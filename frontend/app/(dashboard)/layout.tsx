@@ -1,5 +1,5 @@
-import Sidebar from "@/app/components/Sidebar";
-import Topbar from "@/app/components/Topbar";
+import Sidebar from "@/src/components/Sidebar";
+import Topbar from "@/src/components/Topbar";
 
 export default function DashboardLayout({
   children,
@@ -13,7 +13,7 @@ export default function DashboardLayout({
         <Topbar />
         <main
           className="flex-1 overflow-y-auto p-6"
-          style={{ backgroundColor: "#f3f4f6" }}
+          style={{ backgroundColor: "#ffffff" }}
         >
           {children}
         </main>
