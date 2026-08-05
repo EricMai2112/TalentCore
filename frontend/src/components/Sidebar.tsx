@@ -14,6 +14,8 @@ import {
   Settings,
   ChevronLeft,
 } from "lucide-react";
+import logo from '../../public/logo-talentcore.png'
+import Image from "next/image";
 
 interface NavItem {
   label: string;
@@ -44,31 +46,8 @@ export default function Sidebar() {
       }`}
     >
       {/* Logo */}
-      <div className={`flex items-center gap-3 px-4 py-5 ${isCollapsed ? "justify-center" : ""}`}>
-        <div
-          className="flex items-center justify-center rounded-lg shrink-0"
-          style={{ backgroundColor: "#4f46e5", width: 36, height: 36 }}
-        >
-          <svg
-            width="18"
-            height="18"
-            viewBox="0 0 18 18"
-            fill="none"
-            xmlns="http://www.w3.org/2000/svg"
-          >
-            <path
-              d="M9 3v12M3 9h12"
-              stroke="white"
-              strokeWidth="2.5"
-              strokeLinecap="round"
-            />
-          </svg>
-        </div>
-        {!isCollapsed && (
-          <span className="text-white font-semibold text-xl tracking-wide">
-            TalenCore
-          </span>
-        )}
+      <div className={`flex items-center px-3 py-4 ${isCollapsed ? "justify-center" : ""}`}>
+        <Image src={logo} alt="logo" width={180}/>
       </div>
 
       {/* Nav items */}
