@@ -14,7 +14,8 @@ import {
   Settings,
   ChevronLeft,
 } from "lucide-react";
-import logo from '../../public/logo-talentcore.png'
+import logo from "../../public/logo-talentcore.png";
+import logomini from "../../public/favicon-talentcore.png";
 import Image from "next/image";
 
 interface NavItem {
@@ -27,11 +28,11 @@ interface NavItem {
 const navItems: NavItem[] = [
   { label: "Tổng quan", href: "/dashboard", icon: LayoutDashboard },
   { label: "Tin tuyển dụng", href: "/job-description", icon: Briefcase },
-  { label: "Kanban Tuyển dụng", href: "/kanban", icon: LayoutGrid},
+  { label: "Kanban Tuyển dụng", href: "/kanban", icon: LayoutGrid },
   { label: "Ứng viên", href: "/candidates", icon: UserRound },
   { label: "Phỏng vấn", href: "/interviews", icon: MessageSquare },
   { label: "Offer", href: "/offers", icon: FileText },
-  { label: "Thông báo", href: "/notifications", icon: Bell},
+  { label: "Thông báo", href: "/notifications", icon: Bell },
 ];
 
 export default function Sidebar() {
@@ -46,15 +47,22 @@ export default function Sidebar() {
       }`}
     >
       {/* Logo */}
-      <div className={`flex items-center px-3 py-4 ${isCollapsed ? "justify-center" : ""}`}>
-        <Image src={logo} alt="logo" width={180}/>
+      <div
+        className={`flex items-center px-3 py-4 ${isCollapsed ? "justify-center" : ""}`}
+      >
+        <Image
+          src={isCollapsed ? logomini : logo}
+          alt="logo"
+          width={isCollapsed ? 40 : 180}
+        />
       </div>
 
       {/* Nav items */}
       <nav className="flex-1 px-2 py-2 overflow-y-auto overflow-x-hidden">
         <ul className="flex flex-col gap-3">
           {navItems.map((item) => {
-            const isActive = pathname === item.href || pathname.startsWith(item.href + "/");
+            const isActive =
+              pathname === item.href || pathname.startsWith(item.href + "/");
             const Icon = item.icon;
 
             return (
@@ -65,14 +73,10 @@ export default function Sidebar() {
                     className={`flex items-center gap-3 rounded-lg px-3 py-3 transition-colors duration-150 ${
                       isCollapsed ? "justify-center" : ""
                     } ${
-                      isActive
-                        ? "text-white"
-                        : "text-gray-300 hover:text-white"
+                      isActive ? "text-white" : "text-gray-300 hover:text-white"
                     }`}
                     style={
-                      isActive
-                        ? { backgroundColor: "#4f46e5" }
-                        : undefined
+                      isActive ? { backgroundColor: "#4f46e5" } : undefined
                     }
                     onMouseEnter={(e) => {
                       if (!isActive) {
@@ -96,7 +100,12 @@ export default function Sidebar() {
                         {item.badge !== undefined && (
                           <span
                             className="text-xs font-semibold rounded-full px-1.5 py-0.5 leading-none"
-                            style={{ backgroundColor: "#4f46e5", color: "white", minWidth: 20, textAlign: "center" }}
+                            style={{
+                              backgroundColor: "#4f46e5",
+                              color: "white",
+                              minWidth: 20,
+                              textAlign: "center",
+                            }}
                           >
                             {item.badge}
                           </span>
@@ -139,7 +148,9 @@ export default function Sidebar() {
               isCollapsed ? "justify-center" : ""
             } ${pathname === "/settings" ? "text-white" : ""}`}
             style={
-              pathname === "/settings" ? { backgroundColor: "#4f46e5" } : undefined
+              pathname === "/settings"
+                ? { backgroundColor: "#4f46e5" }
+                : undefined
             }
             onMouseEnter={(e) => {
               if (pathname !== "/settings") {
