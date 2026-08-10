@@ -3,6 +3,7 @@ import { ConfigModule, ConfigService } from '@nestjs/config';
 import { MongooseModule } from '@nestjs/mongoose';
 import { AuthModule } from './modules/auth/auth.module';
 import { UsersModule } from './modules/users/users.module';
+import { PipelineTemplateModule } from './modules/pipeline-template/pipeline-template.module';
 
 @Module({
   imports: [
@@ -15,7 +16,8 @@ import { UsersModule } from './modules/users/users.module';
       inject: [ConfigService],
     }),
     AuthModule,
-    UsersModule
+    UsersModule,
+    PipelineTemplateModule,
   ],
   controllers: [],
   providers: [],

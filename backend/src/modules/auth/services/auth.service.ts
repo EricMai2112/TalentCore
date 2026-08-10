@@ -1,4 +1,8 @@
-import { BadRequestException, Injectable, UnauthorizedException } from '@nestjs/common';
+import {
+  BadRequestException,
+  Injectable,
+  UnauthorizedException,
+} from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model } from 'mongoose';
 import { JwtService } from '@nestjs/jwt';
@@ -9,46 +13,42 @@ import { UserService } from 'src/modules/users/services/user.service';
 
 @Injectable()
 export class AuthService {
-    constructor(
+  constructor(
     private readonly userService: UserService,
-    private jwtService: JwtService
-    ) {}
+    private jwtService: JwtService,
+  ) {}
 
-    async register(registerDto: RegisterDto) {
-        const {email, name, phone, password, confirm_password} = registerDto
+  async register(registerDto: RegisterDto) {
+    const { email, name, phone, password, confirm_password } = registerDto;
 
-        const isExistedEmail = await this.userService.findByEmail(email)
+    const isExistedEmail = await this.userService.findByEmail(email);
 
-        if(isExistedEmail) {
-            throw new BadRequestException(
-                "Email đã tồn tại trong hệ thống"
-            )
-        }
-
-        if (password !== confirm_password) {
-            throw new BadRequestException(
-            'Mật khẩu xác nhận không khớp',
-            );
-        }
-
-        const hashedPassword = await bcrypt.hash(password, 10)
-
-        await this.userService.createUser({
-          email,
-          name,
-          phone,
-          password: hashedPassword,
-        });
-
-        return {
-          message: 'Đăng ký người dùng thành công!',
-        };
+    if (isExistedEmail) {
+      throw new BadRequestException('Email đã tồn tại trong hệ thống');
     }
 
-    async login(loginDto: LoginDto) {
+    if (password !== confirm_password) {
+      throw new BadRequestException('Mật khẩu xác nhận không khớp');
+    }
+
+    const hashedPassword = await bcrypt.hash(password, 10);
+
+    await this.userService.createUser({
+      email,
+      name,
+      phone,
+      password: hashedPassword,
+    });
+
+    return {
+      message: 'Đăng ký người dùng thành công!',
+    };
+  }
+
+  async login(loginDto: LoginDto) {
     const { email, password } = loginDto;
 
-    const user = await this.userService.findByEmail(email)
+    const user = await this.userService.findByEmail(email);
 
     if (!user) {
       throw new UnauthorizedException('Email hoặc Password không chính xác');
@@ -67,7 +67,7 @@ export class AuthService {
 
     return {
       access_token: this.jwtService.sign(payload),
-      user: userWithoutPassword
+      user: userWithoutPassword,
     };
   }
 }

@@ -1,7 +1,7 @@
-import { Schema, Prop, SchemaFactory } from "@nestjs/mongoose"
-import { Document, Types } from "mongoose"
+import { Schema, Prop, SchemaFactory } from '@nestjs/mongoose';
+import { Document, Types } from 'mongoose';
 
-export type UserDocument = User & Document
+export type UserDocument = User & Document;
 
 export enum UserRole {
   CANDIDATE = 'CANDIDATE',
@@ -11,36 +11,36 @@ export enum UserRole {
 }
 
 export enum UserStatus {
-  ACTIVE = "ACTIVE",
-  LOCKED = "LOCKED",
+  ACTIVE = 'ACTIVE',
+  LOCKED = 'LOCKED',
 }
 
-@Schema({timestamps: true})
+@Schema({ timestamps: true })
 export class User {
-    @Prop({required: true})
-    name: string
+  @Prop({ required: true })
+  name: string;
 
-    @Prop({required: true, unique: true})
-    email: string
+  @Prop({ required: true, unique: true })
+  email: string;
 
-    @Prop({required: true})
-    phone: string
+  @Prop({ required: true })
+  phone: string;
 
-    @Prop({required: true, enum: UserRole, default: UserRole.CANDIDATE})
-    role: UserRole
+  @Prop({ required: true, enum: UserRole, default: UserRole.CANDIDATE })
+  role: UserRole;
 
-    @Prop({required: true, enum: UserStatus, default: UserStatus.ACTIVE})
-    status: UserStatus
+  @Prop({ required: true, enum: UserStatus, default: UserStatus.ACTIVE })
+  status: UserStatus;
 
-    @Prop({required: true})
-    password: string
-    
-    @Prop()
-    departmentId?: Types.ObjectId;
+  @Prop({ required: true })
+  password: string;
 
-    createdAt: Date
+  @Prop()
+  departmentId?: Types.ObjectId;
 
-    updatedAt: Date
+  createdAt: Date;
+
+  updatedAt: Date;
 }
 
 export const UserSchema = SchemaFactory.createForClass(User);
