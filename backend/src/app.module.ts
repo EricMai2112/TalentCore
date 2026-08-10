@@ -4,6 +4,7 @@ import { MongooseModule } from '@nestjs/mongoose';
 import { AuthModule } from './modules/auth/auth.module';
 import { UsersModule } from './modules/users/users.module';
 import { PipelineTemplateModule } from './modules/pipeline-template/pipeline-template.module';
+import { EmailTemplateModule } from './modules/email-template/email-template.module';
 
 @Module({
   imports: [
@@ -18,6 +19,7 @@ import { PipelineTemplateModule } from './modules/pipeline-template/pipeline-tem
     AuthModule,
     UsersModule,
     PipelineTemplateModule,
+    EmailTemplateModule,
   ],
   controllers: [],
   providers: [],
