@@ -9,6 +9,16 @@ import * as bcrypt from 'bcrypt';
 export class UserService {
     constructor(@InjectModel(User.name) private userModel: Model<UserDocument>) {}
 
+    async findByEmail(email: string) {
+        return this.userModel.findOne({ email }).exec();
+    }
+
+    async createUser(data: Partial<User>) {
+        const user = new this.userModel(data);
+
+        return user.save();
+    }
+
     async createEmployee(createEmployeeDto: CreateEmployeeDto) {
         const {email, name, phone, role, departmentId} = createEmployeeDto
 

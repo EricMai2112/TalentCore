@@ -5,17 +5,19 @@ import { JwtService } from '@nestjs/jwt';
 import * as bcrypt from 'bcrypt';
 import { LoginDto, RegisterDto } from '../dtos/auth.dto';
 import { User, UserDocument } from 'src/modules/users/schemas/user.schema';
+import { UserService } from 'src/modules/users/services/user.service';
 
 @Injectable()
 export class AuthService {
-    constructor(@InjectModel(User.name) private userModel: Model<UserDocument>,
+    constructor(
+    private readonly userService: UserService,
     private jwtService: JwtService
     ) {}
 
     async register(registerDto: RegisterDto) {
         const {email, name, phone, password, confirm_password} = registerDto
 
-        const isExistedEmail = await this.userModel.findOne({email}).exec()
+        const isExistedEmail = await this.userService.findByEmail(email)
 
         if(isExistedEmail) {
             throw new BadRequestException(
@@ -31,24 +33,22 @@ export class AuthService {
 
         const hashedPassword = await bcrypt.hash(password, 10)
 
-        const newUser = new this.userModel({
-            email,
-            name,
-            phone,
-            password: hashedPassword
-        })
-
-        await newUser.save()
+        await this.userService.createUser({
+          email,
+          name,
+          phone,
+          password: hashedPassword,
+        });
 
         return {
-            message: "Đăng ký người dùng thành công!"
-        }
+          message: 'Đăng ký người dùng thành công!',
+        };
     }
 
     async login(loginDto: LoginDto) {
     const { email, password } = loginDto;
 
-    const user = await this.userModel.findOne({ email }).exec();
+    const user = await this.userService.findByEmail(email)
 
     if (!user) {
       throw new UnauthorizedException('Email hoặc Password không chính xác');
