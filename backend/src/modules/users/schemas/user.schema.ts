@@ -1,13 +1,13 @@
 import { Schema, Prop, SchemaFactory } from "@nestjs/mongoose"
-import { Document } from "mongoose"
+import { Document, Types } from "mongoose"
 
 export type UserDocument = User & Document
 
 export enum UserRole {
-  CANDIDATE = "Ứng viên",
-  HR_ADMIN = "Quản trị nhân sự",
-  EMPLOYEE = "Nhân viên",
-  DEPARTMENT_MANAGER = "Quản lý phòng ban",
+  CANDIDATE = 'CANDIDATE',
+  HR_ADMIN = 'HR_ADMIN',
+  EMPLOYEE = 'EMPLOYEE',
+  DEPARTMENT_MANAGER = 'DEPARTMENT_MANAGER',
 }
 
 export enum UserStatus {
@@ -34,6 +34,9 @@ export class User {
 
     @Prop({required: true})
     password: string
+    
+    @Prop()
+    departmentId?: Types.ObjectId;
 
     createdAt: Date
 

@@ -15,6 +15,7 @@ import { UsersModule } from './modules/users/users.module';
       inject: [ConfigService],
     }),
     AuthModule,
+    UsersModule
   ],
   controllers: [],
   providers: [],
