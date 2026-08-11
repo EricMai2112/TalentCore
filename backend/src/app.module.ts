@@ -5,6 +5,8 @@ import { AuthModule } from './modules/auth/auth.module';
 import { UsersModule } from './modules/users/users.module';
 import { PipelineTemplateModule } from './modules/pipeline-template/pipeline-template.module';
 import { EmailTemplateModule } from './modules/email-template/email-template.module';
+import { SkillsModule } from './modules/skills/skills.module';
+import { PositionsModule } from './modules/positions/positions.module';
 
 @Module({
   imports: [
@@ -20,6 +22,8 @@ import { EmailTemplateModule } from './modules/email-template/email-template.mod
     UsersModule,
     PipelineTemplateModule,
     EmailTemplateModule,
+    SkillsModule,
+    PositionsModule,
   ],
   controllers: [],
   providers: [],
