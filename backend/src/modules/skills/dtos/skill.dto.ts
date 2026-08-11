@@ -1,30 +1,22 @@
 import {
   IsArray,
-  IsEnum,
-  IsMongoId,
   IsNotEmpty,
   IsOptional,
   IsString,
 } from 'class-validator';
 
-
 export class CreateSkillDto {
-  @IsString()
   @IsNotEmpty({
     message: 'Tên kỹ năng không được để trống',
   })
+  @IsString()
   name: string;
 
   @IsOptional()
   @IsArray()
-  @IsString({ each: true })
-  aliases?: string[];
-
-  @IsOptional()
-  @IsArray()
-  @IsMongoId({
+  @IsString({
     each: true,
-    message: 'positionIds không hợp lệ',
+    message: 'Alias phải là chuỗi',
   })
-  positionIds?: string[];
+  aliases?: string[];
 }
