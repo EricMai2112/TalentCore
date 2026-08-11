@@ -14,9 +14,10 @@ import {
   Settings,
   ChevronLeft,
 } from "lucide-react";
-import logo from "../../public/logo-talentcore.png";
-import logomini from "../../public/favicon-talentcore.png";
+import logo from "@/public/logo-talentcore.png";
+import logomini from "@/public/favicon-talentcore.png";
 import Image from "next/image";
+
 
 interface NavItem {
   label: string;
