@@ -1,4 +1,4 @@
-import { Body, Controller, Delete, Param, Post } from "@nestjs/common";
+import { Body, Controller, Delete, Get, Param, Post } from "@nestjs/common";
 import { SkillsService } from "../services/skills.service";
 import { CreateSkillDto } from "../dtos/skill.dto";
 
@@ -7,16 +7,17 @@ export class SkillsController {
     constructor(private readonly skillsService: SkillsService) {}
 
     @Post()
-    async create(
-    @Body() createSkillDto: CreateSkillDto,
-    ) {
-        return this.skillsService.create(
-        createSkillDto,
-        );
+    async create(@Body() createSkillDto: CreateSkillDto) {
+        return this.skillsService.create(createSkillDto);
+    }
+
+    @Get()
+    async findAll() {
+        return this.skillsService.getAll();
     }
 
     @Delete(':id')
     async remove(@Param('id') id: string) {
-    return this.skillsService.remove(id);
-}
+        return this.skillsService.remove(id);
+    }
 }
