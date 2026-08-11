@@ -3,53 +3,42 @@
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { Plus, Users, Check, AlertTriangle, Search } from "lucide-react";
-import { User, Department, CreateEmployeeDto } from "../types/user.types";
+import { User, Department, CreateEmployeeDto, UpdateEmployeeDto, UserStatus } from "../types/user.types";
 import { userApi } from "../services/user.api";
 import UserRow from "./UserRow";
 import CreateUserModal from "./CreateUserModal";
-import DeleteConfirmModal from "./DeleteConfirmModal";
+import EditUserModal from "./EditUserModal";
 
 interface UserManagerProps {
   initialUsers: User[];
   initialDepartments: Department[];
 }
 
-export default function UserManager({
-  initialUsers,
-  initialDepartments,
-}: UserManagerProps) {
+export default function UserManager({ initialUsers, initialDepartments }: UserManagerProps) {
   const router = useRouter();
 
   const [users, setUsers] = useState<User[]>(initialUsers);
   const [departments] = useState<Department[]>(initialDepartments);
   const [searchQuery, setSearchQuery] = useState("");
 
-  // Sync với server-side data
-  useEffect(() => {
-    setUsers(initialUsers);
-  }, [initialUsers]);
+  useEffect(() => { setUsers(initialUsers); }, [initialUsers]);
 
   // Modal states
   const [isCreateOpen, setIsCreateOpen] = useState(false);
-  const [isDeleteOpen, setIsDeleteOpen] = useState(false);
-  const [userToDelete, setUserToDelete] = useState<User | null>(null);
+  const [isEditOpen, setIsEditOpen] = useState(false);
+  const [editingUser, setEditingUser] = useState<User | null>(null);
 
   // Loading & toast
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [toast, setToast] = useState<{
-    message: string;
-    type: "success" | "error";
-  } | null>(null);
+  const [toast, setToast] = useState<{ message: string; type: "success" | "error" } | null>(null);
 
-  // Auto-dismiss toast sau 3 giây
   useEffect(() => {
     if (!toast) return;
     const t = setTimeout(() => setToast(null), 3000);
     return () => clearTimeout(t);
   }, [toast]);
 
-  const showToast = (message: string, type: "success" | "error") =>
-    setToast({ message, type });
+  const showToast = (message: string, type: "success" | "error") => setToast({ message, type });
 
   const fetchUsers = async () => {
     try {
@@ -60,7 +49,8 @@ export default function UserManager({
     }
   };
 
-  // Tạo nhân viên mới
+  // ── Handlers ──────────────────────────────────────────────
+
   const handleCreateSubmit = async (data: CreateEmployeeDto) => {
     setIsSubmitting(true);
     try {
@@ -70,30 +60,57 @@ export default function UserManager({
       await fetchUsers();
       router.refresh();
     } catch (err: unknown) {
-      const message = err instanceof Error ? err.message : "Đã xảy ra lỗi";
-      throw new Error(message);
+      throw new Error(err instanceof Error ? err.message : "Đã xảy ra lỗi");
     } finally {
       setIsSubmitting(false);
     }
   };
 
-  // Xóa người dùng (placeholder — backend chưa có endpoint DELETE)
-  const handleDeleteConfirm = async () => {
-    if (!userToDelete) return;
+  const handleOpenEdit = (user: User) => {
+    setEditingUser(user);
+    setIsEditOpen(true);
+  };
+
+  const handleEditSubmit = async (data: UpdateEmployeeDto) => {
+    if (!editingUser) return;
     setIsSubmitting(true);
     try {
-      // TODO: gọi userApi.deleteEmployee(userToDelete._id) khi backend sẵn sàng
-      showToast("Chức năng xóa đang được phát triển", "error");
-      setIsDeleteOpen(false);
-      setUserToDelete(null);
+      await userApi.updateEmployee(editingUser._id, data);
+      showToast("Cập nhật thông tin thành công!", "success");
+      setIsEditOpen(false);
+      setEditingUser(null);
+      await fetchUsers();
+      router.refresh();
+    } catch (err: unknown) {
+      throw new Error(err instanceof Error ? err.message : "Đã xảy ra lỗi");
     } finally {
       setIsSubmitting(false);
     }
   };
 
-  const handleOpenDelete = (user: User) => {
-    setUserToDelete(user);
-    setIsDeleteOpen(true);
+  const handleToggleStatus = async (user: User) => {
+    // Optimistic update ngay lập tức
+    const newStatus = user.status === UserStatus.ACTIVE ? UserStatus.LOCKED : UserStatus.ACTIVE;
+    setUsers((prev) =>
+      prev.map((u) => (u._id === user._id ? { ...u, status: newStatus } : u))
+    );
+
+    try {
+      await userApi.toggleStatus(user._id, newStatus);
+      showToast(
+        newStatus === UserStatus.LOCKED
+          ? `Đã khóa tài khoản ${user.name}`
+          : `Đã mở khóa tài khoản ${user.name}`,
+        "success"
+      );
+      router.refresh();
+    } catch (err: unknown) {
+      // Rollback nếu lỗi
+      setUsers((prev) =>
+        prev.map((u) => (u._id === user._id ? { ...u, status: user.status } : u))
+      );
+      showToast(err instanceof Error ? err.message : "Không thể thay đổi trạng thái", "error");
+    }
   };
 
   // Map departmentId → tên phòng ban
@@ -121,11 +138,7 @@ export default function UserManager({
               : "bg-red-50 border-red-100 text-red-800"
           }`}
         >
-          {toast.type === "success" ? (
-            <Check size={16} />
-          ) : (
-            <AlertTriangle size={16} />
-          )}
+          {toast.type === "success" ? <Check size={16} /> : <AlertTriangle size={16} />}
           <span className="text-sm font-semibold">{toast.message}</span>
         </div>
       )}
@@ -163,21 +176,14 @@ export default function UserManager({
           <Users className="mx-auto text-gray-300 mb-3" size={40} />
           {searchQuery ? (
             <>
-              <h3 className="text-base font-semibold text-gray-800">
-                Không tìm thấy kết quả
-              </h3>
-              <p className="text-sm text-gray-400 mt-1">
-                Thử tìm với từ khoá khác.
-              </p>
+              <h3 className="text-base font-semibold text-gray-800">Không tìm thấy kết quả</h3>
+              <p className="text-sm text-gray-400 mt-1">Thử tìm với từ khoá khác.</p>
             </>
           ) : (
             <>
-              <h3 className="text-base font-semibold text-gray-800">
-                Chưa có người dùng nào
-              </h3>
+              <h3 className="text-base font-semibold text-gray-800">Chưa có người dùng nào</h3>
               <p className="text-sm text-gray-400 mt-1 max-w-sm mx-auto">
-                Tạo tài khoản nhân viên đầu tiên để bắt đầu quản lý quy trình
-                tuyển dụng.
+                Tạo tài khoản nhân viên đầu tiên để bắt đầu quản lý quy trình tuyển dụng.
               </p>
               <button
                 onClick={() => setIsCreateOpen(true)}
@@ -191,29 +197,18 @@ export default function UserManager({
         </div>
       ) : (
         <div className="rounded-2xl border border-gray-100 overflow-hidden shadow-xs">
-          {/* Responsive scroll wrapper */}
           <div className="overflow-x-auto">
             <table className="w-full min-w-[640px] bg-white">
               <thead>
                 <tr className="border-b border-gray-100 bg-gray-50/80">
-                  <th className="px-4 py-3 text-left text-xs font-bold text-gray-500 uppercase tracking-wider">
-                    Người dùng
-                  </th>
-                  <th className="px-4 py-3 text-left text-xs font-bold text-gray-500 uppercase tracking-wider">
-                    Email
-                  </th>
-                  <th className="px-4 py-3 text-left text-xs font-bold text-gray-500 uppercase tracking-wider">
-                    Vai trò
-                  </th>
-                  <th className="px-4 py-3 text-left text-xs font-bold text-gray-500 uppercase tracking-wider">
-                    Phòng ban
-                  </th>
-                  <th className="px-4 py-3 text-left text-xs font-bold text-gray-500 uppercase tracking-wider">
-                    Trạng thái
-                  </th>
-                  <th className="px-4 py-3 text-left text-xs font-bold text-gray-500 uppercase tracking-wider">
-                    Thao tác
-                  </th>
+                  {["Người dùng", "Email", "Vai trò", "Phòng ban", "Trạng thái", "Thao tác"].map((h) => (
+                    <th
+                      key={h}
+                      className="px-4 py-3 text-left text-xs font-bold text-gray-500 uppercase tracking-wider"
+                    >
+                      {h}
+                    </th>
+                  ))}
                 </tr>
               </thead>
               <tbody>
@@ -222,7 +217,8 @@ export default function UserManager({
                     key={user._id}
                     user={user}
                     departmentName={deptMap.get(user.departmentId ?? "")}
-                    onDelete={() => handleOpenDelete(user)}
+                    onEdit={() => handleOpenEdit(user)}
+                    onToggleStatus={() => handleToggleStatus(user)}
                   />
                 ))}
               </tbody>
@@ -249,15 +245,13 @@ export default function UserManager({
         isSubmitting={isSubmitting}
       />
 
-      <DeleteConfirmModal
-        isOpen={isDeleteOpen}
-        onClose={() => {
-          setIsDeleteOpen(false);
-          setUserToDelete(null);
-        }}
-        onConfirm={handleDeleteConfirm}
-        userName={userToDelete?.name ?? ""}
-        isDeleting={isSubmitting}
+      <EditUserModal
+        isOpen={isEditOpen}
+        onClose={() => { setIsEditOpen(false); setEditingUser(null); }}
+        onSubmit={handleEditSubmit}
+        user={editingUser}
+        departments={departments}
+        isSubmitting={isSubmitting}
       />
     </div>
   );

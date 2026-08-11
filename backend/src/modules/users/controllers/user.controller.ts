@@ -1,19 +1,35 @@
-import { Body, Controller, Get, Post, UsePipes, ValidationPipe } from "@nestjs/common";
+import { Body, Controller, Get, Param, Patch, Post, UsePipes, ValidationPipe } from "@nestjs/common";
 import { UserService } from "../services/user.service";
-import { CreateEmployeeDto } from "../dtos/user.dto";
+import { CreateEmployeeDto, UpdateEmployeeDto, ToggleStatusDto } from "../dtos/user.dto";
 
 @Controller("users")
+@UsePipes(new ValidationPipe({ whitelist: true }))
 export class UserController {
     constructor(private readonly userService: UserService) {}
 
     @Post("employees")
-    @UsePipes(new ValidationPipe())
     async createEmployee(@Body() createEmployeeDto: CreateEmployeeDto) {
-        return this.userService.createEmployee(createEmployeeDto)
+        return this.userService.createEmployee(createEmployeeDto);
     }
 
     @Get("employees")
-    async getUsers() {
-        return this.userService.getEmployees()
+    async getEmployees() {
+        return this.userService.getEmployees();
+    }
+
+    @Patch("employees/:id")
+    async updateEmployee(
+        @Param("id") id: string,
+        @Body() updateEmployeeDto: UpdateEmployeeDto,
+    ) {
+        return this.userService.updateEmployee(id, updateEmployeeDto);
+    }
+
+    @Patch("employees/:id/status")
+    async toggleStatus(
+        @Param("id") id: string,
+        @Body() toggleStatusDto: ToggleStatusDto,
+    ) {
+        return this.userService.toggleStatus(id, toggleStatusDto);
     }
 }
