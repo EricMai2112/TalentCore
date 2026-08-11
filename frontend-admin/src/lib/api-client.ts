@@ -23,6 +23,7 @@ async function request<T>(endpoint: string, options: RequestOptions = {}): Promi
       ...defaultHeaders,
       ...headers,
     },
+    credentials: "include",
     ...restOptions,
   };
 
