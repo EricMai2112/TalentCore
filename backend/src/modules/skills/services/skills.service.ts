@@ -2,67 +2,44 @@ import { BadRequestException, Injectable, NotFoundException } from "@nestjs/comm
 import { InjectModel } from "@nestjs/mongoose";
 import { Skill, SkillDocument } from "../schemas/skills.schema";
 import { Model } from "mongoose";
-import { PositionService } from "src/modules/positions/services/position.service";
 import { CreateSkillDto } from "../dtos/skill.dto";
 
 @Injectable()
 export class SkillsService {
-    constructor(@InjectModel(Skill.name) private skillModel: Model<SkillDocument>,
-) {}
+    constructor(
+        @InjectModel(Skill.name) private skillModel: Model<SkillDocument>,
+    ) {}
 
-      async create(createSkillDto: CreateSkillDto) {
-    const {
-      name,
-      aliases = [],
-    } = createSkillDto;
-
-    const existedSkill = await this.skillModel.findOne({
-      name,
-    });
-
-    if (existedSkill) {
-      throw new BadRequestException(
-        'Kỹ năng đã tồn tại',
-      );
+    async getAll() {
+        return this.skillModel.find().sort({ name: 1 }).exec();
     }
 
-    const skill = await this.skillModel.create({
-      name,
-      aliases,
-    });
+    async create(createSkillDto: CreateSkillDto) {
+        const { name, aliases = [] } = createSkillDto;
 
-    return {
-      message: 'Tạo kỹ năng thành công',
-      skill,
-    };
-  }
+        const existedSkill = await this.skillModel.findOne({ name });
+        if (existedSkill) {
+            throw new BadRequestException('Kỹ năng đã tồn tại');
+        }
 
-  async remove(id: string) {
-    const skill = await this.skillModel.findById(id).exec();
-
-    if (!skill) {
-      throw new NotFoundException('Không tìm thấy kỹ năng');
+        const skill = await this.skillModel.create({ name, aliases });
+        return { message: 'Tạo kỹ năng thành công', skill };
     }
 
-    await this.skillModel.findByIdAndDelete(id).exec();
-
-    return {
-      message: 'Xóa kỹ năng thành công',
-    };
-  }
+    async remove(id: string) {
+        const skill = await this.skillModel.findById(id).exec();
+        if (!skill) {
+            throw new NotFoundException('Không tìm thấy kỹ năng');
+        }
+        await this.skillModel.findByIdAndDelete(id).exec();
+        return { message: 'Xóa kỹ năng thành công' };
+    }
 
     async findOne(id: string) {
-    const skill =
-      await this.skillModel
-        .findById(id)
-        .exec();
-
-    if (!skill) {
-      throw new NotFoundException(
-        'Không tìm thấy kỹ năng',
-      );
+        const skill = await this.skillModel.findById(id).exec();
+        if (!skill) {
+            throw new NotFoundException('Không tìm thấy kỹ năng');
+        }
+        return skill;
     }
-
-    return skill;
-  }
 }
