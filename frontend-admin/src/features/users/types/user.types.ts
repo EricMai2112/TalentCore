@@ -35,6 +35,13 @@ export interface CreateEmployeeDto {
   departmentId?: string;
 }
 
+export interface UpdateEmployeeDto {
+  name?: string;
+  phone?: string;
+  role?: UserRole;
+  departmentId?: string;
+}
+
 export const USER_ROLE_LABEL: Record<UserRole, string> = {
   [UserRole.HR_ADMIN]: "Admin",
   [UserRole.DEPARTMENT_MANAGER]: "Trưởng phòng",
