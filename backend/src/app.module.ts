@@ -8,6 +8,7 @@ import { EmailTemplateModule } from './modules/email-template/email-template.mod
 import { SkillsModule } from './modules/skills/skills.module';
 import { PositionsModule } from './modules/positions/positions.module';
 import { DepartmentsModule } from './modules/departments/departments.module';
+import { JobDescriptionModule } from './modules/job-description/job-description.module';
 
 @Module({
   imports: [
@@ -26,6 +27,7 @@ import { DepartmentsModule } from './modules/departments/departments.module';
     SkillsModule,
     PositionsModule,
     DepartmentsModule,
+    JobDescriptionModule,
   ],
   controllers: [],
   providers: [],
