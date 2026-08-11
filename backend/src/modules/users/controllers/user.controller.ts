@@ -1,4 +1,4 @@
-import { Body, Controller, Post, UsePipes, ValidationPipe } from "@nestjs/common";
+import { Body, Controller, Get, Post, UsePipes, ValidationPipe } from "@nestjs/common";
 import { UserService } from "../services/user.service";
 import { CreateEmployeeDto } from "../dtos/user.dto";
 
@@ -10,5 +10,10 @@ export class UserController {
     @UsePipes(new ValidationPipe())
     async createEmployee(@Body() createEmployeeDto: CreateEmployeeDto) {
         return this.userService.createEmployee(createEmployeeDto)
+    }
+
+    @Get("employees")
+    async getUsers() {
+        return this.userService.getEmployees()
     }
 }
