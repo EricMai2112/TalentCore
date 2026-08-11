@@ -1,6 +1,6 @@
 import { BadRequestException, Injectable } from "@nestjs/common";
 import { InjectModel } from "@nestjs/mongoose";
-import { User, UserDocument, UserStatus } from "../schemas/user.schema";
+import { User, UserDocument, UserRole, UserStatus } from "../schemas/user.schema";
 import { Model } from "mongoose";
 import { CreateEmployeeDto } from "../dtos/user.dto";
 import * as bcrypt from 'bcrypt';
@@ -55,5 +55,9 @@ export class UserService {
                 departmentId: newUser.departmentId
             }
         }
+    }
+
+    async getEmployees() {
+        return this.userModel.find({role: {$ne: UserRole.CANDIDATE}}, {password: 0}).exec()
     }
 }
