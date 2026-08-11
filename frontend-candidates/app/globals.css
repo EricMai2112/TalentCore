@@ -2,25 +2,58 @@
 
 :root {
   --background: #ffffff;
-  --foreground: #171717;
+  --foreground: #0f172a;
 }
 
-@theme inline {
+@theme {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+  --font-sans: var(--font-geist-sans), ui-sans-serif, system-ui;
+  --font-mono: var(--font-geist-mono), ui-monospace, SFMono-Regular;
+  
+  /* TalentCore Custom Theme Colors */
+  --color-brand-blue: #2563eb;
+  --color-brand-dark: #0f172a;
+  --color-navy-dark: #0b132b;
+  --color-navy-deep: #030712;
+  --color-navy-glow: #1e1b4b;
+  --color-accent: #7c3aed;
+  
+  --animate-pulse-slow: pulse 4s cubic-bezier(0.4, 0, 0.6, 1) infinite;
 }
 
 @media (prefers-color-scheme: dark) {
   :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
+    --background: #030712;
+    --foreground: #f8fafc;
   }
 }
 
-body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+html {
+  scroll-behavior: smooth;
 }
+
+body {
+  background-color: var(--background);
+  color: var(--foreground);
+  font-family: var(--font-sans);
+  overflow-x: hidden;
+}
+
+/* Custom glow utility for a high-tech modern aesthetic */
+.glow-effect {
+  position: relative;
+}
+.glow-effect::before {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 130%;
+  height: 130%;
+  background: radial-gradient(circle, rgba(37, 99, 235, 0.15) 0%, transparent 60%);
+  z-index: -1;
+  pointer-events: none;
+}
+
