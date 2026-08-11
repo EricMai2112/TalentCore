@@ -7,6 +7,7 @@ import { PipelineTemplateModule } from './modules/pipeline-template/pipeline-tem
 import { EmailTemplateModule } from './modules/email-template/email-template.module';
 import { SkillsModule } from './modules/skills/skills.module';
 import { PositionsModule } from './modules/positions/positions.module';
+import { DepartmentsModule } from './modules/departments/departments.module';
 
 @Module({
   imports: [
@@ -24,6 +25,7 @@ import { PositionsModule } from './modules/positions/positions.module';
     EmailTemplateModule,
     SkillsModule,
     PositionsModule,
+    DepartmentsModule,
   ],
   controllers: [],
   providers: [],
