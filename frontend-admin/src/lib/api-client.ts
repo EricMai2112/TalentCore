@@ -49,7 +49,9 @@ async function request<T>(endpoint: string, options: RequestOptions = {}): Promi
 
     return data as T;
   } catch (error: any) {
-    console.error(`API Request to ${endpoint} failed:`, error);
+    if (!endpoint.includes("/auth/me")) {
+      console.error(`API Request to ${endpoint} failed:`, error);
+    }
     throw error;
   }
 }
