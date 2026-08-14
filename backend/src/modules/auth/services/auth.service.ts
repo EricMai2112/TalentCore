@@ -70,4 +70,14 @@ export class AuthService {
       user: userWithoutPassword,
     };
   }
+
+  async getMe(userId: string) {
+    const user = await this.userService.findByEmail(userId); 
+    if (!user) {
+      throw new UnauthorizedException('Người dùng không tồn tại');
+    }
+    const userObject = user.toObject();
+    const { password: _, ...userWithoutPassword } = userObject;
+    return userWithoutPassword;
+  }
 }
