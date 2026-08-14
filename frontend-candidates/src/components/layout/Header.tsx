@@ -1,8 +1,12 @@
+"use client";
+
 import Link from 'next/link';
-import LanguageSelector from './LanguageSelector';
+import { usePathname } from 'next/navigation';
 import MobileMenu from './MobileMenu';
 
 export default function Header() {
+  const pathname = usePathname();
+
   const navItems = [
     { label: 'Về chúng tôi', href: '/#about' },
     { label: 'Sản phẩm & Giải pháp', href: '/#products' },
@@ -10,11 +14,11 @@ export default function Header() {
     { label: 'Sự nghiệp', href: '/#careers' },
     { label: 'Tin tức', href: '/#news' },
     { label: 'Liên hệ', href: '/#footer' },
-    { label: 'Tuyển dụng', href: '/jobs' }, // Added recruitment tab as requested
+    { label: 'Tuyển dụng', href: '/jobs' },
   ];
 
   return (
-    <header className="sticky top-0 z-40 w-full border-b border-slate-900/50 bg-slate-950/80 backdrop-blur-md">
+    <header className="sticky top-0 z-40 w-full border-b border-slate-900/50 bg-slate-950/80 backdrop-blur-md text-white">
       <div className="mx-auto flex max-w-7xl h-20 items-center justify-between px-4 sm:px-6 lg:px-8">
         {/* Logo */}
         <Link href="/" className="flex items-center gap-2.5 group">
@@ -28,15 +32,22 @@ export default function Header() {
 
         {/* Desktop Navigation */}
         <nav className="hidden lg:flex items-center gap-0.5 xl:gap-1.5 text-[13px] xl:text-sm font-semibold">
-          {navItems.map((item) => (
-            <Link
-              key={item.href}
-              href={item.href}
-              className="px-2.5 py-2 text-slate-300 hover:text-white rounded-lg hover:bg-slate-900/40 transition-all duration-200 whitespace-nowrap"
-            >
-              {item.label}
-            </Link>
-          ))}
+          {navItems.map((item) => {
+            const isActive = pathname === item.href || (item.href === '/jobs' && pathname?.startsWith('/jobs'));
+            return (
+              <Link
+                key={item.href}
+                href={item.href}
+                className={`px-3 py-2 rounded-lg transition-all duration-200 whitespace-nowrap ${
+                  isActive
+                    ? 'bg-blue-600/20 text-blue-400 font-bold border border-blue-500/30'
+                    : 'text-slate-300 hover:text-white hover:bg-slate-900/60'
+                }`}
+              >
+                {item.label}
+              </Link>
+            );
+          })}
         </nav>
 
         {/* Action Buttons */}

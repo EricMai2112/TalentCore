@@ -37,6 +37,15 @@ export class JobDescriptionController {
     };
   }
 
+  @Get('public')
+  async findPublicJobs() {
+    const jobs = await this.jobDescriptionService.findPublicJobs();
+    return {
+      message: 'Lấy danh sách Job tuyển dụng công khai thành công',
+      data: jobs,
+    };
+  }
+
   @Get(':id')
   async findById(@Param('id') id: string) {
     const job = await this.jobDescriptionService.findById(id);
