@@ -43,9 +43,9 @@ export interface UpdateEmployeeDto {
 }
 
 export const USER_ROLE_LABEL: Record<UserRole, string> = {
-  [UserRole.HR_ADMIN]: "Admin",
+  [UserRole.HR_ADMIN]: "Quản trị nhân sự",
   [UserRole.DEPARTMENT_MANAGER]: "Trưởng phòng",
-  [UserRole.EMPLOYEE]: "Interviewer",
+  [UserRole.EMPLOYEE]: "Nhân viên",
 };
 
 export const USER_ROLE_COLOR: Record<UserRole, string> = {
