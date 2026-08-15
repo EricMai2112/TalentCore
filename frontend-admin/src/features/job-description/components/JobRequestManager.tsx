@@ -17,6 +17,8 @@ import {
   Position,
   JobStatus,
 } from "../types/job-description.types";
+import { useAuth } from "@/src/providers/AuthProvider";
+import { UserRole } from "@/src/features/users/types/user.types";
 
 interface JobRequestManagerProps {
   initialJobs: JobDescription[];
@@ -35,6 +37,13 @@ export default function JobRequestManager({
   employees,
   positions,
 }: JobRequestManagerProps) {
+  const { user: currentUser } = useAuth();
+  const isHrAdmin = currentUser?.role === UserRole.HR_ADMIN;
+  const isDeptManager = currentUser?.role === UserRole.DEPARTMENT_MANAGER;
+  const userDeptId = typeof currentUser?.departmentId === "object"
+    ? currentUser?.departmentId?._id
+    : (currentUser?.departmentId ?? "");
+
   const [jobs, setJobs] = useState<JobDescription[]>(initialJobs);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isDeleteOpen, setIsDeleteOpen] = useState(false);
@@ -197,6 +206,9 @@ export default function JobRequestManager({
         onView={handleView}
         onReview={handleReview}
         onPromote={handlePromote}
+        isHrAdmin={isHrAdmin}
+        isDeptManager={isDeptManager}
+        userDeptId={userDeptId}
       />
 
       {/* Creation and Update Wizard Modal */}
@@ -211,6 +223,8 @@ export default function JobRequestManager({
         skills={skills}
         employees={employees}
         positions={positions}
+        isDeptManager={isDeptManager}
+        userDeptId={userDeptId}
       />
 
       {/* Delete confirmation popup */}
