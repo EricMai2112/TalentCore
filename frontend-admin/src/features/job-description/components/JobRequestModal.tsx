@@ -26,6 +26,8 @@ interface JobRequestModalProps {
   skills: Skill[];
   employees: User[];
   positions: Position[];
+  isDeptManager?: boolean;
+  userDeptId?: string;
 }
 
 const DEFAULT_SKILLS = [
@@ -60,6 +62,8 @@ export default function JobRequestModal({
   skills,
   employees,
   positions,
+  isDeptManager = false,
+  userDeptId = "",
 }: JobRequestModalProps) {
   const [step, setStep] = useState(1);
   const [error, setError] = useState<string | null>(null);
@@ -161,7 +165,7 @@ export default function JobRequestModal({
       } else {
         // Reset to default blank form
         setTitle("");
-        setDepartmentId(""); // Force department selection first
+        setDepartmentId(isDeptManager && userDeptId ? userDeptId : "");
         setPositionId("");
         setLocation("");
         setEmploymentType(EmploymentType.FULL_TIME);
@@ -189,7 +193,7 @@ export default function JobRequestModal({
         setStatus(JobStatus.PENDING);
       }
     }
-  }, [isOpen, initialJob, departments, pipelineTemplates]);
+  }, [isOpen, initialJob, departments, pipelineTemplates, isDeptManager, userDeptId]);
 
   if (!isOpen) return null;
 
@@ -395,10 +399,13 @@ export default function JobRequestModal({
                     Phòng ban <span className="text-red-500">*</span>
                   </label>
                   <select
-                    value={departmentId}
+                    value={isDeptManager && userDeptId ? userDeptId : departmentId}
                     onChange={(e) => handleDepartmentChange(e.target.value)}
+                    disabled={isDeptManager}
                     required
-                    className="w-full px-3.5 py-2.5 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 bg-white font-medium text-gray-800"
+                    className={`w-full px-3.5 py-2.5 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 font-medium text-gray-800 ${
+                      isDeptManager ? "bg-gray-100 text-gray-500 cursor-not-allowed" : "bg-white"
+                    }`}
                   >
                     <option value="">-- Chọn phòng ban --</option>
                     {departments.map((dept) => (

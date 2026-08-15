@@ -1,7 +1,7 @@
 "use client";
 
-import { useState } from "react";
-import { Eye, Check, Edit2, Trash2, Plus, Info, Search, CheckCheck, Briefcase } from "lucide-react";
+import { useState, useEffect } from "react";
+import { Eye, Edit2, Trash2, Plus, CheckCheck, Briefcase } from "lucide-react";
 import { JobDescription, JobStatus, JobPriority, Department } from "../types/job-description.types";
 
 interface JobRequestTableProps {
@@ -13,6 +13,9 @@ interface JobRequestTableProps {
   onReview: (job: JobDescription) => void;
   onPromote: (job: JobDescription) => void;
   onAdd: () => void;
+  isHrAdmin?: boolean;
+  isDeptManager?: boolean;
+  userDeptId?: string;
 }
 
 export default function JobRequestTable({
@@ -24,10 +27,21 @@ export default function JobRequestTable({
   onReview,
   onPromote,
   onAdd,
+  isHrAdmin = true,
+  isDeptManager = false,
+  userDeptId = "",
 }: JobRequestTableProps) {
-  const [selectedDept, setSelectedDept] = useState("all");
+  const [selectedDept, setSelectedDept] = useState(
+    isDeptManager && userDeptId ? userDeptId : "all"
+  );
   const [selectedStatus, setSelectedStatus] = useState("all");
   const [selectedPriority, setSelectedPriority] = useState("all");
+
+  useEffect(() => {
+    if (isDeptManager && userDeptId) {
+      setSelectedDept(userDeptId);
+    }
+  }, [isDeptManager, userDeptId]);
 
   // Status mapping to label and classes
   const getStatusConfig = (status: JobStatus) => {
@@ -57,16 +71,25 @@ export default function JobRequestTable({
     }
   };
 
-  // Metrics counting
-  const totalCount = jobs.length;
-  const pendingCount = jobs.filter(j => j.status === JobStatus.PENDING).length;
-  const approvedCount = jobs.filter(j => j.status === JobStatus.APPROVED).length;
-  const rejectedCount = jobs.filter(j => j.status === JobStatus.REJECTED).length;
-  const jdCreatedCount = jobs.filter(j => j.status === JobStatus.JD_CREATED).length;
+  // Scope jobs list for metrics and display if user is Department Manager
+  const scopedJobs = jobs.filter((job) => {
+    if (isDeptManager && userDeptId) {
+      const deptId = typeof job.departmentId === "object" ? job.departmentId?._id : job.departmentId;
+      if (deptId !== userDeptId) return false;
+    }
+    return true;
+  });
+
+  // Metrics counting based on scoped jobs
+  const totalCount = scopedJobs.length;
+  const pendingCount = scopedJobs.filter(j => j.status === JobStatus.PENDING).length;
+  const approvedCount = scopedJobs.filter(j => j.status === JobStatus.APPROVED).length;
+  const rejectedCount = scopedJobs.filter(j => j.status === JobStatus.REJECTED).length;
+  const jdCreatedCount = scopedJobs.filter(j => j.status === JobStatus.JD_CREATED).length;
 
   // Filtering logic
-  const filteredJobs = jobs.filter(job => {
-    const deptId = typeof job.departmentId === "string" ? job.departmentId : job.departmentId?._id;
+  const filteredJobs = scopedJobs.filter(job => {
+    const deptId = typeof job.departmentId === "object" ? job.departmentId?._id : job.departmentId;
     const matchDept = selectedDept === "all" || deptId === selectedDept;
     const matchStatus = selectedStatus === "all" || job.status === selectedStatus;
     const matchPriority = selectedPriority === "all" || job.priority === selectedPriority;
@@ -80,7 +103,9 @@ export default function JobRequestTable({
         <div>
           <h2 className="text-xl font-bold text-gray-900">Yêu cầu tuyển dụng</h2>
           <p className="text-sm text-gray-500 mt-0.5">
-            Trưởng phòng gửi yêu cầu — HR xem xét và phê duyệt
+            {isDeptManager
+              ? "Tạo yêu cầu tuyển dụng cho phòng ban của bạn"
+              : "Trưởng phòng gửi yêu cầu — HR xem xét và phê duyệt"}
           </p>
         </div>
         <button
@@ -122,11 +147,14 @@ export default function JobRequestTable({
       {/* Filters Bar */}
       <div className="flex flex-wrap gap-3">
         <select
-          value={selectedDept}
+          value={isDeptManager && userDeptId ? userDeptId : selectedDept}
           onChange={(e) => setSelectedDept(e.target.value)}
-          className="px-3.5 py-2 border border-gray-200 rounded-xl text-xs font-semibold text-gray-700 focus:outline-none focus:ring-2 focus:ring-indigo-500 bg-white"
+          disabled={isDeptManager}
+          className={`px-3.5 py-2 border border-gray-200 rounded-xl text-xs font-semibold focus:outline-none focus:ring-2 focus:ring-indigo-500 ${
+            isDeptManager ? "bg-gray-100 text-gray-500 cursor-not-allowed" : "bg-white text-gray-700"
+          }`}
         >
-          <option value="all">Tất cả phòng ban</option>
+          {!isDeptManager && <option value="all">Tất cả phòng ban</option>}
           {departments.map((dept) => (
             <option key={dept._id} value={dept._id}>
               {dept.name}
@@ -152,7 +180,7 @@ export default function JobRequestTable({
           className="px-3.5 py-2 border border-gray-200 rounded-xl text-xs font-semibold text-gray-700 focus:outline-none focus:ring-2 focus:ring-indigo-500 bg-white"
         >
           <option value="all">Tất cả ưu tiên</option>
-          <option value={JobPriority.HIGH}>Gập</option>
+          <option value={JobPriority.HIGH}>Gấp</option>
           <option value={JobPriority.MEDIUM}>Bình thường</option>
           <option value={JobPriority.LOW}>Thấp</option>
         </select>
@@ -240,16 +268,16 @@ export default function JobRequestTable({
                       {/* Actions */}
                       <td className="px-6 py-4.5 text-center">
                         <div className="flex items-center justify-center gap-1.5">
-                           <button
+                          <button
                             onClick={() => onView(job)}
                             className="p-1.5 text-gray-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg transition-colors cursor-pointer"
                             title="Xem chi tiết"
                           >
                             <Eye size={16} />
                           </button>
-                          
-                          {/* Review Button (only for PENDING) */}
-                          {job.status === JobStatus.PENDING && (
+
+                          {/* Review Button (ONLY for HR Admin on PENDING jobs) */}
+                          {isHrAdmin && job.status === JobStatus.PENDING && (
                             <button
                               onClick={() => onReview(job)}
                               className="p-1.5 text-emerald-600 hover:text-emerald-700 hover:bg-emerald-50 border border-emerald-100/50 rounded-lg transition-colors cursor-pointer"
@@ -259,8 +287,8 @@ export default function JobRequestTable({
                             </button>
                           )}
 
-                          {/* Promote Button (only for APPROVED) */}
-                          {job.status === JobStatus.APPROVED && (
+                          {/* Promote Button (ONLY for HR Admin on APPROVED jobs) */}
+                          {isHrAdmin && job.status === JobStatus.APPROVED && (
                             <button
                               onClick={() => onPromote(job)}
                               className="p-1.5 text-purple-600 hover:text-purple-700 hover:bg-purple-50 border border-purple-100/50 rounded-lg transition-colors cursor-pointer"
