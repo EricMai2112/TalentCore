@@ -9,6 +9,8 @@ interface EditPositionModalProps {
   position: PositionWithSkills | null;
   departments: DeptOption[];
   isSubmitting: boolean;
+  isDeptManager?: boolean;
+  userDeptId?: string;
 }
 
 export default function EditPositionModal({
@@ -18,6 +20,8 @@ export default function EditPositionModal({
   position,
   departments,
   isSubmitting,
+  isDeptManager = false,
+  userDeptId = "",
 }: EditPositionModalProps) {
   const [name, setName] = useState("");
   const [deptId, setDeptId] = useState("");
@@ -26,9 +30,9 @@ export default function EditPositionModal({
   useEffect(() => {
     if (!isOpen || !position) return;
     setName(position.name);
-    setDeptId(position.departmentId._id);
+    setDeptId(isDeptManager && userDeptId ? userDeptId : position.departmentId._id);
     setError(null);
-  }, [isOpen, position]);
+  }, [isOpen, position, isDeptManager, userDeptId]);
 
   if (!isOpen || !position) return null;
 
@@ -36,9 +40,10 @@ export default function EditPositionModal({
     e.preventDefault();
     setError(null);
     if (!name.trim()) return setError("Tên vị trí không được để trống");
-    if (!deptId) return setError("Vui lòng chọn phòng ban");
+    const finalDeptId = isDeptManager ? userDeptId : deptId;
+    if (!finalDeptId) return setError("Vui lòng chọn phòng ban");
     try {
-      await onSubmit(position._id, name.trim(), deptId);
+      await onSubmit(position._id, name.trim(), finalDeptId);
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : "Đã xảy ra lỗi");
     }
@@ -90,9 +95,12 @@ export default function EditPositionModal({
               Phòng ban <span className="text-red-500">*</span>
             </label>
             <select
-              value={deptId}
+              value={isDeptManager && userDeptId ? userDeptId : deptId}
               onChange={(e) => setDeptId(e.target.value)}
-              className="w-full px-3.5 py-2.5 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 bg-white text-gray-800"
+              disabled={isDeptManager}
+              className={`w-full px-3.5 py-2.5 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 text-gray-800 ${
+                isDeptManager ? "bg-gray-100 text-gray-500 cursor-not-allowed" : "bg-white"
+              }`}
             >
               <option value="">— Chọn phòng ban —</option>
               {departments.map((d) => (

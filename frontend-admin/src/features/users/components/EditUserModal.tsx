@@ -36,11 +36,12 @@ export default function EditUserModal({
 
   useEffect(() => {
     if (!isOpen || !user) return;
+    const deptIdStr = typeof user.departmentId === "object" ? user.departmentId?._id : (user.departmentId ?? "");
     setForm({
       name: user.name,
       phone: user.phone,
       role: user.role,
-      departmentId: user.departmentId ?? "",
+      departmentId: deptIdStr,
     });
     setError(null);
   }, [isOpen, user]);

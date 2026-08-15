@@ -3,19 +3,31 @@
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { Plus, Users, Check, AlertTriangle, Search } from "lucide-react";
-import { User, Department, CreateEmployeeDto, UpdateEmployeeDto, UserStatus } from "../types/user.types";
+import { User, Department, CreateEmployeeDto, UpdateEmployeeDto, UserStatus, UserRole } from "../types/user.types";
 import { userApi } from "../services/user.api";
 import UserRow from "./UserRow";
 import CreateUserModal from "./CreateUserModal";
 import EditUserModal from "./EditUserModal";
+import { useAuth } from "@/src/providers/AuthProvider";
 
 interface UserManagerProps {
   initialUsers: User[];
   initialDepartments: Department[];
 }
 
+const getDeptIdStr = (dept: string | Department | undefined): string => {
+  if (!dept) return "";
+  if (typeof dept === "string") return dept;
+  if (typeof dept === "object" && "_id" in dept && typeof dept._id === "string") return dept._id;
+  return "";
+};
+
 export default function UserManager({ initialUsers, initialDepartments }: UserManagerProps) {
   const router = useRouter();
+  const { user: currentUser } = useAuth();
+
+  const isDeptManager = currentUser?.role === UserRole.DEPARTMENT_MANAGER;
+  const userDeptId = getDeptIdStr(currentUser?.departmentId);
 
   const [users, setUsers] = useState<User[]>(initialUsers);
   const [departments] = useState<Department[]>(initialDepartments);
@@ -116,14 +128,23 @@ export default function UserManager({ initialUsers, initialDepartments }: UserMa
   // Map departmentId → tên phòng ban
   const deptMap = new Map(departments.map((d) => [d._id, d.name]));
 
-  // Lọc theo search
-  const filtered = users.filter((u) => {
+  // Lọc theo role & phòng ban & search query
+  const scopedUsers = users.filter((u) => {
+    if (isDeptManager && userDeptId) {
+      const uDeptId = getDeptIdStr(u.departmentId);
+      if (uDeptId !== userDeptId) return false;
+    }
+    return true;
+  });
+
+  const filtered = scopedUsers.filter((u) => {
     const q = searchQuery.toLowerCase().trim();
     if (!q) return true;
+    const deptIdStr = getDeptIdStr(u.departmentId);
     return (
       u.name.toLowerCase().includes(q) ||
       u.email.toLowerCase().includes(q) ||
-      (deptMap.get(u.departmentId ?? "")?.toLowerCase().includes(q) ?? false)
+      (deptMap.get(deptIdStr)?.toLowerCase().includes(q) ?? false)
     );
   });
 
@@ -147,7 +168,7 @@ export default function UserManager({ initialUsers, initialDepartments }: UserMa
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <h2 className="text-xl font-bold text-gray-900 flex items-center gap-2">
           <Users className="text-indigo-600 shrink-0" size={22} />
-          Quản lý người dùng
+          {isDeptManager ? "Thành viên phòng ban" : "Quản lý người dùng"}
         </h2>
         <button
           onClick={() => setIsCreateOpen(true)}
@@ -165,7 +186,7 @@ export default function UserManager({ initialUsers, initialDepartments }: UserMa
           type="text"
           value={searchQuery}
           onChange={(e) => setSearchQuery(e.target.value)}
-          placeholder="Tìm theo tên, email, phòng ban..."
+          placeholder="Tìm theo tên, email..."
           className="bg-transparent text-sm text-gray-700 placeholder-gray-400 outline-none w-full"
         />
       </div>
@@ -183,14 +204,16 @@ export default function UserManager({ initialUsers, initialDepartments }: UserMa
             <>
               <h3 className="text-base font-semibold text-gray-800">Chưa có người dùng nào</h3>
               <p className="text-sm text-gray-400 mt-1 max-w-sm mx-auto">
-                Tạo tài khoản nhân viên đầu tiên để bắt đầu quản lý quy trình tuyển dụng.
+                {isDeptManager
+                  ? "Chưa có nhân viên nào thuộc phòng ban của bạn."
+                  : "Tạo tài khoản nhân viên đầu tiên để bắt đầu quản lý quy trình tuyển dụng."}
               </p>
               <button
                 onClick={() => setIsCreateOpen(true)}
                 className="mt-4 inline-flex items-center gap-1 px-4 py-2 bg-indigo-50 hover:bg-indigo-100 text-indigo-600 font-semibold text-sm rounded-xl transition-colors border border-indigo-100 cursor-pointer"
               >
                 <Plus size={16} />
-                Tạo người dùng đầu tiên
+                Tạo người dùng mới
               </button>
             </>
           )}
@@ -212,15 +235,18 @@ export default function UserManager({ initialUsers, initialDepartments }: UserMa
                 </tr>
               </thead>
               <tbody>
-                {filtered.map((user) => (
-                  <UserRow
-                    key={user._id}
-                    user={user}
-                    departmentName={deptMap.get(user.departmentId ?? "")}
-                    onEdit={() => handleOpenEdit(user)}
-                    onToggleStatus={() => handleToggleStatus(user)}
-                  />
-                ))}
+                {filtered.map((user) => {
+                  const deptIdStr = getDeptIdStr(user.departmentId);
+                  return (
+                    <UserRow
+                      key={user._id}
+                      user={user}
+                      departmentName={deptMap.get(deptIdStr)}
+                      onEdit={() => handleOpenEdit(user)}
+                      onToggleStatus={() => handleToggleStatus(user)}
+                    />
+                  );
+                })}
               </tbody>
             </table>
           </div>
@@ -230,7 +256,7 @@ export default function UserManager({ initialUsers, initialDepartments }: UserMa
             <p className="text-xs text-gray-400 font-medium">
               Hiển thị{" "}
               <span className="text-gray-600 font-bold">{filtered.length}</span>{" "}
-              / {users.length} người dùng
+              / {scopedUsers.length} người dùng
             </p>
           </div>
         </div>
@@ -243,6 +269,8 @@ export default function UserManager({ initialUsers, initialDepartments }: UserMa
         onSubmit={handleCreateSubmit}
         departments={departments}
         isSubmitting={isSubmitting}
+        isDeptManager={isDeptManager}
+        userDeptId={userDeptId}
       />
 
       <EditUserModal

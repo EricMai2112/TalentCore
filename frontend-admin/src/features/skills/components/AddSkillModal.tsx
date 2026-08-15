@@ -21,6 +21,8 @@ interface AddSkillModalProps {
   // Pre-selected dept (khi bấm "Thêm vị trí" từ DepartmentGroup)
   preselectedDeptId?: string;
   isSubmitting: boolean;
+  isDeptManager?: boolean;
+  userDeptId?: string;
 }
 
 export default function AddSkillModal({
@@ -29,12 +31,11 @@ export default function AddSkillModal({
   onClose,
   onCreateSkill,
   onCreatePosition,
-  onAddSkillToPosition,
   departments,
-  positions,
-  allSkills,
   preselectedDeptId,
   isSubmitting,
+  isDeptManager = false,
+  userDeptId = "",
 }: AddSkillModalProps) {
   const [tab, setTab] = useState<ModalMode>(mode);
 
@@ -45,7 +46,9 @@ export default function AddSkillModal({
 
   // ── Add position form ───────────────────────────────────────────────────
   const [posName, setPosName] = useState("");
-  const [posDeptId, setPosDeptId] = useState(preselectedDeptId ?? "");
+  const [posDeptId, setPosDeptId] = useState(
+    isDeptManager && userDeptId ? userDeptId : (preselectedDeptId ?? "")
+  );
 
   const [error, setError] = useState<string | null>(null);
 
@@ -56,9 +59,9 @@ export default function AddSkillModal({
     setAliasInput("");
     setAliases([]);
     setPosName("");
-    setPosDeptId(preselectedDeptId ?? "");
+    setPosDeptId(isDeptManager && userDeptId ? userDeptId : (preselectedDeptId ?? ""));
     setError(null);
-  }, [isOpen, mode, preselectedDeptId]);
+  }, [isOpen, mode, preselectedDeptId, isDeptManager, userDeptId]);
 
   if (!isOpen) return null;
 
@@ -83,8 +86,9 @@ export default function AddSkillModal({
         await onCreateSkill({ name: skillName.trim(), aliases });
       } else {
         if (!posName.trim()) return setError("Tên vị trí không được để trống");
-        if (!posDeptId) return setError("Vui lòng chọn phòng ban");
-        await onCreatePosition(posName.trim(), posDeptId);
+        const finalDeptId = isDeptManager ? userDeptId : posDeptId;
+        if (!finalDeptId) return setError("Vui lòng chọn phòng ban");
+        await onCreatePosition(posName.trim(), finalDeptId);
       }
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : "Đã xảy ra lỗi");
@@ -227,9 +231,12 @@ export default function AddSkillModal({
                   Phòng ban <span className="text-red-500">*</span>
                 </label>
                 <select
-                  value={posDeptId}
+                  value={isDeptManager && userDeptId ? userDeptId : posDeptId}
                   onChange={(e) => setPosDeptId(e.target.value)}
-                  className="w-full px-3.5 py-2.5 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 bg-white text-gray-800"
+                  disabled={isDeptManager}
+                  className={`w-full px-3.5 py-2.5 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 text-gray-800 ${
+                    isDeptManager ? "bg-gray-100 text-gray-500 cursor-not-allowed" : "bg-white"
+                  }`}
                 >
                   <option value="">— Chọn phòng ban —</option>
                   {departments.map((d) => (
