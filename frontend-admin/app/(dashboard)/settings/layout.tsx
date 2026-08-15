@@ -1,19 +1,39 @@
 'use client'
 
 import Link from 'next/link'
-import { usePathname } from 'next/navigation'
+import { usePathname, useRouter } from 'next/navigation'
+import { useEffect } from 'react'
 import { Users, Building2, GitBranch, Zap, Mail } from 'lucide-react'
+import { useAuth } from '@/src/providers/AuthProvider'
+import { UserRole } from '@/src/features/users/types/user.types'
 
-const tabs = [
-  { label: 'Người dùng', href: '/settings/users', icon: Users },
-  { label: 'Phòng ban', href: '/settings/departments', icon: Building2 },
-  { label: 'Pipeline', href: '/settings/pipeline', icon: GitBranch },
-  { label: 'Kỹ năng', href: '/settings/skills', icon: Zap },
-  { label: 'Email & AI', href: '/settings/email-ai', icon: Mail }
+const allTabs = [
+  { label: 'Người dùng', href: '/settings/users', icon: Users, roles: [UserRole.HR_ADMIN, UserRole.DEPARTMENT_MANAGER] },
+  { label: 'Phòng ban', href: '/settings/departments', icon: Building2, roles: [UserRole.HR_ADMIN] },
+  { label: 'Pipeline', href: '/settings/pipeline', icon: GitBranch, roles: [UserRole.HR_ADMIN] },
+  { label: 'Kỹ năng', href: '/settings/skills', icon: Zap, roles: [UserRole.HR_ADMIN, UserRole.DEPARTMENT_MANAGER] },
+  { label: 'Email & AI', href: '/settings/email-ai', icon: Mail, roles: [UserRole.HR_ADMIN] }
 ]
 
 export default function SettingsLayout({ children }: { children: React.ReactNode }) {
+  const { user } = useAuth()
   const pathname = usePathname()
+  const router = useRouter()
+
+  const isDeptManager = user?.role === UserRole.DEPARTMENT_MANAGER
+
+  // Filter tabs visible to current user's role
+  const visibleTabs = allTabs.filter(tab => !user || tab.roles.includes(user.role))
+
+  // Redirect DEPARTMENT_MANAGER away from hidden settings tabs if accessed directly via URL
+  useEffect(() => {
+    if (isDeptManager) {
+      const isAllowed = visibleTabs.some(tab => pathname === tab.href || pathname.startsWith(tab.href + '/'))
+      if (!isAllowed) {
+        router.replace('/settings/users')
+      }
+    }
+  }, [isDeptManager, pathname, visibleTabs, router])
 
   return (
     <div className="min-h-full">
@@ -21,7 +41,9 @@ export default function SettingsLayout({ children }: { children: React.ReactNode
       <div className="mb-6">
         <h1 className="text-2xl font-bold text-gray-900">Cấu hình hệ thống</h1>
         <p className="mt-1 text-sm text-gray-500">
-          Quản lý nhân viên, phòng ban, quy trình, Kỹ năng và mẫu email
+          {isDeptManager
+            ? 'Quản lý danh sách nhân viên và danh mục kỹ năng thuộc phòng ban'
+            : 'Quản lý nhân viên, phòng ban, quy trình, Kỹ năng và mẫu email'}
         </p>
       </div>
 
@@ -30,7 +52,7 @@ export default function SettingsLayout({ children }: { children: React.ReactNode
         {/* Tabs */}
         <div className="border-b border-gray-100 px-4 overflow-x-auto">
           <nav className="flex gap-1 min-w-max sm:min-w-0" aria-label="Settings tabs">
-            {tabs.map((tab) => {
+            {visibleTabs.map((tab) => {
               const isActive = pathname === tab.href || pathname.startsWith(tab.href + '/')
               const Icon = tab.icon
 

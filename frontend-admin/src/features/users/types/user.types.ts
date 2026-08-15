@@ -16,7 +16,7 @@ export interface User {
   phone: string;
   role: UserRole;
   status: UserStatus;
-  departmentId?: string;
+  departmentId?: string | Department;
   createdAt: string;
   updatedAt: string;
 }

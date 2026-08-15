@@ -8,6 +8,8 @@ interface CreateUserModalProps {
   onSubmit: (data: CreateEmployeeDto) => Promise<void>;
   departments: Department[];
   isSubmitting: boolean;
+  isDeptManager?: boolean;
+  userDeptId?: string;
 }
 
 const ROLE_OPTIONS = [
@@ -16,31 +18,37 @@ const ROLE_OPTIONS = [
   UserRole.EMPLOYEE,
 ];
 
-const emptyForm = (): CreateEmployeeDto => ({
-  name: "",
-  email: "",
-  phone: "",
-  role: UserRole.EMPLOYEE,
-  departmentId: "",
-});
-
 export default function CreateUserModal({
   isOpen,
   onClose,
   onSubmit,
   departments,
   isSubmitting,
+  isDeptManager = false,
+  userDeptId = "",
 }: CreateUserModalProps) {
-  const [form, setForm] = useState<CreateEmployeeDto>(emptyForm());
+  const [form, setForm] = useState<CreateEmployeeDto>({
+    name: "",
+    email: "",
+    phone: "",
+    role: UserRole.EMPLOYEE,
+    departmentId: isDeptManager ? userDeptId : "",
+  });
   const [error, setError] = useState<string | null>(null);
 
-  // Reset form mỗi lần mở
+  // Reset form mỗi lần mở modal
   useEffect(() => {
     if (isOpen) {
-      setForm(emptyForm());
+      setForm({
+        name: "",
+        email: "",
+        phone: "",
+        role: UserRole.EMPLOYEE,
+        departmentId: isDeptManager ? userDeptId : "",
+      });
       setError(null);
     }
-  }, [isOpen]);
+  }, [isOpen, isDeptManager, userDeptId]);
 
   if (!isOpen) return null;
 
@@ -63,9 +71,11 @@ export default function CreateUserModal({
       name: form.name.trim(),
       email: form.email.trim(),
       phone: form.phone.trim(),
-      role: form.role,
+      role: isDeptManager ? UserRole.EMPLOYEE : form.role,
     };
-    if (form.departmentId) payload.departmentId = form.departmentId;
+
+    const finalDeptId = isDeptManager ? userDeptId : form.departmentId;
+    if (finalDeptId) payload.departmentId = finalDeptId;
 
     try {
       await onSubmit(payload);
@@ -160,9 +170,12 @@ export default function CreateUserModal({
               </label>
               <select
                 name="role"
-                value={form.role}
+                value={isDeptManager ? UserRole.EMPLOYEE : form.role}
                 onChange={handleChange}
-                className="w-full px-3.5 py-2.5 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent bg-white text-gray-800"
+                disabled={isDeptManager}
+                className={`w-full px-3.5 py-2.5 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent text-gray-800 ${
+                  isDeptManager ? "bg-gray-100 text-gray-500 cursor-not-allowed" : "bg-white"
+                }`}
               >
                 {ROLE_OPTIONS.map((role) => (
                   <option key={role} value={role}>
@@ -179,9 +192,12 @@ export default function CreateUserModal({
               </label>
               <select
                 name="departmentId"
-                value={form.departmentId ?? ""}
+                value={isDeptManager ? userDeptId : (form.departmentId ?? "")}
                 onChange={handleChange}
-                className="w-full px-3.5 py-2.5 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent bg-white text-gray-800"
+                disabled={isDeptManager}
+                className={`w-full px-3.5 py-2.5 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent text-gray-800 ${
+                  isDeptManager ? "bg-gray-100 text-gray-500 cursor-not-allowed" : "bg-white"
+                }`}
               >
                 <option value="">— Chưa phân công —</option>
                 {departments.map((dept) => (

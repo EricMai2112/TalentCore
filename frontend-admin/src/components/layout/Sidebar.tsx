@@ -153,7 +153,7 @@ export default function Sidebar() {
 
       {/* Bottom: Settings + Collapse */}
       <div className="px-2 py-3 border-t border-white/10 flex flex-col gap-1">
-        {user?.role === UserRole.HR_ADMIN && (
+        {(user?.role === UserRole.HR_ADMIN || user?.role === UserRole.DEPARTMENT_MANAGER) && (
           <div className="relative group">
             <Link
               href="/settings"
