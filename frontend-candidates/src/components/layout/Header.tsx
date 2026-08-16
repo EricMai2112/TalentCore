@@ -79,7 +79,7 @@ export default function Header() {
 
                   {/* Nút Hồ sơ của tôi */}
                   <Link
-                    href="/profile"
+                    href="/user/profile"
                     onClick={() => setDropdownOpen(false)}
                     className="w-full flex items-center gap-2 px-4 py-2.5 text-xs font-semibold text-slate-200 hover:bg-slate-800/70 hover:text-blue-400 transition-colors"
                   >

@@ -9,6 +9,7 @@ import { SkillsModule } from './modules/skills/skills.module';
 import { PositionsModule } from './modules/positions/positions.module';
 import { DepartmentsModule } from './modules/departments/departments.module';
 import { JobDescriptionModule } from './modules/job-description/job-description.module';
+import { CandidatesModule } from './modules/candidates/candidates.module';
 
 @Module({
   imports: [
@@ -28,6 +29,7 @@ import { JobDescriptionModule } from './modules/job-description/job-description.
     PositionsModule,
     DepartmentsModule,
     JobDescriptionModule,
+    CandidatesModule,
   ],
   controllers: [],
   providers: [],
