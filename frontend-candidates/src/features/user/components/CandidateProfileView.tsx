@@ -25,7 +25,7 @@ import {
   Link as LinkIcon,
 } from "lucide-react";
 import { useAuth } from "@/src/providers/AuthProvider";
-import { CandidateProfile, EducationItem, ExperienceItem } from "../types/profile.types";
+import { CandidateProfile, CertificateItem, CustomSection, EducationItem, ExperienceItem, ProjectItem } from "../types/profile.types";
 import { profileApi } from "../services/user.api";
 import EditCareerObjectiveModal from "./EditCareerObjectiveModal";
 import EditPersonalInfoModal from "./EditPersonalInfoModal";
@@ -33,6 +33,10 @@ import EditEducationModal from "./EditEducationModal";
 import EditSkillsModal from "./EditSkillsModal";
 import EditExperienceModal from "./EditExperienceModal";
 import EditExpSummaryModal from "./EditExpSummaryModal";
+import EditProjectModal from "./EditProjectModal";
+import EditCertificationModal from "./EditCertificationModal";
+import EditLanguageModal from "./EditLanguageModal";
+import EditCustomSectionModal from "./EditCustomSectionModal";
 
 export default function CandidateProfileView() {
   const { user: authUser } = useAuth();
@@ -47,8 +51,17 @@ export default function CandidateProfileView() {
   const [isExpModalOpen, setIsExpModalOpen] = useState(false);
   const [selectedExp, setSelectedExp] = useState<ExperienceItem | null>(null);
   const [selectedExpIndex, setSelectedExpIndex] = useState<number | null>(null);
-
+  const [isProjectModalOpen, setIsProjectModalOpen] = useState(false);
+  const [selectedProject, setSelectedProject] = useState<ProjectItem | null>(null);
+  const [selectedProjectIndex, setSelectedProjectIndex] = useState<number | null>(null);
+  const [isCertModalOpen, setIsCertModalOpen] = useState(false);
+  const [selectedCert, setSelectedCert] = useState<CertificateItem | null>(null);
+  const [selectedCertIndex, setSelectedCertIndex] = useState<number | null>(null);
+  const [isLangModalOpen, setIsLangModalOpen] = useState(false);
   const [isExpSummaryModalOpen, setIsExpSummaryModalOpen] = useState(false);
+  const [isCustomSectionModalOpen, setIsCustomSectionModalOpen] = useState(false);
+  const [selectedCustomSection, setSelectedCustomSection] = useState<CustomSection | null>(null);
+  const [selectedSectionIndex, setSelectedSectionIndex] = useState<number | null>(null);
 
   useEffect(() => {
     const loadProfile = async () => {
@@ -139,6 +152,40 @@ export default function CandidateProfileView() {
     setSelectedExp(exp);
     setSelectedExpIndex(index);
     setIsExpModalOpen(true);
+  };
+  const handleOpenAddProject = () => {
+  setSelectedProject(null);
+  setSelectedProjectIndex(null);
+  setIsProjectModalOpen(true);
+  };
+
+  const handleOpenEditProject = (proj: ProjectItem, index: number) => {
+    setSelectedProject(proj);
+    setSelectedProjectIndex(index);
+    setIsProjectModalOpen(true);
+  };
+
+  const handleOpenAddCert = () => {
+  setSelectedCert(null);
+  setSelectedCertIndex(null);
+  setIsCertModalOpen(true);
+  };
+
+  const handleOpenEditCert = (cert: CertificateItem, index: number) => {
+    setSelectedCert(cert);
+    setSelectedCertIndex(index);
+    setIsCertModalOpen(true);
+  };
+  const handleOpenAddCustomSection = () => {
+  setSelectedCustomSection(null);
+  setSelectedSectionIndex(null);
+  setIsCustomSectionModalOpen(true);
+  };
+
+  const handleOpenEditCustomSection = (sec: CustomSection, index: number) => {
+    setSelectedCustomSection(sec);
+    setSelectedSectionIndex(index);
+    setIsCustomSectionModalOpen(true);
   };
 
   return (
@@ -596,38 +643,6 @@ export default function CandidateProfileView() {
           )}
         </div>
 
-        {/* Cấp bậc & Số năm kinh nghiệm */}
-        <div className="mt-6 pt-5 border-t border-slate-100 grid grid-cols-1 sm:grid-cols-2 gap-4 text-xs">
-          <div className="flex items-center justify-between py-1">
-            <span className="font-bold text-slate-700">Số năm kinh nghiệm:</span>
-            <span className="text-slate-600 font-medium flex items-center gap-2">
-              {profile?.yearsOfExperience ? `${profile.yearsOfExperience} năm` : "Chưa có kinh nghiệm (0 năm)"}
-              <button
-                type="button"
-                onClick={() => setIsExpSummaryModalOpen(true)}
-                className="text-blue-600 hover:text-blue-700 cursor-pointer p-0.5"
-                title="Chỉnh sửa số năm kinh nghiệm"
-              >
-                <Pencil size={13} />
-              </button>
-            </span>
-          </div>
-
-          <div className="flex items-center justify-between py-1">
-            <span className="font-bold text-slate-700">Cấp bậc hiện tại:</span>
-            <span className="text-slate-600 font-medium flex items-center gap-2">
-              {profile?.currentLevel || "Intern / Fresher"}
-              <button
-                type="button"
-                onClick={() => setIsExpSummaryModalOpen(true)}
-                className="text-blue-600 hover:text-blue-700 cursor-pointer p-0.5"
-                title="Chỉnh sửa cấp bậc"
-              >
-                <Pencil size={13} />
-              </button>
-            </span>
-          </div>
-        </div>
       </section>
       <EditExperienceModal
         isOpen={isExpModalOpen}
@@ -650,7 +665,7 @@ export default function CandidateProfileView() {
         }}
       />
 
-      {/* 5. DỰ ÁN THỰC TẾ (CÓ THỜI GIAN & TECHNOLOGIES LIỆT KÊ Ở DƯỚI) */}
+      {/* PROJECTS */}
       <section className="bg-white rounded-2xl p-6 sm:p-8 shadow-xs border border-slate-200/90">
         <div className="flex items-start justify-between gap-4">
           <div className="flex items-start gap-4">
@@ -661,7 +676,7 @@ export default function CandidateProfileView() {
               <h2 className="text-xl font-bold text-slate-900">Dự án thực tế</h2>
               {hasProjects ? (
                 <span className="inline-flex items-center gap-1 text-xs font-semibold text-emerald-600 mt-1">
-                  <CheckCircle2 size={13} /> Đã cập nhật ({profile?.projects.length} dự án)
+                  <CheckCircle2 size={13} /> Đã cập nhật
                 </span>
               ) : (
                 <span className="text-xs font-bold text-slate-400 mt-1 block">
@@ -674,6 +689,7 @@ export default function CandidateProfileView() {
           <div className="flex items-center gap-3 shrink-0">
             <button
               type="button"
+              onClick={handleOpenAddProject}
               className="inline-flex items-center gap-1.5 px-4 py-2 border border-blue-600 text-blue-600 text-xs font-bold rounded-full hover:bg-blue-50 transition-all cursor-pointer"
             >
               <Plus size={15} />
@@ -690,6 +706,7 @@ export default function CandidateProfileView() {
               </p>
               <button
                 type="button"
+                onClick={handleOpenAddProject}
                 className="mt-3 inline-flex items-center gap-1 text-xs font-bold text-blue-600 hover:underline uppercase tracking-wider cursor-pointer"
               >
                 <Plus size={14} />
@@ -714,7 +731,7 @@ export default function CandidateProfileView() {
                       )}
                     </div>
 
-                    {/* Thời gian thực hiện dự án */}
+                    {/* Thời gian thực hiện */}
                     {(proj.startDate || proj.endDate) && (
                       <p className="text-xs text-slate-400 font-medium flex items-center gap-1.5">
                         <Calendar size={13} className="text-slate-400" />
@@ -736,14 +753,14 @@ export default function CandidateProfileView() {
                       </div>
                     )}
 
-                    {/* Mô tả chi tiết */}
+                    {/* Mô tả */}
                     {proj.description && (
                       <p className="text-xs text-slate-600 leading-relaxed whitespace-pre-line pt-0.5">
                         {proj.description}
                       </p>
                     )}
 
-                    {/* DANH SÁCH CÔNG NGHỆ (TECHNOLOGIES) LIỆT KÊ Ở DƯỚI */}
+                    {/* Danh sách công nghệ */}
                     {proj.technologies && proj.technologies.length > 0 && (
                       <div className="pt-2 border-t border-slate-200/60 mt-3">
                         <span className="text-[11px] font-bold text-slate-500 block mb-1.5 uppercase tracking-wider">
@@ -765,6 +782,7 @@ export default function CandidateProfileView() {
 
                   <button
                     type="button"
+                    onClick={() => handleOpenEditProject(proj, index)}
                     className="p-1.5 text-slate-400 hover:text-blue-600 rounded-lg hover:bg-white transition-all cursor-pointer shrink-0"
                   >
                     <Pencil size={15} />
@@ -775,10 +793,20 @@ export default function CandidateProfileView() {
           )}
         </div>
       </section>
+      <EditProjectModal
+        isOpen={isProjectModalOpen}
+        onClose={() => setIsProjectModalOpen(false)}
+        initialData={selectedProject}
+        currentIndex={selectedProjectIndex}
+        allProjects={profile?.projects || []}
+        onSuccess={(updatedProjects) => {
+          setProfile((prev) => (prev ? { ...prev, projects: updatedProjects } : null));
+        }}
+      />
 
-      {/* 7. CHỨNG CHỈ & NGOẠI NGỮ */}
+      {/* CERTIFICATES & LANGUAGES */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        {/* CHỨNG CHỈ */}
+        {/* CERTIFICATES */}
         <section className="bg-white rounded-2xl p-6 sm:p-7 shadow-xs border border-slate-200/90 flex flex-col justify-between">
           <div>
             <div className="flex items-start justify-between gap-4 mb-4">
@@ -788,11 +816,12 @@ export default function CandidateProfileView() {
                 </div>
                 <div>
                   <h2 className="text-lg font-bold text-slate-900">Chứng chỉ</h2>
-                  <span className="text-[11px] text-slate-500">IELTS, AWS, Microsoft...</span>
+                  <span className="text-[11px] text-slate-500">TOEIC, IELTS, AWS...</span>
                 </div>
               </div>
               <button
                 type="button"
+                onClick={handleOpenAddCert}
                 className="p-1.5 text-blue-600 hover:bg-blue-50 rounded-lg cursor-pointer transition-colors"
                 title="Thêm chứng chỉ"
               >
@@ -805,6 +834,7 @@ export default function CandidateProfileView() {
                 <p className="text-xs text-slate-600 font-medium">Chưa có chứng chỉ</p>
                 <button
                   type="button"
+                  onClick={handleOpenAddCert}
                   className="mt-2 inline-flex items-center gap-1 text-[11px] font-bold text-blue-600 hover:underline uppercase tracking-wider cursor-pointer"
                 >
                   <Plus size={13} />
@@ -814,16 +844,44 @@ export default function CandidateProfileView() {
             ) : (
               <div className="space-y-2.5">
                 {profile?.certifications?.map((cert, index) => (
-                  <div key={index} className="p-3 bg-slate-50/80 border border-slate-100 rounded-xl text-xs space-y-0.5">
-                    <p className="font-bold text-slate-800">{cert.name}</p>
-                    <p className="text-slate-500">{cert.organization} {cert.scoreOrLevel && `• ${cert.scoreOrLevel}`}</p>
-                    {cert.issueDate && <p className="text-slate-400 text-[11px]">{cert.issueDate}</p>}
+                  <div
+                    key={index}
+                    className="p-3 bg-slate-50/80 border border-slate-100 rounded-xl text-xs flex justify-between items-start gap-2 hover:border-slate-200 transition-colors"
+                  >
+                    <div className="space-y-0.5">
+                      <p className="font-bold text-slate-800">{cert.name}</p>
+                      <p className="text-slate-500">
+                        {cert.organization} {cert.scoreOrLevel && `• ${cert.scoreOrLevel}`}
+                      </p>
+                      {cert.issueDate && (
+                        <p className="text-slate-400 text-[11px]">{cert.issueDate}</p>
+                      )}
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => handleOpenEditCert(cert, index)}
+                      className="p-1 text-slate-400 hover:text-blue-600 rounded-md hover:bg-white transition-all cursor-pointer shrink-0"
+                    >
+                      <Pencil size={13} />
+                    </button>
                   </div>
                 ))}
               </div>
             )}
           </div>
         </section>
+        <EditCertificationModal
+          isOpen={isCertModalOpen}
+          onClose={() => setIsCertModalOpen(false)}
+          initialData={selectedCert}
+          currentIndex={selectedCertIndex}
+          allCertifications={profile?.certifications || []}
+          onSuccess={(updatedCertifications) => {
+            setProfile((prev) =>
+              prev ? { ...prev, certifications: updatedCertifications } : null
+            );
+          }}
+        />
 
         {/* NGOẠI NGỮ */}
         <section className="bg-white rounded-2xl p-6 sm:p-7 shadow-xs border border-slate-200/90 flex flex-col justify-between">
@@ -840,10 +898,11 @@ export default function CandidateProfileView() {
               </div>
               <button
                 type="button"
+                onClick={() => setIsLangModalOpen(true)}
                 className="p-1.5 text-blue-600 hover:bg-blue-50 rounded-lg cursor-pointer transition-colors"
-                title="Thêm ngoại ngữ"
+                title="Chỉnh sửa ngoại ngữ"
               >
-                <Plus size={18} />
+                {hasLanguages ? <Pencil size={16} /> : <Plus size={18} />}
               </button>
             </div>
 
@@ -852,6 +911,7 @@ export default function CandidateProfileView() {
                 <p className="text-xs text-slate-600 font-medium">Chưa có ngoại ngữ</p>
                 <button
                   type="button"
+                  onClick={() => setIsLangModalOpen(true)}
                   className="mt-2 inline-flex items-center gap-1 text-[11px] font-bold text-blue-600 hover:underline uppercase tracking-wider cursor-pointer"
                 >
                   <Plus size={13} />
@@ -861,9 +921,12 @@ export default function CandidateProfileView() {
             ) : (
               <div className="space-y-2.5">
                 {profile?.languages?.map((lang, index) => (
-                  <div key={index} className="p-3 bg-slate-50/80 border border-slate-100 rounded-xl text-xs flex items-center justify-between">
+                  <div
+                    key={index}
+                    className="p-3 bg-slate-50/80 border border-slate-100 rounded-xl text-xs flex items-center justify-between"
+                  >
                     <span className="font-bold text-slate-800">{lang.language}</span>
-                    <span className="text-blue-600 font-semibold px-2 py-0.5 bg-blue-50 rounded-md">
+                    <span className="text-blue-600 font-semibold px-2.5 py-0.5 bg-blue-50 rounded-md">
                       {lang.proficiency || "Cơ bản"}
                     </span>
                   </div>
@@ -872,66 +935,141 @@ export default function CandidateProfileView() {
             )}
           </div>
         </section>
+        <EditLanguageModal
+          isOpen={isLangModalOpen}
+          onClose={() => setIsLangModalOpen(false)}
+          initialLanguages={profile?.languages || []}
+          onSuccess={(updatedLanguages) => {
+            setProfile((prev) =>
+              prev ? { ...prev, languages: updatedLanguages } : null
+            );
+          }}
+        />
       </div>
 
-      {/* 8. CÁC MỤC BỔ SUNG & TÙY CHỈNH */}
-      <section className="bg-white rounded-2xl p-6 sm:p-8 shadow-xs border border-slate-200/90">
-        <div className="flex items-start justify-between gap-4">
-          <div className="flex items-start gap-4">
-            <div className="p-3 bg-blue-50 text-blue-600 rounded-2xl shrink-0">
-              <FileText className="w-7 h-7" />
-            </div>
-            <div>
-              <h2 className="text-xl font-bold text-slate-900">Mục bổ sung & Tùy chỉnh</h2>
-              <p className="text-xs text-slate-500 mt-1">
-                Giải thưởng, Hoạt động ngoại khóa, Tình nguyện, Sở thích cá nhân...
-              </p>
-            </div>
-          </div>
-
-          <button
-            type="button"
-            className="inline-flex items-center gap-1.5 px-4 py-2 border border-blue-600 text-blue-600 text-xs font-bold rounded-full hover:bg-blue-50 transition-all cursor-pointer shrink-0"
-          >
-            <Plus size={15} />
-            <span>Thêm mục khác</span>
-          </button>
-        </div>
-
-        <div className="mt-6">
-          {!hasCustomSections ? (
-            <div className="border border-dashed border-slate-300 rounded-xl p-6 bg-slate-50/60 text-left">
-              <p className="text-sm text-slate-600 font-medium">
-                Thêm các thành tích, giải thưởng hoặc hoạt động ngoại khóa để hồ sơ nổi bật hơn
-              </p>
-              <button
-                type="button"
-                className="mt-3 inline-flex items-center gap-1 text-xs font-bold text-blue-600 hover:underline uppercase tracking-wider cursor-pointer"
-              >
-                <Plus size={14} />
-                <span>THÊM MỤC MỚI</span>
-              </button>
-            </div>
-          ) : (
-            <div className="space-y-4">
-              {profile?.customSections.map((section, sIdx) => (
-                <div key={sIdx} className="border border-slate-200 rounded-xl p-4 bg-slate-50/50">
-                  <h3 className="text-sm font-bold text-slate-800 mb-2">{section.sectionTitle}</h3>
-                  <div className="space-y-2">
-                    {section.items.map((item, iIdx) => (
-                      <div key={iIdx} className="text-xs p-3 bg-white border border-slate-100 rounded-lg">
-                        <p className="font-bold text-slate-800">{item.title}</p>
-                        {item.subtitle && <p className="text-slate-600">{item.subtitle}</p>}
-                        {item.description && <p className="text-slate-500 mt-1">{item.description}</p>}
-                      </div>
-                    ))}
+      {/* CUSTOMSECTIONS */}
+      <div className="space-y-6">
+        {hasCustomSections ? (
+          profile?.customSections.map((section, sIdx) => (
+            <section
+              key={sIdx}
+              className="bg-white rounded-2xl p-6 sm:p-8 shadow-xs border border-slate-200/90"
+            >
+              <div className="flex items-start justify-between gap-4 mb-5">
+                <div className="flex items-center gap-3">
+                  <div className="p-2.5 bg-blue-50 text-blue-600 rounded-xl">
+                    <FileText size={20} />
+                  </div>
+                  <div>
+                    <h2 className="text-xl font-bold text-slate-900">
+                      {section.sectionTitle}
+                    </h2>
+                    <span className="text-xs text-slate-400">
+                      {section.items.length} mục
+                    </span>
                   </div>
                 </div>
-              ))}
+                <button
+                  type="button"
+                  onClick={() => handleOpenEditCustomSection(section, sIdx)}
+                  className="inline-flex items-center gap-1.5 px-4 py-2 border border-blue-600 text-blue-600 text-xs font-bold rounded-full hover:bg-blue-50 transition-all cursor-pointer"
+                >
+                  <Pencil size={13} />
+                  <span>Chỉnh sửa</span>
+                </button>
+              </div>
+
+              <div className="space-y-3">
+                {section.items.map((item, iIdx) => (
+                  <div
+                    key={iIdx}
+                    className="p-4 rounded-xl border border-slate-100 bg-slate-50/70 space-y-1 text-xs"
+                  >
+                    <div className="flex flex-wrap items-center justify-between gap-2">
+                      <h4 className="text-sm font-bold text-slate-800">
+                        {item.title}
+                      </h4>
+                      {item.date && (
+                        <span className="text-slate-400 font-medium">
+                          {item.date}
+                        </span>
+                      )}
+                    </div>
+                    {item.subtitle && (
+                      <p className="text-slate-600 font-semibold">{item.subtitle}</p>
+                    )}
+                    {item.description && (
+                      <p className="text-slate-500 leading-relaxed pt-1 whitespace-pre-line">
+                        {item.description}
+                      </p>
+                    )}
+                  </div>
+                ))}
+              </div>
+            </section>
+          ))
+        ) : (
+          <section className="bg-white rounded-2xl p-6 sm:p-8 shadow-xs border border-slate-200/90">
+            <div className="flex items-start justify-between gap-4">
+              <div className="flex items-start gap-4">
+                <div className="p-3 bg-blue-50 text-blue-600 rounded-2xl shrink-0">
+                  <FileText className="w-7 h-7" />
+                </div>
+                <div>
+                  <h2 className="text-xl font-bold text-slate-900">
+                    Mục bổ sung & Tùy chỉnh
+                  </h2>
+                  <p className="text-xs text-slate-500 mt-1">
+                    Giải thưởng, Hoạt động ngoại khóa, Tình nguyện, Sở thích cá nhân...
+                  </p>
+                </div>
+              </div>
             </div>
-          )}
-        </div>
-      </section>
+
+            <div className="mt-6">
+              <div className="border border-dashed border-slate-300 rounded-xl p-6 bg-slate-50/60 text-left">
+                <p className="text-sm text-slate-600 font-medium">
+                  Thêm các thành tích, giải thưởng hoặc hoạt động ngoại khóa để hồ sơ nổi bật hơn
+                </p>
+                <button
+                  type="button"
+                  onClick={handleOpenAddCustomSection}
+                  className="mt-3 inline-flex items-center gap-1 text-xs font-bold text-blue-600 hover:underline uppercase tracking-wider cursor-pointer"
+                >
+                  <Plus size={14} />
+                  <span>THÊM MỤC MỚI</span>
+                </button>
+              </div>
+            </div>
+          </section>
+        )}
+
+        {/* Nút thêm nhóm tùy chỉnh mới khi đã có sẵn danh mục */}
+        {hasCustomSections && (
+          <div className="text-center pt-2">
+            <button
+              type="button"
+              onClick={handleOpenAddCustomSection}
+              className="inline-flex items-center gap-2 px-6 py-3 border border-slate-300 hover:border-blue-500 bg-white text-slate-700 hover:text-blue-600 text-xs font-bold rounded-xl shadow-xs transition-all cursor-pointer"
+            >
+              <Plus size={16} />
+              <span>Thêm nhóm mục khác (Giải thưởng, Hoạt động ngoại khóa...)</span>
+            </button>
+          </div>
+        )}
+      </div>
+      <EditCustomSectionModal
+        isOpen={isCustomSectionModalOpen}
+        onClose={() => setIsCustomSectionModalOpen(false)}
+        initialData={selectedCustomSection}
+        sectionIndex={selectedSectionIndex}
+        allCustomSections={profile?.customSections || []}
+        onSuccess={(updatedCustomSections) => {
+          setProfile((prev) =>
+            prev ? { ...prev, customSections: updatedCustomSections } : null
+          );
+        }}
+      />
 
     </div>
   );
