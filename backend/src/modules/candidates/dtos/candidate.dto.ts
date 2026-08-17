@@ -26,6 +26,10 @@ export class UpdateCandidateProfileDto {
   address?: string;
 
   @IsOptional()
+  @IsString()
+  phone?: string;
+
+  @IsOptional()
   @IsArray()
   socialLinks?: Array<{ platform: string; url: string }>;
 
