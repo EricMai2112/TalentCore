@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { X, Plus, Trash2, Check, Loader2 } from "lucide-react";
+import { X, Plus, Trash2, Check, Loader2, Phone } from "lucide-react";
 import { CandidateProfile, SocialLinkItem } from "../types/profile.types";
 import { profileApi } from "../services/user.api";
 
@@ -9,7 +9,8 @@ interface EditPersonalInfoModalProps {
   isOpen: boolean;
   onClose: () => void;
   profile: CandidateProfile | null;
-  onSuccess: (updatedData: Partial<CandidateProfile>) => void;
+  defaultPhone?: string;
+  onSuccess: (updatedData: Partial<CandidateProfile> & { phone?: string }) => void;
 }
 
 const PLATFORM_OPTIONS = [
@@ -26,9 +27,11 @@ export default function EditPersonalInfoModal({
   isOpen,
   onClose,
   profile,
+  defaultPhone = "",
   onSuccess,
 }: EditPersonalInfoModalProps) {
   const [headline, setHeadline] = useState("");
+  const [phone, setPhone] = useState("");
   const [address, setAddress] = useState("");
   const [summary, setSummary] = useState("");
   const [socialLinks, setSocialLinks] = useState<SocialLinkItem[]>([]);
@@ -40,8 +43,13 @@ export default function EditPersonalInfoModal({
       setAddress(profile.address || "");
       setSummary(profile.summary || "");
       setSocialLinks(profile.socialLinks ? [...profile.socialLinks] : []);
+
+      // Lấy số điện thoại từ profile.userId hoặc fallback defaultPhone
+      const existingPhone =
+        typeof profile.userId === "object" ? profile.userId?.phone : "";
+      setPhone(existingPhone || defaultPhone || "");
     }
-  }, [profile, isOpen]);
+  }, [profile, isOpen, defaultPhone]);
 
   useEffect(() => {
     if (isOpen) {
@@ -83,8 +91,9 @@ export default function EditPersonalInfoModal({
     try {
       const cleanSocialLinks = socialLinks.filter((s) => s.url.trim() !== "");
 
-      const payload: Partial<CandidateProfile> = {
+      const payload: any = {
         headline: headline.trim(),
+        phone: phone.trim(),
         address: address.trim(),
         summary: summary.trim(),
         socialLinks: cleanSocialLinks,
@@ -101,7 +110,7 @@ export default function EditPersonalInfoModal({
   };
 
   return (
-    <div 
+    <div
       role="dialog"
       aria-modal="true"
       className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4"
@@ -120,7 +129,7 @@ export default function EditPersonalInfoModal({
               Chỉnh sửa thông tin cá nhân & Giới thiệu
             </h3>
             <p className="text-xs text-slate-500 mt-0.5">
-              Cập nhật chức danh, địa chỉ, phần tóm tắt bản thân và các liên kết mạng xã hội
+              Cập nhật chức danh, số điện thoại, địa chỉ và liên kết mạng xã hội
             </p>
           </div>
           <button
@@ -137,7 +146,7 @@ export default function EditPersonalInfoModal({
           {/* Chức danh nghề nghiệp (Headline) */}
           <div className="space-y-1.5">
             <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider">
-              Chức danh nghề nghiệp <span className="text-rose-500">*</span>
+              Chức danh nghề nghiệp (Headline) <span className="text-rose-500">*</span>
             </label>
             <input
               type="text"
@@ -149,18 +158,35 @@ export default function EditPersonalInfoModal({
             />
           </div>
 
-          {/* Địa chỉ sinh sống */}
-          <div className="space-y-1.5">
-            <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider">
-              Địa chỉ / Khu vực sinh sống
-            </label>
-            <input
-              type="text"
-              value={address}
-              onChange={(e) => setAddress(e.target.value)}
-              placeholder="VD: Quận Gò Vấp, TP. Hồ Chí Minh"
-              className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm text-slate-900 placeholder:text-slate-400 focus:bg-white focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 outline-none transition-all font-medium"
-            />
+          {/* Grid 2 cột: Số điện thoại & Địa chỉ */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            {/* Số điện thoại */}
+            <div className="space-y-1.5">
+              <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider">
+                Số điện thoại liên hệ
+              </label>
+              <input
+                type="tel"
+                value={phone}
+                onChange={(e) => setPhone(e.target.value)}
+                placeholder="VD: 0987654321"
+                className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm text-slate-900 placeholder:text-slate-400 focus:bg-white focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 outline-none transition-all font-medium"
+              />
+            </div>
+
+            {/* Địa chỉ sinh sống */}
+            <div className="space-y-1.5">
+              <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider">
+                Địa chỉ / Khu vực sinh sống
+              </label>
+              <input
+                type="text"
+                value={address}
+                onChange={(e) => setAddress(e.target.value)}
+                placeholder="VD: Quận Gò Vấp, TP. Hồ Chí Minh"
+                className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm text-slate-900 placeholder:text-slate-400 focus:bg-white focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 outline-none transition-all font-medium"
+              />
+            </div>
           </div>
 
           {/* Giới thiệu bản thân (Summary) */}

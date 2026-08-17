@@ -36,6 +36,12 @@ export class CandidateService {
   }
 
   async updateProfile(userId: string, dto: UpdateCandidateProfileDto) {
+    const { phone, ...candidateDto } = dto;
+    if (phone !== undefined) {
+    await this.userModel.findByIdAndUpdate(userId, {
+      $set: { phone: phone.trim() },
+      });
+    } 
     const candidate = await this.candidateModel.findOneAndUpdate(
       { userId: new Types.ObjectId(userId) },
       { $set: dto },

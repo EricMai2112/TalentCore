@@ -25,10 +25,14 @@ import {
   Link as LinkIcon,
 } from "lucide-react";
 import { useAuth } from "@/src/providers/AuthProvider";
-import { CandidateProfile } from "../types/profile.types";
+import { CandidateProfile, EducationItem, ExperienceItem } from "../types/profile.types";
 import { profileApi } from "../services/user.api";
 import EditCareerObjectiveModal from "./EditCareerObjectiveModal";
 import EditPersonalInfoModal from "./EditPersonalInfoModal";
+import EditEducationModal from "./EditEducationModal";
+import EditSkillsModal from "./EditSkillsModal";
+import EditExperienceModal from "./EditExperienceModal";
+import EditExpSummaryModal from "./EditExpSummaryModal";
 
 export default function CandidateProfileView() {
   const { user: authUser } = useAuth();
@@ -36,6 +40,15 @@ export default function CandidateProfileView() {
   const [loading, setLoading] = useState<boolean>(true);
   const [isObjectiveModalOpen, setIsObjectiveModalOpen] = useState(false);
   const [isPersonalModalOpen, setIsPersonalModalOpen] = useState(false);
+  const [isEduModalOpen, setIsEduModalOpen] = useState(false);
+  const [selectedEdu, setSelectedEdu] = useState<EducationItem | null>(null);
+  const [selectedEduIndex, setSelectedEduIndex] = useState<number | null>(null);
+  const [isSkillsModalOpen, setIsSkillsModalOpen] = useState(false);
+  const [isExpModalOpen, setIsExpModalOpen] = useState(false);
+  const [selectedExp, setSelectedExp] = useState<ExperienceItem | null>(null);
+  const [selectedExpIndex, setSelectedExpIndex] = useState<number | null>(null);
+
+  const [isExpSummaryModalOpen, setIsExpSummaryModalOpen] = useState(false);
 
   useEffect(() => {
     const loadProfile = async () => {
@@ -102,6 +115,30 @@ export default function CandidateProfileView() {
       );
     }
     return <Globe size={14} />;
+  };
+
+  const handleOpenAddEdu = () => {
+  setSelectedEdu(null);
+  setSelectedEduIndex(null);
+  setIsEduModalOpen(true);
+  };
+
+  const handleOpenEditEdu = (edu: EducationItem, index: number) => {
+    setSelectedEdu(edu);
+    setSelectedEduIndex(index);
+    setIsEduModalOpen(true);
+  };
+
+  const handleOpenAddExp = () => {
+  setSelectedExp(null);
+  setSelectedExpIndex(null);
+  setIsExpModalOpen(true);
+  };
+
+  const handleOpenEditExp = (exp: ExperienceItem, index: number) => {
+    setSelectedExp(exp);
+    setSelectedExpIndex(index);
+    setIsExpModalOpen(true);
   };
 
   return (
@@ -189,17 +226,27 @@ export default function CandidateProfileView() {
           </p>
         </div>
       </section>
-      {/* Modal Chỉnh sửa Thông tin cá nhân & Giới thiệu */}
       <EditPersonalInfoModal
         isOpen={isPersonalModalOpen}
         onClose={() => setIsPersonalModalOpen(false)}
         profile={profile}
+        defaultPhone={candidatePhone}
         onSuccess={(updatedData) => {
-          setProfile((prev) => (prev ? { ...prev, ...updatedData } : null));
+          setProfile((prev) => {
+            if (!prev) return null;
+            return {
+              ...prev,
+              ...updatedData,
+              userId:
+                typeof prev.userId === "object"
+                  ? { ...prev.userId, phone: updatedData.phone || prev.userId.phone }
+                  : prev.userId,
+            };
+          });
         }}
       />
 
-      {/* 2. MỤC TIÊU NGHỀ NGHIỆP (BẮT BUỘC) */}
+      {/* CarrerObjectives */}
       <section className="bg-white rounded-2xl p-6 sm:p-8 shadow-xs border border-slate-200/90">
         <div className="flex items-start justify-between gap-4">
           <div className="flex items-start gap-4">
@@ -297,13 +344,7 @@ export default function CandidateProfileView() {
           <div className="flex items-center gap-3 shrink-0">
             <button
               type="button"
-              className="hidden sm:inline-flex items-center gap-1.5 text-xs font-bold text-slate-600 hover:text-blue-600 transition-colors cursor-pointer"
-            >
-              <Lightbulb className="w-4 h-4 text-blue-600 fill-blue-600" />
-              <span>Tips</span>
-            </button>
-            <button
-              type="button"
+              onClick={handleOpenAddEdu}
               className="inline-flex items-center gap-1.5 px-4 py-2 border border-blue-600 text-blue-600 text-xs font-bold rounded-full hover:bg-blue-50 transition-all cursor-pointer"
             >
               <Plus size={15} />
@@ -320,6 +361,7 @@ export default function CandidateProfileView() {
               </p>
               <button
                 type="button"
+                onClick={handleOpenAddEdu}
                 className="mt-3 inline-flex items-center gap-1 text-xs font-bold text-blue-600 hover:text-blue-700 hover:underline uppercase tracking-wider cursor-pointer"
               >
                 <Plus size={14} />
@@ -349,7 +391,11 @@ export default function CandidateProfileView() {
                       </p>
                     )}
                   </div>
-                  <button type="button" className="p-1.5 text-slate-400 hover:text-blue-600 rounded-lg hover:bg-white transition-all cursor-pointer">
+                  <button
+                    type="button"
+                    onClick={() => handleOpenEditEdu(edu, index)}
+                    className="p-1.5 text-slate-400 hover:text-blue-600 rounded-lg hover:bg-white transition-all cursor-pointer"
+                  >
                     <Pencil size={15} />
                   </button>
                 </div>
@@ -358,8 +404,18 @@ export default function CandidateProfileView() {
           )}
         </div>
       </section>
+      <EditEducationModal
+        isOpen={isEduModalOpen}
+        onClose={() => setIsEduModalOpen(false)}
+        initialData={selectedEdu}
+        currentIndex={selectedEduIndex}
+        allEducations={profile?.educations || []}
+        onSuccess={(updatedEducations) => {
+          setProfile((prev) => (prev ? { ...prev, educations: updatedEducations } : null));
+        }}
+      />
 
-      {/* 6. KỸ NĂNG CHUYÊN MÔN */}
+      {/* Skill */}
       <section className="bg-white rounded-2xl p-6 sm:p-8 shadow-xs border border-slate-200/90">
         <div className="flex items-start justify-between gap-4">
           <div className="flex items-start gap-4">
@@ -370,7 +426,7 @@ export default function CandidateProfileView() {
               <h2 className="text-xl font-bold text-slate-900">Kỹ năng chuyên môn</h2>
               {hasSkills ? (
                 <span className="inline-flex items-center gap-1 text-xs font-semibold text-emerald-600 mt-1">
-                  <CheckCircle2 size={13} /> Đã cập nhật ({profile?.skills.length} kỹ năng)
+                  <CheckCircle2 size={13} /> Đã cập nhật
                 </span>
               ) : (
                 <span className="text-xs font-bold text-slate-400 mt-1 block">
@@ -383,10 +439,11 @@ export default function CandidateProfileView() {
           <div className="flex items-center gap-3 shrink-0">
             <button
               type="button"
+              onClick={() => setIsSkillsModalOpen(true)}
               className="inline-flex items-center gap-1.5 px-4 py-2 border border-blue-600 text-blue-600 text-xs font-bold rounded-full hover:bg-blue-50 transition-all cursor-pointer"
             >
-              <Plus size={15} />
-              <span>Thêm mới</span>
+              {hasSkills ? <Pencil size={13} /> : <Plus size={15} />}
+              <span>{hasSkills ? "Chỉnh sửa" : "Thêm mới"}</span>
             </button>
           </div>
         </div>
@@ -399,6 +456,7 @@ export default function CandidateProfileView() {
               </p>
               <button
                 type="button"
+                onClick={() => setIsSkillsModalOpen(true)}
                 className="mt-3 inline-flex items-center gap-1 text-xs font-bold text-blue-600 hover:underline uppercase tracking-wider cursor-pointer"
               >
                 <Plus size={14} />
@@ -410,10 +468,10 @@ export default function CandidateProfileView() {
               {profile?.skills.map((skill, index) => (
                 <div
                   key={index}
-                  className="px-3.5 py-2 rounded-xl bg-slate-50 border border-slate-200/80 flex items-center gap-2"
+                  className="px-3.5 py-2 rounded-xl bg-slate-50 border border-slate-200/80 flex items-center gap-2 group hover:border-blue-300 transition-colors"
                 >
                   <span className="text-sm font-bold text-slate-800">{skill.name}</span>
-                  {skill.yearsOfExperience && (
+                  {skill.yearsOfExperience !== undefined && (
                     <span className="text-[11px] text-slate-500 font-medium bg-white px-1.5 py-0.5 rounded border border-slate-200">
                       {skill.yearsOfExperience} năm
                     </span>
@@ -429,8 +487,16 @@ export default function CandidateProfileView() {
           )}
         </div>
       </section>
+      <EditSkillsModal
+        isOpen={isSkillsModalOpen}
+        onClose={() => setIsSkillsModalOpen(false)}
+        initialSkills={profile?.skills || []}
+        onSuccess={(updatedSkills) => {
+          setProfile((prev) => (prev ? { ...prev, skills: updatedSkills } : null));
+        }}
+      />
 
-      {/* 3. KINH NGHIỆM LÀM VIỆC (KHÔNG BẮT BUỘC) */}
+      {/* Experiences */}
       <section className="bg-white rounded-2xl p-6 sm:p-8 shadow-xs border border-slate-200/90">
         <div className="flex items-start justify-between gap-4">
           <div className="flex items-start gap-4">
@@ -443,7 +509,7 @@ export default function CandidateProfileView() {
               </h2>
               {hasExperience ? (
                 <span className="inline-flex items-center gap-1 text-xs font-semibold text-emerald-600 mt-1">
-                  <CheckCircle2 size={13} /> Đã cập nhật ({profile?.experiences.length} kinh nghiệm)
+                  <CheckCircle2 size={13} /> Đã cập nhật
                 </span>
               ) : (
                 <span className="text-xs font-medium text-slate-400 mt-1 block">
@@ -456,13 +522,7 @@ export default function CandidateProfileView() {
           <div className="flex items-center gap-3 shrink-0">
             <button
               type="button"
-              className="hidden sm:inline-flex items-center gap-1.5 text-xs font-bold text-slate-600 hover:text-blue-600 transition-colors cursor-pointer"
-            >
-              <Lightbulb className="w-4 h-4 text-blue-600 fill-blue-600" />
-              <span>Tips</span>
-            </button>
-            <button
-              type="button"
+              onClick={handleOpenAddExp}
               className="inline-flex items-center gap-1.5 px-4 py-2 border border-blue-600 text-blue-600 text-xs font-bold rounded-full hover:bg-blue-50 transition-all cursor-pointer"
             >
               <Plus size={15} />
@@ -479,6 +539,7 @@ export default function CandidateProfileView() {
               </p>
               <button
                 type="button"
+                onClick={handleOpenAddExp}
                 className="mt-3 inline-flex items-center gap-1 text-xs font-bold text-blue-600 hover:text-blue-700 hover:underline uppercase tracking-wider cursor-pointer"
               >
                 <Plus size={14} />
@@ -524,6 +585,7 @@ export default function CandidateProfileView() {
                   </div>
                   <button
                     type="button"
+                    onClick={() => handleOpenEditExp(exp, index)}
                     className="p-1.5 text-slate-400 hover:text-blue-600 rounded-lg hover:bg-white transition-all cursor-pointer"
                   >
                     <Pencil size={15} />
@@ -540,7 +602,12 @@ export default function CandidateProfileView() {
             <span className="font-bold text-slate-700">Số năm kinh nghiệm:</span>
             <span className="text-slate-600 font-medium flex items-center gap-2">
               {profile?.yearsOfExperience ? `${profile.yearsOfExperience} năm` : "Chưa có kinh nghiệm (0 năm)"}
-              <button type="button" className="text-blue-600 hover:text-blue-700 cursor-pointer">
+              <button
+                type="button"
+                onClick={() => setIsExpSummaryModalOpen(true)}
+                className="text-blue-600 hover:text-blue-700 cursor-pointer p-0.5"
+                title="Chỉnh sửa số năm kinh nghiệm"
+              >
                 <Pencil size={13} />
               </button>
             </span>
@@ -550,13 +617,38 @@ export default function CandidateProfileView() {
             <span className="font-bold text-slate-700">Cấp bậc hiện tại:</span>
             <span className="text-slate-600 font-medium flex items-center gap-2">
               {profile?.currentLevel || "Intern / Fresher"}
-              <button type="button" className="text-blue-600 hover:text-blue-700 cursor-pointer">
+              <button
+                type="button"
+                onClick={() => setIsExpSummaryModalOpen(true)}
+                className="text-blue-600 hover:text-blue-700 cursor-pointer p-0.5"
+                title="Chỉnh sửa cấp bậc"
+              >
                 <Pencil size={13} />
               </button>
             </span>
           </div>
         </div>
       </section>
+      <EditExperienceModal
+        isOpen={isExpModalOpen}
+        onClose={() => setIsExpModalOpen(false)}
+        initialData={selectedExp}
+        currentIndex={selectedExpIndex}
+        allExperiences={profile?.experiences || []}
+        onSuccess={(updatedList) => {
+          setProfile((prev) => (prev ? { ...prev, experiences: updatedList } : null));
+        }}
+      />
+
+      <EditExpSummaryModal
+        isOpen={isExpSummaryModalOpen}
+        onClose={() => setIsExpSummaryModalOpen(false)}
+        currentYears={profile?.yearsOfExperience || 0}
+        currentLevel={profile?.currentLevel || ""}
+        onSuccess={(data) => {
+          setProfile((prev) => (prev ? { ...prev, ...data } : null));
+        }}
+      />
 
       {/* 5. DỰ ÁN THỰC TẾ (CÓ THỜI GIAN & TECHNOLOGIES LIỆT KÊ Ở DƯỚI) */}
       <section className="bg-white rounded-2xl p-6 sm:p-8 shadow-xs border border-slate-200/90">
