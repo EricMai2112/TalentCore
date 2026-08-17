@@ -27,11 +27,15 @@ import {
 import { useAuth } from "@/src/providers/AuthProvider";
 import { CandidateProfile } from "../types/profile.types";
 import { profileApi } from "../services/user.api";
+import EditCareerObjectiveModal from "./EditCareerObjectiveModal";
+import EditPersonalInfoModal from "./EditPersonalInfoModal";
 
 export default function CandidateProfileView() {
   const { user: authUser } = useAuth();
   const [profile, setProfile] = useState<CandidateProfile | null>(null);
   const [loading, setLoading] = useState<boolean>(true);
+  const [isObjectiveModalOpen, setIsObjectiveModalOpen] = useState(false);
+  const [isPersonalModalOpen, setIsPersonalModalOpen] = useState(false);
 
   useEffect(() => {
     const loadProfile = async () => {
@@ -105,25 +109,18 @@ export default function CandidateProfileView() {
 
       {/* 1. THÔNG TIN CÁ NHÂN & SOCIAL LINKS (HEADER CARD) */}
       <section className="bg-white rounded-2xl p-6 sm:p-8 shadow-xs border border-slate-200/90">
+        {/* Header hàng trên: Avatar + Thông tin bên trái & DUY NHẤT 1 NÚT CHỈNH SỬA bên phải */}
         <div className="flex flex-col sm:flex-row items-start justify-between gap-6">
           <div className="flex items-start gap-5">
+            {/* Avatar chữ cái */}
             <div className="w-20 h-20 rounded-2xl bg-blue-600 flex items-center justify-center text-white text-3xl font-extrabold shadow-md shadow-blue-500/20 shrink-0">
               {initialLetter}
             </div>
 
             <div className="space-y-2">
-              <div className="flex items-center gap-3">
-                <h1 className="text-2xl font-extrabold text-slate-900">
-                  {candidateName}
-                </h1>
-                <button
-                  type="button"
-                  className="text-slate-400 hover:text-blue-600 transition-colors p-1 rounded-md hover:bg-slate-50 cursor-pointer"
-                  title="Chỉnh sửa thông tin"
-                >
-                  <Pencil size={16} />
-                </button>
-              </div>
+              <h1 className="text-2xl font-extrabold text-slate-900">
+                {candidateName}
+              </h1>
 
               <p className="text-base font-semibold text-blue-600">
                 {profile?.headline || "Chưa cập nhật chức danh nghề nghiệp"}
@@ -149,10 +146,10 @@ export default function CandidateProfileView() {
                 </span>
               </div>
 
-              {/* Social Links */}
-              <div className="pt-2 flex flex-wrap items-center gap-2">
-                {profile?.socialLinks && profile.socialLinks.length > 0 ? (
-                  profile.socialLinks.map((item, idx) => (
+              {/* Social Links (Hiển thị các link đã có, không có nút thêm lẻ) */}
+              {profile?.socialLinks && profile.socialLinks.length > 0 && (
+                <div className="pt-2 flex flex-wrap items-center gap-2">
+                  {profile.socialLinks.map((item, idx) => (
                     <a
                       key={idx}
                       href={item.url.startsWith("http") ? item.url : `https://${item.url}`}
@@ -164,40 +161,43 @@ export default function CandidateProfileView() {
                       <span>{item.platform}</span>
                       <ExternalLink size={11} className="text-slate-400" />
                     </a>
-                  ))
-                ) : (
-                  <button
-                    type="button"
-                    className="inline-flex items-center gap-1.5 text-xs font-semibold text-blue-600 hover:underline cursor-pointer pt-1"
-                  >
-                    <Plus size={14} />
-                    <span>Thêm liên kết mạng xã hội (GitHub, LinkedIn, Portfolio...)</span>
-                  </button>
-                )}
-              </div>
+                  ))}
+                </div>
+              )}
             </div>
           </div>
+
+          {/* DUY NHẤT 1 NÚT CHỈNH SỬA Ở ĐÂY */}
+          <button
+            type="button"
+            onClick={() => setIsPersonalModalOpen(true)}
+            className="inline-flex items-center gap-1.5 px-4 py-2 border border-blue-600 text-blue-600 text-xs font-bold rounded-full hover:bg-blue-50 transition-all cursor-pointer shrink-0"
+          >
+            <Pencil size={13} />
+            <span>Chỉnh sửa</span>
+          </button>
         </div>
 
-        {/* Giới thiệu bản thân */}
+        {/* Giới thiệu bản thân (Chỉ hiển thị text, không còn nút chỉnh sửa) */}
         <div className="mt-6 pt-5 border-t border-slate-100">
-          <div className="flex items-center justify-between mb-2">
-            <h3 className="text-xs font-bold uppercase tracking-wider text-slate-500">
-              Giới thiệu bản thân
-            </h3>
-            <button
-              type="button"
-              className="text-xs font-bold text-blue-600 hover:underline inline-flex items-center gap-1 cursor-pointer"
-            >
-              <Pencil size={12} /> Chỉnh sửa
-            </button>
-          </div>
+          <h3 className="text-xs font-bold uppercase tracking-wider text-slate-500 mb-2">
+            Giới thiệu bản thân
+          </h3>
           <p className="text-sm text-slate-700 leading-relaxed whitespace-pre-line">
             {profile?.summary ||
               "Thêm mô tả ngắn về kinh nghiệm và thế mạnh của bạn để tạo ấn tượng tốt với nhà tuyển dụng."}
           </p>
         </div>
       </section>
+      {/* Modal Chỉnh sửa Thông tin cá nhân & Giới thiệu */}
+      <EditPersonalInfoModal
+        isOpen={isPersonalModalOpen}
+        onClose={() => setIsPersonalModalOpen(false)}
+        profile={profile}
+        onSuccess={(updatedData) => {
+          setProfile((prev) => (prev ? { ...prev, ...updatedData } : null));
+        }}
+      />
 
       {/* 2. MỤC TIÊU NGHỀ NGHIỆP (BẮT BUỘC) */}
       <section className="bg-white rounded-2xl p-6 sm:p-8 shadow-xs border border-slate-200/90">
@@ -223,22 +223,25 @@ export default function CandidateProfileView() {
           </div>
 
           <div className="flex items-center gap-3 shrink-0">
-            <button
-              type="button"
-              className="hidden sm:inline-flex items-center gap-1.5 text-xs font-bold text-slate-600 hover:text-blue-600 transition-colors cursor-pointer"
-            >
-              <Lightbulb className="w-4 h-4 text-blue-600 fill-blue-600" />
-              <span>Tips</span>
-            </button>
-            <button
+            {!hasCareerObjective && <button
               type="button"
               className="inline-flex items-center gap-1.5 px-4 py-2 border border-blue-600 text-blue-600 text-xs font-bold rounded-full hover:bg-blue-50 transition-all cursor-pointer"
+              onClick={() => setIsObjectiveModalOpen(true)}
             >
               <Plus size={15} />
-              <span>{hasCareerObjective ? "Chỉnh sửa" : "Thêm mới"}</span>
-            </button>
+              <span>Thêm mới</span>
+            </button>}
+            
           </div>
         </div>
+        <EditCareerObjectiveModal
+          isOpen={isObjectiveModalOpen}
+          onClose={() => setIsObjectiveModalOpen(false)}
+          initialValue={profile?.careerObjective || ""}
+          onSuccess={(updatedValue) => {
+            setProfile((prev) => prev ? { ...prev, careerObjective: updatedValue } : null);
+          }}
+        />
 
         <div className="mt-6">
           {!hasCareerObjective ? (
@@ -249,6 +252,7 @@ export default function CandidateProfileView() {
               <button
                 type="button"
                 className="mt-3 inline-flex items-center gap-1 text-xs font-bold text-blue-600 hover:text-blue-700 hover:underline uppercase tracking-wider cursor-pointer"
+                onClick={() => setIsObjectiveModalOpen(true)}
               >
                 <Plus size={14} />
                 <span>THÊM MỤC TIÊU NGHỀ NGHIỆP</span>
@@ -259,139 +263,11 @@ export default function CandidateProfileView() {
               <p className="text-sm text-slate-700 leading-relaxed whitespace-pre-line">
                 {profile?.careerObjective}
               </p>
-              <button type="button" className="p-1.5 text-slate-400 hover:text-blue-600 rounded-lg hover:bg-white transition-all cursor-pointer">
+              <button type="button" onClick={() => setIsObjectiveModalOpen(true)} className="p-1.5 text-slate-400 hover:text-blue-600 rounded-lg hover:bg-white transition-all cursor-pointer">
                 <Pencil size={15} />
               </button>
             </div>
           )}
-        </div>
-      </section>
-
-      {/* 3. KINH NGHIỆM LÀM VIỆC (BẮT BUỘC) */}
-      <section className="bg-white rounded-2xl p-6 sm:p-8 shadow-xs border border-slate-200/90">
-        <div className="flex items-start justify-between gap-4">
-          <div className="flex items-start gap-4">
-            <div className="p-3 bg-blue-50 text-blue-600 rounded-2xl shrink-0">
-              <Briefcase className="w-7 h-7" />
-            </div>
-            <div>
-              <h2 className="text-xl font-bold text-slate-900 flex items-center gap-1.5">
-                Kinh nghiệm làm việc <span className="text-rose-500 font-bold">*</span>
-              </h2>
-              {hasExperience ? (
-                <span className="inline-flex items-center gap-1 text-xs font-semibold text-emerald-600 mt-1">
-                  <CheckCircle2 size={13} /> Đã hoàn thành
-                </span>
-              ) : (
-                <span className="text-xs font-bold text-rose-500 mt-1 block">
-                  Chưa hoàn thành
-                </span>
-              )}
-            </div>
-          </div>
-
-          <div className="flex items-center gap-3 shrink-0">
-            <button
-              type="button"
-              className="hidden sm:inline-flex items-center gap-1.5 text-xs font-bold text-slate-600 hover:text-blue-600 transition-colors cursor-pointer"
-            >
-              <Lightbulb className="w-4 h-4 text-blue-600 fill-blue-600" />
-              <span>Tips</span>
-            </button>
-            <button
-              type="button"
-              className="inline-flex items-center gap-1.5 px-4 py-2 border border-blue-600 text-blue-600 text-xs font-bold rounded-full hover:bg-blue-50 transition-all cursor-pointer"
-            >
-              <Plus size={15} />
-              <span>Thêm mới</span>
-            </button>
-          </div>
-        </div>
-
-        <div className="mt-6">
-          {!hasExperience ? (
-            <div className="border border-dashed border-slate-300 rounded-xl p-6 bg-slate-50/60 text-left">
-              <p className="text-sm text-slate-600 font-medium">
-                Bạn hãy thêm kinh nghiệm làm việc của mình để nhà tuyển dụng tham khảo
-              </p>
-              <button
-                type="button"
-                className="mt-3 inline-flex items-center gap-1 text-xs font-bold text-blue-600 hover:text-blue-700 hover:underline uppercase tracking-wider cursor-pointer"
-              >
-                <Plus size={14} />
-                <span>THÊM MỚI</span>
-              </button>
-            </div>
-          ) : (
-            <div className="space-y-3">
-              {profile?.experiences.map((exp, index) => (
-                <div
-                  key={index}
-                  className="p-4 rounded-xl border border-slate-100 bg-slate-50/70 flex justify-between items-start gap-4"
-                >
-                  <div className="space-y-1">
-                    <h3 className="text-base font-bold text-slate-900">{exp.position}</h3>
-                    <p className="text-sm font-semibold text-slate-700 flex items-center gap-1.5">
-                      <Building2 size={14} className="text-slate-400" />
-                      <span>{exp.company}</span>
-                    </p>
-                    {(exp.startDate || exp.endDate) && (
-                      <p className="text-xs text-slate-400 flex items-center gap-1">
-                        <Calendar size={13} />
-                        <span>{exp.startDate || "N/A"} - {exp.endDate || "Hiện tại"}</span>
-                      </p>
-                    )}
-                    {exp.description && (
-                      <p className="text-xs text-slate-600 pt-1 leading-relaxed whitespace-pre-line">
-                        {exp.description}
-                      </p>
-                    )}
-                    {exp.technologies && exp.technologies.length > 0 && (
-                      <div className="flex flex-wrap gap-1.5 pt-2">
-                        {exp.technologies.map((tech, idx) => (
-                          <span
-                            key={idx}
-                            className="px-2 py-0.5 rounded-md bg-white border border-slate-200 text-[11px] font-medium text-slate-700"
-                          >
-                            {tech}
-                          </span>
-                        ))}
-                      </div>
-                    )}
-                  </div>
-                  <button
-                    type="button"
-                    className="p-1.5 text-slate-400 hover:text-blue-600 rounded-lg hover:bg-white transition-all cursor-pointer"
-                  >
-                    <Pencil size={15} />
-                  </button>
-                </div>
-              ))}
-            </div>
-          )}
-        </div>
-
-        {/* Cấp bậc & Số năm kinh nghiệm */}
-        <div className="mt-6 pt-5 border-t border-slate-100 grid grid-cols-1 sm:grid-cols-2 gap-4 text-xs">
-          <div className="flex items-center justify-between py-1">
-            <span className="font-bold text-slate-700">Số năm kinh nghiệm:</span>
-            <span className="text-slate-600 font-medium flex items-center gap-2">
-              {profile?.yearsOfExperience ? `${profile.yearsOfExperience} năm` : "Chưa có kinh nghiệm"}
-              <button type="button" className="text-blue-600 hover:text-blue-700 cursor-pointer">
-                <Pencil size={13} />
-              </button>
-            </span>
-          </div>
-
-          <div className="flex items-center justify-between py-1">
-            <span className="font-bold text-slate-700">Cấp bậc hiện tại:</span>
-            <span className="text-slate-600 font-medium flex items-center gap-2">
-              {profile?.currentLevel || "Chưa cập nhật"}
-              <button type="button" className="text-blue-600 hover:text-blue-700 cursor-pointer">
-                <Pencil size={13} />
-              </button>
-            </span>
-          </div>
         </div>
       </section>
 
@@ -480,6 +356,205 @@ export default function CandidateProfileView() {
               ))}
             </div>
           )}
+        </div>
+      </section>
+
+      {/* 6. KỸ NĂNG CHUYÊN MÔN */}
+      <section className="bg-white rounded-2xl p-6 sm:p-8 shadow-xs border border-slate-200/90">
+        <div className="flex items-start justify-between gap-4">
+          <div className="flex items-start gap-4">
+            <div className="p-3 bg-blue-50 text-blue-600 rounded-2xl shrink-0">
+              <Cpu className="w-7 h-7" />
+            </div>
+            <div>
+              <h2 className="text-xl font-bold text-slate-900">Kỹ năng chuyên môn</h2>
+              {hasSkills ? (
+                <span className="inline-flex items-center gap-1 text-xs font-semibold text-emerald-600 mt-1">
+                  <CheckCircle2 size={13} /> Đã cập nhật ({profile?.skills.length} kỹ năng)
+                </span>
+              ) : (
+                <span className="text-xs font-bold text-slate-400 mt-1 block">
+                  Chưa cập nhật
+                </span>
+              )}
+            </div>
+          </div>
+
+          <div className="flex items-center gap-3 shrink-0">
+            <button
+              type="button"
+              className="inline-flex items-center gap-1.5 px-4 py-2 border border-blue-600 text-blue-600 text-xs font-bold rounded-full hover:bg-blue-50 transition-all cursor-pointer"
+            >
+              <Plus size={15} />
+              <span>Thêm mới</span>
+            </button>
+          </div>
+        </div>
+
+        <div className="mt-6">
+          {!hasSkills ? (
+            <div className="border border-dashed border-slate-300 rounded-xl p-6 bg-slate-50/60 text-left">
+              <p className="text-sm text-slate-600 font-medium">
+                Thêm các kỹ năng chuyên môn của bạn để hệ thống AI so khớp độ tương thích với Job Description
+              </p>
+              <button
+                type="button"
+                className="mt-3 inline-flex items-center gap-1 text-xs font-bold text-blue-600 hover:underline uppercase tracking-wider cursor-pointer"
+              >
+                <Plus size={14} />
+                <span>THÊM KỸ NĂNG</span>
+              </button>
+            </div>
+          ) : (
+            <div className="flex flex-wrap gap-2.5">
+              {profile?.skills.map((skill, index) => (
+                <div
+                  key={index}
+                  className="px-3.5 py-2 rounded-xl bg-slate-50 border border-slate-200/80 flex items-center gap-2"
+                >
+                  <span className="text-sm font-bold text-slate-800">{skill.name}</span>
+                  {skill.yearsOfExperience && (
+                    <span className="text-[11px] text-slate-500 font-medium bg-white px-1.5 py-0.5 rounded border border-slate-200">
+                      {skill.yearsOfExperience} năm
+                    </span>
+                  )}
+                  {skill.proficiency && (
+                    <span className="text-[10px] font-bold text-blue-600 bg-blue-50 px-1.5 py-0.5 rounded">
+                      {skill.proficiency}
+                    </span>
+                  )}
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      </section>
+
+      {/* 3. KINH NGHIỆM LÀM VIỆC (KHÔNG BẮT BUỘC) */}
+      <section className="bg-white rounded-2xl p-6 sm:p-8 shadow-xs border border-slate-200/90">
+        <div className="flex items-start justify-between gap-4">
+          <div className="flex items-start gap-4">
+            <div className="p-3 bg-blue-50 text-blue-600 rounded-2xl shrink-0">
+              <Briefcase className="w-7 h-7" />
+            </div>
+            <div>
+              <h2 className="text-xl font-bold text-slate-900">
+                Kinh nghiệm làm việc
+              </h2>
+              {hasExperience ? (
+                <span className="inline-flex items-center gap-1 text-xs font-semibold text-emerald-600 mt-1">
+                  <CheckCircle2 size={13} /> Đã cập nhật ({profile?.experiences.length} kinh nghiệm)
+                </span>
+              ) : (
+                <span className="text-xs font-medium text-slate-400 mt-1 block">
+                  Chưa có kinh nghiệm / Fresher
+                </span>
+              )}
+            </div>
+          </div>
+
+          <div className="flex items-center gap-3 shrink-0">
+            <button
+              type="button"
+              className="hidden sm:inline-flex items-center gap-1.5 text-xs font-bold text-slate-600 hover:text-blue-600 transition-colors cursor-pointer"
+            >
+              <Lightbulb className="w-4 h-4 text-blue-600 fill-blue-600" />
+              <span>Tips</span>
+            </button>
+            <button
+              type="button"
+              className="inline-flex items-center gap-1.5 px-4 py-2 border border-blue-600 text-blue-600 text-xs font-bold rounded-full hover:bg-blue-50 transition-all cursor-pointer"
+            >
+              <Plus size={15} />
+              <span>Thêm mới</span>
+            </button>
+          </div>
+        </div>
+
+        <div className="mt-6">
+          {!hasExperience ? (
+            <div className="border border-dashed border-slate-300 rounded-xl p-6 bg-slate-50/60 text-left">
+              <p className="text-sm text-slate-600 font-medium">
+                Nếu bạn là sinh viên hoặc thực tập sinh, bạn có thể bỏ qua phần này hoặc thêm các kỳ thực tập trước đây
+              </p>
+              <button
+                type="button"
+                className="mt-3 inline-flex items-center gap-1 text-xs font-bold text-blue-600 hover:text-blue-700 hover:underline uppercase tracking-wider cursor-pointer"
+              >
+                <Plus size={14} />
+                <span>THÊM KINH NGHIỆM / THỰC TẬP</span>
+              </button>
+            </div>
+          ) : (
+            <div className="space-y-3">
+              {profile?.experiences.map((exp, index) => (
+                <div
+                  key={index}
+                  className="p-4 rounded-xl border border-slate-100 bg-slate-50/70 flex justify-between items-start gap-4"
+                >
+                  <div className="space-y-1">
+                    <h3 className="text-base font-bold text-slate-900">{exp.position}</h3>
+                    <p className="text-sm font-semibold text-slate-700 flex items-center gap-1.5">
+                      <Building2 size={14} className="text-slate-400" />
+                      <span>{exp.company}</span>
+                    </p>
+                    {(exp.startDate || exp.endDate) && (
+                      <p className="text-xs text-slate-400 flex items-center gap-1">
+                        <Calendar size={13} />
+                        <span>{exp.startDate || "N/A"} - {exp.endDate || "Hiện tại"}</span>
+                      </p>
+                    )}
+                    {exp.description && (
+                      <p className="text-xs text-slate-600 pt-1 leading-relaxed whitespace-pre-line">
+                        {exp.description}
+                      </p>
+                    )}
+                    {exp.technologies && exp.technologies.length > 0 && (
+                      <div className="flex flex-wrap gap-1.5 pt-2">
+                        {exp.technologies.map((tech, idx) => (
+                          <span
+                            key={idx}
+                            className="px-2 py-0.5 rounded-md bg-white border border-slate-200 text-[11px] font-medium text-slate-700"
+                          >
+                            {tech}
+                          </span>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                  <button
+                    type="button"
+                    className="p-1.5 text-slate-400 hover:text-blue-600 rounded-lg hover:bg-white transition-all cursor-pointer"
+                  >
+                    <Pencil size={15} />
+                  </button>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+
+        {/* Cấp bậc & Số năm kinh nghiệm */}
+        <div className="mt-6 pt-5 border-t border-slate-100 grid grid-cols-1 sm:grid-cols-2 gap-4 text-xs">
+          <div className="flex items-center justify-between py-1">
+            <span className="font-bold text-slate-700">Số năm kinh nghiệm:</span>
+            <span className="text-slate-600 font-medium flex items-center gap-2">
+              {profile?.yearsOfExperience ? `${profile.yearsOfExperience} năm` : "Chưa có kinh nghiệm (0 năm)"}
+              <button type="button" className="text-blue-600 hover:text-blue-700 cursor-pointer">
+                <Pencil size={13} />
+              </button>
+            </span>
+          </div>
+
+          <div className="flex items-center justify-between py-1">
+            <span className="font-bold text-slate-700">Cấp bậc hiện tại:</span>
+            <span className="text-slate-600 font-medium flex items-center gap-2">
+              {profile?.currentLevel || "Intern / Fresher"}
+              <button type="button" className="text-blue-600 hover:text-blue-700 cursor-pointer">
+                <Pencil size={13} />
+              </button>
+            </span>
+          </div>
         </div>
       </section>
 
@@ -609,77 +684,6 @@ export default function CandidateProfileView() {
         </div>
       </section>
 
-      {/* 6. KỸ NĂNG CHUYÊN MÔN */}
-      <section className="bg-white rounded-2xl p-6 sm:p-8 shadow-xs border border-slate-200/90">
-        <div className="flex items-start justify-between gap-4">
-          <div className="flex items-start gap-4">
-            <div className="p-3 bg-blue-50 text-blue-600 rounded-2xl shrink-0">
-              <Cpu className="w-7 h-7" />
-            </div>
-            <div>
-              <h2 className="text-xl font-bold text-slate-900">Kỹ năng chuyên môn</h2>
-              {hasSkills ? (
-                <span className="inline-flex items-center gap-1 text-xs font-semibold text-emerald-600 mt-1">
-                  <CheckCircle2 size={13} /> Đã cập nhật ({profile?.skills.length} kỹ năng)
-                </span>
-              ) : (
-                <span className="text-xs font-bold text-slate-400 mt-1 block">
-                  Chưa cập nhật
-                </span>
-              )}
-            </div>
-          </div>
-
-          <div className="flex items-center gap-3 shrink-0">
-            <button
-              type="button"
-              className="inline-flex items-center gap-1.5 px-4 py-2 border border-blue-600 text-blue-600 text-xs font-bold rounded-full hover:bg-blue-50 transition-all cursor-pointer"
-            >
-              <Plus size={15} />
-              <span>Thêm mới</span>
-            </button>
-          </div>
-        </div>
-
-        <div className="mt-6">
-          {!hasSkills ? (
-            <div className="border border-dashed border-slate-300 rounded-xl p-6 bg-slate-50/60 text-left">
-              <p className="text-sm text-slate-600 font-medium">
-                Thêm các kỹ năng chuyên môn của bạn để hệ thống AI so khớp độ tương thích với Job Description
-              </p>
-              <button
-                type="button"
-                className="mt-3 inline-flex items-center gap-1 text-xs font-bold text-blue-600 hover:underline uppercase tracking-wider cursor-pointer"
-              >
-                <Plus size={14} />
-                <span>THÊM KỸ NĂNG</span>
-              </button>
-            </div>
-          ) : (
-            <div className="flex flex-wrap gap-2.5">
-              {profile?.skills.map((skill, index) => (
-                <div
-                  key={index}
-                  className="px-3.5 py-2 rounded-xl bg-slate-50 border border-slate-200/80 flex items-center gap-2"
-                >
-                  <span className="text-sm font-bold text-slate-800">{skill.name}</span>
-                  {skill.yearsOfExperience && (
-                    <span className="text-[11px] text-slate-500 font-medium bg-white px-1.5 py-0.5 rounded border border-slate-200">
-                      {skill.yearsOfExperience} năm
-                    </span>
-                  )}
-                  {skill.proficiency && (
-                    <span className="text-[10px] font-bold text-blue-600 bg-blue-50 px-1.5 py-0.5 rounded">
-                      {skill.proficiency}
-                    </span>
-                  )}
-                </div>
-              ))}
-            </div>
-          )}
-        </div>
-      </section>
-
       {/* 7. CHỨNG CHỈ & NGOẠI NGỮ */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         {/* CHỨNG CHỈ */}
@@ -692,7 +696,7 @@ export default function CandidateProfileView() {
                 </div>
                 <div>
                   <h2 className="text-lg font-bold text-slate-900">Chứng chỉ</h2>
-                  <span className="text-[11px] text-slate-500">TOEIC, IELTS, AWS...</span>
+                  <span className="text-[11px] text-slate-500">IELTS, AWS, Microsoft...</span>
                 </div>
               </div>
               <button

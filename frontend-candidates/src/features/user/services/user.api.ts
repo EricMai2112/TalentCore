@@ -11,4 +11,9 @@ export const profileApi = {
     const response: any = await apiClient.get("/candidates/profile");
     return response.data || response;
   },
+
+  updateProfile: async (payload: Partial<CandidateProfile>): Promise<CandidateProfile> => {
+    const response: any = await apiClient.patch<ApiResponse<CandidateProfile>>("/candidates/profile", payload);
+    return response.data || response;
+  },
 };
