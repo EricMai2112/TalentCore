@@ -1,7 +1,8 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { Eye, Edit2, Trash2, Plus, CheckCheck, Briefcase } from "lucide-react";
+import { createPortal } from "react-dom";
+import { Eye, Edit2, Trash2, Plus, CheckCheck, Briefcase, CheckCircle2, MoreVertical, FileText, Clock, XCircle, Award } from "lucide-react";
 import { JobDescription, JobStatus, JobPriority, Department } from "../types/job-description.types";
 
 interface JobRequestTableProps {
@@ -12,6 +13,7 @@ interface JobRequestTableProps {
   onView: (job: JobDescription) => void;
   onReview: (job: JobDescription) => void;
   onPromote: (job: JobDescription) => void;
+  onComplete: (job: JobDescription) => void;
   onAdd: () => void;
   isHrAdmin?: boolean;
   isDeptManager?: boolean;
@@ -26,6 +28,7 @@ export default function JobRequestTable({
   onView,
   onReview,
   onPromote,
+  onComplete,
   onAdd,
   isHrAdmin = true,
   isDeptManager = false,
@@ -37,11 +40,45 @@ export default function JobRequestTable({
   const [selectedStatus, setSelectedStatus] = useState("all");
   const [selectedPriority, setSelectedPriority] = useState("all");
 
+  // Portal & Floating Popover state
+  const [mounted, setMounted] = useState(false);
+  const [activeMenu, setActiveMenu] = useState<{
+    job: JobDescription;
+    rect: DOMRect;
+  } | null>(null);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
+
   useEffect(() => {
     if (isDeptManager && userDeptId) {
       setSelectedDept(userDeptId);
     }
   }, [isDeptManager, userDeptId]);
+
+  // Close floating menu on window scroll or resize
+  useEffect(() => {
+    if (!activeMenu) return;
+    const handleClose = () => setActiveMenu(null);
+    window.addEventListener("scroll", handleClose, true);
+    window.addEventListener("resize", handleClose);
+    return () => {
+      window.removeEventListener("scroll", handleClose, true);
+      window.removeEventListener("resize", handleClose);
+    };
+  }, [activeMenu]);
+
+  // Toggle action menu with precise button coordinates
+  const handleToggleMenu = (e: React.MouseEvent<HTMLButtonElement>, job: JobDescription) => {
+    e.stopPropagation();
+    if (activeMenu?.job._id === job._id) {
+      setActiveMenu(null);
+    } else {
+      const rect = e.currentTarget.getBoundingClientRect();
+      setActiveMenu({ job, rect });
+    }
+  };
 
   // Status mapping to label and classes
   const getStatusConfig = (status: JobStatus) => {
@@ -52,6 +89,8 @@ export default function JobRequestTable({
         return { label: "Đã duyệt", style: "bg-emerald-50 text-emerald-700 border-emerald-200" };
       case JobStatus.REJECTED:
         return { label: "Từ chối", style: "bg-rose-50 text-rose-700 border-rose-200" };
+      case JobStatus.COMPLETED:
+        return { label: "Hoàn thành", style: "bg-blue-50 text-blue-700 border-blue-200" };
       case JobStatus.JD_CREATED:
       default:
         return { label: "Đã tạo JD", style: "bg-indigo-50 text-indigo-700 border-indigo-200" };
@@ -86,6 +125,7 @@ export default function JobRequestTable({
   const approvedCount = scopedJobs.filter(j => j.status === JobStatus.APPROVED).length;
   const rejectedCount = scopedJobs.filter(j => j.status === JobStatus.REJECTED).length;
   const jdCreatedCount = scopedJobs.filter(j => j.status === JobStatus.JD_CREATED).length;
+  const completedCount = scopedJobs.filter(j => j.status === JobStatus.COMPLETED).length;
 
   // Filtering logic
   const filteredJobs = scopedJobs.filter(job => {
@@ -117,30 +157,72 @@ export default function JobRequestTable({
         </button>
       </div>
 
-      {/* Metrics Row */}
-      <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
-        <div className="bg-white border border-gray-100 rounded-2xl p-4 shadow-3xs">
-          <span className="text-xs font-semibold text-gray-400 uppercase tracking-wider block">Tổng yêu cầu</span>
-          <span className="text-2xl font-bold text-gray-900 mt-1 block">{totalCount}</span>
-        </div>
-        <div className="bg-amber-50/20 border border-amber-100/40 rounded-2xl p-4 shadow-3xs">
-          <span className="text-xs font-semibold text-amber-500 uppercase tracking-wider block">Chờ duyệt</span>
-          <div className="flex items-baseline gap-1 mt-1">
-            <span className="text-2xl font-bold text-amber-700">{pendingCount}</span>
-            <span className="text-[10px] font-semibold text-amber-600">cần xử lý</span>
+      {/* Metrics Row - Modern, Premium 6-Card Single Horizontal Row */}
+      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
+        {/* 1. Tổng yêu cầu */}
+        <div className="bg-white border border-slate-200/80 rounded-2xl p-3.5 shadow-2xs hover:shadow-xs transition-all duration-200 group min-w-0">
+          <div className="flex items-center justify-between gap-1.5">
+            <span className="text-[11px] font-bold text-slate-500 uppercase tracking-wider block truncate">Tổng yêu cầu</span>
+            <div className="p-1.5 rounded-xl bg-slate-100 text-slate-600 group-hover:scale-105 transition-transform shrink-0">
+              <FileText size={15} />
+            </div>
           </div>
+          <span className="text-2xl font-black text-slate-900 mt-2 block tracking-tight">{totalCount}</span>
         </div>
-        <div className="bg-emerald-50/20 border border-emerald-100/40 rounded-2xl p-4 shadow-3xs">
-          <span className="text-xs font-semibold text-emerald-500 uppercase tracking-wider block">Đã duyệt</span>
-          <span className="text-2xl font-bold text-emerald-700 mt-1 block">{approvedCount}</span>
+
+        {/* 2. Chờ duyệt */}
+        <div className="bg-white border border-amber-200/70 rounded-2xl p-3.5 shadow-2xs hover:shadow-xs transition-all duration-200 group min-w-0">
+          <div className="flex items-center justify-between gap-1.5">
+            <span className="text-[11px] font-bold text-amber-600 uppercase tracking-wider block truncate">Chờ duyệt</span>
+            <div className="p-1.5 rounded-xl bg-amber-50 text-amber-600 group-hover:scale-105 transition-transform shrink-0">
+              <Clock size={15} />
+            </div>
+          </div>
+          <span className="text-2xl font-black text-amber-700 mt-2 block tracking-tight">{pendingCount}</span>
         </div>
-        <div className="bg-rose-50/20 border border-rose-100/40 rounded-2xl p-4 shadow-3xs">
-          <span className="text-xs font-semibold text-rose-500 uppercase tracking-wider block">Từ chối</span>
-          <span className="text-2xl font-bold text-rose-700 mt-1 block">{rejectedCount}</span>
+
+        {/* 3. Đã duyệt */}
+        <div className="bg-white border border-emerald-200/70 rounded-2xl p-3.5 shadow-2xs hover:shadow-xs transition-all duration-200 group min-w-0">
+          <div className="flex items-center justify-between gap-1.5">
+            <span className="text-[11px] font-bold text-emerald-600 uppercase tracking-wider block truncate">Đã duyệt</span>
+            <div className="p-1.5 rounded-xl bg-emerald-50 text-emerald-600 group-hover:scale-105 transition-transform shrink-0">
+              <CheckCircle2 size={15} />
+            </div>
+          </div>
+          <span className="text-2xl font-black text-emerald-700 mt-2 block tracking-tight">{approvedCount}</span>
         </div>
-        <div className="bg-indigo-50/20 border border-indigo-100/40 rounded-2xl p-4 shadow-3xs">
-          <span className="text-xs font-semibold text-indigo-500 uppercase tracking-wider block">Đã tạo JD</span>
-          <span className="text-2xl font-bold text-indigo-700 mt-1 block">{jdCreatedCount}</span>
+
+        {/* 4. Từ chối */}
+        <div className="bg-white border border-rose-200/70 rounded-2xl p-3.5 shadow-2xs hover:shadow-xs transition-all duration-200 group min-w-0">
+          <div className="flex items-center justify-between gap-1.5">
+            <span className="text-[11px] font-bold text-rose-600 uppercase tracking-wider block truncate">Từ chối</span>
+            <div className="p-1.5 rounded-xl bg-rose-50 text-rose-600 group-hover:scale-105 transition-transform shrink-0">
+              <XCircle size={15} />
+            </div>
+          </div>
+          <span className="text-2xl font-black text-rose-700 mt-2 block tracking-tight">{rejectedCount}</span>
+        </div>
+
+        {/* 5. Đã tạo JD */}
+        <div className="bg-white border border-indigo-200/70 rounded-2xl p-3.5 shadow-2xs hover:shadow-xs transition-all duration-200 group min-w-0">
+          <div className="flex items-center justify-between gap-1.5">
+            <span className="text-[11px] font-bold text-indigo-600 uppercase tracking-wider block truncate">Đã tạo JD</span>
+            <div className="p-1.5 rounded-xl bg-indigo-50 text-indigo-600 group-hover:scale-105 transition-transform shrink-0">
+              <Briefcase size={15} />
+            </div>
+          </div>
+          <span className="text-2xl font-black text-indigo-700 mt-2 block tracking-tight">{jdCreatedCount}</span>
+        </div>
+
+        {/* 6. Hoàn thành */}
+        <div className="bg-white border border-blue-200/70 rounded-2xl p-3.5 shadow-2xs hover:shadow-xs transition-all duration-200 group min-w-0">
+          <div className="flex items-center justify-between gap-1.5">
+            <span className="text-[11px] font-bold text-blue-600 uppercase tracking-wider block truncate">Hoàn thành</span>
+            <div className="p-1.5 rounded-xl bg-blue-50 text-blue-600 group-hover:scale-105 transition-transform shrink-0">
+              <Award size={15} />
+            </div>
+          </div>
+          <span className="text-2xl font-black text-blue-700 mt-2 block tracking-tight">{completedCount}</span>
         </div>
       </div>
 
@@ -172,6 +254,7 @@ export default function JobRequestTable({
           <option value={JobStatus.APPROVED}>Đã duyệt</option>
           <option value={JobStatus.REJECTED}>Từ chối</option>
           <option value={JobStatus.JD_CREATED}>Đã tạo JD</option>
+          <option value={JobStatus.COMPLETED}>Hoàn thành</option>
         </select>
 
         <select
@@ -187,7 +270,7 @@ export default function JobRequestTable({
       </div>
 
       {/* Table grid */}
-      <div className="bg-white border border-gray-100 rounded-2xl overflow-hidden shadow-2xs">
+      <div className="bg-white border border-gray-100 rounded-2xl shadow-2xs">
         <div className="overflow-x-auto">
           <table className="w-full text-left border-collapse text-sm">
             <thead>
@@ -216,6 +299,7 @@ export default function JobRequestTable({
                   const statusConf = getStatusConfig(job.status);
                   const priorityConf = getPriorityConfig(job.priority);
                   const createdDate = job.createdAt ? new Date(job.createdAt).toISOString().split("T")[0] : "";
+                  const isMenuOpen = activeMenu?.job._id === job._id;
 
                   return (
                     <tr key={job._id} className="hover:bg-gray-50/40 transition-colors">
@@ -265,52 +349,19 @@ export default function JobRequestTable({
                         {createdDate}
                       </td>
 
-                      {/* Actions */}
+                      {/* Actions Button */}
                       <td className="px-6 py-4.5 text-center">
-                        <div className="flex items-center justify-center gap-1.5">
+                        <div className="flex items-center justify-center">
                           <button
-                            onClick={() => onView(job)}
-                            className="p-1.5 text-gray-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg transition-colors cursor-pointer"
-                            title="Xem chi tiết"
+                            onClick={(e) => handleToggleMenu(e, job)}
+                            className={`p-1.5 rounded-xl transition-colors cursor-pointer ${
+                              isMenuOpen
+                                ? "bg-indigo-50 text-indigo-600"
+                                : "text-gray-400 hover:text-gray-700 hover:bg-gray-100"
+                            }`}
+                            title="Thao tác"
                           >
-                            <Eye size={16} />
-                          </button>
-
-                          {/* Review Button (ONLY for HR Admin on PENDING jobs) */}
-                          {isHrAdmin && job.status === JobStatus.PENDING && (
-                            <button
-                              onClick={() => onReview(job)}
-                              className="p-1.5 text-emerald-600 hover:text-emerald-700 hover:bg-emerald-50 border border-emerald-100/50 rounded-lg transition-colors cursor-pointer"
-                              title="Xét duyệt yêu cầu"
-                            >
-                              <CheckCheck size={16} />
-                            </button>
-                          )}
-
-                          {/* Promote Button (ONLY for HR Admin on APPROVED jobs) */}
-                          {isHrAdmin && job.status === JobStatus.APPROVED && (
-                            <button
-                              onClick={() => onPromote(job)}
-                              className="p-1.5 text-purple-600 hover:text-purple-700 hover:bg-purple-50 border border-purple-100/50 rounded-lg transition-colors cursor-pointer"
-                              title="Chuyển thành Job"
-                            >
-                              <Briefcase size={16} />
-                            </button>
-                          )}
-
-                          <button
-                            onClick={() => onEdit(job)}
-                            className="p-1.5 text-gray-400 hover:text-emerald-600 hover:bg-emerald-50 rounded-lg transition-colors cursor-pointer"
-                            title="Chỉnh sửa yêu cầu"
-                          >
-                            <Edit2 size={16} />
-                          </button>
-                          <button
-                            onClick={() => onDelete(job)}
-                            className="p-1.5 text-gray-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition-colors cursor-pointer"
-                            title="Xóa yêu cầu"
-                          >
-                            <Trash2 size={16} />
+                            <MoreVertical size={18} />
                           </button>
                         </div>
                       </td>
@@ -322,6 +373,124 @@ export default function JobRequestTable({
           </table>
         </div>
       </div>
+
+      {/* Floating Action Menu Portal (Rendered at document.body level - Bypasses table overflow & clipping) */}
+      {mounted && activeMenu && createPortal(
+        <>
+          {/* Backdrop to close menu when clicking outside */}
+          <div
+            className="fixed inset-0 z-[9998]"
+            onClick={() => setActiveMenu(null)}
+          />
+
+          {/* Floating Popover Menu */}
+          <div
+            style={{
+              position: "fixed",
+              zIndex: 9999,
+              right: `${Math.max(12, window.innerWidth - activeMenu.rect.right)}px`,
+              ...(window.innerHeight - activeMenu.rect.bottom < 230
+                ? { bottom: `${window.innerHeight - activeMenu.rect.top + 6}px` }
+                : { top: `${activeMenu.rect.bottom + 6}px` }),
+            }}
+            className="min-w-[195px] bg-white border border-gray-100 rounded-2xl shadow-xl py-1.5 text-left animate-in fade-in zoom-in-95 duration-150"
+          >
+            {/* Xem chi tiết */}
+            <button
+              onClick={() => {
+                const targetJob = activeMenu.job;
+                setActiveMenu(null);
+                onView(targetJob);
+              }}
+              className="w-full flex items-center gap-2.5 px-3.5 py-2 text-xs font-semibold text-gray-700 hover:bg-gray-50 transition-colors cursor-pointer whitespace-nowrap"
+            >
+              <Eye size={15} className="text-indigo-500 shrink-0" />
+              <span>Xem chi tiết</span>
+            </button>
+
+            {/* Xét duyệt (chỉ HR Admin & PENDING) */}
+            {isHrAdmin && activeMenu.job.status === JobStatus.PENDING && (
+              <button
+                onClick={() => {
+                  const targetJob = activeMenu.job;
+                  setActiveMenu(null);
+                  onReview(targetJob);
+                }}
+                className="w-full flex items-center gap-2.5 px-3.5 py-2 text-xs font-semibold text-emerald-700 hover:bg-emerald-50/60 transition-colors cursor-pointer whitespace-nowrap"
+              >
+                <CheckCheck size={15} className="text-emerald-600 shrink-0" />
+                <span>Xét duyệt yêu cầu</span>
+              </button>
+            )}
+
+            {/* Chuyển thành Job (chỉ HR Admin & APPROVED) */}
+            {isHrAdmin && activeMenu.job.status === JobStatus.APPROVED && (
+              <button
+                onClick={() => {
+                  const targetJob = activeMenu.job;
+                  setActiveMenu(null);
+                  onPromote(targetJob);
+                }}
+                className="w-full flex items-center gap-2.5 px-3.5 py-2 text-xs font-semibold text-purple-700 hover:bg-purple-50/60 transition-colors cursor-pointer whitespace-nowrap"
+              >
+                <Briefcase size={15} className="text-purple-600 shrink-0" />
+                <span>Chuyển thành Job</span>
+              </button>
+            )}
+
+            {/* Đánh dấu Hoàn thành (chỉ HR Admin & APPROVED/JD_CREATED) */}
+            {isHrAdmin && (activeMenu.job.status === JobStatus.APPROVED || activeMenu.job.status === JobStatus.JD_CREATED) && (
+              <button
+                onClick={() => {
+                  const targetJob = activeMenu.job;
+                  setActiveMenu(null);
+                  onComplete(targetJob);
+                }}
+                className="w-full flex items-center gap-2.5 px-3.5 py-2 text-xs font-semibold text-blue-700 hover:bg-blue-50/60 transition-colors cursor-pointer whitespace-nowrap"
+              >
+                <CheckCircle2 size={15} className="text-blue-600 shrink-0" />
+                <span>Đánh dấu Hoàn thành</span>
+              </button>
+            )}
+
+            {/* Chỉnh sửa (HR Admin hoặc PENDING) */}
+            {(isHrAdmin || activeMenu.job.status === JobStatus.PENDING) && (
+              <button
+                onClick={() => {
+                  const targetJob = activeMenu.job;
+                  setActiveMenu(null);
+                  onEdit(targetJob);
+                }}
+                className="w-full flex items-center gap-2.5 px-3.5 py-2 text-xs font-semibold text-gray-700 hover:bg-gray-50 transition-colors cursor-pointer whitespace-nowrap"
+              >
+                <Edit2 size={15} className="text-gray-500 shrink-0" />
+                <span>Chỉnh sửa</span>
+              </button>
+            )}
+
+            {/* Đường phân cách trước nút xóa */}
+            {(isHrAdmin || activeMenu.job.status === JobStatus.PENDING) && (
+              <div className="my-1 border-t border-gray-100" />
+            )}
+
+            {/* Xóa yêu cầu */}
+            {(isHrAdmin || activeMenu.job.status === JobStatus.PENDING) && (
+              <button
+                onClick={() => {
+                  const targetJob = activeMenu.job;
+                  setActiveMenu(null);
+                  onDelete(targetJob);
+                }}
+                className="w-full flex items-center gap-2.5 px-3.5 py-2 text-xs font-semibold text-rose-600 hover:bg-rose-50 transition-colors cursor-pointer whitespace-nowrap"
+              >
+                <Trash2 size={15} className="text-rose-500 shrink-0" />
+                <span>Xóa yêu cầu</span>
+              </button>
+            )}
+          </div>
+        </>,
+        document.body
+      )}
     </div>
   );
 }

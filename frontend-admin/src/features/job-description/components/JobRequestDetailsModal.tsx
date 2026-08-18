@@ -24,6 +24,7 @@ export default function JobRequestDetailsModal({
       case JobStatus.APPROVED: return "Đã duyệt";
       case JobStatus.REJECTED: return "Từ chối";
       case JobStatus.JD_CREATED: return "Đã tạo JD";
+      case JobStatus.COMPLETED: return "Hoàn thành";
     }
   };
 

@@ -17,6 +17,7 @@ export enum JobStatus {
   APPROVED = 'APPROVED',     // Đã duyệt
   REJECTED = 'REJECTED',     // Từ chối
   JD_CREATED = 'JD_CREATED', // Đã tạo JD
+  COMPLETED = 'COMPLETED',   // Hoàn thành
 }
 
 export enum JobPriority {
