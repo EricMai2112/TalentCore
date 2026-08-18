@@ -1,11 +1,10 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState } from "react";
+import { useRouter } from "next/navigation";
 import { Check, AlertTriangle } from "lucide-react";
 import JobRequestTable from "./JobRequestTable";
-import JobRequestModal from "./JobRequestModal";
 import DeleteConfirmModal from "./DeleteConfirmModal";
-import JobRequestDetailsModal from "./JobRequestDetailsModal";
 import ReviewModal from "./ReviewModal";
 import { jobDescriptionApi } from "../services/job-description.api";
 import {
@@ -37,60 +36,55 @@ export default function JobRequestManager({
   employees,
   positions,
 }: JobRequestManagerProps) {
+  const router = useRouter();
   const { user: currentUser } = useAuth();
+
+  const getDeptIdStr = (dept: string | Department | undefined): string => {
+    if (!dept) return "";
+    if (typeof dept === "string") return dept;
+    if (typeof dept === "object" && "_id" in dept) return dept._id;
+    return "";
+  };
+
   const isHrAdmin = currentUser?.role === UserRole.HR_ADMIN;
   const isDeptManager = currentUser?.role === UserRole.DEPARTMENT_MANAGER;
-  const userDeptId = typeof currentUser?.departmentId === "object"
-    ? currentUser?.departmentId?._id
-    : (currentUser?.departmentId ?? "");
+  const userDeptId = getDeptIdStr(currentUser?.departmentId);
 
   const [jobs, setJobs] = useState<JobDescription[]>(initialJobs);
-  const [isModalOpen, setIsModalOpen] = useState(false);
-  const [isDeleteOpen, setIsDeleteOpen] = useState(false);
-  const [isDetailsOpen, setIsDetailsOpen] = useState(false);
-  const [isReviewOpen, setIsReviewOpen] = useState(false);
-  
   const [activeJob, setActiveJob] = useState<JobDescription | null>(null);
-  
-  const [isSubmitting, setIsSubmitting] = useState(false);
+
+  // Popup Modal States for Delete and Review
+  const [isDeleteOpen, setIsDeleteOpen] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
+
+  const [isReviewOpen, setIsReviewOpen] = useState(false);
   const [isSubmittingReview, setIsSubmittingReview] = useState(false);
+
+  // Toast alert state
   const [toast, setToast] = useState<{ message: string; type: "success" | "error" } | null>(null);
 
-  // Auto-dismiss toast
-  useEffect(() => {
-    if (toast) {
-      const timer = setTimeout(() => setToast(null), 3000);
-      return () => clearTimeout(timer);
-    }
-  }, [toast]);
-
-  const showToast = (message: string, type: "success" | "error") => {
+  const showToast = (message: string, type: "success" | "error" = "success") => {
     setToast({ message, type });
+    setTimeout(() => setToast(null), 3000);
   };
 
-  // Trigger add/create
+  // Route Page Navigations
   const handleAdd = () => {
-    setActiveJob(null);
-    setIsModalOpen(true);
+    router.push("/job-description/create");
   };
 
-  // Trigger edit
   const handleEdit = (job: JobDescription) => {
-    setActiveJob(job);
-    setIsModalOpen(true);
+    router.push(`/job-description/${job._id}/edit`);
   };
 
-  // Trigger delete
+  const handleView = (job: JobDescription) => {
+    router.push(`/job-description/${job._id}`);
+  };
+
+  // Trigger delete confirmation modal
   const handleDelete = (job: JobDescription) => {
     setActiveJob(job);
     setIsDeleteOpen(true);
-  };
-
-  // Trigger view details
-  const handleView = (job: JobDescription) => {
-    setActiveJob(job);
-    setIsDetailsOpen(true);
   };
 
   // Trigger review modal
@@ -125,33 +119,6 @@ export default function JobRequestManager({
     }
   };
 
-  // Handle form submission (Create or Update)
-  const handleFormSubmit = async (payload: any) => {
-    setIsSubmitting(true);
-    try {
-      if (activeJob) {
-        // Update mode
-        await jobDescriptionApi.updateJob(activeJob._id, payload);
-        const refreshed = await jobDescriptionApi.getJobs();
-        setJobs(refreshed);
-        setIsModalOpen(false);
-        showToast("Cập nhật yêu cầu tuyển dụng thành công!", "success");
-      } else {
-        // Create mode
-        await jobDescriptionApi.createJob(payload);
-        const refreshed = await jobDescriptionApi.getJobs();
-        setJobs(refreshed);
-        setIsModalOpen(false);
-        showToast("Tạo yêu cầu tuyển dụng thành công!", "success");
-      }
-    } catch (err: any) {
-      showToast(err.message || "Lỗi khi lưu yêu cầu tuyển dụng", "error");
-      throw err;
-    } finally {
-      setIsSubmitting(false);
-    }
-  };
-
   // Handle review approval/rejection submission
   const handleReviewSubmit = async (status: JobStatus, note: string) => {
     if (!activeJob) return;
@@ -182,7 +149,7 @@ export default function JobRequestManager({
     setIsDeleting(true);
     try {
       await jobDescriptionApi.deleteJob(activeJob._id);
-      setJobs(jobs.filter(j => j._id !== activeJob._id));
+      setJobs(jobs.filter((j) => j._id !== activeJob._id));
       setIsDeleteOpen(false);
       showToast("Xóa yêu cầu tuyển dụng thành công!", "success");
     } catch (err: any) {
@@ -225,22 +192,6 @@ export default function JobRequestManager({
         userDeptId={userDeptId}
       />
 
-      {/* Creation and Update Wizard Modal */}
-      <JobRequestModal
-        isOpen={isModalOpen}
-        onClose={() => setIsModalOpen(false)}
-        onSubmit={handleFormSubmit}
-        initialJob={activeJob}
-        isSubmitting={isSubmitting}
-        departments={departments}
-        pipelineTemplates={pipelineTemplates}
-        skills={skills}
-        employees={employees}
-        positions={positions}
-        isDeptManager={isDeptManager}
-        userDeptId={userDeptId}
-      />
-
       {/* Delete confirmation popup */}
       <DeleteConfirmModal
         isOpen={isDeleteOpen}
@@ -248,13 +199,6 @@ export default function JobRequestManager({
         onConfirm={handleDeleteConfirm}
         jobTitle={activeJob?.title || ""}
         isDeleting={isDeleting}
-      />
-
-      {/* Read-only detailed overview Modal */}
-      <JobRequestDetailsModal
-        isOpen={isDetailsOpen}
-        onClose={() => setIsDetailsOpen(false)}
-        job={activeJob}
       />
 
       {/* Requisition Review (Approve/Reject) Modal */}
