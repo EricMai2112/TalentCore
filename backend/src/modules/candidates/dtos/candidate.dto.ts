@@ -1,6 +1,11 @@
 import { IsArray, IsNumber, IsOptional, IsString } from 'class-validator';
 
 export class UpdateCandidateProfileDto {
+
+  @IsOptional()
+  @IsString()
+  name?: string;
+
   @IsOptional()
   @IsString()
   headline?: string;

@@ -36,17 +36,28 @@ export class CandidateService {
   }
 
   async updateProfile(userId: string, dto: UpdateCandidateProfileDto) {
-    const { phone, ...candidateDto } = dto;
-    if (phone !== undefined) {
-    await this.userModel.findByIdAndUpdate(userId, {
-      $set: { phone: phone.trim() },
+    const { name, phone, ...candidateDto } = dto;
+
+    const userUpdates: Record<string, string> = {};
+    if (name !== undefined && name !== null) {
+      userUpdates.name = name.trim();
+    }
+    if (phone !== undefined && phone !== null) {
+      userUpdates.phone = phone.trim();
+    }
+    if (Object.keys(userUpdates).length > 0) {
+      await this.userModel.findByIdAndUpdate(userId, {
+        $set: userUpdates,
       });
-    } 
-    const candidate = await this.candidateModel.findOneAndUpdate(
-      { userId: new Types.ObjectId(userId) },
-      { $set: dto },
-      { returnDocument: 'after', upsert: true }
-    ).populate('userId', 'name email phone avatar');
+    }
+
+    const candidate = await this.candidateModel
+      .findOneAndUpdate(
+        { userId: new Types.ObjectId(userId) },
+        { $set: candidateDto },
+        { returnDocument: 'after', upsert: true },
+      )
+      .populate('userId', 'name email phone avatar');
 
     return {
       message: 'Cập nhật hồ sơ thành công',

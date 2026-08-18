@@ -23,6 +23,9 @@ import {
   Globe,
   Target,
   Link as LinkIcon,
+  Sparkles,
+  Loader2,
+  UploadCloud,
 } from "lucide-react";
 import { useAuth } from "@/src/providers/AuthProvider";
 import { CandidateProfile, CertificateItem, CustomSection, EducationItem, ExperienceItem, ProjectItem } from "../types/profile.types";
@@ -37,6 +40,9 @@ import EditProjectModal from "./EditProjectModal";
 import EditCertificationModal from "./EditCertificationModal";
 import EditLanguageModal from "./EditLanguageModal";
 import EditCustomSectionModal from "./EditCustomSectionModal";
+import CvParsingPreviewModal from "./CvParsingPreviewModal";
+import { toast } from "react-toastify";
+import ProfileNavSidebar from "./ProfileNavSidebar";
 
 export default function CandidateProfileView() {
   const { user: authUser } = useAuth();
@@ -62,6 +68,9 @@ export default function CandidateProfileView() {
   const [isCustomSectionModalOpen, setIsCustomSectionModalOpen] = useState(false);
   const [selectedCustomSection, setSelectedCustomSection] = useState<CustomSection | null>(null);
   const [selectedSectionIndex, setSelectedSectionIndex] = useState<number | null>(null);
+  const [isParsingCv, setIsParsingCv] = useState(false);
+  const [parsedCvData, setParsedCvData] = useState<any>(null);
+  const [isPreviewModalOpen, setIsPreviewModalOpen] = useState(false);
 
   useEffect(() => {
     const loadProfile = async () => {
@@ -188,889 +197,993 @@ export default function CandidateProfileView() {
     setIsCustomSectionModalOpen(true);
   };
 
+  const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    const allowedTypes = ['.pdf', '.docx', '.png', '.jpg', '.jpeg', '.webp'];
+    const isAllowed = allowedTypes.some((ext) =>
+      file.name.toLowerCase().endsWith(ext)
+    );
+
+    if (!isAllowed) {
+      toast.error("Vui lòng tải lên file định dạng PDF, Word (.docx) hoặc Ảnh (.png, .jpg).");
+      return;
+    }
+
+    setIsParsingCv(true);
+    try {
+      const data = await profileApi.parseCvWithAi(file);
+      
+      if (!data || Object.keys(data).length === 0) {
+        throw new Error("Dữ liệu rỗng");
+      }
+
+      setParsedCvData(data);
+      setIsPreviewModalOpen(true);
+      toast.success("Bóc tách thông tin CV thành công!");
+    } catch (error: any) {
+      console.error("Lỗi parse CV:", error);
+      toast.error("Có lỗi khi lấy dữ liệu");
+    } finally {
+      setIsParsingCv(false);
+      e.target.value = "";
+    }
+  };
+
   return (
-    <div className="max-w-4xl mx-auto space-y-6 pb-20 text-slate-900">
-
-      {/* 1. THÔNG TIN CÁ NHÂN & SOCIAL LINKS (HEADER CARD) */}
-      <section className="bg-white rounded-2xl p-6 sm:p-8 shadow-xs border border-slate-200/90">
-        {/* Header hàng trên: Avatar + Thông tin bên trái & DUY NHẤT 1 NÚT CHỈNH SỬA bên phải */}
-        <div className="flex flex-col sm:flex-row items-start justify-between gap-6">
-          <div className="flex items-start gap-5">
-            {/* Avatar chữ cái */}
-            <div className="w-20 h-20 rounded-2xl bg-blue-600 flex items-center justify-center text-white text-3xl font-extrabold shadow-md shadow-blue-500/20 shrink-0">
-              {initialLetter}
-            </div>
-
-            <div className="space-y-2">
-              <h1 className="text-2xl font-extrabold text-slate-900">
-                {candidateName}
-              </h1>
-
-              <p className="text-base font-semibold text-blue-600">
-                {profile?.headline || "Chưa cập nhật chức danh nghề nghiệp"}
-              </p>
-
-              {/* Thông tin liên hệ cơ bản */}
-              <div className="flex flex-wrap items-center gap-4 text-xs font-medium text-slate-500 pt-0.5">
-                {candidateEmail && (
-                  <span className="flex items-center gap-1.5">
-                    <Mail size={14} className="text-slate-400" />
-                    {candidateEmail}
-                  </span>
-                )}
-                {candidatePhone && (
-                  <span className="flex items-center gap-1.5">
-                    <Phone size={14} className="text-slate-400" />
-                    {candidatePhone}
-                  </span>
-                )}
-                <span className="flex items-center gap-1.5">
-                  <MapPin size={14} className="text-slate-400" />
-                  {profile?.address || "Chưa cập nhật địa chỉ"}
-                </span>
-              </div>
-
-              {/* Social Links (Hiển thị các link đã có, không có nút thêm lẻ) */}
-              {profile?.socialLinks && profile.socialLinks.length > 0 && (
-                <div className="pt-2 flex flex-wrap items-center gap-2">
-                  {profile.socialLinks.map((item, idx) => (
-                    <a
-                      key={idx}
-                      href={item.url.startsWith("http") ? item.url : `https://${item.url}`}
-                      target="_blank"
-                      rel="noreferrer"
-                      className="inline-flex items-center gap-1.5 px-3 py-1 rounded-lg bg-slate-50 hover:bg-blue-50 border border-slate-200 hover:border-blue-200 text-slate-700 hover:text-blue-600 text-xs font-semibold transition-colors"
-                    >
-                      {renderSocialIcon(item.platform)}
-                      <span>{item.platform}</span>
-                      <ExternalLink size={11} className="text-slate-400" />
-                    </a>
-                  ))}
-                </div>
-              )}
-            </div>
+    <div className="mmin-h-screen bg-slate-50/50 py-8 px-4 sm:px-6 lg:px-10 xl:px-12">
+      <div className="max-w-6xl mx-auto space-y-6 pb-20 text-slate-900">
+        {/* AI Parsing */}
+      <div className="bg-gradient-to-r from-blue-600 via-indigo-600 to-violet-600 rounded-3xl p-6 sm:p-7 text-white shadow-lg shadow-blue-500/10 flex flex-col sm:flex-row items-center justify-between gap-6">
+        <div className="space-y-1.5 text-center sm:text-left">
+          <div className="inline-flex items-center gap-1.5 px-3 py-1 bg-white/20 backdrop-blur-md rounded-full text-xs font-bold text-blue-50 mb-1">
+            <Sparkles size={14} className="text-yellow-300 animate-spin" />
+            <span>Tính năng AI thông minh</span>
           </div>
-
-          {/* DUY NHẤT 1 NÚT CHỈNH SỬA Ở ĐÂY */}
-          <button
-            type="button"
-            onClick={() => setIsPersonalModalOpen(true)}
-            className="inline-flex items-center gap-1.5 px-4 py-2 border border-blue-600 text-blue-600 text-xs font-bold rounded-full hover:bg-blue-50 transition-all cursor-pointer shrink-0"
-          >
-            <Pencil size={13} />
-            <span>Chỉnh sửa</span>
-          </button>
-        </div>
-
-        {/* Giới thiệu bản thân (Chỉ hiển thị text, không còn nút chỉnh sửa) */}
-        <div className="mt-6 pt-5 border-t border-slate-100">
-          <h3 className="text-xs font-bold uppercase tracking-wider text-slate-500 mb-2">
-            Giới thiệu bản thân
-          </h3>
-          <p className="text-sm text-slate-700 leading-relaxed whitespace-pre-line">
-            {profile?.summary ||
-              "Thêm mô tả ngắn về kinh nghiệm và thế mạnh của bạn để tạo ấn tượng tốt với nhà tuyển dụng."}
+          <h2 className="text-xl sm:text-2xl font-extrabold tracking-tight">
+            Tự động điền hồ sơ bằng CV sẵn có
+          </h2>
+          <p className="text-xs sm:text-sm text-blue-100 max-w-xl font-medium">
+            Hỗ trợ tải lên file <strong>PDF, Word hoặc Ảnh CV</strong>. Hệ thống TalentCore sẽ tự động trích xuất các thông tin chỉ trong vài giây.
           </p>
         </div>
-      </section>
-      <EditPersonalInfoModal
-        isOpen={isPersonalModalOpen}
-        onClose={() => setIsPersonalModalOpen(false)}
-        profile={profile}
-        defaultPhone={candidatePhone}
-        onSuccess={(updatedData) => {
-          setProfile((prev) => {
-            if (!prev) return null;
-            return {
-              ...prev,
-              ...updatedData,
-              userId:
-                typeof prev.userId === "object"
-                  ? { ...prev.userId, phone: updatedData.phone || prev.userId.phone }
-                  : prev.userId,
-            };
-          });
-        }}
-      />
 
-      {/* CarrerObjectives */}
-      <section className="bg-white rounded-2xl p-6 sm:p-8 shadow-xs border border-slate-200/90">
-        <div className="flex items-start justify-between gap-4">
-          <div className="flex items-start gap-4">
-            <div className="p-3 bg-blue-50 text-blue-600 rounded-2xl shrink-0">
-              <Target className="w-7 h-7" />
-            </div>
-            <div>
-              <h2 className="text-xl font-bold text-slate-900 flex items-center gap-1.5">
-                Mục tiêu nghề nghiệp <span className="text-rose-500 font-bold">*</span>
-              </h2>
-              {hasCareerObjective ? (
-                <span className="inline-flex items-center gap-1 text-xs font-semibold text-emerald-600 mt-1">
-                  <CheckCircle2 size={13} /> Đã hoàn thành
-                </span>
-              ) : (
-                <span className="text-xs font-bold text-rose-500 mt-1 block">
-                  Chưa hoàn thành
-                </span>
-              )}
-            </div>
-          </div>
-
-          <div className="flex items-center gap-3 shrink-0">
-            {!hasCareerObjective && <button
-              type="button"
-              className="inline-flex items-center gap-1.5 px-4 py-2 border border-blue-600 text-blue-600 text-xs font-bold rounded-full hover:bg-blue-50 transition-all cursor-pointer"
-              onClick={() => setIsObjectiveModalOpen(true)}
-            >
-              <Plus size={15} />
-              <span>Thêm mới</span>
-            </button>}
-            
-          </div>
-        </div>
-        <EditCareerObjectiveModal
-          isOpen={isObjectiveModalOpen}
-          onClose={() => setIsObjectiveModalOpen(false)}
-          initialValue={profile?.careerObjective || ""}
-          onSuccess={(updatedValue) => {
-            setProfile((prev) => prev ? { ...prev, careerObjective: updatedValue } : null);
-          }}
-        />
-
-        <div className="mt-6">
-          {!hasCareerObjective ? (
-            <div className="border border-dashed border-slate-300 rounded-xl p-6 bg-slate-50/60 text-left">
-              <p className="text-sm text-slate-600 font-medium">
-                Nêu rõ mục tiêu ngắn hạn và dài hạn trong sự nghiệp giúp nhà tuyển dụng đánh giá định hướng phát triển của bạn
-              </p>
-              <button
-                type="button"
-                className="mt-3 inline-flex items-center gap-1 text-xs font-bold text-blue-600 hover:text-blue-700 hover:underline uppercase tracking-wider cursor-pointer"
-                onClick={() => setIsObjectiveModalOpen(true)}
-              >
-                <Plus size={14} />
-                <span>THÊM MỤC TIÊU NGHỀ NGHIỆP</span>
-              </button>
-            </div>
-          ) : (
-            <div className="p-4 rounded-xl border border-slate-100 bg-slate-50/70 flex justify-between items-start gap-4">
-              <p className="text-sm text-slate-700 leading-relaxed whitespace-pre-line">
-                {profile?.careerObjective}
-              </p>
-              <button type="button" onClick={() => setIsObjectiveModalOpen(true)} className="p-1.5 text-slate-400 hover:text-blue-600 rounded-lg hover:bg-white transition-all cursor-pointer">
-                <Pencil size={15} />
-              </button>
-            </div>
-          )}
-        </div>
-      </section>
-
-      {/* 4. HỌC VẤN (BẮT BUỘC) */}
-      <section className="bg-white rounded-2xl p-6 sm:p-8 shadow-xs border border-slate-200/90">
-        <div className="flex items-start justify-between gap-4">
-          <div className="flex items-start gap-4">
-            <div className="p-3 bg-blue-50 text-blue-600 rounded-2xl shrink-0">
-              <GraduationCap className="w-7 h-7" />
-            </div>
-            <div>
-              <h2 className="text-xl font-bold text-slate-900 flex items-center gap-1.5">
-                Học vấn <span className="text-rose-500 font-bold">*</span>
-              </h2>
-              {hasEducation ? (
-                <span className="inline-flex items-center gap-1 text-xs font-semibold text-emerald-600 mt-1">
-                  <CheckCircle2 size={13} /> Đã hoàn thành
-                </span>
-              ) : (
-                <span className="text-xs font-bold text-rose-500 mt-1 block">
-                  Chưa hoàn thành
-                </span>
-              )}
-            </div>
-          </div>
-
-          <div className="flex items-center gap-3 shrink-0">
-            <button
-              type="button"
-              onClick={handleOpenAddEdu}
-              className="inline-flex items-center gap-1.5 px-4 py-2 border border-blue-600 text-blue-600 text-xs font-bold rounded-full hover:bg-blue-50 transition-all cursor-pointer"
-            >
-              <Plus size={15} />
-              <span>Thêm mới</span>
-            </button>
-          </div>
-        </div>
-
-        <div className="mt-6">
-          {!hasEducation ? (
-            <div className="border border-dashed border-slate-300 rounded-xl p-6 bg-slate-50/60 text-left">
-              <p className="text-sm text-slate-600 font-medium">
-                Nhập thông tin học vấn của bạn
-              </p>
-              <button
-                type="button"
-                onClick={handleOpenAddEdu}
-                className="mt-3 inline-flex items-center gap-1 text-xs font-bold text-blue-600 hover:text-blue-700 hover:underline uppercase tracking-wider cursor-pointer"
-              >
-                <Plus size={14} />
-                <span>THÊM MỚI</span>
-              </button>
-            </div>
-          ) : (
-            <div className="space-y-3">
-              {profile?.educations.map((edu, index) => (
-                <div
-                  key={index}
-                  className="p-4 rounded-xl border border-slate-100 bg-slate-50/70 flex justify-between items-start gap-4"
-                >
-                  <div className="space-y-1">
-                    <h3 className="text-base font-bold text-slate-900">{edu.institution}</h3>
-                    <p className="text-sm font-semibold text-slate-700">
-                      {edu.major} {edu.degree && `• ${edu.degree}`}
-                    </p>
-                    {(edu.startDate || edu.endDate) && (
-                      <p className="text-xs text-slate-400">
-                        {edu.startDate || "N/A"} - {edu.endDate || "Hiện tại"}
-                      </p>
-                    )}
-                    {edu.gpa !== undefined && (
-                      <p className="text-xs font-bold text-slate-800 pt-0.5">
-                        GPA: <span className="text-blue-600">{edu.gpa}</span>
-                      </p>
-                    )}
-                  </div>
-                  <button
-                    type="button"
-                    onClick={() => handleOpenEditEdu(edu, index)}
-                    className="p-1.5 text-slate-400 hover:text-blue-600 rounded-lg hover:bg-white transition-all cursor-pointer"
-                  >
-                    <Pencil size={15} />
-                  </button>
-                </div>
-              ))}
-            </div>
-          )}
-        </div>
-      </section>
-      <EditEducationModal
-        isOpen={isEduModalOpen}
-        onClose={() => setIsEduModalOpen(false)}
-        initialData={selectedEdu}
-        currentIndex={selectedEduIndex}
-        allEducations={profile?.educations || []}
-        onSuccess={(updatedEducations) => {
-          setProfile((prev) => (prev ? { ...prev, educations: updatedEducations } : null));
-        }}
-      />
-
-      {/* Skill */}
-      <section className="bg-white rounded-2xl p-6 sm:p-8 shadow-xs border border-slate-200/90">
-        <div className="flex items-start justify-between gap-4">
-          <div className="flex items-start gap-4">
-            <div className="p-3 bg-blue-50 text-blue-600 rounded-2xl shrink-0">
-              <Cpu className="w-7 h-7" />
-            </div>
-            <div>
-              <h2 className="text-xl font-bold text-slate-900">Kỹ năng chuyên môn</h2>
-              {hasSkills ? (
-                <span className="inline-flex items-center gap-1 text-xs font-semibold text-emerald-600 mt-1">
-                  <CheckCircle2 size={13} /> Đã cập nhật
-                </span>
-              ) : (
-                <span className="text-xs font-bold text-slate-400 mt-1 block">
-                  Chưa cập nhật
-                </span>
-              )}
-            </div>
-          </div>
-
-          <div className="flex items-center gap-3 shrink-0">
-            <button
-              type="button"
-              onClick={() => setIsSkillsModalOpen(true)}
-              className="inline-flex items-center gap-1.5 px-4 py-2 border border-blue-600 text-blue-600 text-xs font-bold rounded-full hover:bg-blue-50 transition-all cursor-pointer"
-            >
-              {hasSkills ? <Pencil size={13} /> : <Plus size={15} />}
-              <span>{hasSkills ? "Chỉnh sửa" : "Thêm mới"}</span>
-            </button>
-          </div>
-        </div>
-
-        <div className="mt-6">
-          {!hasSkills ? (
-            <div className="border border-dashed border-slate-300 rounded-xl p-6 bg-slate-50/60 text-left">
-              <p className="text-sm text-slate-600 font-medium">
-                Thêm các kỹ năng chuyên môn của bạn để hệ thống AI so khớp độ tương thích với Job Description
-              </p>
-              <button
-                type="button"
-                onClick={() => setIsSkillsModalOpen(true)}
-                className="mt-3 inline-flex items-center gap-1 text-xs font-bold text-blue-600 hover:underline uppercase tracking-wider cursor-pointer"
-              >
-                <Plus size={14} />
-                <span>THÊM KỸ NĂNG</span>
-              </button>
-            </div>
-          ) : (
-            <div className="flex flex-wrap gap-2.5">
-              {profile?.skills.map((skill, index) => (
-                <div
-                  key={index}
-                  className="px-3.5 py-2 rounded-xl bg-slate-50 border border-slate-200/80 flex items-center gap-2 group hover:border-blue-300 transition-colors"
-                >
-                  <span className="text-sm font-bold text-slate-800">{skill.name}</span>
-                  {skill.yearsOfExperience !== undefined && (
-                    <span className="text-[11px] text-slate-500 font-medium bg-white px-1.5 py-0.5 rounded border border-slate-200">
-                      {skill.yearsOfExperience} năm
-                    </span>
-                  )}
-                  {skill.proficiency && (
-                    <span className="text-[10px] font-bold text-blue-600 bg-blue-50 px-1.5 py-0.5 rounded">
-                      {skill.proficiency}
-                    </span>
-                  )}
-                </div>
-              ))}
-            </div>
-          )}
-        </div>
-      </section>
-      <EditSkillsModal
-        isOpen={isSkillsModalOpen}
-        onClose={() => setIsSkillsModalOpen(false)}
-        initialSkills={profile?.skills || []}
-        onSuccess={(updatedSkills) => {
-          setProfile((prev) => (prev ? { ...prev, skills: updatedSkills } : null));
-        }}
-      />
-
-      {/* Experiences */}
-      <section className="bg-white rounded-2xl p-6 sm:p-8 shadow-xs border border-slate-200/90">
-        <div className="flex items-start justify-between gap-4">
-          <div className="flex items-start gap-4">
-            <div className="p-3 bg-blue-50 text-blue-600 rounded-2xl shrink-0">
-              <Briefcase className="w-7 h-7" />
-            </div>
-            <div>
-              <h2 className="text-xl font-bold text-slate-900">
-                Kinh nghiệm làm việc
-              </h2>
-              {hasExperience ? (
-                <span className="inline-flex items-center gap-1 text-xs font-semibold text-emerald-600 mt-1">
-                  <CheckCircle2 size={13} /> Đã cập nhật
-                </span>
-              ) : (
-                <span className="text-xs font-medium text-slate-400 mt-1 block">
-                  Chưa có kinh nghiệm / Fresher
-                </span>
-              )}
-            </div>
-          </div>
-
-          <div className="flex items-center gap-3 shrink-0">
-            <button
-              type="button"
-              onClick={handleOpenAddExp}
-              className="inline-flex items-center gap-1.5 px-4 py-2 border border-blue-600 text-blue-600 text-xs font-bold rounded-full hover:bg-blue-50 transition-all cursor-pointer"
-            >
-              <Plus size={15} />
-              <span>Thêm mới</span>
-            </button>
-          </div>
-        </div>
-
-        <div className="mt-6">
-          {!hasExperience ? (
-            <div className="border border-dashed border-slate-300 rounded-xl p-6 bg-slate-50/60 text-left">
-              <p className="text-sm text-slate-600 font-medium">
-                Nếu bạn là sinh viên hoặc thực tập sinh, bạn có thể bỏ qua phần này hoặc thêm các kỳ thực tập trước đây
-              </p>
-              <button
-                type="button"
-                onClick={handleOpenAddExp}
-                className="mt-3 inline-flex items-center gap-1 text-xs font-bold text-blue-600 hover:text-blue-700 hover:underline uppercase tracking-wider cursor-pointer"
-              >
-                <Plus size={14} />
-                <span>THÊM KINH NGHIỆM / THỰC TẬP</span>
-              </button>
-            </div>
-          ) : (
-            <div className="space-y-3">
-              {profile?.experiences.map((exp, index) => (
-                <div
-                  key={index}
-                  className="p-4 rounded-xl border border-slate-100 bg-slate-50/70 flex justify-between items-start gap-4"
-                >
-                  <div className="space-y-1">
-                    <h3 className="text-base font-bold text-slate-900">{exp.position}</h3>
-                    <p className="text-sm font-semibold text-slate-700 flex items-center gap-1.5">
-                      <Building2 size={14} className="text-slate-400" />
-                      <span>{exp.company}</span>
-                    </p>
-                    {(exp.startDate || exp.endDate) && (
-                      <p className="text-xs text-slate-400 flex items-center gap-1">
-                        <Calendar size={13} />
-                        <span>{exp.startDate || "N/A"} - {exp.endDate || "Hiện tại"}</span>
-                      </p>
-                    )}
-                    {exp.description && (
-                      <p className="text-xs text-slate-600 pt-1 leading-relaxed whitespace-pre-line">
-                        {exp.description}
-                      </p>
-                    )}
-                    {exp.technologies && exp.technologies.length > 0 && (
-                      <div className="flex flex-wrap gap-1.5 pt-2">
-                        {exp.technologies.map((tech, idx) => (
-                          <span
-                            key={idx}
-                            className="px-2 py-0.5 rounded-md bg-white border border-slate-200 text-[11px] font-medium text-slate-700"
-                          >
-                            {tech}
-                          </span>
-                        ))}
-                      </div>
-                    )}
-                  </div>
-                  <button
-                    type="button"
-                    onClick={() => handleOpenEditExp(exp, index)}
-                    className="p-1.5 text-slate-400 hover:text-blue-600 rounded-lg hover:bg-white transition-all cursor-pointer"
-                  >
-                    <Pencil size={15} />
-                  </button>
-                </div>
-              ))}
-            </div>
-          )}
-        </div>
-
-      </section>
-      <EditExperienceModal
-        isOpen={isExpModalOpen}
-        onClose={() => setIsExpModalOpen(false)}
-        initialData={selectedExp}
-        currentIndex={selectedExpIndex}
-        allExperiences={profile?.experiences || []}
-        onSuccess={(updatedList) => {
-          setProfile((prev) => (prev ? { ...prev, experiences: updatedList } : null));
-        }}
-      />
-
-      <EditExpSummaryModal
-        isOpen={isExpSummaryModalOpen}
-        onClose={() => setIsExpSummaryModalOpen(false)}
-        currentYears={profile?.yearsOfExperience || 0}
-        currentLevel={profile?.currentLevel || ""}
-        onSuccess={(data) => {
-          setProfile((prev) => (prev ? { ...prev, ...data } : null));
-        }}
-      />
-
-      {/* PROJECTS */}
-      <section className="bg-white rounded-2xl p-6 sm:p-8 shadow-xs border border-slate-200/90">
-        <div className="flex items-start justify-between gap-4">
-          <div className="flex items-start gap-4">
-            <div className="p-3 bg-blue-50 text-blue-600 rounded-2xl shrink-0">
-              <FolderGit2 className="w-7 h-7" />
-            </div>
-            <div>
-              <h2 className="text-xl font-bold text-slate-900">Dự án thực tế</h2>
-              {hasProjects ? (
-                <span className="inline-flex items-center gap-1 text-xs font-semibold text-emerald-600 mt-1">
-                  <CheckCircle2 size={13} /> Đã cập nhật
-                </span>
-              ) : (
-                <span className="text-xs font-bold text-slate-400 mt-1 block">
-                  Chưa cập nhật
-                </span>
-              )}
-            </div>
-          </div>
-
-          <div className="flex items-center gap-3 shrink-0">
-            <button
-              type="button"
-              onClick={handleOpenAddProject}
-              className="inline-flex items-center gap-1.5 px-4 py-2 border border-blue-600 text-blue-600 text-xs font-bold rounded-full hover:bg-blue-50 transition-all cursor-pointer"
-            >
-              <Plus size={15} />
-              <span>Thêm mới</span>
-            </button>
-          </div>
-        </div>
-
-        <div className="mt-6">
-          {!hasProjects ? (
-            <div className="border border-dashed border-slate-300 rounded-xl p-6 bg-slate-50/60 text-left">
-              <p className="text-sm text-slate-600 font-medium">
-                Thêm dự án nổi bật cùng link GitHub / Demo để tăng điểm AI Fit Score
-              </p>
-              <button
-                type="button"
-                onClick={handleOpenAddProject}
-                className="mt-3 inline-flex items-center gap-1 text-xs font-bold text-blue-600 hover:underline uppercase tracking-wider cursor-pointer"
-              >
-                <Plus size={14} />
-                <span>THÊM DỰ ÁN</span>
-              </button>
-            </div>
-          ) : (
-            <div className="space-y-4">
-              {profile?.projects?.map((proj, index) => (
-                <div
-                  key={index}
-                  className="p-5 rounded-xl border border-slate-100 bg-slate-50/70 flex justify-between items-start gap-4"
-                >
-                  <div className="space-y-2 flex-1">
-                    {/* Tên dự án & Vai trò */}
-                    <div className="flex flex-wrap items-center gap-2.5">
-                      <h3 className="text-base font-bold text-slate-900">{proj.name}</h3>
-                      {proj.role && (
-                        <span className="text-xs px-2.5 py-0.5 bg-blue-100/80 text-blue-700 rounded-md font-semibold">
-                          {proj.role}
-                        </span>
-                      )}
-                    </div>
-
-                    {/* Thời gian thực hiện */}
-                    {(proj.startDate || proj.endDate) && (
-                      <p className="text-xs text-slate-400 font-medium flex items-center gap-1.5">
-                        <Calendar size={13} className="text-slate-400" />
-                        <span>{proj.startDate || "N/A"} - {proj.endDate || "Hiện tại"}</span>
-                      </p>
-                    )}
-
-                    {/* Link GitHub / Demo */}
-                    {proj.projectUrl && (
-                      <div>
-                        <a
-                          href={proj.projectUrl}
-                          target="_blank"
-                          rel="noreferrer"
-                          className="text-xs font-semibold text-blue-600 hover:underline inline-flex items-center gap-1"
-                        >
-                          <ExternalLink size={12} /> {proj.projectUrl}
-                        </a>
-                      </div>
-                    )}
-
-                    {/* Mô tả */}
-                    {proj.description && (
-                      <p className="text-xs text-slate-600 leading-relaxed whitespace-pre-line pt-0.5">
-                        {proj.description}
-                      </p>
-                    )}
-
-                    {/* Danh sách công nghệ */}
-                    {proj.technologies && proj.technologies.length > 0 && (
-                      <div className="pt-2 border-t border-slate-200/60 mt-3">
-                        <span className="text-[11px] font-bold text-slate-500 block mb-1.5 uppercase tracking-wider">
-                          Công nghệ sử dụng:
-                        </span>
-                        <div className="flex flex-wrap gap-1.5">
-                          {proj.technologies.map((t, idx) => (
-                            <span
-                              key={idx}
-                              className="px-2.5 py-1 bg-white border border-slate-200 text-[11px] font-semibold text-slate-700 rounded-lg shadow-2xs"
-                            >
-                              {t}
-                            </span>
-                          ))}
-                        </div>
-                      </div>
-                    )}
-                  </div>
-
-                  <button
-                    type="button"
-                    onClick={() => handleOpenEditProject(proj, index)}
-                    className="p-1.5 text-slate-400 hover:text-blue-600 rounded-lg hover:bg-white transition-all cursor-pointer shrink-0"
-                  >
-                    <Pencil size={15} />
-                  </button>
-                </div>
-              ))}
-            </div>
-          )}
-        </div>
-      </section>
-      <EditProjectModal
-        isOpen={isProjectModalOpen}
-        onClose={() => setIsProjectModalOpen(false)}
-        initialData={selectedProject}
-        currentIndex={selectedProjectIndex}
-        allProjects={profile?.projects || []}
-        onSuccess={(updatedProjects) => {
-          setProfile((prev) => (prev ? { ...prev, projects: updatedProjects } : null));
-        }}
-      />
-
-      {/* CERTIFICATES & LANGUAGES */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        {/* CERTIFICATES */}
-        <section className="bg-white rounded-2xl p-6 sm:p-7 shadow-xs border border-slate-200/90 flex flex-col justify-between">
-          <div>
-            <div className="flex items-start justify-between gap-4 mb-4">
-              <div className="flex items-center gap-3">
-                <div className="p-2.5 bg-blue-50 text-blue-600 rounded-xl">
-                  <Award size={22} />
-                </div>
-                <div>
-                  <h2 className="text-lg font-bold text-slate-900">Chứng chỉ</h2>
-                  <span className="text-[11px] text-slate-500">TOEIC, IELTS, AWS...</span>
-                </div>
-              </div>
-              <button
-                type="button"
-                onClick={handleOpenAddCert}
-                className="p-1.5 text-blue-600 hover:bg-blue-50 rounded-lg cursor-pointer transition-colors"
-                title="Thêm chứng chỉ"
-              >
-                <Plus size={18} />
-              </button>
-            </div>
-
-            {!hasCertifications ? (
-              <div className="border border-dashed border-slate-300 rounded-xl p-5 bg-slate-50/60 text-left">
-                <p className="text-xs text-slate-600 font-medium">Chưa có chứng chỉ</p>
-                <button
-                  type="button"
-                  onClick={handleOpenAddCert}
-                  className="mt-2 inline-flex items-center gap-1 text-[11px] font-bold text-blue-600 hover:underline uppercase tracking-wider cursor-pointer"
-                >
-                  <Plus size={13} />
-                  <span>THÊM MỚI</span>
-                </button>
-              </div>
+        <div className="shrink-0 w-full sm:w-auto">
+          <label
+            className={`inline-flex items-center justify-center gap-2 px-6 py-3.5 bg-white text-blue-700 hover:bg-blue-50 active:scale-95 text-xs font-extrabold rounded-2xl shadow-md cursor-pointer transition-all w-full sm:w-auto ${
+              isParsingCv ? "opacity-75 pointer-events-none" : ""
+            }`}
+          >
+            {isParsingCv ? (
+              <>
+                <Loader2 size={16} className="animate-spin text-blue-600" />
+                <span>AI đang phân tích CV...</span>
+              </>
             ) : (
-              <div className="space-y-2.5">
-                {profile?.certifications?.map((cert, index) => (
-                  <div
-                    key={index}
-                    className="p-3 bg-slate-50/80 border border-slate-100 rounded-xl text-xs flex justify-between items-start gap-2 hover:border-slate-200 transition-colors"
-                  >
-                    <div className="space-y-0.5">
-                      <p className="font-bold text-slate-800">{cert.name}</p>
-                      <p className="text-slate-500">
-                        {cert.organization} {cert.scoreOrLevel && `• ${cert.scoreOrLevel}`}
-                      </p>
-                      {cert.issueDate && (
-                        <p className="text-slate-400 text-[11px]">{cert.issueDate}</p>
-                      )}
-                    </div>
-                    <button
-                      type="button"
-                      onClick={() => handleOpenEditCert(cert, index)}
-                      className="p-1 text-slate-400 hover:text-blue-600 rounded-md hover:bg-white transition-all cursor-pointer shrink-0"
-                    >
-                      <Pencil size={13} />
-                    </button>
-                  </div>
-                ))}
-              </div>
+              <>
+                <UploadCloud size={18} className="text-blue-600" />
+                <span>Tải lên CV (PDF, DOCX, Ảnh)</span>
+              </>
             )}
-          </div>
-        </section>
-        <EditCertificationModal
-          isOpen={isCertModalOpen}
-          onClose={() => setIsCertModalOpen(false)}
-          initialData={selectedCert}
-          currentIndex={selectedCertIndex}
-          allCertifications={profile?.certifications || []}
-          onSuccess={(updatedCertifications) => {
-            setProfile((prev) =>
-              prev ? { ...prev, certifications: updatedCertifications } : null
-            );
-          }}
-        />
-
-        {/* NGOẠI NGỮ */}
-        <section className="bg-white rounded-2xl p-6 sm:p-7 shadow-xs border border-slate-200/90 flex flex-col justify-between">
-          <div>
-            <div className="flex items-start justify-between gap-4 mb-4">
-              <div className="flex items-center gap-3">
-                <div className="p-2.5 bg-blue-50 text-blue-600 rounded-xl">
-                  <Languages size={22} />
-                </div>
-                <div>
-                  <h2 className="text-lg font-bold text-slate-900">Ngoại ngữ</h2>
-                  <span className="text-[11px] text-slate-500">Tiếng Anh, Nhật, Hàn...</span>
-                </div>
-              </div>
-              <button
-                type="button"
-                onClick={() => setIsLangModalOpen(true)}
-                className="p-1.5 text-blue-600 hover:bg-blue-50 rounded-lg cursor-pointer transition-colors"
-                title="Chỉnh sửa ngoại ngữ"
-              >
-                {hasLanguages ? <Pencil size={16} /> : <Plus size={18} />}
-              </button>
-            </div>
-
-            {!hasLanguages ? (
-              <div className="border border-dashed border-slate-300 rounded-xl p-5 bg-slate-50/60 text-left">
-                <p className="text-xs text-slate-600 font-medium">Chưa có ngoại ngữ</p>
-                <button
-                  type="button"
-                  onClick={() => setIsLangModalOpen(true)}
-                  className="mt-2 inline-flex items-center gap-1 text-[11px] font-bold text-blue-600 hover:underline uppercase tracking-wider cursor-pointer"
-                >
-                  <Plus size={13} />
-                  <span>THÊM MỚI</span>
-                </button>
-              </div>
-            ) : (
-              <div className="space-y-2.5">
-                {profile?.languages?.map((lang, index) => (
-                  <div
-                    key={index}
-                    className="p-3 bg-slate-50/80 border border-slate-100 rounded-xl text-xs flex items-center justify-between"
-                  >
-                    <span className="font-bold text-slate-800">{lang.language}</span>
-                    <span className="text-blue-600 font-semibold px-2.5 py-0.5 bg-blue-50 rounded-md">
-                      {lang.proficiency || "Cơ bản"}
-                    </span>
-                  </div>
-                ))}
-              </div>
-            )}
-          </div>
-        </section>
-        <EditLanguageModal
-          isOpen={isLangModalOpen}
-          onClose={() => setIsLangModalOpen(false)}
-          initialLanguages={profile?.languages || []}
-          onSuccess={(updatedLanguages) => {
-            setProfile((prev) =>
-              prev ? { ...prev, languages: updatedLanguages } : null
-            );
-          }}
-        />
+            <input
+              type="file"
+              accept=".pdf,.docx,.png,.jpg,.jpeg,.webp"
+              disabled={isParsingCv}
+              onChange={handleFileUpload}
+              className="hidden"
+            />
+          </label>
+        </div>
       </div>
 
-      {/* CUSTOMSECTIONS */}
-      <div className="space-y-6">
-        {hasCustomSections ? (
-          profile?.customSections.map((section, sIdx) => (
-            <section
-              key={sIdx}
-              className="bg-white rounded-2xl p-6 sm:p-8 shadow-xs border border-slate-200/90"
-            >
-              <div className="flex items-start justify-between gap-4 mb-5">
-                <div className="flex items-center gap-3">
-                  <div className="p-2.5 bg-blue-50 text-blue-600 rounded-xl">
-                    <FileText size={20} />
-                  </div>
-                  <div>
-                    <h2 className="text-xl font-bold text-slate-900">
-                      {section.sectionTitle}
-                    </h2>
-                    <span className="text-xs text-slate-400">
-                      {section.items.length} mục
+      <div className="flex flex-col lg:flex-row items-start gap-6">
+        <div className="hidden lg:block w-72 shrink-0">
+          <ProfileNavSidebar profile={profile} />
+        </div>
+        <div className="flex-1 w-full space-y-6">
+          {/* 1. THÔNG TIN CÁ NHÂN & SOCIAL LINKS (HEADER CARD) */}
+          <section id="section-personal-info" className="bg-white rounded-2xl p-6 sm:p-8 shadow-xs border border-slate-200/90">
+            {/* Header hàng trên: Avatar + Thông tin bên trái & DUY NHẤT 1 NÚT CHỈNH SỬA bên phải */}
+            <div className="flex flex-col sm:flex-row items-start justify-between gap-6">
+              <div className="flex items-start gap-5">
+                {/* Avatar chữ cái */}
+                <div className="w-20 h-20 rounded-2xl bg-blue-600 flex items-center justify-center text-white text-3xl font-extrabold shadow-md shadow-blue-500/20 shrink-0">
+                  {initialLetter}
+                </div>
+
+                <div className="space-y-2">
+                  <h1 className="text-2xl font-extrabold text-slate-900">
+                    {candidateName}
+                  </h1>
+
+                  <p className="text-base font-semibold text-blue-600">
+                    {profile?.headline || "Chưa cập nhật chức danh nghề nghiệp"}
+                  </p>
+
+                  {/* Thông tin liên hệ cơ bản */}
+                  <div className="flex flex-wrap items-center gap-4 text-xs font-medium text-slate-500 pt-0.5">
+                    {candidateEmail && (
+                      <span className="flex items-center gap-1.5">
+                        <Mail size={14} className="text-slate-400" />
+                        {candidateEmail}
+                      </span>
+                    )}
+                    {candidatePhone && (
+                      <span className="flex items-center gap-1.5">
+                        <Phone size={14} className="text-slate-400" />
+                        {candidatePhone}
+                      </span>
+                    )}
+                    <span className="flex items-center gap-1.5">
+                      <MapPin size={14} className="text-slate-400" />
+                      {profile?.address || "Chưa cập nhật địa chỉ"}
                     </span>
                   </div>
+
+                  {/* Social Links (Hiển thị các link đã có, không có nút thêm lẻ) */}
+                  {profile?.socialLinks && profile.socialLinks.length > 0 && (
+                    <div className="pt-2 flex flex-wrap items-center gap-2">
+                      {profile.socialLinks.map((item, idx) => (
+                        <a
+                          key={idx}
+                          href={item.url.startsWith("http") ? item.url : `https://${item.url}`}
+                          target="_blank"
+                          rel="noreferrer"
+                          className="inline-flex items-center gap-1.5 px-3 py-1 rounded-lg bg-slate-50 hover:bg-blue-50 border border-slate-200 hover:border-blue-200 text-slate-700 hover:text-blue-600 text-xs font-semibold transition-colors"
+                        >
+                          {renderSocialIcon(item.platform)}
+                          <span>{item.platform}</span>
+                          <ExternalLink size={11} className="text-slate-400" />
+                        </a>
+                      ))}
+                    </div>
+                  )}
                 </div>
-                <button
-                  type="button"
-                  onClick={() => handleOpenEditCustomSection(section, sIdx)}
-                  className="inline-flex items-center gap-1.5 px-4 py-2 border border-blue-600 text-blue-600 text-xs font-bold rounded-full hover:bg-blue-50 transition-all cursor-pointer"
-                >
-                  <Pencil size={13} />
-                  <span>Chỉnh sửa</span>
-                </button>
               </div>
 
-              <div className="space-y-3">
-                {section.items.map((item, iIdx) => (
-                  <div
-                    key={iIdx}
-                    className="p-4 rounded-xl border border-slate-100 bg-slate-50/70 space-y-1 text-xs"
-                  >
-                    <div className="flex flex-wrap items-center justify-between gap-2">
-                      <h4 className="text-sm font-bold text-slate-800">
-                        {item.title}
-                      </h4>
-                      {item.date && (
-                        <span className="text-slate-400 font-medium">
-                          {item.date}
-                        </span>
-                      )}
-                    </div>
-                    {item.subtitle && (
-                      <p className="text-slate-600 font-semibold">{item.subtitle}</p>
-                    )}
-                    {item.description && (
-                      <p className="text-slate-500 leading-relaxed pt-1 whitespace-pre-line">
-                        {item.description}
-                      </p>
-                    )}
-                  </div>
-                ))}
-              </div>
-            </section>
-          ))
-        ) : (
-          <section className="bg-white rounded-2xl p-6 sm:p-8 shadow-xs border border-slate-200/90">
+              {/* DUY NHẤT 1 NÚT CHỈNH SỬA Ở ĐÂY */}
+              <button
+                type="button"
+                onClick={() => setIsPersonalModalOpen(true)}
+                className="inline-flex items-center gap-1.5 px-4 py-2 border border-blue-600 text-blue-600 text-xs font-bold rounded-full hover:bg-blue-50 transition-all cursor-pointer shrink-0"
+              >
+                <Pencil size={13} />
+                <span>Chỉnh sửa</span>
+              </button>
+            </div>
+
+            {/* Giới thiệu bản thân (Chỉ hiển thị text, không còn nút chỉnh sửa) */}
+            <div className="mt-6 pt-5 border-t border-slate-100">
+              <h3 className="text-xs font-bold uppercase tracking-wider text-slate-500 mb-2">
+                Giới thiệu bản thân
+              </h3>
+              <p className="text-sm text-slate-700 leading-relaxed whitespace-pre-line">
+                {profile?.summary ||
+                  "Thêm mô tả ngắn về kinh nghiệm và thế mạnh của bạn để tạo ấn tượng tốt với nhà tuyển dụng."}
+              </p>
+            </div>
+          </section>
+          <EditPersonalInfoModal
+            isOpen={isPersonalModalOpen}
+            onClose={() => setIsPersonalModalOpen(false)}
+            profile={profile}
+            defaultName={profile?.userId?.name || ""}
+            defaultPhone={candidatePhone}
+            onSuccess={(updatedData) => {
+              setProfile((prev) => {
+                if (!prev) return null;
+
+                if (updatedData?.userId && typeof updatedData.userId === "object") {
+                  return {
+                    ...prev,
+                    ...updatedData,
+                  };
+                }
+                return {
+                  ...prev,
+                  ...updatedData,
+                  userId:
+                    typeof prev.userId === "object" && prev.userId !== null
+                      ? {
+                          ...prev.userId,
+                          name: updatedData.name ?? prev.userId.name,
+                          phone: updatedData.phone ?? prev.userId.phone,
+                        }
+                      : prev.userId,
+                };
+              });
+            }}
+          />
+
+          {/* CarrerObjectives */}
+          <section id="section-career-objective" className="bg-white rounded-2xl p-6 sm:p-8 shadow-xs border border-slate-200/90">
             <div className="flex items-start justify-between gap-4">
               <div className="flex items-start gap-4">
                 <div className="p-3 bg-blue-50 text-blue-600 rounded-2xl shrink-0">
-                  <FileText className="w-7 h-7" />
+                  <Target className="w-7 h-7" />
                 </div>
                 <div>
-                  <h2 className="text-xl font-bold text-slate-900">
-                    Mục bổ sung & Tùy chỉnh
+                  <h2 className="text-xl font-bold text-slate-900 flex items-center gap-1.5">
+                    Mục tiêu nghề nghiệp <span className="text-rose-500 font-bold">*</span>
                   </h2>
-                  <p className="text-xs text-slate-500 mt-1">
-                    Giải thưởng, Hoạt động ngoại khóa, Tình nguyện, Sở thích cá nhân...
-                  </p>
+                  {hasCareerObjective ? (
+                    <span className="inline-flex items-center gap-1 text-xs font-semibold text-emerald-600 mt-1">
+                      <CheckCircle2 size={13} /> Đã hoàn thành
+                    </span>
+                  ) : (
+                    <span className="text-xs font-bold text-rose-500 mt-1 block">
+                      Chưa hoàn thành
+                    </span>
+                  )}
                 </div>
+              </div>
+
+              <div className="flex items-center gap-3 shrink-0">
+                {!hasCareerObjective && <button
+                  type="button"
+                  className="inline-flex items-center gap-1.5 px-4 py-2 border border-blue-600 text-blue-600 text-xs font-bold rounded-full hover:bg-blue-50 transition-all cursor-pointer"
+                  onClick={() => setIsObjectiveModalOpen(true)}
+                >
+                  <Plus size={15} />
+                  <span>Thêm mới</span>
+                </button>}
+                
+              </div>
+            </div>
+            <EditCareerObjectiveModal
+              isOpen={isObjectiveModalOpen}
+              onClose={() => setIsObjectiveModalOpen(false)}
+              initialValue={profile?.careerObjective || ""}
+              onSuccess={(updatedValue) => {
+                setProfile((prev) => prev ? { ...prev, careerObjective: updatedValue } : null);
+              }}
+            />
+
+            <div className="mt-6">
+              {!hasCareerObjective ? (
+                <div className="border border-dashed border-slate-300 rounded-xl p-6 bg-slate-50/60 text-left">
+                  <p className="text-sm text-slate-600 font-medium">
+                    Nêu rõ mục tiêu ngắn hạn và dài hạn trong sự nghiệp giúp nhà tuyển dụng đánh giá định hướng phát triển của bạn
+                  </p>
+                  <button
+                    type="button"
+                    className="mt-3 inline-flex items-center gap-1 text-xs font-bold text-blue-600 hover:text-blue-700 hover:underline uppercase tracking-wider cursor-pointer"
+                    onClick={() => setIsObjectiveModalOpen(true)}
+                  >
+                    <Plus size={14} />
+                    <span>THÊM MỤC TIÊU NGHỀ NGHIỆP</span>
+                  </button>
+                </div>
+              ) : (
+                <div className="p-4 rounded-xl border border-slate-100 bg-slate-50/70 flex justify-between items-start gap-4">
+                  <p className="text-sm text-slate-700 leading-relaxed whitespace-pre-line">
+                    {profile?.careerObjective}
+                  </p>
+                  <button type="button" onClick={() => setIsObjectiveModalOpen(true)} className="p-1.5 text-slate-400 hover:text-blue-600 rounded-lg hover:bg-white transition-all cursor-pointer">
+                    <Pencil size={15} />
+                  </button>
+                </div>
+              )}
+            </div>
+          </section>
+
+          {/* Education */}
+          <section id="section-education" className="bg-white rounded-2xl p-6 sm:p-8 shadow-xs border border-slate-200/90">
+            <div className="flex items-start justify-between gap-4">
+              <div className="flex items-start gap-4">
+                <div className="p-3 bg-blue-50 text-blue-600 rounded-2xl shrink-0">
+                  <GraduationCap className="w-7 h-7" />
+                </div>
+                <div>
+                  <h2 className="text-xl font-bold text-slate-900 flex items-center gap-1.5">
+                    Học vấn <span className="text-rose-500 font-bold">*</span>
+                  </h2>
+                  {hasEducation ? (
+                    <span className="inline-flex items-center gap-1 text-xs font-semibold text-emerald-600 mt-1">
+                      <CheckCircle2 size={13} /> Đã hoàn thành
+                    </span>
+                  ) : (
+                    <span className="text-xs font-bold text-rose-500 mt-1 block">
+                      Chưa hoàn thành
+                    </span>
+                  )}
+                </div>
+              </div>
+
+              <div className="flex items-center gap-3 shrink-0">
+                <button
+                  type="button"
+                  onClick={handleOpenAddEdu}
+                  className="inline-flex items-center gap-1.5 px-4 py-2 border border-blue-600 text-blue-600 text-xs font-bold rounded-full hover:bg-blue-50 transition-all cursor-pointer"
+                >
+                  <Plus size={15} />
+                  <span>Thêm mới</span>
+                </button>
               </div>
             </div>
 
             <div className="mt-6">
-              <div className="border border-dashed border-slate-300 rounded-xl p-6 bg-slate-50/60 text-left">
-                <p className="text-sm text-slate-600 font-medium">
-                  Thêm các thành tích, giải thưởng hoặc hoạt động ngoại khóa để hồ sơ nổi bật hơn
-                </p>
+              {!hasEducation ? (
+                <div className="border border-dashed border-slate-300 rounded-xl p-6 bg-slate-50/60 text-left">
+                  <p className="text-sm text-slate-600 font-medium">
+                    Nhập thông tin học vấn của bạn
+                  </p>
+                  <button
+                    type="button"
+                    onClick={handleOpenAddEdu}
+                    className="mt-3 inline-flex items-center gap-1 text-xs font-bold text-blue-600 hover:text-blue-700 hover:underline uppercase tracking-wider cursor-pointer"
+                  >
+                    <Plus size={14} />
+                    <span>THÊM MỚI</span>
+                  </button>
+                </div>
+              ) : (
+                <div className="space-y-3">
+                  {profile?.educations.map((edu, index) => (
+                    <div
+                      key={index}
+                      className="p-4 rounded-xl border border-slate-100 bg-slate-50/70 flex justify-between items-start gap-4"
+                    >
+                      <div className="space-y-1">
+                        <h3 className="text-base font-bold text-slate-900">{edu.institution}</h3>
+                        <p className="text-sm font-semibold text-slate-700">
+                          {edu.major} {edu.degree && `• ${edu.degree}`}
+                        </p>
+                        {(edu.startDate || edu.endDate) && (
+                          <p className="text-xs text-slate-400">
+                            {edu.startDate || "N/A"} - {edu.endDate || "Hiện tại"}
+                          </p>
+                        )}
+                        {edu.gpa !== undefined && (
+                          <p className="text-xs font-bold text-slate-800 pt-0.5">
+                            GPA: <span className="text-blue-600">{edu.gpa}</span>
+                          </p>
+                        )}
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => handleOpenEditEdu(edu, index)}
+                        className="p-1.5 text-slate-400 hover:text-blue-600 rounded-lg hover:bg-white transition-all cursor-pointer"
+                      >
+                        <Pencil size={15} />
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          </section>
+          <EditEducationModal
+            isOpen={isEduModalOpen}
+            onClose={() => setIsEduModalOpen(false)}
+            initialData={selectedEdu}
+            currentIndex={selectedEduIndex}
+            allEducations={profile?.educations || []}
+            onSuccess={(updatedEducations) => {
+              setProfile((prev) => (prev ? { ...prev, educations: updatedEducations } : null));
+            }}
+          />
+
+          {/* Skill */}
+          <section id="section-skills" className="bg-white rounded-2xl p-6 sm:p-8 shadow-xs border border-slate-200/90">
+            <div className="flex items-start justify-between gap-4">
+              <div className="flex items-start gap-4">
+                <div className="p-3 bg-blue-50 text-blue-600 rounded-2xl shrink-0">
+                  <Cpu className="w-7 h-7" />
+                </div>
+                <div>
+                  <h2 className="text-xl font-bold text-slate-900">Kỹ năng chuyên môn</h2>
+                  {hasSkills ? (
+                    <span className="inline-flex items-center gap-1 text-xs font-semibold text-emerald-600 mt-1">
+                      <CheckCircle2 size={13} /> Đã cập nhật
+                    </span>
+                  ) : (
+                    <span className="text-xs font-bold text-slate-400 mt-1 block">
+                      Chưa cập nhật
+                    </span>
+                  )}
+                </div>
+              </div>
+
+              <div className="flex items-center gap-3 shrink-0">
                 <button
                   type="button"
-                  onClick={handleOpenAddCustomSection}
-                  className="mt-3 inline-flex items-center gap-1 text-xs font-bold text-blue-600 hover:underline uppercase tracking-wider cursor-pointer"
+                  onClick={() => setIsSkillsModalOpen(true)}
+                  className="inline-flex items-center gap-1.5 px-4 py-2 border border-blue-600 text-blue-600 text-xs font-bold rounded-full hover:bg-blue-50 transition-all cursor-pointer"
                 >
-                  <Plus size={14} />
-                  <span>THÊM MỤC MỚI</span>
+                  {hasSkills ? <Pencil size={13} /> : <Plus size={15} />}
+                  <span>{hasSkills ? "Chỉnh sửa" : "Thêm mới"}</span>
                 </button>
               </div>
             </div>
+
+            <div className="mt-6">
+              {!hasSkills ? (
+                <div className="border border-dashed border-slate-300 rounded-xl p-6 bg-slate-50/60 text-left">
+                  <p className="text-sm text-slate-600 font-medium">
+                    Thêm các kỹ năng chuyên môn của bạn để hệ thống AI so khớp độ tương thích với Job Description
+                  </p>
+                  <button
+                    type="button"
+                    onClick={() => setIsSkillsModalOpen(true)}
+                    className="mt-3 inline-flex items-center gap-1 text-xs font-bold text-blue-600 hover:underline uppercase tracking-wider cursor-pointer"
+                  >
+                    <Plus size={14} />
+                    <span>THÊM KỸ NĂNG</span>
+                  </button>
+                </div>
+              ) : (
+                <div className="flex flex-wrap gap-2.5">
+                  {profile?.skills.map((skill, index) => (
+                    <div
+                      key={index}
+                      className="px-3.5 py-2 rounded-xl bg-slate-50 border border-slate-200/80 flex items-center gap-2 group hover:border-blue-300 transition-colors"
+                    >
+                      <span className="text-sm font-bold text-slate-800">{skill.name}</span>
+                      {skill.yearsOfExperience !== undefined && (
+                        <span className="text-[11px] text-slate-500 font-medium bg-white px-1.5 py-0.5 rounded border border-slate-200">
+                          {skill.yearsOfExperience} năm
+                        </span>
+                      )}
+                      {skill.proficiency && (
+                        <span className="text-[10px] font-bold text-blue-600 bg-blue-50 px-1.5 py-0.5 rounded">
+                          {skill.proficiency}
+                        </span>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
           </section>
-        )}
+          <EditSkillsModal
+            isOpen={isSkillsModalOpen}
+            onClose={() => setIsSkillsModalOpen(false)}
+            initialSkills={profile?.skills || []}
+            onSuccess={(updatedSkills) => {
+              setProfile((prev) => (prev ? { ...prev, skills: updatedSkills } : null));
+            }}
+          />
 
-        {/* Nút thêm nhóm tùy chỉnh mới khi đã có sẵn danh mục */}
-        {hasCustomSections && (
-          <div className="text-center pt-2">
-            <button
-              type="button"
-              onClick={handleOpenAddCustomSection}
-              className="inline-flex items-center gap-2 px-6 py-3 border border-slate-300 hover:border-blue-500 bg-white text-slate-700 hover:text-blue-600 text-xs font-bold rounded-xl shadow-xs transition-all cursor-pointer"
-            >
-              <Plus size={16} />
-              <span>Thêm nhóm mục khác (Giải thưởng, Hoạt động ngoại khóa...)</span>
-            </button>
+          {/* Experiences */}
+          <section id="section-experience" className="bg-white rounded-2xl p-6 sm:p-8 shadow-xs border border-slate-200/90">
+            <div className="flex items-start justify-between gap-4">
+              <div className="flex items-start gap-4">
+                <div className="p-3 bg-blue-50 text-blue-600 rounded-2xl shrink-0">
+                  <Briefcase className="w-7 h-7" />
+                </div>
+                <div>
+                  <h2 className="text-xl font-bold text-slate-900">
+                    Kinh nghiệm làm việc
+                  </h2>
+                  {hasExperience ? (
+                    <span className="inline-flex items-center gap-1 text-xs font-semibold text-emerald-600 mt-1">
+                      <CheckCircle2 size={13} /> Đã cập nhật
+                    </span>
+                  ) : (
+                    <span className="text-xs font-medium text-slate-400 mt-1 block">
+                      Chưa có kinh nghiệm / Fresher
+                    </span>
+                  )}
+                </div>
+              </div>
+
+              <div className="flex items-center gap-3 shrink-0">
+                <button
+                  type="button"
+                  onClick={handleOpenAddExp}
+                  className="inline-flex items-center gap-1.5 px-4 py-2 border border-blue-600 text-blue-600 text-xs font-bold rounded-full hover:bg-blue-50 transition-all cursor-pointer"
+                >
+                  <Plus size={15} />
+                  <span>Thêm mới</span>
+                </button>
+              </div>
+            </div>
+
+            <div className="mt-6">
+              {!hasExperience ? (
+                <div className="border border-dashed border-slate-300 rounded-xl p-6 bg-slate-50/60 text-left">
+                  <p className="text-sm text-slate-600 font-medium">
+                    Nếu bạn là sinh viên hoặc thực tập sinh, bạn có thể bỏ qua phần này hoặc thêm các kỳ thực tập trước đây
+                  </p>
+                  <button
+                    type="button"
+                    onClick={handleOpenAddExp}
+                    className="mt-3 inline-flex items-center gap-1 text-xs font-bold text-blue-600 hover:text-blue-700 hover:underline uppercase tracking-wider cursor-pointer"
+                  >
+                    <Plus size={14} />
+                    <span>THÊM KINH NGHIỆM / THỰC TẬP</span>
+                  </button>
+                </div>
+              ) : (
+                <div className="space-y-3">
+                  {profile?.experiences.map((exp, index) => (
+                    <div
+                      key={index}
+                      className="p-4 rounded-xl border border-slate-100 bg-slate-50/70 flex justify-between items-start gap-4"
+                    >
+                      <div className="space-y-1">
+                        <h3 className="text-base font-bold text-slate-900">{exp.position}</h3>
+                        <p className="text-sm font-semibold text-slate-700 flex items-center gap-1.5">
+                          <Building2 size={14} className="text-slate-400" />
+                          <span>{exp.company}</span>
+                        </p>
+                        {(exp.startDate || exp.endDate) && (
+                          <p className="text-xs text-slate-400 flex items-center gap-1">
+                            <Calendar size={13} />
+                            <span>{exp.startDate || "N/A"} - {exp.endDate || "Hiện tại"}</span>
+                          </p>
+                        )}
+                        {exp.description && (
+                          <p className="text-xs text-slate-600 pt-1 leading-relaxed whitespace-pre-line">
+                            {exp.description}
+                          </p>
+                        )}
+                        {exp.technologies && exp.technologies.length > 0 && (
+                          <div className="flex flex-wrap gap-1.5 pt-2">
+                            {exp.technologies.map((tech, idx) => (
+                              <span
+                                key={idx}
+                                className="px-2 py-0.5 rounded-md bg-white border border-slate-200 text-[11px] font-medium text-slate-700"
+                              >
+                                {tech}
+                              </span>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => handleOpenEditExp(exp, index)}
+                        className="p-1.5 text-slate-400 hover:text-blue-600 rounded-lg hover:bg-white transition-all cursor-pointer"
+                      >
+                        <Pencil size={15} />
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+
+          </section>
+          <EditExperienceModal
+            isOpen={isExpModalOpen}
+            onClose={() => setIsExpModalOpen(false)}
+            initialData={selectedExp}
+            currentIndex={selectedExpIndex}
+            allExperiences={profile?.experiences || []}
+            onSuccess={(updatedList) => {
+              setProfile((prev) => (prev ? { ...prev, experiences: updatedList } : null));
+            }}
+          />
+
+          <EditExpSummaryModal
+            isOpen={isExpSummaryModalOpen}
+            onClose={() => setIsExpSummaryModalOpen(false)}
+            currentYears={profile?.yearsOfExperience || 0}
+            currentLevel={profile?.currentLevel || ""}
+            onSuccess={(data) => {
+              setProfile((prev) => (prev ? { ...prev, ...data } : null));
+            }}
+          />
+
+          {/* PROJECTS */}
+          <section id="section-projects" className="bg-white rounded-2xl p-6 sm:p-8 shadow-xs border border-slate-200/90">
+            <div className="flex items-start justify-between gap-4">
+              <div className="flex items-start gap-4">
+                <div className="p-3 bg-blue-50 text-blue-600 rounded-2xl shrink-0">
+                  <FolderGit2 className="w-7 h-7" />
+                </div>
+                <div>
+                  <h2 className="text-xl font-bold text-slate-900">Dự án thực tế</h2>
+                  {hasProjects ? (
+                    <span className="inline-flex items-center gap-1 text-xs font-semibold text-emerald-600 mt-1">
+                      <CheckCircle2 size={13} /> Đã cập nhật
+                    </span>
+                  ) : (
+                    <span className="text-xs font-bold text-slate-400 mt-1 block">
+                      Chưa cập nhật
+                    </span>
+                  )}
+                </div>
+              </div>
+
+              <div className="flex items-center gap-3 shrink-0">
+                <button
+                  type="button"
+                  onClick={handleOpenAddProject}
+                  className="inline-flex items-center gap-1.5 px-4 py-2 border border-blue-600 text-blue-600 text-xs font-bold rounded-full hover:bg-blue-50 transition-all cursor-pointer"
+                >
+                  <Plus size={15} />
+                  <span>Thêm mới</span>
+                </button>
+              </div>
+            </div>
+
+            <div className="mt-6">
+              {!hasProjects ? (
+                <div className="border border-dashed border-slate-300 rounded-xl p-6 bg-slate-50/60 text-left">
+                  <p className="text-sm text-slate-600 font-medium">
+                    Thêm dự án nổi bật cùng link GitHub / Demo để tăng điểm AI Fit Score
+                  </p>
+                  <button
+                    type="button"
+                    onClick={handleOpenAddProject}
+                    className="mt-3 inline-flex items-center gap-1 text-xs font-bold text-blue-600 hover:underline uppercase tracking-wider cursor-pointer"
+                  >
+                    <Plus size={14} />
+                    <span>THÊM DỰ ÁN</span>
+                  </button>
+                </div>
+              ) : (
+                <div className="space-y-4">
+                  {profile?.projects?.map((proj, index) => (
+                    <div
+                      key={index}
+                      className="p-5 rounded-xl border border-slate-100 bg-slate-50/70 flex justify-between items-start gap-4"
+                    >
+                      <div className="space-y-2 flex-1">
+                        {/* Tên dự án & Vai trò */}
+                        <div className="flex flex-wrap items-center gap-2.5">
+                          <h3 className="text-base font-bold text-slate-900">{proj.name}</h3>
+                          {proj.role && (
+                            <span className="text-xs px-2.5 py-0.5 bg-blue-100/80 text-blue-700 rounded-md font-semibold">
+                              {proj.role}
+                            </span>
+                          )}
+                        </div>
+
+                        {/* Thời gian thực hiện */}
+                        {(proj.startDate || proj.endDate) && (
+                          <p className="text-xs text-slate-400 font-medium flex items-center gap-1.5">
+                            <Calendar size={13} className="text-slate-400" />
+                            <span>{proj.startDate || "N/A"} - {proj.endDate || "Hiện tại"}</span>
+                          </p>
+                        )}
+
+                        {/* Link GitHub / Demo */}
+                        {proj.projectUrl && (
+                          <div>
+                            <a
+                              href={proj.projectUrl}
+                              target="_blank"
+                              rel="noreferrer"
+                              className="text-xs font-semibold text-blue-600 hover:underline inline-flex items-center gap-1"
+                            >
+                              <ExternalLink size={12} /> {proj.projectUrl}
+                            </a>
+                          </div>
+                        )}
+
+                        {/* Mô tả */}
+                        {proj.description && (
+                          <p className="text-xs text-slate-600 leading-relaxed whitespace-pre-line pt-0.5">
+                            {proj.description}
+                          </p>
+                        )}
+
+                        {/* Danh sách công nghệ */}
+                        {proj.technologies && proj.technologies.length > 0 && (
+                          <div className="pt-2 border-t border-slate-200/60 mt-3">
+                            <span className="text-[11px] font-bold text-slate-500 block mb-1.5 uppercase tracking-wider">
+                              Công nghệ sử dụng:
+                            </span>
+                            <div className="flex flex-wrap gap-1.5">
+                              {proj.technologies.map((t, idx) => (
+                                <span
+                                  key={idx}
+                                  className="px-2.5 py-1 bg-white border border-slate-200 text-[11px] font-semibold text-slate-700 rounded-lg shadow-2xs"
+                                >
+                                  {t}
+                                </span>
+                              ))}
+                            </div>
+                          </div>
+                        )}
+                      </div>
+
+                      <button
+                        type="button"
+                        onClick={() => handleOpenEditProject(proj, index)}
+                        className="p-1.5 text-slate-400 hover:text-blue-600 rounded-lg hover:bg-white transition-all cursor-pointer shrink-0"
+                      >
+                        <Pencil size={15} />
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          </section>
+          <EditProjectModal
+            isOpen={isProjectModalOpen}
+            onClose={() => setIsProjectModalOpen(false)}
+            initialData={selectedProject}
+            currentIndex={selectedProjectIndex}
+            allProjects={profile?.projects || []}
+            onSuccess={(updatedProjects) => {
+              setProfile((prev) => (prev ? { ...prev, projects: updatedProjects } : null));
+            }}
+          />
+
+          {/* CERTIFICATES & LANGUAGES */}
+          <div id="section-certifications" className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            {/* CERTIFICATES */}
+            <section className="bg-white rounded-2xl p-6 sm:p-7 shadow-xs border border-slate-200/90 flex flex-col justify-between">
+              <div>
+                <div className="flex items-start justify-between gap-4 mb-4">
+                  <div className="flex items-center gap-3">
+                    <div className="p-2.5 bg-blue-50 text-blue-600 rounded-xl">
+                      <Award size={22} />
+                    </div>
+                    <div>
+                      <h2 className="text-lg font-bold text-slate-900">Chứng chỉ</h2>
+                      <span className="text-[11px] text-slate-500">TOEIC, IELTS, AWS...</span>
+                    </div>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={handleOpenAddCert}
+                    className="p-1.5 text-blue-600 hover:bg-blue-50 rounded-lg cursor-pointer transition-colors"
+                    title="Thêm chứng chỉ"
+                  >
+                    <Plus size={18} />
+                  </button>
+                </div>
+
+                {!hasCertifications ? (
+                  <div className="border border-dashed border-slate-300 rounded-xl p-5 bg-slate-50/60 text-left">
+                    <p className="text-xs text-slate-600 font-medium">Chưa có chứng chỉ</p>
+                    <button
+                      type="button"
+                      onClick={handleOpenAddCert}
+                      className="mt-2 inline-flex items-center gap-1 text-[11px] font-bold text-blue-600 hover:underline uppercase tracking-wider cursor-pointer"
+                    >
+                      <Plus size={13} />
+                      <span>THÊM MỚI</span>
+                    </button>
+                  </div>
+                ) : (
+                  <div className="space-y-2.5">
+                    {profile?.certifications?.map((cert, index) => (
+                      <div
+                        key={index}
+                        className="p-3 bg-slate-50/80 border border-slate-100 rounded-xl text-xs flex justify-between items-start gap-2 hover:border-slate-200 transition-colors"
+                      >
+                        <div className="space-y-0.5">
+                          <p className="font-bold text-slate-800">{cert.name}</p>
+                          <p className="text-slate-500">
+                            {cert.organization} {cert.scoreOrLevel && `• ${cert.scoreOrLevel}`}
+                          </p>
+                          {cert.issueDate && (
+                            <p className="text-slate-400 text-[11px]">{cert.issueDate}</p>
+                          )}
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => handleOpenEditCert(cert, index)}
+                          className="p-1 text-slate-400 hover:text-blue-600 rounded-md hover:bg-white transition-all cursor-pointer shrink-0"
+                        >
+                          <Pencil size={13} />
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            </section>
+            <EditCertificationModal
+              isOpen={isCertModalOpen}
+              onClose={() => setIsCertModalOpen(false)}
+              initialData={selectedCert}
+              currentIndex={selectedCertIndex}
+              allCertifications={profile?.certifications || []}
+              onSuccess={(updatedCertifications) => {
+                setProfile((prev) =>
+                  prev ? { ...prev, certifications: updatedCertifications } : null
+                );
+              }}
+            />
+
+            {/* NGOẠI NGỮ */}
+            <section className="bg-white rounded-2xl p-6 sm:p-7 shadow-xs border border-slate-200/90 flex flex-col justify-between">
+              <div>
+                <div className="flex items-start justify-between gap-4 mb-4">
+                  <div className="flex items-center gap-3">
+                    <div className="p-2.5 bg-blue-50 text-blue-600 rounded-xl">
+                      <Languages size={22} />
+                    </div>
+                    <div>
+                      <h2 className="text-lg font-bold text-slate-900">Ngoại ngữ</h2>
+                      <span className="text-[11px] text-slate-500">Tiếng Anh, Nhật, Hàn...</span>
+                    </div>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => setIsLangModalOpen(true)}
+                    className="p-1.5 text-blue-600 hover:bg-blue-50 rounded-lg cursor-pointer transition-colors"
+                    title="Chỉnh sửa ngoại ngữ"
+                  >
+                    {hasLanguages ? <Pencil size={16} /> : <Plus size={18} />}
+                  </button>
+                </div>
+
+                {!hasLanguages ? (
+                  <div className="border border-dashed border-slate-300 rounded-xl p-5 bg-slate-50/60 text-left">
+                    <p className="text-xs text-slate-600 font-medium">Chưa có ngoại ngữ</p>
+                    <button
+                      type="button"
+                      onClick={() => setIsLangModalOpen(true)}
+                      className="mt-2 inline-flex items-center gap-1 text-[11px] font-bold text-blue-600 hover:underline uppercase tracking-wider cursor-pointer"
+                    >
+                      <Plus size={13} />
+                      <span>THÊM MỚI</span>
+                    </button>
+                  </div>
+                ) : (
+                  <div className="space-y-2.5">
+                    {profile?.languages?.map((lang, index) => (
+                      <div
+                        key={index}
+                        className="p-3 bg-slate-50/80 border border-slate-100 rounded-xl text-xs flex items-center justify-between"
+                      >
+                        <span className="font-bold text-slate-800">{lang.language}</span>
+                        <span className="text-blue-600 font-semibold px-2.5 py-0.5 bg-blue-50 rounded-md">
+                          {lang.proficiency || "Cơ bản"}
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            </section>
+            <EditLanguageModal
+              isOpen={isLangModalOpen}
+              onClose={() => setIsLangModalOpen(false)}
+              initialLanguages={profile?.languages || []}
+              onSuccess={(updatedLanguages) => {
+                setProfile((prev) =>
+                  prev ? { ...prev, languages: updatedLanguages } : null
+                );
+              }}
+            />
           </div>
-        )}
-      </div>
-      <EditCustomSectionModal
-        isOpen={isCustomSectionModalOpen}
-        onClose={() => setIsCustomSectionModalOpen(false)}
-        initialData={selectedCustomSection}
-        sectionIndex={selectedSectionIndex}
-        allCustomSections={profile?.customSections || []}
-        onSuccess={(updatedCustomSections) => {
-          setProfile((prev) =>
-            prev ? { ...prev, customSections: updatedCustomSections } : null
-          );
-        }}
-      />
 
+          {/* CUSTOMSECTIONS */}
+          <div id="section-custom" className="space-y-6">
+            {hasCustomSections ? (
+              profile?.customSections.map((section, sIdx) => (
+                <section
+                  key={sIdx}
+                  className="bg-white rounded-2xl p-6 sm:p-8 shadow-xs border border-slate-200/90"
+                >
+                  <div className="flex items-start justify-between gap-4 mb-5">
+                    <div className="flex items-center gap-3">
+                      <div className="p-2.5 bg-blue-50 text-blue-600 rounded-xl">
+                        <FileText size={20} />
+                      </div>
+                      <div>
+                        <h2 className="text-xl font-bold text-slate-900">
+                          {section.sectionTitle}
+                        </h2>
+                        <span className="text-xs text-slate-400">
+                          {section.items.length} mục
+                        </span>
+                      </div>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => handleOpenEditCustomSection(section, sIdx)}
+                      className="inline-flex items-center gap-1.5 px-4 py-2 border border-blue-600 text-blue-600 text-xs font-bold rounded-full hover:bg-blue-50 transition-all cursor-pointer"
+                    >
+                      <Pencil size={13} />
+                      <span>Chỉnh sửa</span>
+                    </button>
+                  </div>
+
+                  <div className="space-y-3">
+                    {section.items.map((item, iIdx) => (
+                      <div
+                        key={iIdx}
+                        className="p-4 rounded-xl border border-slate-100 bg-slate-50/70 space-y-1 text-xs"
+                      >
+                        <div className="flex flex-wrap items-center justify-between gap-2">
+                          <h4 className="text-sm font-bold text-slate-800">
+                            {item.title}
+                          </h4>
+                          {item.date && (
+                            <span className="text-slate-400 font-medium">
+                              {item.date}
+                            </span>
+                          )}
+                        </div>
+                        {item.subtitle && (
+                          <p className="text-slate-600 font-semibold">{item.subtitle}</p>
+                        )}
+                        {item.description && (
+                          <p className="text-slate-500 leading-relaxed pt-1 whitespace-pre-line">
+                            {item.description}
+                          </p>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                </section>
+              ))
+            ) : (
+              <section className="bg-white rounded-2xl p-6 sm:p-8 shadow-xs border border-slate-200/90">
+                <div className="flex items-start justify-between gap-4">
+                  <div className="flex items-start gap-4">
+                    <div className="p-3 bg-blue-50 text-blue-600 rounded-2xl shrink-0">
+                      <FileText className="w-7 h-7" />
+                    </div>
+                    <div>
+                      <h2 className="text-xl font-bold text-slate-900">
+                        Mục bổ sung & Tùy chỉnh
+                      </h2>
+                      <p className="text-xs text-slate-500 mt-1">
+                        Giải thưởng, Hoạt động ngoại khóa, Tình nguyện, Sở thích cá nhân...
+                      </p>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="mt-6">
+                  <div className="border border-dashed border-slate-300 rounded-xl p-6 bg-slate-50/60 text-left">
+                    <p className="text-sm text-slate-600 font-medium">
+                      Thêm các thành tích, giải thưởng hoặc hoạt động ngoại khóa để hồ sơ nổi bật hơn
+                    </p>
+                    <button
+                      type="button"
+                      onClick={handleOpenAddCustomSection}
+                      className="mt-3 inline-flex items-center gap-1 text-xs font-bold text-blue-600 hover:underline uppercase tracking-wider cursor-pointer"
+                    >
+                      <Plus size={14} />
+                      <span>THÊM MỤC MỚI</span>
+                    </button>
+                  </div>
+                </div>
+              </section>
+            )}
+
+            {/* Nút thêm nhóm tùy chỉnh mới khi đã có sẵn danh mục */}
+            {hasCustomSections && (
+              <div className="text-center pt-2">
+                <button
+                  type="button"
+                  onClick={handleOpenAddCustomSection}
+                  className="inline-flex items-center gap-2 px-6 py-3 border border-slate-300 hover:border-blue-500 bg-white text-slate-700 hover:text-blue-600 text-xs font-bold rounded-xl shadow-xs transition-all cursor-pointer"
+                >
+                  <Plus size={16} />
+                  <span>Thêm nhóm mục khác (Giải thưởng, Hoạt động ngoại khóa...)</span>
+                </button>
+              </div>
+            )}
+          </div>
+          <EditCustomSectionModal
+            isOpen={isCustomSectionModalOpen}
+            onClose={() => setIsCustomSectionModalOpen(false)}
+            initialData={selectedCustomSection}
+            sectionIndex={selectedSectionIndex}
+            allCustomSections={profile?.customSections || []}
+            onSuccess={(updatedCustomSections) => {
+              setProfile((prev) =>
+                prev ? { ...prev, customSections: updatedCustomSections } : null
+              );
+            }}
+          />
+          <CvParsingPreviewModal
+            isOpen={isPreviewModalOpen}
+            onClose={() => setIsPreviewModalOpen(false)}
+            parsedData={parsedCvData}
+            onSuccess={(updatedProfile) => {
+              setProfile(updatedProfile);
+            }}
+          />
+        </div>
+      </div>
+      </div> 
     </div>
   );
 }

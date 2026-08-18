@@ -66,15 +66,14 @@ export default function Header() {
                 <div className="w-8 h-8 rounded-full bg-blue-600 flex items-center justify-center text-white text-xs font-bold">
                   {initial}
                 </div>
-                <span className="text-sm font-medium text-slate-200 max-w-[120px] truncate">{user.name}</span>
+                <span className="text-sm font-medium text-slate-200 max-w-[120px] truncate">{user.email}</span>
                 <ChevronDown size={14} className="text-slate-400" />
               </button>
 
               {dropdownOpen && (
                 <div className="absolute right-0 mt-2 w-48 bg-slate-900 border border-slate-800 rounded-2xl shadow-2xl py-1.5 z-50 animate-in fade-in zoom-in-95 duration-150">
                   <div className="px-4 py-2 border-b border-slate-800">
-                    <p className="text-xs font-bold text-white truncate">{user.name}</p>
-                    <p className="text-[11px] text-slate-400 truncate">{user.email}</p>
+                    <p className="text-xs font-bold text-white truncate">{user.email}</p>
                   </div>
 
                   {/* Nút Hồ sơ của tôi */}

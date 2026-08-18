@@ -3,9 +3,7 @@ import { apiClient } from "@/src/lib/api-client";
 import { CandidateUser, LoginPayload, LoginResponse } from "../types/auth.types";
 
 export interface RegisterPayload {
-  name: string;
   email: string;
-  phone: string;
   password: string;
   confirm_password: string;
 }
