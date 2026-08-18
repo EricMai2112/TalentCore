@@ -47,7 +47,7 @@ export default function JobDetailModal({
               </span>
               <span className="inline-flex items-center gap-1 rounded-full bg-emerald-50 border border-emerald-100 px-3 py-0.5 text-xs font-bold text-emerald-700">
                 <DollarSign size={12} />
-                ${job.minimumSalary.toLocaleString()} - ${job.maximumSalary.toLocaleString()}
+                ${(job.minimumSalary ?? 0).toLocaleString("en-US")} - ${(job.maximumSalary ?? 0).toLocaleString("en-US")}
               </span>
             </div>
             <h2 className="text-2xl font-extrabold text-slate-900">{job.title}</h2>
