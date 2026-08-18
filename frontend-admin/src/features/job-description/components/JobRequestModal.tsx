@@ -715,6 +715,7 @@ export default function JobRequestModal({
                     <option value={JobStatus.APPROVED}>Đã duyệt</option>
                     <option value={JobStatus.REJECTED}>Từ chối</option>
                     <option value={JobStatus.JD_CREATED}>Đã tạo JD</option>
+                    <option value={JobStatus.COMPLETED}>Hoàn thành</option>
                   </select>
                 </div>
               </div>

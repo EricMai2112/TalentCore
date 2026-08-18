@@ -112,6 +112,19 @@ export default function JobRequestManager({
     }
   };
 
+  // Complete requisition
+  const handleComplete = async (job: JobDescription) => {
+    try {
+      await jobDescriptionApi.updateJob(job._id, { status: JobStatus.COMPLETED });
+      const refreshed = await jobDescriptionApi.getJobs();
+      setJobs(refreshed);
+      showToast("Đã chuyển trạng thái yêu cầu sang Hoàn thành thành công!", "success");
+    } catch (err: any) {
+      console.error("Lỗi khi chuyển trạng thái Hoàn thành:", err);
+      showToast(err.message || "Lỗi khi chuyển trạng thái Hoàn thành", "error");
+    }
+  };
+
   // Handle form submission (Create or Update)
   const handleFormSubmit = async (payload: any) => {
     setIsSubmitting(true);
@@ -206,6 +219,7 @@ export default function JobRequestManager({
         onView={handleView}
         onReview={handleReview}
         onPromote={handlePromote}
+        onComplete={handleComplete}
         isHrAdmin={isHrAdmin}
         isDeptManager={isDeptManager}
         userDeptId={userDeptId}

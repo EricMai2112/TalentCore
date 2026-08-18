@@ -23,7 +23,19 @@ export class JobDescriptionService {
     return populated;
   }
 
+  private async checkAndCompleteExpiredJobs(): Promise<void> {
+    const now = new Date();
+    await this.jobDescriptionModel.updateMany(
+      {
+        status: { $in: [JobStatus.JD_CREATED, JobStatus.APPROVED, JobStatus.PENDING] },
+        applicationDeadline: { $exists: true, $ne: null, $lt: now },
+      },
+      { $set: { status: JobStatus.COMPLETED } },
+    );
+  }
+
   async findAll(): Promise<JobDescriptionDocument[]> {
+    await this.checkAndCompleteExpiredJobs();
     return this.jobDescriptionModel
       .find()
       .populate('departmentId')
@@ -36,6 +48,7 @@ export class JobDescriptionService {
   }
 
   async findPublicJobs(): Promise<JobDescriptionDocument[]> {
+    await this.checkAndCompleteExpiredJobs();
     return this.jobDescriptionModel
       .find({ status: JobStatus.JD_CREATED })
       .populate('departmentId')
