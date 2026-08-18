@@ -149,7 +149,7 @@ export default async function JobDetailPage({ params }: PageProps) {
                 <div className="flex items-center gap-1 text-emerald-400 font-bold text-base">
                   <DollarSign size={18} className="shrink-0" />
                   <span>
-                    ${job.minimumSalary.toLocaleString()} - ${job.maximumSalary.toLocaleString()} / tháng
+                    ${(job.minimumSalary ?? 0).toLocaleString("en-US")} - ${(job.maximumSalary ?? 0).toLocaleString("en-US")} / tháng
                   </span>
                 </div>
                 <div className="flex items-center gap-1.5">
@@ -261,7 +261,7 @@ export default async function JobDetailPage({ params }: PageProps) {
                     <div>
                       <span className="text-slate-500 font-semibold block mb-1 text-sm">Mức lương</span>
                       <span className="font-bold text-slate-900 text-base sm:text-[17px] leading-snug">
-                        ${job.minimumSalary.toLocaleString()} - ${job.maximumSalary.toLocaleString()} / tháng
+                        ${(job.minimumSalary ?? 0).toLocaleString("en-US")} - ${(job.maximumSalary ?? 0).toLocaleString("en-US")} / tháng
                       </span>
                     </div>
                   </div>

@@ -69,7 +69,7 @@ export default function JobCard({ job, onApply }: JobCardProps) {
           <div className="flex items-center gap-1 text-emerald-600 font-bold">
             <DollarSign size={16} className="shrink-0" />
             <span>
-              ${job.minimumSalary.toLocaleString()} - ${job.maximumSalary.toLocaleString()} / tháng
+              ${(job.minimumSalary ?? 0).toLocaleString("en-US")} - ${(job.maximumSalary ?? 0).toLocaleString("en-US")} / tháng
             </span>
           </div>
           <div className="flex items-center gap-1.5">

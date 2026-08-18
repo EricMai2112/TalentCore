@@ -226,7 +226,7 @@ export default function JobRequestTable({
                             {job.title}
                           </span>
                           <span className="text-xs text-gray-400 font-medium block">
-                            ${job.minimumSalary.toLocaleString()} - ${job.maximumSalary.toLocaleString()} · {job.location}
+                            ${(job.minimumSalary ?? 0).toLocaleString("en-US")} - ${(job.maximumSalary ?? 0).toLocaleString("en-US")} · {job.location}
                           </span>
                         </div>
                       </td>

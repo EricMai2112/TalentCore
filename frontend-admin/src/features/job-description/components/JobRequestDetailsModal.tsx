@@ -72,7 +72,7 @@ export default function JobRequestDetailsModal({
               <DollarSign className="text-gray-400 shrink-0" size={18} />
               <div>
                 <span className="text-[10px] font-semibold text-gray-400 block">Mức lương (USD)</span>
-                <span className="text-xs font-bold text-gray-800">${job.minimumSalary.toLocaleString()} - ${job.maximumSalary.toLocaleString()}</span>
+                <span className="text-xs font-bold text-gray-800">${(job.minimumSalary ?? 0).toLocaleString("en-US")} - ${(job.maximumSalary ?? 0).toLocaleString("en-US")}</span>
               </div>
             </div>
             <div className="bg-gray-50 border border-gray-100 rounded-xl p-3 flex items-center gap-3">
