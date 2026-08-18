@@ -43,9 +43,11 @@ import EditCustomSectionModal from "./EditCustomSectionModal";
 import CvParsingPreviewModal from "./CvParsingPreviewModal";
 import { toast } from "react-toastify";
 import ProfileNavSidebar from "./ProfileNavSidebar";
+import { useRouter } from "next/navigation";
 
 export default function CandidateProfileView() {
-  const { user: authUser } = useAuth();
+  const { user: authUser, isLoading: isAuthLoading } = useAuth();
+  const router = useRouter();
   const [profile, setProfile] = useState<CandidateProfile | null>(null);
   const [loading, setLoading] = useState<boolean>(true);
   const [isObjectiveModalOpen, setIsObjectiveModalOpen] = useState(false);
@@ -73,6 +75,12 @@ export default function CandidateProfileView() {
   const [isPreviewModalOpen, setIsPreviewModalOpen] = useState(false);
 
   useEffect(() => {
+    if (isAuthLoading) return;
+
+    if (!authUser) {
+      router.replace("/login");
+      return;
+    }
     const loadProfile = async () => {
       try {
         const data = await profileApi.getMyProfile();
@@ -84,7 +92,7 @@ export default function CandidateProfileView() {
       }
     };
     loadProfile();
-  }, []);
+  }, [authUser, isAuthLoading, router]);
 
   if (loading) {
     return (
@@ -224,7 +232,7 @@ export default function CandidateProfileView() {
       toast.success("Bóc tách thông tin CV thành công!");
     } catch (error: any) {
       console.error("Lỗi parse CV:", error);
-      toast.error("Có lỗi khi lấy dữ liệu");
+      toast.error("Có lỗi xảy ra, vui lòng thử lại");
     } finally {
       setIsParsingCv(false);
       e.target.value = "";

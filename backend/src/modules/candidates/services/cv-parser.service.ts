@@ -1,4 +1,4 @@
-import { Injectable, BadRequestException, InternalServerErrorException } from '@nestjs/common';
+import { Injectable, BadRequestException, InternalServerErrorException, ServiceUnavailableException } from '@nestjs/common';
 import { GoogleGenAI, Type, Schema } from '@google/genai';
 import * as mammoth from 'mammoth';
 
@@ -214,10 +214,13 @@ export class CvParserService {
 
       return JSON.parse(rawText.trim());
     } catch (error: any) {
-      console.error('Lỗi khi bóc tách CV qua Gemini:', error);
-      throw new InternalServerErrorException(
-        error.message || 'Lỗi xử lý bóc tách CV bằng AI.'
-      );
-    }
+      console.error('Lỗi khi bóc tách CV qua Gemini:', error?.message || error);
+
+      if (error?.status === 503 || error?.message?.includes('503') || error?.message?.includes('high demand')) {
+        throw new ServiceUnavailableException('Hệ thống AI đang bận hoặc quá tải. Vui lòng thử lại sau giây lát!');
+      }
+
+      throw new InternalServerErrorException('Có lỗi xảy ra, vui lòng thử lại');
+        }
   }
 }
