@@ -5,6 +5,7 @@ import { MongooseModule } from '@nestjs/mongoose';
 import { Candidate, CandidateSchema } from './schema/candidate.schema';
 import { User, UserSchema } from '../users/schemas/user.schema';
 import { AuthModule } from '../auth/auth.module';
+import { CvParserService } from './services/cv-parser.service';
 
 @Module({
     imports: [MongooseModule.forFeature([{name: Candidate.name, schema: CandidateSchema}
@@ -12,7 +13,7 @@ import { AuthModule } from '../auth/auth.module';
         
     ]), AuthModule],
     controllers: [CandidateController],
-    providers: [CandidateService],
+    providers: [CandidateService, CvParserService],
     exports: []
 })
 export class CandidatesModule {}

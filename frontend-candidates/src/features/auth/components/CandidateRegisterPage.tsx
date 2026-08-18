@@ -1,20 +1,17 @@
-// frontend-candidates/src/features/auth/components/CandidateRegisterPage.tsx
 "use client";
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import Image from "next/image";
-import { Eye, EyeOff, AlertTriangle, CheckCircle2 } from "lucide-react";
+import { Eye, EyeOff, AlertTriangle, CheckCircle2, Loader2 } from "lucide-react";
 import { authApi } from "../service/auth.api";
 
 export default function CandidateRegisterPage() {
   const router = useRouter();
 
   const [form, setForm] = useState({
-    name: "",
     email: "",
-    phone: "",
     password: "",
     confirm_password: "",
   });
@@ -34,7 +31,6 @@ export default function CandidateRegisterPage() {
     e.preventDefault();
     setError(null);
 
-    // Validate mật khẩu khớp nhau ở client
     if (form.password !== form.confirm_password) {
       setError("Mật khẩu xác nhận không khớp");
       return;
@@ -49,9 +45,7 @@ export default function CandidateRegisterPage() {
 
     try {
       const res = await authApi.register({
-        name: form.name.trim(),
         email: form.email.trim(),
-        phone: form.phone.trim(),
         password: form.password,
         confirm_password: form.confirm_password,
       });
@@ -105,54 +99,21 @@ export default function CandidateRegisterPage() {
             )}
 
             {/* Form */}
-            <form onSubmit={handleSubmit} className="space-y-3.5">
-              {/* Họ tên */}
+            <form onSubmit={handleSubmit} className="space-y-4">
+              {/* Email */}
               <div className="space-y-1">
                 <label className="block text-xs font-semibold text-slate-300">
-                  Họ và tên <span className="text-red-500">*</span>
+                  Email <span className="text-red-500">*</span>
                 </label>
                 <input
-                  type="text"
-                  name="name"
+                  type="email"
+                  name="email"
                   required
-                  value={form.name}
+                  value={form.email}
                   onChange={handleChange}
-                  placeholder="Nguyễn Văn A"
-                  className="w-full px-4 py-2.5 bg-slate-900/90 border border-slate-800 rounded-xl text-sm text-slate-100 placeholder-slate-500 focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-all"
+                  placeholder="candidate@gmail.com"
+                  className="w-full px-3.5 py-2.5 bg-slate-900/90 border border-slate-800 rounded-xl text-sm text-slate-100 placeholder-slate-500 focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-all"
                 />
-              </div>
-
-              {/* Grid 2 cột: Email & Số điện thoại */}
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                <div className="space-y-1">
-                  <label className="block text-xs font-semibold text-slate-300">
-                    Email <span className="text-red-500">*</span>
-                  </label>
-                  <input
-                    type="email"
-                    name="email"
-                    required
-                    value={form.email}
-                    onChange={handleChange}
-                    placeholder="candidate@gmail.com"
-                    className="w-full px-3.5 py-2.5 bg-slate-900/90 border border-slate-800 rounded-xl text-sm text-slate-100 placeholder-slate-500 focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-all"
-                  />
-                </div>
-
-                <div className="space-y-1">
-                  <label className="block text-xs font-semibold text-slate-300">
-                    Số điện thoại <span className="text-red-500">*</span>
-                  </label>
-                  <input
-                    type="tel"
-                    name="phone"
-                    required
-                    value={form.phone}
-                    onChange={handleChange}
-                    placeholder="0912345678"
-                    className="w-full px-3.5 py-2.5 bg-slate-900/90 border border-slate-800 rounded-xl text-sm text-slate-100 placeholder-slate-500 focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-all"
-                  />
-                </div>
               </div>
 
               {/* Mật khẩu */}
@@ -209,9 +170,16 @@ export default function CandidateRegisterPage() {
               <button
                 type="submit"
                 disabled={isLoading}
-                className="w-full py-3 bg-blue-600 hover:bg-blue-700 text-white text-sm font-bold rounded-xl transition-all shadow-lg shadow-blue-600/25 active:scale-[0.98] disabled:opacity-50 cursor-pointer mt-3"
+                className="w-full py-3 bg-blue-600 hover:bg-blue-700 text-white text-sm font-bold rounded-xl transition-all shadow-lg shadow-blue-600/25 active:scale-[0.98] disabled:opacity-50 cursor-pointer mt-3 flex items-center justify-center gap-2"
               >
-                {isLoading ? "Đang tạo tài khoản..." : "Đăng ký tài khoản"}
+                {isLoading ? (
+                  <>
+                    <Loader2 size={16} className="animate-spin" />
+                    <span>Đang tạo tài khoản...</span>
+                  </>
+                ) : (
+                  "Đăng ký tài khoản"
+                )}
               </button>
             </form>
 

@@ -17,14 +17,15 @@ export enum UserStatus {
 
 @Schema({ timestamps: true })
 export class User {
-  @Prop({ required: true })
-  name: string;
 
   @Prop({ required: true, unique: true })
   email: string;
 
-  @Prop({ required: true })
-  phone: string;
+  @Prop({ required: false, default: '' })
+  name?: string;
+
+  @Prop({ required: false, default: '' })
+  phone?: string;
 
   @Prop({ required: true, enum: UserRole, default: UserRole.CANDIDATE })
   role: UserRole;

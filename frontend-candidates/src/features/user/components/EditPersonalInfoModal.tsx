@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { X, Plus, Trash2, Check, Loader2, Phone } from "lucide-react";
+import { X, Plus, Trash2, Check, Loader2 } from "lucide-react";
 import { CandidateProfile, SocialLinkItem } from "../types/profile.types";
 import { profileApi } from "../services/user.api";
 
@@ -9,8 +9,9 @@ interface EditPersonalInfoModalProps {
   isOpen: boolean;
   onClose: () => void;
   profile: CandidateProfile | null;
+  defaultName?: string;
   defaultPhone?: string;
-  onSuccess: (updatedData: Partial<CandidateProfile> & { phone?: string }) => void;
+  onSuccess: (updatedData: any) => void;
 }
 
 const PLATFORM_OPTIONS = [
@@ -27,9 +28,11 @@ export default function EditPersonalInfoModal({
   isOpen,
   onClose,
   profile,
+  defaultName = "",
   defaultPhone = "",
   onSuccess,
 }: EditPersonalInfoModalProps) {
+  const [name, setName] = useState("");
   const [headline, setHeadline] = useState("");
   const [phone, setPhone] = useState("");
   const [address, setAddress] = useState("");
@@ -38,18 +41,25 @@ export default function EditPersonalInfoModal({
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   useEffect(() => {
-    if (profile && isOpen) {
-      setHeadline(profile.headline || "");
-      setAddress(profile.address || "");
-      setSummary(profile.summary || "");
-      setSocialLinks(profile.socialLinks ? [...profile.socialLinks] : []);
+    if (isOpen) {
+      setHeadline(profile?.headline || "");
+      setAddress(profile?.address || "");
+      setSummary(profile?.summary || "");
+      setSocialLinks(profile?.socialLinks ? [...profile.socialLinks] : []);
 
-      // Lấy số điện thoại từ profile.userId hoặc fallback defaultPhone
+      const existingName =
+        typeof profile?.userId === "object" && profile?.userId !== null
+          ? (profile.userId as any).name
+          : defaultName;
+      setName(existingName || "");
+
       const existingPhone =
-        typeof profile.userId === "object" ? profile.userId?.phone : "";
-      setPhone(existingPhone || defaultPhone || "");
+        typeof profile?.userId === "object" && profile?.userId !== null
+          ? (profile.userId as any).phone
+          : defaultPhone;
+      setPhone(existingPhone || "");
     }
-  }, [profile, isOpen, defaultPhone]);
+  }, [profile, isOpen, defaultName, defaultPhone]);
 
   useEffect(() => {
     if (isOpen) {
@@ -91,7 +101,8 @@ export default function EditPersonalInfoModal({
     try {
       const cleanSocialLinks = socialLinks.filter((s) => s.url.trim() !== "");
 
-      const payload: any = {
+      const payload = {
+        name: name.trim(),
         headline: headline.trim(),
         phone: phone.trim(),
         address: address.trim(),
@@ -99,8 +110,11 @@ export default function EditPersonalInfoModal({
         socialLinks: cleanSocialLinks,
       };
 
-      await profileApi.updateProfile(payload);
-      onSuccess(payload);
+      const response = await profileApi.updateProfile(payload);
+
+      const updatedData = (response as any)?.data || response || payload;
+      
+      onSuccess(updatedData);
       onClose();
     } catch (error) {
       console.error("Cập nhật thông tin cá nhân thất bại:", error);
@@ -115,7 +129,6 @@ export default function EditPersonalInfoModal({
       aria-modal="true"
       className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4"
     >
-      {/* Click outside backdrop để đóng modal */}
       <div className="fixed inset-0" onClick={onClose} />
 
       <div
@@ -129,7 +142,7 @@ export default function EditPersonalInfoModal({
               Chỉnh sửa thông tin cá nhân & Giới thiệu
             </h3>
             <p className="text-xs text-slate-500 mt-0.5">
-              Cập nhật chức danh, số điện thoại, địa chỉ và liên kết mạng xã hội
+              Cập nhật họ tên, chức danh, số điện thoại và liên kết hồ sơ
             </p>
           </div>
           <button
@@ -142,25 +155,40 @@ export default function EditPersonalInfoModal({
         </div>
 
         {/* Form Body */}
-        <form onSubmit={handleSubmit} className="space-y-5 overflow-y-auto pr-1 flex-1">
-          {/* Chức danh nghề nghiệp (Headline) */}
-          <div className="space-y-1.5">
-            <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider">
-              Chức danh nghề nghiệp (Headline) <span className="text-rose-500">*</span>
-            </label>
-            <input
-              type="text"
-              required
-              value={headline}
-              onChange={(e) => setHeadline(e.target.value)}
-              placeholder="VD: Full-Stack Developer / Frontend ReactJS Engineer"
-              className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm text-slate-900 placeholder:text-slate-400 focus:bg-white focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 outline-none transition-all font-medium"
-            />
+        <form onSubmit={handleSubmit} className="space-y-4 overflow-y-auto pr-1 flex-1">
+          {/* Họ và tên & Chức danh */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <div className="space-y-1.5">
+              <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider">
+                Họ và tên <span className="text-rose-500">*</span>
+              </label>
+              <input
+                type="text"
+                required
+                value={name}
+                onChange={(e) => setName(e.target.value)}
+                placeholder="VD: Nguyễn Văn A"
+                className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm font-medium text-slate-900 placeholder:text-slate-400 focus:bg-white focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 outline-none transition-all"
+              />
+            </div>
+
+            <div className="space-y-1.5">
+              <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider">
+                Chức danh nghề nghiệp <span className="text-rose-500">*</span>
+              </label>
+              <input
+                type="text"
+                required
+                value={headline}
+                onChange={(e) => setHeadline(e.target.value)}
+                placeholder="VD: Full-Stack Developer"
+                className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm font-medium text-slate-900 placeholder:text-slate-400 focus:bg-white focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 outline-none transition-all"
+              />
+            </div>
           </div>
 
-          {/* Grid 2 cột: Số điện thoại & Địa chỉ */}
+          {/* Số điện thoại & Địa chỉ */}
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-            {/* Số điện thoại */}
             <div className="space-y-1.5">
               <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider">
                 Số điện thoại liên hệ
@@ -170,11 +198,10 @@ export default function EditPersonalInfoModal({
                 value={phone}
                 onChange={(e) => setPhone(e.target.value)}
                 placeholder="VD: 0987654321"
-                className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm text-slate-900 placeholder:text-slate-400 focus:bg-white focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 outline-none transition-all font-medium"
+                className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm font-medium text-slate-900 placeholder:text-slate-400 focus:bg-white focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 outline-none transition-all"
               />
             </div>
 
-            {/* Địa chỉ sinh sống */}
             <div className="space-y-1.5">
               <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider">
                 Địa chỉ / Khu vực sinh sống
@@ -184,12 +211,12 @@ export default function EditPersonalInfoModal({
                 value={address}
                 onChange={(e) => setAddress(e.target.value)}
                 placeholder="VD: Quận Gò Vấp, TP. Hồ Chí Minh"
-                className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm text-slate-900 placeholder:text-slate-400 focus:bg-white focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 outline-none transition-all font-medium"
+                className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm font-medium text-slate-900 placeholder:text-slate-400 focus:bg-white focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 outline-none transition-all"
               />
             </div>
           </div>
 
-          {/* Giới thiệu bản thân (Summary) */}
+          {/* Giới thiệu bản thân */}
           <div className="space-y-1.5">
             <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider">
               Giới thiệu bản thân
@@ -198,12 +225,12 @@ export default function EditPersonalInfoModal({
               rows={4}
               value={summary}
               onChange={(e) => setSummary(e.target.value)}
-              placeholder="Nêu ngắn gọn kinh nghiệm, kỹ năng thế mạnh và mục tiêu làm việc..."
+              placeholder="Nêu ngắn gọn kinh nghiệm, kỹ năng thế mạnh và định hướng làm việc..."
               className="w-full p-3.5 bg-slate-50 border border-slate-200 rounded-xl text-sm text-slate-900 placeholder:text-slate-400 focus:bg-white focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 outline-none transition-all leading-relaxed font-normal resize-none"
             />
           </div>
 
-          {/* Danh sách Liên kết mạng xã hội */}
+          {/* Liên kết mạng xã hội */}
           <div className="space-y-3 pt-2 border-t border-slate-100">
             <div className="flex items-center justify-between">
               <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider">
