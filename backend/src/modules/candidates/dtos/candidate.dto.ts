@@ -1,6 +1,24 @@
-import { IsArray, IsNumber, IsOptional, IsString } from 'class-validator';
+import { IsArray, IsBoolean, IsNotEmpty, IsNumber, IsOptional, IsString } from 'class-validator';
+
+export class CreateCandidateProfileDto {
+  @IsNotEmpty({ message: 'Tên hồ sơ không được để trống' })
+  @IsString({ message: 'Tên hồ sơ phải là chuỗi' })
+  profileName: string;
+
+  @IsOptional()
+  @IsString()
+  cloneFromCandidateId?: string;
+}
 
 export class UpdateCandidateProfileDto {
+
+  @IsOptional()
+  @IsString()
+  profileName?: string;
+
+  @IsOptional()
+  @IsBoolean()
+  isDefault?: boolean;
 
   @IsOptional()
   @IsString()

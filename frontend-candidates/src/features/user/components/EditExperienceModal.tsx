@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react";
 import { X, Check, Trash2, Loader2, Plus } from "lucide-react";
 import { profileApi } from "../services/user.api";
+import { useActiveProfile } from "../context/ActiveProfileContext";
 import { ExperienceItem } from "../types/profile.types";
 
 interface EditExperienceModalProps {
@@ -22,6 +23,7 @@ export default function EditExperienceModal({
   allExperiences,
   onSuccess,
 }: EditExperienceModalProps) {
+  const { saveProfile } = useActiveProfile();
   const [position, setPosition] = useState("");
   const [company, setCompany] = useState("");
   const [startDate, setStartDate] = useState("");
@@ -101,7 +103,7 @@ export default function EditExperienceModal({
     }
 
     try {
-      await profileApi.updateProfile({ experiences: updatedList });
+      await saveProfile({ experiences: updatedList });
       onSuccess(updatedList);
       onClose();
     } catch (error) {
@@ -116,7 +118,7 @@ export default function EditExperienceModal({
     setIsSubmitting(true);
     const updatedList = allExperiences.filter((_, idx) => idx !== currentIndex);
     try {
-      await profileApi.updateProfile({ experiences: updatedList });
+      await saveProfile({ experiences: updatedList });
       onSuccess(updatedList);
       onClose();
     } catch (error) {

@@ -4,6 +4,7 @@ import { useState, useEffect } from "react";
 import { X, Check, Trash2, Loader2, Award } from "lucide-react";
 import { CertificateItem } from "../types/profile.types";
 import { profileApi } from "../services/user.api";
+import { useActiveProfile } from "../context/ActiveProfileContext";
 
 interface EditCertificationModalProps {
   isOpen: boolean;
@@ -22,6 +23,7 @@ export default function EditCertificationModal({
   allCertifications,
   onSuccess,
 }: EditCertificationModalProps) {
+  const { saveProfile } = useActiveProfile();
   const [name, setName] = useState("");
   const [organization, setOrganization] = useState("");
   const [scoreOrLevel, setScoreOrLevel] = useState("");
@@ -83,7 +85,7 @@ export default function EditCertificationModal({
     }
 
     try {
-      await profileApi.updateProfile({ certifications: updatedList });
+      await saveProfile({ certifications: updatedList });
       onSuccess(updatedList);
       onClose();
     } catch (error: any) {
@@ -99,7 +101,7 @@ export default function EditCertificationModal({
     setIsSubmitting(true);
     const updatedList = allCertifications.filter((_, idx) => idx !== currentIndex);
     try {
-      await profileApi.updateProfile({ certifications: updatedList });
+      await saveProfile({ certifications: updatedList });
       onSuccess(updatedList);
       onClose();
     } catch (error) {

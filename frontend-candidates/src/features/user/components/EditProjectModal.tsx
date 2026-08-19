@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react";
 import { X, Check, Trash2, Loader2, FolderGit2 } from "lucide-react";
 import { profileApi } from "../services/user.api";
+import { useActiveProfile } from "../context/ActiveProfileContext";
 import { ProjectItem } from "../types/profile.types";
 
 interface EditProjectModalProps {
@@ -22,6 +23,7 @@ export default function EditProjectModal({
   allProjects,
   onSuccess,
 }: EditProjectModalProps) {
+  const { saveProfile } = useActiveProfile();
   const [name, setName] = useState("");
   const [role, setRole] = useState("");
   const [projectUrl, setProjectUrl] = useState("");
@@ -108,7 +110,7 @@ export default function EditProjectModal({
     }
 
     try {
-      await profileApi.updateProfile({ projects: updatedList });
+      await saveProfile({ projects: updatedList });
       onSuccess(updatedList);
       onClose();
     } catch (error: any) {
@@ -124,7 +126,7 @@ export default function EditProjectModal({
     setIsSubmitting(true);
     const updatedList = allProjects.filter((_, idx) => idx !== currentIndex);
     try {
-      await profileApi.updateProfile({ projects: updatedList });
+      await saveProfile({ projects: updatedList });
       onSuccess(updatedList);
       onClose();
     } catch (error) {

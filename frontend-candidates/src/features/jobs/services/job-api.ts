@@ -11,6 +11,7 @@ interface ApiResponse<T> {
 
 export interface ApplyJobPayload {
   jobDescriptionId: string;
+  candidateId: string;
 }
 
 export interface ApplyJobResponse {

@@ -4,6 +4,7 @@ import { useState, useEffect } from "react";
 import { X, Plus, Trash2, Check, Loader2, FileText, Layers } from "lucide-react";
 import { CustomSection, CustomSectionItem } from "../types/profile.types";
 import { profileApi } from "../services/user.api";
+import { useActiveProfile } from "../context/ActiveProfileContext";
 
 interface EditCustomSectionModalProps {
   isOpen: boolean;
@@ -31,6 +32,7 @@ export default function EditCustomSectionModal({
   allCustomSections,
   onSuccess,
 }: EditCustomSectionModalProps) {
+  const { saveProfile } = useActiveProfile();
   const [sectionTitle, setSectionTitle] = useState("");
   const [items, setItems] = useState<CustomSectionItem[]>([]);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -123,7 +125,7 @@ export default function EditCustomSectionModal({
     }
 
     try {
-      await profileApi.updateProfile({ customSections: updatedList });
+      await saveProfile({ customSections: updatedList });
       onSuccess(updatedList);
       onClose();
     } catch (error: any) {
@@ -142,7 +144,7 @@ export default function EditCustomSectionModal({
     setIsSubmitting(true);
     const updatedList = allCustomSections.filter((_, idx) => idx !== sectionIndex);
     try {
-      await profileApi.updateProfile({ customSections: updatedList });
+      await saveProfile({ customSections: updatedList });
       onSuccess(updatedList);
       onClose();
     } catch (error) {

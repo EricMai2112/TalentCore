@@ -4,6 +4,7 @@ import { useState, useEffect } from "react";
 import { X, Plus, Trash2, Check, Loader2 } from "lucide-react";
 import { CandidateProfile, SocialLinkItem } from "../types/profile.types";
 import { profileApi } from "../services/user.api";
+import { useActiveProfile } from "../context/ActiveProfileContext";
 
 interface EditPersonalInfoModalProps {
   isOpen: boolean;
@@ -32,6 +33,7 @@ export default function EditPersonalInfoModal({
   defaultPhone = "",
   onSuccess,
 }: EditPersonalInfoModalProps) {
+  const { saveProfile } = useActiveProfile();
   const [name, setName] = useState("");
   const [headline, setHeadline] = useState("");
   const [phone, setPhone] = useState("");
@@ -110,7 +112,7 @@ export default function EditPersonalInfoModal({
         socialLinks: cleanSocialLinks,
       };
 
-      const response = await profileApi.updateProfile(payload);
+      const response = await saveProfile(payload);
 
       const updatedData = (response as any)?.data || response || payload;
       

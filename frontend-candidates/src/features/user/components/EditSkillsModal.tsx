@@ -4,6 +4,7 @@ import { useState, useEffect } from "react";
 import { X, Plus, Trash2, Check, Loader2, Cpu } from "lucide-react";
 import { SkillItem } from "../types/profile.types";
 import { profileApi } from "../services/user.api";
+import { useActiveProfile } from "../context/ActiveProfileContext";
 
 interface EditSkillsModalProps {
   isOpen: boolean;
@@ -25,6 +26,7 @@ export default function EditSkillsModal({
   initialSkills,
   onSuccess,
 }: EditSkillsModalProps) {
+  const { saveProfile } = useActiveProfile();
   const [skills, setSkills] = useState<SkillItem[]>([]);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
@@ -82,7 +84,7 @@ export default function EditSkillsModal({
       .filter((s) => s.name.length > 0);
 
     try {
-      await profileApi.updateProfile({ skills: validSkills });
+      await saveProfile({ skills: validSkills });
       onSuccess(validSkills);
       onClose();
     } catch (error: any) {

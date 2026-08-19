@@ -20,6 +20,7 @@ import {
 } from "lucide-react";
 import { CandidateProfile } from "../types/profile.types";
 import { profileApi } from "../services/user.api";
+import { useActiveProfile } from "../context/ActiveProfileContext";
 
 interface CvParsingPreviewModalProps {
   isOpen: boolean;
@@ -32,8 +33,8 @@ export default function CvParsingPreviewModal({
   isOpen,
   onClose,
   parsedData,
-  onSuccess,
-}: CvParsingPreviewModalProps) {
+  onSuccess,}: CvParsingPreviewModalProps) {
+  const { saveProfile } = useActiveProfile();
   const [isApplying, setIsApplying] = useState(false);
 
   useEffect(() => {
@@ -56,7 +57,7 @@ export default function CvParsingPreviewModal({
       ...parsedData,
       name: parsedData.fullName || parsedData.name || undefined,
       };
-      const updated = await profileApi.updateProfile(payloadToSave);
+      const updated = await saveProfile(payloadToSave);
       onSuccess(updated);
       onClose();
     } catch (error) {
