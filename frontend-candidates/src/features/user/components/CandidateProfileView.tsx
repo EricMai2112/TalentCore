@@ -286,7 +286,7 @@ export default function CandidateProfileView() {
       </div>
 
       <div className="flex flex-col lg:flex-row items-start gap-6">
-        <div className="hidden lg:block w-72 shrink-0">
+        <div className="hidden lg:block w-72 shrink-0 self-stretch">
           <ProfileNavSidebar profile={profile} />
         </div>
         <div className="flex-1 w-full space-y-6">

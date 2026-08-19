@@ -22,10 +22,10 @@ interface ProfileNavSidebarProps {
 const SECTION_IDS = [
   "section-personal-info",
   "section-career-objective",
-  "section-experience",
   "section-education",
-  "section-projects",
   "section-skills",
+  "section-experience",
+  "section-projects",
   "section-certifications",
   "section-custom",
 ];
@@ -49,28 +49,28 @@ export default function ProfileNavSidebar({ profile }: ProfileNavSidebarProps) {
         isFilled: Boolean(profile?.careerObjective),
       },
       {
-        id: "section-experience",
-        label: "Kinh nghiệm làm việc",
-        icon: Briefcase,
-        isFilled: Boolean(profile?.experiences && profile.experiences.length > 0),
-      },
-      {
         id: "section-education",
         label: "Học vấn",
         icon: GraduationCap,
         isFilled: Boolean(profile?.educations && profile.educations.length > 0),
       },
       {
-        id: "section-projects",
-        label: "Dự án thực tế",
-        icon: FolderGit2,
-        isFilled: Boolean(profile?.projects && profile.projects.length > 0),
-      },
-      {
         id: "section-skills",
         label: "Kỹ năng chuyên môn",
         icon: Cpu,
         isFilled: Boolean(profile?.skills && profile.skills.length > 0),
+      },
+      {
+        id: "section-experience",
+        label: "Kinh nghiệm làm việc",
+        icon: Briefcase,
+        isFilled: Boolean(profile?.experiences && profile.experiences.length > 0),
+      },
+      {
+        id: "section-projects",
+        label: "Dự án thực tế",
+        icon: FolderGit2,
+        isFilled: Boolean(profile?.projects && profile.projects.length > 0),
       },
       {
         id: "section-certifications",

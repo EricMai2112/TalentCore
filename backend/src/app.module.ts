@@ -10,6 +10,7 @@ import { PositionsModule } from './modules/positions/positions.module';
 import { DepartmentsModule } from './modules/departments/departments.module';
 import { JobDescriptionModule } from './modules/job-description/job-description.module';
 import { CandidatesModule } from './modules/candidates/candidates.module';
+import { ApplicationsModule } from './modules/applications/applications.module';
 
 @Module({
   imports: [
@@ -30,6 +31,7 @@ import { CandidatesModule } from './modules/candidates/candidates.module';
     DepartmentsModule,
     JobDescriptionModule,
     CandidatesModule,
+    ApplicationsModule,
   ],
   controllers: [],
   providers: [],
