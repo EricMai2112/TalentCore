@@ -28,17 +28,14 @@ export default function ProfilesManager() {
   const [profiles, setProfiles] = useState<CandidateProfile[]>([]);
   const [loading, setLoading] = useState(true);
 
-  // Create profile modal state
   const [isCreateOpen, setIsCreateOpen] = useState(false);
   const [newProfileName, setNewProfileName] = useState("");
   const [cloneFromId, setCloneFromId] = useState<string>("");
   const [isCreating, setIsCreating] = useState(false);
 
-  // Delete confirmation state
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
 
-  // Setting default state
   const [settingDefaultId, setSettingDefaultId] = useState<string | null>(null);
 
   useEffect(() => {
@@ -72,7 +69,6 @@ export default function ProfilesManager() {
       setNewProfileName("");
       setCloneFromId("");
       toast.success("Tạo hồ sơ mới thành công!");
-      // Navigate to the new profile editor
       router.push(`/user/profile/${created._id}`);
     } catch (err: any) {
       toast.error(err?.message || "Tạo hồ sơ thất bại");

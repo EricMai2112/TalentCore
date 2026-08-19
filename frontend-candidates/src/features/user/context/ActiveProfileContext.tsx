@@ -1,26 +1,11 @@
 "use client";
 
-/**
- * ActiveProfileContext
- *
- * Provides the active profile ID to all edit modals so they can call
- * profileApi.updateProfileById(profileId, payload) instead of the legacy
- * profileApi.updateProfile() which always targets the default profile.
- *
- * If profileId is null (legacy /user/profile page), modals fall back to
- * the old behaviour.
- */
 
 import { createContext, useContext } from "react";
 import { profileApi } from "../services/user.api";
 import { CandidateProfile } from "../types/profile.types";
 
 interface ActiveProfileContextType {
-  /**
-   * Save a partial update to the currently active profile.
-   * Automatically routes to updateProfileById or updateProfile
-   * depending on whether a profileId is set.
-   */
   saveProfile: (payload: Partial<CandidateProfile>) => Promise<any>;
 }
 
