@@ -1,3 +1,4 @@
+import { apiClient } from "@/src/lib/api-client";
 import { CandidateJob, Department, Skill } from "../types/job.types";
 import { env } from "@/src/config/env.config";
 
@@ -6,6 +7,20 @@ const API_BASE_URL = env.apiUrl;
 interface ApiResponse<T> {
   message: string;
   data: T;
+}
+
+export interface ApplyJobPayload {
+  jobDescriptionId: string;
+}
+
+export interface ApplyJobResponse {
+  message: string;
+  applicationId: string;
+  currentStage?: {
+    _id: string;
+    name: string;
+    color: string;
+  };
 }
 
 export const candidateJobApi = {
@@ -63,5 +78,8 @@ export const candidateJobApi = {
       console.error("Failed to fetch skills:", error);
       return [];
     }
+  },
+  applyJob: async (payload: ApplyJobPayload): Promise<ApplyJobResponse> => {
+    return apiClient.post<ApplyJobResponse>("/applications/apply", payload);
   },
 };
