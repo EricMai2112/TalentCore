@@ -39,7 +39,7 @@ export class ApplicationController {
       const payload = this.jwtService.verify(token);
       const userId = payload.sub || payload.id || payload._id;
 
-      return await this.applicationService.applyJob(userId, dto.jobDescriptionId);
+      return await this.applicationService.applyJob(userId, dto.jobDescriptionId, dto.candidateId);
     } catch (error: any) {
       if (error?.status && error.status !== 500) {
         throw error;

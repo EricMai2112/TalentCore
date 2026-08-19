@@ -22,12 +22,15 @@ export class ApplicationService {
     private readonly pipelineModel: Model<PipelineTemplateDocument>,
   ) {}
 
-  async applyJob(userId: string, jobDescriptionId: string) {
+  async applyJob(userId: string, jobDescriptionId: string, candidateId: string) {
+    const userObjId = new Types.ObjectId(userId);
+
     const candidate = await this.candidateModel.findOne({
-      userId: new Types.ObjectId(userId),
+      _id: new Types.ObjectId(candidateId),
+      userId: userObjId,
     });
     if (!candidate) {
-      throw new BadRequestException('Vui lòng hoàn thiện hồ sơ trước khi ứng tuyển.');
+      throw new BadRequestException('Hồ sơ không tồn tại hoặc không thuộc về bạn.');
     }
 
     const job = await this.jobModel.findById(jobDescriptionId);
@@ -35,10 +38,16 @@ export class ApplicationService {
       throw new NotFoundException('Tin tuyển dụng không tồn tại hoặc đã đóng.');
     }
 
+    const userProfiles = await this.candidateModel
+      .find({ userId: userObjId }, { _id: 1 })
+      .exec();
+    const userCandidateIds = userProfiles.map((p) => p._id);
+
     const existingApp = await this.applicationModel.findOne({
-      candidateId: candidate._id,
+      candidateId: { $in: userCandidateIds },
       jobDescriptionId: new Types.ObjectId(jobDescriptionId),
     });
+
     if (existingApp) {
       throw new BadRequestException('Bạn đã ứng tuyển vào vị trí này rồi!');
     }

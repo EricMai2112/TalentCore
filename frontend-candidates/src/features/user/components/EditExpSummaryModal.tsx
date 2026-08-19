@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react";
 import { X, Check, Loader2 } from "lucide-react";
 import { profileApi } from "../services/user.api";
+import { useActiveProfile } from "../context/ActiveProfileContext";
 
 interface EditExpSummaryModalProps {
   isOpen: boolean;
@@ -29,6 +30,7 @@ export default function EditExpSummaryModal({
   currentLevel = "",
   onSuccess,
 }: EditExpSummaryModalProps) {
+  const { saveProfile } = useActiveProfile();
   const [years, setYears] = useState<number | string>(currentYears);
   const [level, setLevel] = useState(currentLevel || LEVEL_OPTIONS[0]);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -56,7 +58,7 @@ export default function EditExpSummaryModal({
       currentLevel: level.trim(),
     };
     try {
-      await profileApi.updateProfile(payload);
+      await saveProfile(payload);
       onSuccess(payload);
       onClose();
     } catch (error) {

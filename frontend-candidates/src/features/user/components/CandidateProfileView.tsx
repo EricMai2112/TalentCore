@@ -30,6 +30,7 @@ import {
 import { useAuth } from "@/src/providers/AuthProvider";
 import { CandidateProfile, CertificateItem, CustomSection, EducationItem, ExperienceItem, ProjectItem } from "../types/profile.types";
 import { profileApi } from "../services/user.api";
+import { ActiveProfileProvider } from "../context/ActiveProfileContext";
 import EditCareerObjectiveModal from "./EditCareerObjectiveModal";
 import EditPersonalInfoModal from "./EditPersonalInfoModal";
 import EditEducationModal from "./EditEducationModal";
@@ -45,7 +46,11 @@ import { toast } from "react-toastify";
 import ProfileNavSidebar from "./ProfileNavSidebar";
 import { useRouter } from "next/navigation";
 
-export default function CandidateProfileView() {
+interface CandidateProfileViewProps {
+  profileId?: string;
+}
+
+export default function CandidateProfileView({ profileId }: CandidateProfileViewProps = {}) {
   const { user: authUser, isLoading: isAuthLoading } = useAuth();
   const router = useRouter();
   const [profile, setProfile] = useState<CandidateProfile | null>(null);
@@ -83,7 +88,9 @@ export default function CandidateProfileView() {
     }
     const loadProfile = async () => {
       try {
-        const data = await profileApi.getMyProfile();
+        const data = profileId
+          ? await profileApi.getProfileById(profileId)
+          : await profileApi.getMyProfile();
         setProfile(data);
       } catch (err) {
         console.error("Lỗi lấy dữ liệu profile:", err);
@@ -92,7 +99,7 @@ export default function CandidateProfileView() {
       }
     };
     loadProfile();
-  }, [authUser, isAuthLoading, router]);
+  }, [authUser, isAuthLoading, router, profileId]);
 
   if (loading) {
     return (
@@ -240,9 +247,31 @@ export default function CandidateProfileView() {
   };
 
   return (
+    <ActiveProfileProvider profileId={profileId}>
     <div className="mmin-h-screen bg-slate-50/50 py-8 px-4 sm:px-6 lg:px-10 xl:px-12">
       <div className="max-w-6xl mx-auto space-y-6 pb-20 text-slate-900">
-        {/* AI Parsing */}
+        {profile?.profileName && (
+          <div className="flex items-center justify-between bg-white border border-slate-200 rounded-2xl px-5 py-3.5 shadow-xs">
+            <div className="flex items-center gap-3">
+              <div className="w-2 h-2 rounded-full bg-blue-500 shrink-0" />
+              <span className="text-sm font-bold text-slate-800">
+                Đang chỉnh sửa:{" "}
+                <span className="text-blue-600">{profile.profileName}</span>
+              </span>
+              {profile.isDefault && (
+                <span className="px-2 py-0.5 text-[10px] font-bold bg-emerald-100 text-emerald-700 rounded-full uppercase tracking-wide">
+                  Mặc định
+                </span>
+              )}
+            </div>
+            <a
+              href="/user/profile"
+              className="text-xs font-semibold text-slate-500 hover:text-blue-600 transition-colors"
+            >
+              ← Quản lý hồ sơ
+            </a>
+          </div>
+        )}
       <div className="bg-gradient-to-r from-blue-600 via-indigo-600 to-violet-600 rounded-3xl p-6 sm:p-7 text-white shadow-lg shadow-blue-500/10 flex flex-col sm:flex-row items-center justify-between gap-6">
         <div className="space-y-1.5 text-center sm:text-left">
           <div className="inline-flex items-center gap-1.5 px-3 py-1 bg-white/20 backdrop-blur-md rounded-full text-xs font-bold text-blue-50 mb-1">
@@ -1193,5 +1222,6 @@ export default function CandidateProfileView() {
       </div>
       </div> 
     </div>
+    </ActiveProfileProvider>
   );
 }

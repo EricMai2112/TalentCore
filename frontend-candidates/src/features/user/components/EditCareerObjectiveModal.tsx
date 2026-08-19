@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { X, Check, Loader2 } from "lucide-react";
 import { profileApi } from "../services/user.api";
+import { useActiveProfile } from "../context/ActiveProfileContext";
 
 interface EditCareerObjectiveModalProps {
   isOpen: boolean;
@@ -17,6 +18,7 @@ export default function EditCareerObjectiveModal({
   initialValue,
   onSuccess,
 }: EditCareerObjectiveModalProps) {
+  const { saveProfile } = useActiveProfile();
   const [value, setValue] = useState(initialValue);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
@@ -36,7 +38,7 @@ export default function EditCareerObjectiveModal({
     setErrorMsg(null);
 
     try {
-      await profileApi.updateProfile({ careerObjective: value.trim() });
+      await saveProfile({ careerObjective: value.trim() });
       onSuccess(value.trim());
       onClose();
     } catch (error: any) {

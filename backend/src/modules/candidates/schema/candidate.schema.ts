@@ -5,8 +5,15 @@ export type CandidateDocument = Candidate & Document;
 
 @Schema({ timestamps: true })
 export class Candidate {
-  @Prop({ type: Types.ObjectId, ref: 'User', required: true, unique: true })
+
+  @Prop({ type: Types.ObjectId, ref: 'User', required: true, index: true })
   userId: Types.ObjectId;
+
+  @Prop({ required: true, trim: true, default: 'Hồ sơ của tôi' })
+  profileName: string;
+
+  @Prop({ default: false })
+  isDefault: boolean;
 
   @Prop({ default: '' })
   headline: string;

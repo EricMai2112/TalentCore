@@ -74,6 +74,8 @@ export interface SocialLinkItem {
 export interface CandidateProfile {
   _id: string;
   userId: CandidateUserRef;
+  profileName: string;
+  isDefault: boolean;
   headline?: string;
   summary?: string;
   careerObjective?: string;

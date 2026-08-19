@@ -4,6 +4,7 @@ import { useState, useEffect } from "react";
 import { X, Check, Trash2 } from "lucide-react";
 import { EducationItem } from "../types/profile.types";
 import { profileApi } from "../services/user.api";
+import { useActiveProfile } from "../context/ActiveProfileContext";
 
 interface EditEducationModalProps {
   isOpen: boolean;
@@ -22,6 +23,7 @@ export default function EditEducationModal({
   allEducations,
   onSuccess,
 }: EditEducationModalProps) {
+  const { saveProfile } = useActiveProfile();
   const [institution, setInstitution] = useState("");
   const [degree, setDegree] = useState("");
   const [major, setMajor] = useState("");
@@ -75,7 +77,7 @@ export default function EditEducationModal({
     }
 
     try {
-      await profileApi.updateProfile({ educations: updatedList });
+      await saveProfile({ educations: updatedList });
       onSuccess(updatedList);
       onClose();
     } catch (error) {
@@ -90,7 +92,7 @@ export default function EditEducationModal({
     setIsSubmitting(true);
     const updatedList = allEducations.filter((_, idx) => idx !== currentIndex);
     try {
-      await profileApi.updateProfile({ educations: updatedList });
+      await saveProfile({ educations: updatedList });
       onSuccess(updatedList);
       onClose();
     } catch (error) {

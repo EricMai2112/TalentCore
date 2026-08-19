@@ -4,6 +4,7 @@ import { useState, useEffect } from "react";
 import { X, Plus, Trash2, Check, Loader2, Languages } from "lucide-react";
 import { LanguageItem } from "../types/profile.types";
 import { profileApi } from "../services/user.api";
+import { useActiveProfile } from "../context/ActiveProfileContext";
 
 interface EditLanguageModalProps {
   isOpen: boolean;
@@ -35,6 +36,7 @@ export default function EditLanguageModal({
   initialLanguages,
   onSuccess,
 }: EditLanguageModalProps) {
+  const { saveProfile } = useActiveProfile();
   const [languages, setLanguages] = useState<LanguageItem[]>([]);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
@@ -93,7 +95,7 @@ export default function EditLanguageModal({
       .filter((item) => item.language.length > 0);
 
     try {
-      await profileApi.updateProfile({ languages: validLanguages });
+      await saveProfile({ languages: validLanguages });
       onSuccess(validLanguages);
       onClose();
     } catch (error: any) {

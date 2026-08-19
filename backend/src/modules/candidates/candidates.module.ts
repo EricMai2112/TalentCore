@@ -8,12 +8,19 @@ import { AuthModule } from '../auth/auth.module';
 import { CvParserService } from './services/cv-parser.service';
 
 @Module({
-    imports: [MongooseModule.forFeature([{name: Candidate.name, schema: CandidateSchema}
-        ,{ name: User.name, schema: UserSchema },
-        
-    ]), AuthModule],
+    imports: [
+        MongooseModule.forFeature([
+            { name: Candidate.name, schema: CandidateSchema },
+            { name: User.name, schema: UserSchema },
+        ]),
+        AuthModule,
+    ],
     controllers: [CandidateController],
     providers: [CandidateService, CvParserService],
-    exports: []
+    exports: [
+        MongooseModule.forFeature([
+            { name: Candidate.name, schema: CandidateSchema },
+        ]),
+    ],
 })
 export class CandidatesModule {}

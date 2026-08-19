@@ -1,4 +1,5 @@
 import CandidateProfileView from "@/src/features/user/components/CandidateProfileView";
+import ProfilesManager from "@/src/features/user/components/ProfilesManager";
 import { Metadata } from "next";
 
 export const metadata: Metadata = {
@@ -9,7 +10,7 @@ export const metadata: Metadata = {
 export default function CandidateProfilePage() {
   return (
     <div className="min-h-screen bg-[#f8fafc] text-slate-900 py-10 px-4 sm:px-6 lg:px-8">
-      <CandidateProfileView />
+      <ProfilesManager />
     </div>
   );
 }
