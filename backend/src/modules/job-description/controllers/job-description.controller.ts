@@ -13,11 +13,21 @@ import {
 } from '@nestjs/common';
 import { JobDescriptionService } from '../services/job-description.service';
 import { CreateJobDescriptionDto, UpdateJobDescriptionDto } from '../dtos/job-description.dto';
+import { SuggestCriteriaWeightsDto } from '../dtos/suggest-criteria-weights.dto';
 
 @Controller('job-descriptions')
 @UsePipes(new ValidationPipe({ whitelist: true }))
 export class JobDescriptionController {
   constructor(private readonly jobDescriptionService: JobDescriptionService) {}
+
+  @Post('ai-suggest-weights')
+  async suggestCriteriaWeightsWithAi(@Body() dto: SuggestCriteriaWeightsDto) {
+    const result = await this.jobDescriptionService.suggestCriteriaWeightsWithAi(dto);
+    return {
+      message: 'Gợi ý trọng số tiêu chí bằng AI thành công',
+      data: result,
+    };
+  }
 
   @Post()
   async create(@Body() createDto: CreateJobDescriptionDto) {
