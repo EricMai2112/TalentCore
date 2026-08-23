@@ -16,8 +16,14 @@ import {
   CheckCheck,
   CheckCircle2,
   AlertCircle,
+  SlidersHorizontal,
 } from "lucide-react";
-import { JobDescription, JobStatus, JobPriority } from "../types/job-description.types";
+import {
+  JobDescription,
+  JobStatus,
+  JobPriority,
+  CriteriaRequirementType,
+} from "../types/job-description.types";
 import { jobDescriptionApi } from "../services/job-description.api";
 import { useAuth } from "@/src/providers/AuthProvider";
 import { UserRole } from "@/src/features/users/types/user.types";
@@ -40,7 +46,12 @@ export default function JobRequestDetailsView({ job }: JobRequestDetailsViewProp
 
   const deptName = typeof currentJob.departmentId === "object" ? currentJob.departmentId?.name : "Chưa rõ";
   const postedByName = typeof currentJob.postedById === "object" ? currentJob.postedById?.name : "Tuyển dụng";
-  const interviewerName = typeof currentJob.interviewerId === "object" ? currentJob.interviewerId?.name : "Chưa phân công";
+
+  const interviewersList = currentJob.interviewerIds && currentJob.interviewerIds.length > 0
+    ? currentJob.interviewerIds.map((emp: any) => (typeof emp === "object" ? emp?.name : emp))
+    : currentJob.interviewerId
+    ? [typeof currentJob.interviewerId === "object" ? currentJob.interviewerId?.name : currentJob.interviewerId]
+    : [];
 
   const getStatusConfig = (status: JobStatus) => {
     switch (status) {
@@ -67,6 +78,16 @@ export default function JobRequestDetailsView({ job }: JobRequestDetailsViewProp
       case JobPriority.MEDIUM:
       default:
         return { label: "Bình thường", style: "bg-blue-50 text-blue-700 border-blue-100" };
+    }
+  };
+
+  const getRequirementTypeBadge = (type: CriteriaRequirementType) => {
+    switch (type) {
+      case CriteriaRequirementType.MANDATORY:
+        return <span className="px-2.5 py-0.5 rounded-lg bg-rose-50 text-rose-700 border border-rose-200 font-bold text-[11px]">🔴 Bắt buộc</span>;
+      case CriteriaRequirementType.PREFERRED:
+      default:
+        return <span className="px-2.5 py-0.5 rounded-lg bg-blue-50 text-blue-700 border border-blue-200 font-bold text-[11px]">🔵 Ưu tiên</span>;
     }
   };
 
@@ -350,8 +371,9 @@ export default function JobRequestDetailsView({ job }: JobRequestDetailsViewProp
           )}
         </div>
 
-        {/* Right Column (1 col): Department, Position, Skills & Interviewer */}
+        {/* Right Column (1 col): Department, Position, Interviewers, Skills & Criteria */}
         <div className="space-y-6">
+          {/* Metadata & Skills Card */}
           <div className="bg-white border border-gray-100 rounded-2xl p-6 shadow-2xs space-y-4">
             <h3 className="text-base font-bold text-gray-900 border-b border-gray-100 pb-3">
               Thông tin phòng ban & Kỹ năng
@@ -372,13 +394,28 @@ export default function JobRequestDetailsView({ job }: JobRequestDetailsViewProp
                 <span className="text-xs font-bold text-gray-400 uppercase tracking-wider block">Người tạo yêu cầu</span>
                 <span className="text-sm font-bold text-gray-800 mt-0.5 block">{postedByName}</span>
               </div>
-
-              <div>
-                <span className="text-xs font-bold text-gray-400 uppercase tracking-wider block">Interviewer chính</span>
-                <span className="text-sm font-bold text-gray-800 mt-0.5 block">{interviewerName}</span>
-              </div>
             </div>
 
+            {/* Interviewers Badge List */}
+            <div className="pt-3 border-t border-gray-100 space-y-2">
+              <span className="text-xs font-bold text-gray-400 uppercase tracking-wider block">Hội đồng Phỏng vấn</span>
+              {interviewersList.length === 0 ? (
+                <span className="text-xs text-gray-400 italic block">Chưa phân công</span>
+              ) : (
+                <div className="flex flex-wrap gap-1.5">
+                  {interviewersList.map((name, idx) => (
+                    <span
+                      key={idx}
+                      className="px-3 py-1 bg-purple-50 border border-purple-100 text-purple-700 font-bold rounded-lg text-xs"
+                    >
+                      {name}
+                    </span>
+                  ))}
+                </div>
+              )}
+            </div>
+
+            {/* Skills Badge List */}
             <div className="pt-3 border-t border-gray-100 space-y-2">
               <span className="text-xs font-bold text-gray-400 uppercase tracking-wider block">Kỹ năng chuyên môn</span>
               <div className="flex flex-wrap gap-1.5">
@@ -395,6 +432,46 @@ export default function JobRequestDetailsView({ job }: JobRequestDetailsViewProp
                 })}
               </div>
             </div>
+          </div>
+
+          {/* AI Criteria & Weights Table Card */}
+          <div className="bg-white border border-gray-100 rounded-2xl p-6 shadow-2xs space-y-4">
+            <div className="flex items-center justify-between border-b border-gray-100 pb-3">
+              <div className="flex items-center gap-2">
+                <SlidersHorizontal size={18} className="text-indigo-600" />
+                <h3 className="text-base font-bold text-gray-900">
+                  Tiêu chí & Trọng số AI (UC04)
+                </h3>
+              </div>
+              {currentJob.criteria && currentJob.criteria.length > 0 && (
+                <span className="text-xs font-bold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-lg border border-emerald-200">
+                  100%
+                </span>
+              )}
+            </div>
+
+            {!currentJob.criteria || currentJob.criteria.length === 0 ? (
+              <p className="text-xs text-gray-400 italic text-center py-4">
+                Chưa thiết lập bảng tiêu chí trọng số cho công việc này
+              </p>
+            ) : (
+              <div className="space-y-2.5">
+                {currentJob.criteria.map((item, idx) => (
+                  <div
+                    key={idx}
+                    className="p-3 bg-gray-50/70 border border-gray-100 rounded-xl flex items-center justify-between gap-3"
+                  >
+                    <div className="space-y-1">
+                      <span className="text-xs font-bold text-gray-900 block">{item.name}</span>
+                      <div>{getRequirementTypeBadge(item.requirementType)}</div>
+                    </div>
+                    <span className="text-sm font-extrabold text-indigo-600 bg-indigo-50 px-2.5 py-1 rounded-lg border border-indigo-100 shrink-0">
+                      {item.weight}%
+                    </span>
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
         </div>
       </div>

@@ -7,8 +7,33 @@ import {
   IsArray,
   IsDateString,
   Min,
+  ValidateNested,
 } from 'class-validator';
-import { EmploymentType, JobStatus, JobPriority } from '../schemas/job-description.schema';
+import { Type } from 'class-transformer';
+import {
+  EmploymentType,
+  JobStatus,
+  JobPriority,
+  CriteriaRequirementType,
+} from '../schemas/job-description.schema';
+
+export class JobCriteriaDto {
+  @IsString({ message: 'Tên tiêu chí phải là chuỗi' })
+  @IsNotEmpty({ message: 'Tên tiêu chí không được để trống' })
+  name: string;
+
+  @IsEnum(CriteriaRequirementType, { message: 'Loại yêu cầu tiêu chí không hợp lệ' })
+  @IsNotEmpty({ message: 'Loại yêu cầu không được để trống' })
+  requirementType: CriteriaRequirementType;
+
+  @IsNumber({}, { message: 'Trọng số phải là số' })
+  @Min(0, { message: 'Trọng số không được nhỏ hơn 0' })
+  weight: number;
+
+  @IsString({ message: 'Skill ID phải là chuỗi' })
+  @IsOptional()
+  skillId?: string;
+}
 
 export class CreateJobDescriptionDto {
   @IsString({ message: 'Pipeline template id phải là chuỗi' })
@@ -26,6 +51,11 @@ export class CreateJobDescriptionDto {
   @IsString({ message: 'Interviewer id phải là chuỗi' })
   @IsOptional()
   interviewerId?: string;
+
+  @IsArray({ message: 'interviewerIds phải là một mảng' })
+  @IsString({ each: true, message: 'Mỗi interviewer id phải là chuỗi' })
+  @IsOptional()
+  interviewerIds?: string[];
 
   @IsString({ message: 'Tiêu đề không hợp lệ' })
   @IsNotEmpty({ message: 'Tiêu đề không được để trống' })
@@ -51,6 +81,12 @@ export class CreateJobDescriptionDto {
   @IsString({ each: true, message: 'Mỗi skill id phải là chuỗi' })
   @IsOptional()
   requiredSkills?: string[];
+
+  @IsArray({ message: 'criteria phải là một mảng' })
+  @ValidateNested({ each: true })
+  @Type(() => JobCriteriaDto)
+  @IsOptional()
+  criteria?: JobCriteriaDto[];
 
   @IsString({ message: 'Yêu cầu kinh nghiệm không hợp lệ' })
   @IsNotEmpty({ message: 'Yêu cầu kinh nghiệm không được để trống' })
@@ -111,6 +147,11 @@ export class UpdateJobDescriptionDto {
   @IsOptional()
   interviewerId?: string;
 
+  @IsArray({ message: 'interviewerIds phải là một mảng' })
+  @IsString({ each: true, message: 'Mỗi interviewer id phải là chuỗi' })
+  @IsOptional()
+  interviewerIds?: string[];
+
   @IsString({ message: 'Tiêu đề không hợp lệ' })
   @IsOptional()
   title?: string;
@@ -137,6 +178,12 @@ export class UpdateJobDescriptionDto {
   @IsString({ each: true, message: 'Mỗi skill id phải là chuỗi' })
   @IsOptional()
   requiredSkills?: string[];
+
+  @IsArray({ message: 'criteria phải là một mảng' })
+  @ValidateNested({ each: true })
+  @Type(() => JobCriteriaDto)
+  @IsOptional()
+  criteria?: JobCriteriaDto[];
 
   @IsString({ message: 'Yêu cầu kinh nghiệm không hợp lệ' })
   @IsOptional()
