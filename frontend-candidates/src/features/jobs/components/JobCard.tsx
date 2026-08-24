@@ -4,10 +4,9 @@ import { CandidateJob, EmploymentType, JobPriority } from "../types/job.types";
 
 interface JobCardProps {
   job: CandidateJob;
-  onApply: (job: CandidateJob) => void;
 }
 
-export default function JobCard({ job, onApply }: JobCardProps) {
+export default function JobCard({ job }: JobCardProps) {
   const deptName = typeof job.departmentId === "object" ? job.departmentId?.name : "Công nghệ";
 
   const getEmploymentLabel = (type: EmploymentType) => {
@@ -105,24 +104,11 @@ export default function JobCard({ job, onApply }: JobCardProps) {
         </div>
       </div>
 
-      {/* Action Footer */}
-      <div className="flex items-center justify-between border-t border-slate-100 pt-4 gap-3">
-        <span className="text-xs font-bold text-blue-600 group-hover:underline py-2">
-          Xem chi tiết vị trí &rarr;
-        </span>
-
-        <button
-          type="button"
-          onClick={(e) => {
-            e.preventDefault();
-            e.stopPropagation();
-            onApply(job);
-          }}
-          className="inline-flex items-center gap-2 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold px-4 py-2.5 transition-all shadow-md shadow-blue-500/20 active:scale-95 cursor-pointer"
-        >
-          <span>Ứng tuyển ngay</span>
+      <div className="flex justify-end">
+        <span className="inline-flex items-center gap-2 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold px-4 py-2.5 transition-all shadow-md shadow-blue-500/20 group-hover:shadow-blue-500/30">
+          <span>Xem chi tiết</span>
           <ArrowUpRight size={14} />
-        </button>
+        </span>
       </div>
     </Link>
   );

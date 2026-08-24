@@ -4,8 +4,10 @@ import { useState } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { useAuth } from '@/src/providers/AuthProvider';
-import { LogOut, User, ChevronDown } from 'lucide-react';
+import { LogOut, User, ChevronDown, BookCheck } from 'lucide-react';
 import MobileMenu from './MobileMenu';
+import userImage from '../../../public/user.png'
+import Image from 'next/image';
 
 export default function Header() {
   const pathname = usePathname();
@@ -63,9 +65,13 @@ export default function Header() {
                 onClick={() => setDropdownOpen(!dropdownOpen)}
                 className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-slate-900 border border-slate-800 hover:border-slate-700 transition-colors cursor-pointer"
               >
-                <div className="w-8 h-8 rounded-full bg-blue-600 flex items-center justify-center text-white text-xs font-bold">
-                  {initial}
-                </div>
+                <Image
+                  src={userImage}
+                  alt="User avatar"
+                  width={80}
+                  height={80}
+                  className="w-8 h-8 rounded-2xl object-cover shadow-md shadow-blue-500/20 shrink-0"
+                />
                 <span className="text-sm font-medium text-slate-200 max-w-[120px] truncate">{user.email}</span>
                 <ChevronDown size={14} className="text-slate-400" />
               </button>
@@ -84,6 +90,16 @@ export default function Header() {
                   >
                     <User size={14} className="text-slate-400" />
                     <span>Hồ sơ của tôi</span>
+                  </Link>
+
+                  {/* Nút các công việc đã ứng tuyển */}
+                  <Link
+                    href=""
+                    onClick={() => setDropdownOpen(false)}
+                    className="w-full flex items-center gap-2 px-4 py-2.5 text-xs font-semibold text-slate-200 hover:bg-slate-800/70 hover:text-blue-400 transition-colors"
+                  >
+                    <BookCheck size={14} className="text-slate-400" />
+                    <span>Công việc đã ứng tuyển</span>
                   </Link>
 
                   <button

@@ -45,6 +45,8 @@ import CvParsingPreviewModal from "./CvParsingPreviewModal";
 import { toast } from "react-toastify";
 import ProfileNavSidebar from "./ProfileNavSidebar";
 import { useRouter } from "next/navigation";
+import userImage from '../../../../public/user.png'
+import Image from "next/image";
 
 interface CandidateProfileViewProps {
   profileId?: string;
@@ -325,9 +327,13 @@ export default function CandidateProfileView({ profileId }: CandidateProfileView
             <div className="flex flex-col sm:flex-row items-start justify-between gap-6">
               <div className="flex items-start gap-5">
                 {/* Avatar chữ cái */}
-                <div className="w-20 h-20 rounded-2xl bg-blue-600 flex items-center justify-center text-white text-3xl font-extrabold shadow-md shadow-blue-500/20 shrink-0">
-                  {initialLetter}
-                </div>
+                  <Image
+                    src={userImage}
+                    alt="User avatar"
+                    width={80}
+                    height={80}
+                    className="w-20 h-20 rounded-2xl object-cover shrink-0"
+                  />
 
                 <div className="space-y-2">
                   <h1 className="text-2xl font-extrabold text-slate-900">
