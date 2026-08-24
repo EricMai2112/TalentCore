@@ -29,7 +29,7 @@ export default function CriteriaBenchmarkHint({
       </div>
       <div className="space-y-1">
         <span className="font-extrabold uppercase tracking-wider block text-indigo-800">
-          Gợi ý chuẩn Tham chiếu (Benchmark Reference)
+          Gợi ý chuẩn Tham chiếu
         </span>
         <p className="text-slate-600 leading-relaxed">
           Đối với vị trí <strong className="text-indigo-950 font-bold">{titleToShow}</strong>:

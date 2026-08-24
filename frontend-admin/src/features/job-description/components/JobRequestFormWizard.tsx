@@ -114,6 +114,12 @@ export default function JobRequestFormWizard({
   const [isAiSuggesting, setIsAiSuggesting] = useState(false)
   const [aiReasoning, setAiReasoning] = useState<string | null>(null)
 
+  // AI JD Content Generation state in Step 2
+  const [isAiGeneratingContent, setIsAiGeneratingContent] = useState(false)
+  const [aiGeneratingSection, setAiGeneratingSection] = useState<
+    'all' | 'description' | 'requirements' | 'benefits' | null
+  >(null)
+
   const [pendingUrl, setPendingUrl] = useState<string | null>(null)
   const isSubmittedRef = useRef(false)
   const isMountedRef = useRef(false)
@@ -554,6 +560,67 @@ export default function JobRequestFormWizard({
     }
   }
 
+  // Google Gemini AI Auto-Generate JD Content Handler (Step 2)
+  const handleAiGenerateJdContent = async (
+    targetSection: 'all' | 'description' | 'requirements' | 'benefits' = 'all'
+  ) => {
+    if (!title.trim()) {
+      setError('Vui lòng quay lại Bước 1 và nhập Tiêu đề công việc trước khi gọi AI.')
+      return
+    }
+
+    setIsAiGeneratingContent(true)
+    setAiGeneratingSection(targetSection)
+    setError(null)
+
+    const selectedDept = departments.find((d) => d._id === departmentId)
+    const selectedPos = positions.find((p) => p._id === positionId)
+
+    const skillNames = selectedSkills
+      .map((sId) => {
+        const sk = skillsList.find((s) => s._id === sId)
+        return sk ? sk.name : sId
+      })
+      .filter((n) => !n.startsWith('default-'))
+
+    const payload = {
+      title: title.trim(),
+      departmentName: selectedDept?.name,
+      positionName: selectedPos?.name,
+      location: location.trim(),
+      employmentType,
+      experienceLevel,
+      minimumSalary: minimumSalary !== '' ? Number(minimumSalary) : undefined,
+      maximumSalary: maximumSalary !== '' ? Number(maximumSalary) : undefined,
+      skillNames,
+      criteria: criteria.map((c) => ({
+        name: c.name,
+        requirementType: c.requirementType,
+        weight: c.weight
+      }))
+    }
+
+    try {
+      const res = await jobDescriptionApi.generateJdContentWithAi(payload)
+      if (res) {
+        if (targetSection === 'all' || targetSection === 'description') {
+          if (res.description) setDescription(res.description)
+        }
+        if (targetSection === 'all' || targetSection === 'requirements') {
+          if (res.requirements) setRequirements(res.requirements)
+        }
+        if (targetSection === 'all' || targetSection === 'benefits') {
+          if (res.benefits) setBenefits(res.benefits)
+        }
+      }
+    } catch (err: any) {
+      setError(err?.message || 'Không thể tự động soạn thảo nội dung JD bằng AI. Vui lòng thử lại!')
+    } finally {
+      setIsAiGeneratingContent(false)
+      setAiGeneratingSection(null)
+    }
+  }
+
   // Real-time Soft Warnings Generator for each criteria row
   const getCriteriaSoftWarning = (item: JobCriteria, index: number): string | null => {
     // 1. Single criteria dominant (> 50%)
@@ -805,9 +872,9 @@ export default function JobRequestFormWizard({
         {/* Wizard Step Navigation Pills */}
         <div className="flex flex-wrap items-center gap-2">
           {[
-            { stepNum: 1, label: 'Thông tin & Tiêu chí AI' },
-            { stepNum: 2, label: 'Nội dung công việc' },
-            { stepNum: 3, label: 'Quy trình & Trạng thái' }
+            { stepNum: 1, label: '1. Thông tin & Tiêu chí AI' },
+            { stepNum: 2, label: '2. Nội dung công việc' },
+            { stepNum: 3, label: '3. Quy trình & Trạng thái' }
           ].map((sItem) => (
             <button
               key={sItem.stepNum}
@@ -940,12 +1007,12 @@ export default function JobRequestFormWizard({
                     onChange={(e) => setExperienceLevel(e.target.value)}
                     className="w-full px-4 py-3 border border-gray-200 rounded-xl text-sm text-gray-800 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-600 transition-all bg-gray-50/50 hover:bg-gray-50 focus:bg-white"
                   >
-                    <option value="Intern">Intern (Thực tập sinh)</option>
-                    <option value="Fresher">Fresher (Dưới 1 năm)</option>
+                    <option value="Intern">Intern (Thực tập sinh - Dưới 6 tháng)</option>
+                    <option value="Fresher">Fresher (Mới tốt nghiệp - Dưới 1 năm)</option>
                     <option value="Junior">Junior (1 - 3 năm)</option>
-                    <option value="Mid-level">Middle (3 - 5 năm)</option>
+                    <option value="Mid-level">Mid-level (3 - 5 năm)</option>
                     <option value="Senior">Senior (5+ năm)</option>
-                    <option value="Lead / Manager">Lead / Manager</option>
+                    <option value="Lead / Manager">Lead / Manager (7+ năm)</option>
                   </select>
                 </div>
               </div>
@@ -1060,7 +1127,7 @@ export default function JobRequestFormWizard({
               {/* Redesigned Interviewers Section */}
               <div className="space-y-2 pt-2">
                 <label className="text-xs font-bold text-gray-700 uppercase tracking-wider block">
-                  Người phỏng vấn
+                  Người phỏng vấn (Có thể chọn nhiều nhân sự thuộc phòng ban)
                 </label>
                 <div className="p-4 border border-gray-100 rounded-2xl bg-gray-50/60 space-y-3">
                   {!departmentId ? (
@@ -1307,10 +1374,10 @@ export default function JobRequestFormWizard({
                                 }`}
                               >
                                 <option value={CriteriaRequirementType.MANDATORY}>
-                                  🔴 Bắt buộc
+                                  🔴 Bắt buộc (Gắn cờ cảnh báo nếu thiếu)
                                 </option>
                                 <option value={CriteriaRequirementType.PREFERRED}>
-                                  🔵 Ưu tiên
+                                  🔵 Ưu tiên (Tính điểm cộng)
                                 </option>
                               </select>
                             </div>
@@ -1390,62 +1457,134 @@ export default function JobRequestFormWizard({
             </div>
           )}
 
-          {/* Step 2: Job Description Content */}
+          {/* Step 2: Job Description Content (Upgraded with AI Content Generation) */}
           {step === 2 && (
             <div className="space-y-6 animate-in fade-in duration-200">
-              <div className="flex items-center gap-3 border-b border-gray-100 pb-4">
-                <div className="p-2 bg-indigo-50 text-indigo-600 rounded-xl">
-                  <FileText size={20} />
+              {/* Section Top Header & AI Auto Generate Button */}
+              <div className="flex flex-wrap items-center justify-between gap-4 border-b border-gray-100 pb-4">
+                <div className="flex items-center gap-3">
+                  <div className="p-2 bg-indigo-50 text-indigo-600 rounded-xl">
+                    <FileText size={20} />
+                  </div>
+                  <div>
+                    <h3 className="text-base font-bold text-gray-900">
+                      Chi tiết nội dung Mô tả công việc
+                    </h3>
+                    <p className="text-xs text-gray-500">
+                      Nêu rõ trách nhiệm công việc, yêu cầu ứng viên và chính sách đãi ngộ.
+                    </p>
+                  </div>
                 </div>
-                <div>
-                  <h3 className="text-base font-bold text-gray-900">
-                    Chi tiết nội dung Mô tả công việc
-                  </h3>
-                  <p className="text-xs text-gray-500">
-                    Nêu rõ trách nhiệm công việc, yêu cầu ứng viên và chính sách đãi ngộ.
-                  </p>
-                </div>
+
+                {/* AI Auto-Generate All JD Content Button */}
+                <button
+                  type="button"
+                  onClick={() => handleAiGenerateJdContent('all')}
+                  disabled={isAiGeneratingContent}
+                  className="px-4 py-2.5 bg-gradient-to-r from-purple-600 via-indigo-600 to-blue-600 hover:from-purple-700 hover:to-blue-700 text-white font-extrabold text-xs rounded-xl transition-all cursor-pointer flex items-center gap-2 shadow-sm border border-purple-400/30 disabled:opacity-40"
+                  title="Gemini AI tự động phân tích thông tin Bước 1 để soạn thảo Mô tả, Yêu cầu & Quyền lợi chuẩn mực"
+                >
+                  {isAiGeneratingContent && aiGeneratingSection === 'all' ? (
+                    <>
+                      <Loader2 size={16} className="animate-spin" />
+                      Gemini AI đang viết nội dung...
+                    </>
+                  ) : (
+                    <>
+                      <Sparkles size={16} className="text-amber-300 animate-pulse" />
+                      AI Tự Động Soạn Thảo Toàn Bộ JD
+                    </>
+                  )}
+                </button>
               </div>
 
               {/* Description */}
               <div className="space-y-2">
-                <label className="text-xs font-bold text-gray-700 uppercase tracking-wider block">
-                  Mô tả công việc <span className="text-rose-500">*</span>
-                </label>
+                <div className="flex items-center justify-between">
+                  <label className="text-xs font-bold text-gray-700 uppercase tracking-wider block">
+                    Mô tả công việc <span className="text-rose-500">*</span>
+                  </label>
+                  <button
+                    type="button"
+                    onClick={() => handleAiGenerateJdContent('description')}
+                    disabled={isAiGeneratingContent}
+                    className="text-[11px] font-bold text-purple-700 hover:text-purple-900 bg-purple-50 hover:bg-purple-100 border border-purple-200/80 px-2.5 py-1 rounded-lg transition-all cursor-pointer flex items-center gap-1.5 disabled:opacity-40"
+                    title="Viết lại riêng phần Mô tả công việc bằng AI"
+                  >
+                    {isAiGeneratingContent && aiGeneratingSection === 'description' ? (
+                      <Loader2 size={12} className="animate-spin text-purple-600" />
+                    ) : (
+                      <Sparkles size={12} className="text-purple-600" />
+                    )}
+                    AI Viết lại Mô tả
+                  </button>
+                </div>
                 <textarea
-                  rows={6}
+                  rows={7}
                   placeholder="Mô tả chi tiết nhiệm vụ hàng ngày, quy trình làm việc, sản phẩm phát triển..."
                   value={description}
                   onChange={(e) => setDescription(e.target.value)}
-                  className="w-full px-4 py-3 border border-gray-200 rounded-xl text-sm text-gray-800 leading-relaxed focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-600 transition-all bg-gray-50/50 hover:bg-gray-50 focus:bg-white"
+                  className="w-full px-4 py-3 border border-gray-200 rounded-xl text-sm text-gray-800 leading-relaxed focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-600 transition-all bg-gray-50/50 hover:bg-gray-50 focus:bg-white whitespace-pre-line"
                 />
               </div>
 
               {/* Requirements */}
               <div className="space-y-2">
-                <label className="text-xs font-bold text-gray-700 uppercase tracking-wider block">
-                  Yêu cầu ứng viên <span className="text-rose-500">*</span>
-                </label>
+                <div className="flex items-center justify-between">
+                  <label className="text-xs font-bold text-gray-700 uppercase tracking-wider block">
+                    Yêu cầu ứng viên <span className="text-rose-500">*</span>
+                  </label>
+                  <button
+                    type="button"
+                    onClick={() => handleAiGenerateJdContent('requirements')}
+                    disabled={isAiGeneratingContent}
+                    className="text-[11px] font-bold text-purple-700 hover:text-purple-900 bg-purple-50 hover:bg-purple-100 border border-purple-200/80 px-2.5 py-1 rounded-lg transition-all cursor-pointer flex items-center gap-1.5 disabled:opacity-40"
+                    title="Viết lại riêng phần Yêu cầu ứng viên bằng AI"
+                  >
+                    {isAiGeneratingContent && aiGeneratingSection === 'requirements' ? (
+                      <Loader2 size={12} className="animate-spin text-purple-600" />
+                    ) : (
+                      <Sparkles size={12} className="text-purple-600" />
+                    )}
+                    AI Viết lại Yêu cầu
+                  </button>
+                </div>
                 <textarea
-                  rows={6}
+                  rows={7}
                   placeholder="Kinh nghiệm chuyên môn tối thiểu, bằng cấp, ngoại ngữ, kỹ năng làm việc nhóm..."
                   value={requirements}
                   onChange={(e) => setRequirements(e.target.value)}
-                  className="w-full px-4 py-3 border border-gray-200 rounded-xl text-sm text-gray-800 leading-relaxed focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-600 transition-all bg-gray-50/50 hover:bg-gray-50 focus:bg-white"
+                  className="w-full px-4 py-3 border border-gray-200 rounded-xl text-sm text-gray-800 leading-relaxed focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-600 transition-all bg-gray-50/50 hover:bg-gray-50 focus:bg-white whitespace-pre-line"
                 />
               </div>
 
               {/* Benefits */}
               <div className="space-y-2">
-                <label className="text-xs font-bold text-gray-700 uppercase tracking-wider block">
-                  Quyền lợi đãi ngộ <span className="text-rose-500">*</span>
-                </label>
+                <div className="flex items-center justify-between">
+                  <label className="text-xs font-bold text-gray-700 uppercase tracking-wider block">
+                    Quyền lợi đãi ngộ <span className="text-rose-500">*</span>
+                  </label>
+                  <button
+                    type="button"
+                    onClick={() => handleAiGenerateJdContent('benefits')}
+                    disabled={isAiGeneratingContent}
+                    className="text-[11px] font-bold text-purple-700 hover:text-purple-900 bg-purple-50 hover:bg-purple-100 border border-purple-200/80 px-2.5 py-1 rounded-lg transition-all cursor-pointer flex items-center gap-1.5 disabled:opacity-40"
+                    title="Viết lại riêng phần Quyền lợi đãi ngộ bằng AI"
+                  >
+                    {isAiGeneratingContent && aiGeneratingSection === 'benefits' ? (
+                      <Loader2 size={12} className="animate-spin text-purple-600" />
+                    ) : (
+                      <Sparkles size={12} className="text-purple-600" />
+                    )}
+                    AI Viết lại Quyền lợi
+                  </button>
+                </div>
                 <textarea
-                  rows={5}
+                  rows={6}
                   placeholder="Lương thưởng hấp dẫn, bảo hiểm sức khỏe, máy tính làm việc, du lịch hàng năm..."
                   value={benefits}
                   onChange={(e) => setBenefits(e.target.value)}
-                  className="w-full px-4 py-3 border border-gray-200 rounded-xl text-sm text-gray-800 leading-relaxed focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-600 transition-all bg-gray-50/50 hover:bg-gray-50 focus:bg-white"
+                  className="w-full px-4 py-3 border border-gray-200 rounded-xl text-sm text-gray-800 leading-relaxed focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-600 transition-all bg-gray-50/50 hover:bg-gray-50 focus:bg-white whitespace-pre-line"
                 />
               </div>
             </div>

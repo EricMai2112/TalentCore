@@ -14,6 +14,7 @@ import {
 import { JobDescriptionService } from '../services/job-description.service';
 import { CreateJobDescriptionDto, UpdateJobDescriptionDto } from '../dtos/job-description.dto';
 import { SuggestCriteriaWeightsDto } from '../dtos/suggest-criteria-weights.dto';
+import { GenerateJdContentDto } from '../dtos/generate-jd-content.dto';
 
 @Controller('job-descriptions')
 @UsePipes(new ValidationPipe({ whitelist: true }))
@@ -25,6 +26,15 @@ export class JobDescriptionController {
     const result = await this.jobDescriptionService.suggestCriteriaWeightsWithAi(dto);
     return {
       message: 'Gợi ý trọng số tiêu chí bằng AI thành công',
+      data: result,
+    };
+  }
+
+  @Post('ai-generate-content')
+  async generateJdContentWithAi(@Body() dto: GenerateJdContentDto) {
+    const result = await this.jobDescriptionService.generateJdContentWithAi(dto);
+    return {
+      message: 'Soạn thảo nội dung JD bằng AI thành công',
       data: result,
     };
   }

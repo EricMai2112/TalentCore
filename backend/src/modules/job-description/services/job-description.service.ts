@@ -5,6 +5,7 @@ import { GoogleGenAI, Type, Schema } from '@google/genai';
 import { JobDescription, JobDescriptionDocument, JobStatus } from '../schemas/job-description.schema';
 import { CreateJobDescriptionDto, UpdateJobDescriptionDto } from '../dtos/job-description.dto';
 import { SuggestCriteriaWeightsDto } from '../dtos/suggest-criteria-weights.dto';
+import { GenerateJdContentDto } from '../dtos/generate-jd-content.dto';
 import { EventsGateway } from '../gateways/events.gateway';
 
 @Injectable()
@@ -111,7 +112,6 @@ export class JobDescriptionService {
 
       const parsed = JSON.parse(rawText.trim());
 
-      // Normalize weights to sum exactly 100%
       if (parsed.suggestedWeights && parsed.suggestedWeights.length > 0) {
         const sum = parsed.suggestedWeights.reduce((a: number, b: any) => a + (Number(b.weight) || 0), 0);
         if (sum > 0 && Math.abs(sum - 100) > 0.01) {
@@ -132,6 +132,111 @@ export class JobDescriptionService {
     } catch (err: any) {
       console.error('Lỗi Gemini AI suggest weights:', err?.message || err);
       throw new InternalServerErrorException('Có lỗi xảy ra khi gọi AI gợi ý trọng số. Vui lòng thử lại!');
+    }
+  }
+
+  async generateJdContentWithAi(dto: GenerateJdContentDto): Promise<{
+    description: string;
+    requirements: string;
+    benefits: string;
+  }> {
+    if (!dto.title || !dto.title.trim()) {
+      throw new BadRequestException('Tiêu đề công việc không được để trống');
+    }
+
+    const systemInstruction = `
+      Bạn là Chuyên gia Soạn thảo JD & Tuyển dụng Nhân sự Cao cấp tại TalentCore ATS.
+      Nhiệm vụ của bạn là phân tích chi tiết vị trí công việc, kinh nghiệm, kỹ năng và tiêu chí để tự động sinh ra nội dung JD hoàn chỉnh gồm 3 phần:
+      1. description (Mô tả công việc): Trách nhiệm daily, dự án, quy trình làm việc.
+      2. requirements (Yêu cầu ứng viên): Yêu cầu kỹ năng chuyên môn, năm kinh nghiệm, bằng cấp, soft skills.
+      3. benefits (Quyền lợi đãi ngộ): Chế độ lương thưởng, bảo hiểm, máy tính/thiết bị, du lịch, cơ hội thăng tiến.
+
+      QUY TẮC BẮT BUỘC VỀ ĐỊNH DẠNG (STRICT FORMATTING RULES):
+      - Trình bày trực diện, cô đọng bằng tiếng Việt chuyên nghiệp.
+      - TUYỆT ĐỐI BẮT BUỘC ĐI THẲNG VÀO CÁC GẠCH ĐẦU DÒNG NỘI DUNG CHÍNH (bullet points: "• "). KHÔNG ĐƯỢC VIẾT CÂU MỞ ĐẦU HOẶC ĐOẠN GIỚI THIỆU THỪA THÃI (ví dụ: KHÔNG viết "Hiện tại phòng ban... đang tìm kiếm vị trí..."). Bắt đầu ngay dòng đầu tiên bằng gạch đầu dòng "• ".
+      - TUYỆT ĐỐI KHÔNG SỬ DỤNG CÚ PHÁP IN ĐẬM MARKDOWN (KHÔNG DÙNG dấu "**" như **Backend Developer** hay **Nest.js**). Chỉ trả về văn bản thuần (plain text).
+      - Mỗi ý chính nằm trên 1 gạch đầu dòng ("• ") riêng biệt và xuống dòng rõ ràng.
+    `;
+
+    const responseSchema: Schema = {
+      type: Type.OBJECT,
+      properties: {
+        description: {
+          type: Type.STRING,
+          description: 'Mô tả chi tiết công việc dạng văn bản thuần gạch đầu dòng "• ", không dùng in đậm **, bắt đầu ngay bằng gạch đầu dòng',
+        },
+        requirements: {
+          type: Type.STRING,
+          description: 'Yêu cầu ứng viên dạng văn bản thuần gạch đầu dòng "• ", không dùng in đậm **, bắt đầu ngay bằng gạch đầu dòng',
+        },
+        benefits: {
+          type: Type.STRING,
+          description: 'Quyền lợi đãi ngộ dạng văn bản thuần gạch đầu dòng "• ", không dùng in đậm **, bắt đầu ngay bằng gạch đầu dòng',
+        },
+      },
+      required: ['description', 'requirements', 'benefits'],
+    };
+
+    const skillsText = dto.skillNames && dto.skillNames.length > 0 ? dto.skillNames.join(', ') : 'Chưa chỉ định';
+    const criteriaText = dto.criteria && dto.criteria.length > 0
+      ? dto.criteria.map((c) => `- ${c.name} (${c.requirementType === 'MANDATORY' ? 'Bắt buộc' : 'Ưu tiên'} - Trọng số ${c.weight}%)`).join('\n')
+      : 'Chưa có tiêu chí cụ thể';
+
+    const promptText = `
+      Thông tin cấu hình tuyển dụng ở Bước 1:
+      - Tiêu đề công việc: ${dto.title}
+      - Vị trí danh mục: ${dto.positionName || 'Chưa chọn'}
+      - Phòng ban: ${dto.departmentName || 'Chưa chọn'}
+      - Địa điểm: ${dto.location || 'Chưa chọn'}
+      - Hình thức: ${dto.employmentType || 'Full-time'}
+      - Yêu cầu kinh nghiệm: ${dto.experienceLevel || 'Mid-level'}
+      - Mức lương đề xuất: ${dto.minimumSalary && dto.maximumSalary ? `$${dto.minimumSalary} - $${dto.maximumSalary}` : 'Thỏa thuận'}
+      - Kỹ năng gợi ý: ${skillsText}
+      - Các tiêu chí đánh giá AI trọng số:
+      ${criteriaText}
+
+      Hãy tự động soạn thảo 3 phần JD (description, requirements, benefits) đi thẳng vào các gạch đầu dòng "• ", KHÔNG câu giới thiệu mở đầu thừa vặt và KHÔNG dùng ký tự in đậm "**".
+    `;
+
+    try {
+      const response = await this.ai.models.generateContent({
+        model: 'gemini-3.6-flash',
+        contents: [{ role: 'user', parts: [{ text: promptText }] }],
+        config: {
+          systemInstruction,
+          responseMimeType: 'application/json',
+          responseSchema,
+          temperature: 0.2,
+          maxOutputTokens: 4096,
+        },
+      });
+
+      let rawText = response.text || '';
+      if (rawText.startsWith('```json')) {
+        rawText = rawText.replace(/^```json\s*/, '').replace(/\s*```$/, '');
+      } else if (rawText.startsWith('```')) {
+        rawText = rawText.replace(/^```\s*/, '').replace(/\s*```$/, '');
+      }
+
+      const parsed = JSON.parse(rawText.trim());
+
+      const cleanText = (str: string) => {
+        if (!str) return '';
+        return str
+          .replace(/\*\*(.*?)\*\*/g, '$1')
+          .replace(/\*(.*?)\*/g, '$1')
+          .replace(/^[\s\S]*?(?=•)/, '') // Strip any intro text before the first bullet point
+          .trim();
+      };
+
+      return {
+        description: cleanText(parsed.description || ''),
+        requirements: cleanText(parsed.requirements || ''),
+        benefits: cleanText(parsed.benefits || ''),
+      };
+    } catch (err: any) {
+      console.error('Lỗi Gemini AI generate JD content:', err?.message || err);
+      throw new InternalServerErrorException('Có lỗi xảy ra khi AI soạn thảo JD. Vui lòng thử lại!');
     }
   }
 
