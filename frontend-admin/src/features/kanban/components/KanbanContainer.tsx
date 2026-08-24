@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, useMemo } from "react";
+import { Briefcase } from "lucide-react";
 import {
   DndContext,
   DragOverlay,
@@ -12,7 +13,7 @@ import {
   DragEndEvent,
   closestCorners,
 } from "@dnd-kit/core";
-import { Department, JobDescription, PipelineStage } from "@/src/features/job-description/types/job-description.types";
+import { Department, JobDescription, PipelineStage, JobStatus } from "@/src/features/job-description/types/job-description.types";
 import { KanbanApplication } from "../types/kanban.types";
 import { kanbanApi } from "../services/kanban.api";
 import { useAuth } from "@/src/providers/AuthProvider";
@@ -60,7 +61,7 @@ export default function KanbanContainer({
   const [selectedCandidateApp, setSelectedCandidateApp] = useState<KanbanApplication | null>(null);
   const [activeApplication, setActiveApplication] = useState<KanbanApplication | null>(null);
 
-  // dnd-kit sensors setup (activationConstraint allows clicking card without triggering drag)
+  // dnd-kit sensors setup
   const sensors = useSensors(
     useSensor(PointerSensor, {
       activationConstraint: {
@@ -70,15 +71,57 @@ export default function KanbanContainer({
     useSensor(KeyboardSensor)
   );
 
-  // Initialize department filter based on user role
+  // Client mount state to prevent SSR hydration mismatch
+  const [isMounted, setIsMounted] = useState<boolean>(false);
+
   useEffect(() => {
-    if (isDeptManager && userDeptId) {
-      setSelectedDepartmentId(userDeptId);
+    setIsMounted(true);
+  }, []);
+
+  // Initialize default department & job selection (filtering only JD_CREATED jobs)
+  useEffect(() => {
+    let deptId = selectedDepartmentId;
+    if (!deptId) {
+      if (isDeptManager && userDeptId) {
+        deptId = userDeptId;
+      } else if (initialDepartments.length > 0) {
+        deptId = initialDepartments[0]._id;
+      }
+      if (deptId) setSelectedDepartmentId(deptId);
     }
-  }, [isDeptManager, userDeptId]);
+
+    if (deptId && !selectedJobId) {
+      const deptJobs = initialJobs.filter((j) => {
+        const dId = typeof j.departmentId === "object" ? j.departmentId?._id : j.departmentId;
+        return dId === deptId && j.status === JobStatus.JD_CREATED;
+      });
+      if (deptJobs.length > 0) {
+        setSelectedJobId(deptJobs[0]._id);
+      }
+    }
+  }, [isDeptManager, userDeptId, initialDepartments, initialJobs, selectedDepartmentId, selectedJobId]);
+
+  // Handle department filter change
+  const handleDepartmentChange = (deptId: string) => {
+    setSelectedDepartmentId(deptId);
+    if (!deptId) {
+      setSelectedJobId("");
+      return;
+    }
+    const deptJobs = initialJobs.filter((j) => {
+      const dId = typeof j.departmentId === "object" ? j.departmentId?._id : j.departmentId;
+      return dId === deptId && j.status === JobStatus.JD_CREATED;
+    });
+    setSelectedJobId(deptJobs.length > 0 ? deptJobs[0]._id : "");
+  };
 
   // Fetch updated applications when filters change
   useEffect(() => {
+    if (!selectedJobId) {
+      setApplications([]);
+      return;
+    }
+
     const fetchKanban = async () => {
       try {
         const list = await kanbanApi.getKanbanApplications({
@@ -95,7 +138,7 @@ export default function KanbanContainer({
     fetchKanban();
   }, [selectedDepartmentId, selectedJobId, searchQuery]);
 
-  // Determine active pipeline stages
+  // Determine active pipeline stages from selected JD's pipeline template
   const activeStages = useMemo(() => {
     if (selectedJobId) {
       const matchedJob = initialJobs.find((j) => j._id === selectedJobId);
@@ -205,23 +248,60 @@ export default function KanbanContainer({
         selectedJobId={selectedJobId}
         searchQuery={searchQuery}
         scoreFilter={scoreFilter}
-        onDepartmentChange={(deptId) => {
-          setSelectedDepartmentId(deptId);
-          setSelectedJobId("");
-        }}
+        onDepartmentChange={handleDepartmentChange}
         onJobChange={setSelectedJobId}
         onSearchChange={setSearchQuery}
         onScoreFilterChange={setScoreFilter}
       />
 
-      {/* @dnd-kit DndContext Wrapper */}
-      <DndContext
-        sensors={sensors}
-        collisionDetection={closestCorners}
-        onDragStart={handleDragStart}
-        onDragEnd={handleDragEnd}
-      >
-        {/* Horizontal Scrollable Kanban Board Columns Container */}
+      {!selectedJobId ? (
+        /* Empty State Placeholder when No Position Selected */
+        <div className="w-full bg-white border border-gray-100 rounded-3xl p-16 flex flex-col items-center justify-center text-center space-y-4 shadow-2xs">
+          <div className="w-16 h-16 rounded-3xl bg-indigo-50 border border-indigo-100 flex items-center justify-center text-indigo-600">
+            <Briefcase size={30} />
+          </div>
+          <div className="max-w-md space-y-1.5">
+            <h3 className="text-lg font-extrabold text-gray-900">Vui lòng chọn Vị trí tuyển dụng</h3>
+            <p className="text-xs font-medium text-gray-500 leading-relaxed">
+              Bảng Kanban hiển thị ứng viên và quy trình phỏng vấn theo từng vị trí cụ thể của phòng ban. Vui lòng chọn vị trí ở bộ lọc trên.
+            </p>
+          </div>
+        </div>
+      ) : isMounted ? (
+        /* @dnd-kit DndContext Board */
+        <DndContext
+          id="kanban-dnd-board"
+          sensors={sensors}
+          collisionDetection={closestCorners}
+          onDragStart={handleDragStart}
+          onDragEnd={handleDragEnd}
+        >
+          {/* Horizontal Scrollable Kanban Board Columns Container */}
+          <div className="w-full overflow-x-auto pb-6 scrollbar-thin scrollbar-thumb-gray-200">
+            <div className="flex items-start gap-4 min-w-max">
+              {activeStages.map((stage) => (
+                <KanbanColumn
+                  key={stage._id || stage.name}
+                  stage={stage}
+                  applications={applicationsByStage.get(stage._id || "") || []}
+                  onSelectCandidate={setSelectedCandidateApp}
+                />
+              ))}
+            </div>
+          </div>
+
+          {/* DragOverlay for Smooth Floating Preview */}
+          <DragOverlay>
+            {activeApplication ? (
+              <CandidateKanbanCard
+                application={activeApplication}
+                isOverlay
+              />
+            ) : null}
+          </DragOverlay>
+        </DndContext>
+      ) : (
+        /* Fallback SSR render before client hydration */
         <div className="w-full overflow-x-auto pb-6 scrollbar-thin scrollbar-thumb-gray-200">
           <div className="flex items-start gap-4 min-w-max">
             {activeStages.map((stage) => (
@@ -234,17 +314,7 @@ export default function KanbanContainer({
             ))}
           </div>
         </div>
-
-        {/* DragOverlay for Smooth Floating Preview */}
-        <DragOverlay>
-          {activeApplication ? (
-            <CandidateKanbanCard
-              application={activeApplication}
-              isOverlay
-            />
-          ) : null}
-        </DragOverlay>
-      </DndContext>
+      )}
 
       {/* Candidate Quick Detail Modal */}
       <CandidateDetailModal
