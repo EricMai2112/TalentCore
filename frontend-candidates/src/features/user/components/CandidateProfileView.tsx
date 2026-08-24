@@ -47,6 +47,8 @@ import ProfileNavSidebar from "./ProfileNavSidebar";
 import { useRouter } from "next/navigation";
 import userImage from '../../../../public/user.png'
 import Image from "next/image";
+import RichTextDisplay from "@/src/components/common/RichTextDisplay";
+import { isHtmlEmpty } from "@/src/components/common/RichTextEditor";
 
 interface CandidateProfileViewProps {
   profileId?: string;
@@ -128,7 +130,7 @@ export default function CandidateProfileView({ profileId }: CandidateProfileView
 
   const initialLetter = candidateName.charAt(0).toUpperCase();
 
-  const hasCareerObjective = Boolean(profile?.careerObjective && profile.careerObjective.trim().length > 0);
+  const hasCareerObjective = !isHtmlEmpty(profile?.careerObjective);
   const hasExperience = (profile?.experiences?.length ?? 0) > 0;
   const hasEducation = (profile?.educations?.length ?? 0) > 0;
   const hasProjects = (profile?.projects?.length ?? 0) > 0;
@@ -396,15 +398,16 @@ export default function CandidateProfileView({ profileId }: CandidateProfileView
               </button>
             </div>
 
-            {/* Giới thiệu bản thân (Chỉ hiển thị text, không còn nút chỉnh sửa) */}
+            {/* Giới thiệu bản thân */}
             <div className="mt-6 pt-5 border-t border-slate-100">
               <h3 className="text-xs font-bold uppercase tracking-wider text-slate-500 mb-2">
                 Giới thiệu bản thân
               </h3>
-              <p className="text-sm text-slate-700 leading-relaxed whitespace-pre-line">
-                {profile?.summary ||
-                  "Thêm mô tả ngắn về kinh nghiệm và thế mạnh của bạn để tạo ấn tượng tốt với nhà tuyển dụng."}
-              </p>
+              <RichTextDisplay
+                content={profile?.summary}
+                fallback="Thêm mô tả ngắn về kinh nghiệm và thế mạnh của bạn để tạo ấn tượng tốt với nhà tuyển dụng."
+                className="text-sm text-slate-700"
+              />
             </div>
           </section>
           <EditPersonalInfoModal
@@ -500,10 +503,13 @@ export default function CandidateProfileView({ profileId }: CandidateProfileView
                 </div>
               ) : (
                 <div className="p-4 rounded-xl border border-slate-100 bg-slate-50/70 flex justify-between items-start gap-4">
-                  <p className="text-sm text-slate-700 leading-relaxed whitespace-pre-line">
-                    {profile?.careerObjective}
-                  </p>
-                  <button type="button" onClick={() => setIsObjectiveModalOpen(true)} className="p-1.5 text-slate-400 hover:text-blue-600 rounded-lg hover:bg-white transition-all cursor-pointer">
+                  <div className="flex-1">
+                    <RichTextDisplay
+                      content={profile?.careerObjective}
+                      className="text-sm text-slate-700"
+                    />
+                  </div>
+                  <button type="button" onClick={() => setIsObjectiveModalOpen(true)} className="p-1.5 text-slate-400 hover:text-blue-600 rounded-lg hover:bg-white transition-all cursor-pointer shrink-0">
                     <Pencil size={15} />
                   </button>
                 </div>
@@ -759,9 +765,10 @@ export default function CandidateProfileView({ profileId }: CandidateProfileView
                           </p>
                         )}
                         {exp.description && (
-                          <p className="text-xs text-slate-600 pt-1 leading-relaxed whitespace-pre-line">
-                            {exp.description}
-                          </p>
+                          <RichTextDisplay
+                            content={exp.description}
+                            className="text-xs text-slate-600 pt-1"
+                          />
                         )}
                         {exp.technologies && exp.technologies.length > 0 && (
                           <div className="flex flex-wrap gap-1.5 pt-2">
@@ -901,9 +908,10 @@ export default function CandidateProfileView({ profileId }: CandidateProfileView
 
                         {/* Mô tả */}
                         {proj.description && (
-                          <p className="text-xs text-slate-600 leading-relaxed whitespace-pre-line pt-0.5">
-                            {proj.description}
-                          </p>
+                          <RichTextDisplay
+                            content={proj.description}
+                            className="text-xs text-slate-600 pt-0.5"
+                          />
                         )}
 
                         {/* Danh sách công nghệ */}
