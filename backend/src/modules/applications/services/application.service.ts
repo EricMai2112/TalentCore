@@ -114,6 +114,14 @@ export class ApplicationService {
       });
     }
 
+    if (params.jobId) {
+      filtered = filtered.filter((app) => {
+        const job = app.jobDescriptionId as any;
+        const jId = typeof job === 'object' ? job?._id?.toString() : app.jobDescriptionId?.toString();
+        return jId === params.jobId;
+      });
+    }
+
     if (params.search && params.search.trim()) {
       const term = params.search.trim().toLowerCase();
       filtered = filtered.filter((app) => {

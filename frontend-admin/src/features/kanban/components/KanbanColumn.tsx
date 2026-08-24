@@ -42,28 +42,23 @@ export default function KanbanColumn({
     >
       {/* Column Header */}
       <div className="flex items-center justify-between gap-2 mb-4 px-1">
-        <div className="flex items-center gap-2">
+        <span
+          className="px-3 py-1.5 rounded-full text-xs font-extrabold flex items-center gap-2 shadow-2xs truncate max-w-[210px]"
+          style={{
+            backgroundColor: `${stageColorHex}18`,
+            color: stageColorHex,
+            border: `1px solid ${stageColorHex}35`,
+          }}
+          title={stage.name}
+        >
           <span
-            className="px-2.5 py-1 rounded-full text-[11px] font-extrabold flex items-center gap-1.5 shadow-2xs"
-            style={{
-              backgroundColor: `${stageColorHex}15`,
-              color: stageColorHex,
-              border: `1px solid ${stageColorHex}30`,
-            }}
-          >
-            <span
-              className="w-1.5 h-1.5 rounded-full"
-              style={{ backgroundColor: stageColorHex }}
-            />
-            {stage.name.slice(0, 10)}
-          </span>
+            className="w-2 h-2 rounded-full shrink-0"
+            style={{ backgroundColor: stageColorHex }}
+          />
+          <span className="truncate">{stage.name}</span>
+        </span>
 
-          <h3 className="text-sm font-extrabold text-gray-900 truncate max-w-[130px]">
-            {stage.name}
-          </h3>
-        </div>
-
-        <span className="px-2.5 py-0.5 bg-gray-200/70 text-gray-700 font-bold text-xs rounded-full">
+        <span className="px-2.5 py-1 bg-gray-200/70 text-gray-700 font-bold text-xs rounded-full shrink-0">
           {applications.length}
         </span>
       </div>
