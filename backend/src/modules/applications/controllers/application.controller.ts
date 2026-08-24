@@ -1,7 +1,11 @@
 import {
   Controller,
   Post,
+  Get,
+  Put,
   Body,
+  Param,
+  Query,
   Req,
   UnauthorizedException,
   UsePipes,
@@ -46,5 +50,43 @@ export class ApplicationController {
       }
       throw new UnauthorizedException('Token không hợp lệ hoặc đã hết hạn');
     }
+  }
+
+  @Get('kanban')
+  async getKanbanApplications(
+    @Query('departmentId') departmentId?: string,
+    @Query('jobId') jobId?: string,
+    @Query('search') search?: string,
+  ) {
+    const data = await this.applicationService.getKanbanApplications({
+      departmentId,
+      jobId,
+      search,
+    });
+    return {
+      message: 'Lấy danh sách ứng tuyển cho Kanban thành công',
+      data,
+    };
+  }
+
+  @Put(':id/stage')
+  async updateApplicationStage(
+    @Param('id') id: string,
+    @Body('stageId') stageId: string,
+  ) {
+    const data = await this.applicationService.updateApplicationStage(id, stageId);
+    return {
+      message: 'Cập nhật giai đoạn phỏng vấn thành công',
+      data,
+    };
+  }
+
+  @Get(':id')
+  async getApplicationById(@Param('id') id: string) {
+    const data = await this.applicationService.getApplicationById(id);
+    return {
+      message: 'Lấy chi tiết đơn ứng tuyển thành công',
+      data,
+    };
   }
 }

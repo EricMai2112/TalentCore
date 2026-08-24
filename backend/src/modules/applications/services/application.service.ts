@@ -78,6 +78,73 @@ export class ApplicationService {
     };
   }
 
+  async getKanbanApplications(params: { departmentId?: string; jobId?: string; search?: string }) {
+    const query: any = {};
+
+    if (params.jobId && Types.ObjectId.isValid(params.jobId)) {
+      query.jobDescriptionId = new Types.ObjectId(params.jobId);
+    }
+
+    const applications = await this.applicationModel
+      .find(query)
+      .populate({
+        path: 'jobDescriptionId',
+        populate: [
+          { path: 'departmentId' },
+          { path: 'pipelineTemplateId' },
+          { path: 'requiredSkills' },
+          { path: 'interviewerIds', select: 'name email role' },
+          { path: 'interviewerId', select: 'name email role' },
+        ],
+      })
+      .populate({
+        path: 'candidateId',
+        populate: { path: 'userId', select: 'name email phone avatar' },
+      })
+      .sort({ appliedAt: -1 })
+      .exec();
+
+    let filtered = applications;
+
+    if (params.departmentId) {
+      filtered = filtered.filter((app) => {
+        const job = app.jobDescriptionId as any;
+        const deptId = typeof job?.departmentId === 'object' ? job?.departmentId?._id?.toString() : job?.departmentId?.toString();
+        return deptId === params.departmentId;
+      });
+    }
+
+    if (params.search && params.search.trim()) {
+      const term = params.search.trim().toLowerCase();
+      filtered = filtered.filter((app) => {
+        const candidate = app.candidateId as any;
+        const user = candidate?.userId as any;
+        const name = user?.name || candidate?.fullName || candidate?.profileName || '';
+        const job = app.jobDescriptionId as any;
+        const jobTitle = job?.title || '';
+        return name.toLowerCase().includes(term) || jobTitle.toLowerCase().includes(term);
+      });
+    }
+
+    return filtered;
+  }
+
+  async updateApplicationStage(applicationId: string, stageId: string) {
+    if (!Types.ObjectId.isValid(applicationId)) {
+      throw new BadRequestException('ID đơn ứng tuyển không hợp lệ');
+    }
+
+    const application = await this.applicationModel.findById(applicationId);
+    if (!application) {
+      throw new NotFoundException('Không tìm thấy đơn ứng tuyển');
+    }
+
+    application.currentStageId = stageId as any;
+    const updated = await application.save();
+
+    return this.getApplicationById(updated._id.toString());
+  }
+
   async getApplicationById(applicationId: string) {
     const application = await this.applicationModel
       .findById(applicationId)
