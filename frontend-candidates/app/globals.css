@@ -119,23 +119,28 @@ body {
 
 /* Jodit Editor Styling Overrides */
 .rich-text-editor-wrapper .jodit-container {
-  border-radius: 0.75rem !important;
-  border-color: #e2e8f0 !important;
+  border-radius: 1rem !important;
+  border-color: #cbd5e1 !important;
   background-color: #f8fafc !important;
   overflow: hidden;
+  box-shadow: 0 1px 3px 0 rgb(0 0 0 / 0.05);
 }
 .rich-text-editor-wrapper .jodit-toolbar__box {
-  background-color: #f1f5f9 !important;
+  background-color: #f8fafc !important;
   border-bottom: 1px solid #e2e8f0 !important;
+  padding: 0.25rem !important;
 }
 .rich-text-editor-wrapper .jodit-workplace {
   background-color: #ffffff !important;
-  font-size: 0.875rem !important;
+  font-size: 0.925rem !important;
+  min-height: 280px !important;
 }
 .rich-text-editor-wrapper .jodit-wysiwyg {
-  padding: 0.875rem !important;
-  font-size: 0.875rem !important;
-  line-height: 1.6 !important;
+  padding: 1.25rem !important;
+  font-size: 0.925rem !important;
+  line-height: 1.7 !important;
+  min-height: 280px !important;
+  color: #1e293b !important;
 }
 
 

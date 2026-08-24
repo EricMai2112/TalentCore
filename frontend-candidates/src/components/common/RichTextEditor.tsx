@@ -35,7 +35,7 @@ export default function RichTextEditor({
   value,
   onChange,
   placeholder = "Nhập nội dung...",
-  height = 200,
+  height = 360,
   className = "",
 }: RichTextEditorProps) {
   const editorRef = useRef(null);
@@ -44,8 +44,8 @@ export default function RichTextEditor({
     () => ({
       readonly: false,
       placeholder,
-      height: typeof height === "number" ? height : 200,
-      minHeight: 140,
+      height: typeof height === "number" ? height : 360,
+      minHeight: 280,
       toolbarAdaptive: false,
       toolbarSticky: false,
       showCharsCounter: false,

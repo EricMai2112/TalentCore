@@ -139,7 +139,7 @@ export default function EditExperienceModal({
       <div className="fixed inset-0" onClick={onClose} />
 
       <div
-        className="relative bg-white rounded-3xl max-w-xl w-full p-6 sm:p-8 shadow-2xl space-y-6 max-h-[90vh] flex flex-col animate-in zoom-in-95 duration-150 text-slate-900 z-10"
+        className="relative bg-white rounded-3xl max-w-5xl w-full p-6 sm:p-8 shadow-2xl space-y-6 max-h-[90vh] flex flex-col animate-in zoom-in-95 duration-150 text-slate-900 z-10"
         onClick={(e) => e.stopPropagation()}
       >
         {/* Header */}
@@ -244,7 +244,7 @@ export default function EditExperienceModal({
               value={description}
               onChange={(val) => setDescription(val)}
               placeholder="Nêu trách nhiệm chính, các tính năng đã phát triển và kết quả đạt được..."
-              height={180}
+              height={360}
             />
           </div>
 
