@@ -9,6 +9,7 @@
     "lint": "eslint"
   },
   "dependencies": {
+    "jodit-react": "^5.4.72",
     "lucide-react": "^1.31.0",
     "next": "16.3.0",
     "react": "19.2.8",

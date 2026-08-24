@@ -5,6 +5,7 @@ import { X, Plus, Trash2, Check, Loader2 } from "lucide-react";
 import { CandidateProfile, SocialLinkItem } from "../types/profile.types";
 import { profileApi } from "../services/user.api";
 import { useActiveProfile } from "../context/ActiveProfileContext";
+import RichTextEditor from "@/src/components/common/RichTextEditor";
 
 interface EditPersonalInfoModalProps {
   isOpen: boolean;
@@ -223,12 +224,11 @@ export default function EditPersonalInfoModal({
             <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider">
               Giới thiệu bản thân
             </label>
-            <textarea
-              rows={4}
+            <RichTextEditor
               value={summary}
-              onChange={(e) => setSummary(e.target.value)}
+              onChange={(val) => setSummary(val)}
               placeholder="Nêu ngắn gọn kinh nghiệm, kỹ năng thế mạnh và định hướng làm việc..."
-              className="w-full p-3.5 bg-slate-50 border border-slate-200 rounded-xl text-sm text-slate-900 placeholder:text-slate-400 focus:bg-white focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 outline-none transition-all leading-relaxed font-normal resize-none"
+              height={180}
             />
           </div>
 

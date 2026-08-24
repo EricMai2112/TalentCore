@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { X, Check, Loader2 } from "lucide-react";
 import { profileApi } from "../services/user.api";
 import { useActiveProfile } from "../context/ActiveProfileContext";
+import RichTextEditor, { isHtmlEmpty } from "@/src/components/common/RichTextEditor";
 
 interface EditCareerObjectiveModalProps {
   isOpen: boolean;
@@ -34,12 +35,18 @@ export default function EditCareerObjectiveModal({
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (isHtmlEmpty(value)) {
+      setErrorMsg("Vui lòng nhập nội dung mục tiêu nghề nghiệp");
+      return;
+    }
+
     setIsSubmitting(true);
     setErrorMsg(null);
 
     try {
-      await saveProfile({ careerObjective: value.trim() });
-      onSuccess(value.trim());
+      const finalValue = value.trim();
+      await saveProfile({ careerObjective: finalValue });
+      onSuccess(finalValue);
       onClose();
     } catch (error: any) {
       console.error("Cập nhật thất bại:", error);
@@ -57,7 +64,7 @@ export default function EditCareerObjectiveModal({
     >
       <div className="fixed inset-0" onClick={onClose} />
 
-      <div className="relative bg-white rounded-3xl max-w-xl w-full p-6 sm:p-8 shadow-2xl space-y-5 animate-in zoom-in-95 duration-150">
+      <div className="relative bg-white rounded-3xl max-w-2xl w-full p-6 sm:p-8 shadow-2xl space-y-5 animate-in zoom-in-95 duration-150">
         <div className="flex items-center justify-between border-b border-slate-100 pb-4">
           <h3 className="text-lg font-bold text-slate-900">Chỉnh sửa Mục tiêu nghề nghiệp</h3>
           <button 
@@ -80,13 +87,11 @@ export default function EditCareerObjectiveModal({
             <label className="block text-xs font-bold text-slate-600 uppercase tracking-wider mb-2">
               Nội dung mục tiêu nghề nghiệp <span className="text-rose-500">*</span>
             </label>
-            <textarea
-              rows={5}
-              required
+            <RichTextEditor
               value={value}
-              onChange={(e) => setValue(e.target.value)}
-              placeholder="Nêu rõ mục tiêu ngắn hạn và dài hạn trong công việc..."
-              className="w-full p-4 bg-slate-50 border border-slate-200 rounded-2xl text-sm text-slate-900 placeholder:text-slate-400 focus:bg-white focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 outline-none transition-all leading-relaxed resize-none"
+              onChange={(val) => setValue(val)}
+              placeholder="Nêu rõ mục tiêu ngắn hạn và dài hạn trong sự nghiệp..."
+              height={220}
             />
           </div>
 
@@ -101,7 +106,7 @@ export default function EditCareerObjectiveModal({
             </button>
             <button
               type="submit"
-              disabled={isSubmitting || !value.trim()}
+              disabled={isSubmitting || isHtmlEmpty(value)}
               className="px-6 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs shadow-md shadow-blue-500/20 active:scale-95 disabled:opacity-50 disabled:pointer-events-none cursor-pointer flex items-center gap-1.5 transition-all"
             >
               {isSubmitting ? (

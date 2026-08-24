@@ -5,6 +5,7 @@ import { X, Check, Trash2, Loader2, Plus } from "lucide-react";
 import { profileApi } from "../services/user.api";
 import { useActiveProfile } from "../context/ActiveProfileContext";
 import { ExperienceItem } from "../types/profile.types";
+import RichTextEditor from "@/src/components/common/RichTextEditor";
 
 interface EditExperienceModalProps {
   isOpen: boolean;
@@ -239,12 +240,11 @@ export default function EditExperienceModal({
             <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider">
               Mô tả chi tiết công việc & Đóng góp
             </label>
-            <textarea
-              rows={4}
+            <RichTextEditor
               value={description}
-              onChange={(e) => setDescription(e.target.value)}
+              onChange={(val) => setDescription(val)}
               placeholder="Nêu trách nhiệm chính, các tính năng đã phát triển và kết quả đạt được..."
-              className="w-full p-3.5 bg-slate-50 border border-slate-200 rounded-xl text-sm text-slate-900 placeholder:text-slate-400 focus:bg-white focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 outline-none transition-all leading-relaxed resize-none"
+              height={180}
             />
           </div>
 
