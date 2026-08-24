@@ -56,6 +56,30 @@ export const jobDescriptionApi = {
     return res.data;
   },
 
+  generateJdContentWithAi: async (payload: {
+    title: string;
+    departmentName?: string;
+    positionName?: string;
+    location?: string;
+    employmentType?: string;
+    experienceLevel?: string;
+    minimumSalary?: number;
+    maximumSalary?: number;
+    skillNames?: string[];
+    criteria?: any[];
+  }): Promise<{
+    description: string;
+    requirements: string;
+    benefits: string;
+  }> => {
+    const res = await apiClient.post<ApiResponse<{
+      description: string;
+      requirements: string;
+      benefits: string;
+    }>>("/job-descriptions/ai-generate-content", payload);
+    return res.data;
+  },
+
   // Auxiliary data fetchers
   getDepartments: async (): Promise<Department[]> => {
     try {
