@@ -64,7 +64,7 @@ export default function EditCareerObjectiveModal({
     >
       <div className="fixed inset-0" onClick={onClose} />
 
-      <div className="relative bg-white rounded-3xl max-w-2xl w-full p-6 sm:p-8 shadow-2xl space-y-5 animate-in zoom-in-95 duration-150">
+      <div className="relative bg-white rounded-3xl max-w-5xl w-full p-6 sm:p-8 shadow-2xl space-y-5 animate-in zoom-in-95 duration-150">
         <div className="flex items-center justify-between border-b border-slate-100 pb-4">
           <h3 className="text-lg font-bold text-slate-900">Chỉnh sửa Mục tiêu nghề nghiệp</h3>
           <button 
@@ -91,7 +91,7 @@ export default function EditCareerObjectiveModal({
               value={value}
               onChange={(val) => setValue(val)}
               placeholder="Nêu rõ mục tiêu ngắn hạn và dài hạn trong sự nghiệp..."
-              height={220}
+              height={380}
             />
           </div>
 

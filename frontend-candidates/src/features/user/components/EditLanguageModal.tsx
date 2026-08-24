@@ -119,7 +119,7 @@ export default function EditLanguageModal({
       <div className="fixed inset-0" onClick={onClose} />
 
       <div
-        className="relative bg-white rounded-3xl max-w-xl w-full p-6 sm:p-8 shadow-2xl space-y-6 max-h-[90vh] flex flex-col animate-in zoom-in-95 duration-150 text-slate-900 z-10"
+        className="relative bg-white rounded-3xl max-w-4xl w-full p-6 sm:p-8 shadow-2xl space-y-6 max-h-[90vh] flex flex-col animate-in zoom-in-95 duration-150 text-slate-900 z-10"
         onClick={(e) => e.stopPropagation()}
       >
         {/* Header */}

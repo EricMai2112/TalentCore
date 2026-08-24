@@ -21,6 +21,7 @@ import {
 import { CandidateProfile } from "../types/profile.types";
 import { profileApi } from "../services/user.api";
 import { useActiveProfile } from "../context/ActiveProfileContext";
+import RichTextDisplay from "@/src/components/common/RichTextDisplay";
 
 interface CvParsingPreviewModalProps {
   isOpen: boolean;
@@ -76,7 +77,7 @@ export default function CvParsingPreviewModal({
       <div className="fixed inset-0" onClick={onClose} />
 
       <div
-        className="relative bg-white rounded-3xl max-w-3xl w-full p-6 sm:p-8 shadow-2xl space-y-6 max-h-[90vh] flex flex-col text-slate-900 z-10 animate-in zoom-in-95 duration-150"
+        className="relative bg-white rounded-3xl max-w-6xl w-full p-6 sm:p-8 shadow-2xl space-y-6 max-h-[90vh] flex flex-col text-slate-900 z-10 animate-in zoom-in-95 duration-150"
         onClick={(e) => e.stopPropagation()}
       >
         {/* Header */}
@@ -169,9 +170,10 @@ export default function CvParsingPreviewModal({
               <span className="font-bold text-slate-500 uppercase tracking-wider text-[10px]">
                 Giới thiệu bản thân
               </span>
-              <p className="text-slate-700 leading-relaxed whitespace-pre-line">
-                {parsedData.summary}
-              </p>
+              <RichTextDisplay
+                content={parsedData.summary}
+                className="text-xs text-slate-700 leading-relaxed"
+              />
             </div>
           )}
 
@@ -181,9 +183,10 @@ export default function CvParsingPreviewModal({
               <span className="font-bold text-slate-500 uppercase tracking-wider text-[10px] flex items-center gap-1">
                 <Target size={13} className="text-blue-600" /> Mục tiêu nghề nghiệp
               </span>
-              <p className="text-slate-700 leading-relaxed whitespace-pre-line">
-                {parsedData.careerObjective}
-              </p>
+              <RichTextDisplay
+                content={parsedData.careerObjective}
+                className="text-xs text-slate-700 leading-relaxed"
+              />
             </div>
           )}
 
@@ -230,9 +233,10 @@ export default function CvParsingPreviewModal({
                       </span>
                     </div>
                     {exp.description && (
-                      <p className="text-slate-500 leading-relaxed pt-1 whitespace-pre-line">
-                        {exp.description}
-                      </p>
+                      <RichTextDisplay
+                        content={exp.description}
+                        className="text-xs text-slate-600 pt-1 leading-relaxed"
+                      />
                     )}
                     {exp.technologies && exp.technologies.length > 0 && (
                       <div className="flex flex-wrap gap-1 pt-1">
@@ -312,9 +316,10 @@ export default function CvParsingPreviewModal({
                       </a>
                     )}
                     {proj.description && (
-                      <p className="text-slate-500 leading-relaxed pt-0.5 whitespace-pre-line">
-                        {proj.description}
-                      </p>
+                      <RichTextDisplay
+                        content={proj.description}
+                        className="text-xs text-slate-600 pt-0.5 leading-relaxed"
+                      />
                     )}
                     {proj.technologies && proj.technologies.length > 0 && (
                       <div className="flex flex-wrap gap-1 pt-1">
