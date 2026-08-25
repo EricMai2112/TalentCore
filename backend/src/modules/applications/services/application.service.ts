@@ -5,6 +5,8 @@ import { Application, ApplicationDocument } from '../schemas/application.schema'
 import { Candidate, CandidateDocument } from 'src/modules/candidates/schema/candidate.schema';
 import { JobDescription, JobDescriptionDocument, JobStatus } from 'src/modules/job-description/schemas/job-description.schema';
 import { PipelineTemplate, PipelineTemplateDocument } from 'src/modules/pipeline-template/schemas/pipeline-template.schema';
+import { AiMatchingProcessor } from '../processors/ai-matching.processor';
+import { AiEvaluation, AiEvaluationDocument } from '../schemas/ai-evaluation.schema';
 
 @Injectable()
 export class ApplicationService {
@@ -20,6 +22,11 @@ export class ApplicationService {
 
     @InjectModel(PipelineTemplate.name)
     private readonly pipelineModel: Model<PipelineTemplateDocument>,
+
+    @InjectModel(AiEvaluation.name)
+    private readonly aiEvaluationModel: Model<AiEvaluationDocument>,
+
+    private readonly aiMatchingProcessor: AiMatchingProcessor
   ) {}
 
   async applyJob(userId: string, jobDescriptionId: string, candidateId: string) {
@@ -67,6 +74,10 @@ export class ApplicationService {
       appliedAt: new Date(),
     });
 
+    setImmediate(() => {
+      this.aiMatchingProcessor.processMatching(newApplication._id.toString());
+    });
+
     return {
       message: 'Ứng tuyển thành công!',
       applicationId: newApplication._id,
@@ -102,14 +113,38 @@ export class ApplicationService {
         populate: { path: 'userId', select: 'name email phone avatar' },
       })
       .sort({ appliedAt: -1 })
+      .lean()
       .exec();
 
-    let filtered = applications;
+    // Lấy thông tin AI Evaluation gắn vào từng Application
+    const appIds = applications.map((app) => app._id);
+    const evaluations = await this.aiEvaluationModel
+      .find({ applicationId: { $in: appIds } })
+      .lean()
+      .exec();
+
+    const evalMap = new Map<string, any>();
+    evaluations.forEach((item) => {
+      evalMap.set(item.applicationId.toString(), item);
+    });
+
+    let filtered = applications.map((app: any) => {
+      const aiEval = evalMap.get(app._id.toString());
+      return {
+        ...app,
+        aiFitScore: aiEval?.aiFitScore ?? app?.aiFitScore ?? null,
+        isMissingMandatory: Boolean(aiEval?.isMissingMandatory),
+        aiEvaluation: aiEval || null,
+      };
+    });
 
     if (params.departmentId) {
       filtered = filtered.filter((app) => {
         const job = app.jobDescriptionId as any;
-        const deptId = typeof job?.departmentId === 'object' ? job?.departmentId?._id?.toString() : job?.departmentId?.toString();
+        const deptId =
+          typeof job?.departmentId === 'object'
+            ? job?.departmentId?._id?.toString()
+            : job?.departmentId?.toString();
         return deptId === params.departmentId;
       });
     }
@@ -117,7 +152,10 @@ export class ApplicationService {
     if (params.jobId) {
       filtered = filtered.filter((app) => {
         const job = app.jobDescriptionId as any;
-        const jId = typeof job === 'object' ? job?._id?.toString() : app.jobDescriptionId?.toString();
+        const jId =
+          typeof job === 'object'
+            ? job?._id?.toString()
+            : app.jobDescriptionId?.toString();
         return jId === params.jobId;
       });
     }
@@ -176,11 +214,19 @@ export class ApplicationService {
       (s: any) => s._id.toString() === application.currentStageId.toString(),
     );
 
+    const aiEval = await this.aiEvaluationModel
+      .findOne({ applicationId: application._id })
+      .lean()
+      .exec();
+
     return {
       ...application.toObject(),
       stageName: currentStage?.name || 'Không xác định',
       stageColor: currentStage?.color || '#94a3b8',
       currentStage,
+      aiFitScore: aiEval?.aiFitScore ?? null,
+      isMissingMandatory: Boolean(aiEval?.isMissingMandatory),
+      aiEvaluation: aiEval || null,
     };
   }
 }
