@@ -50,9 +50,24 @@ export default function KanbanContainer({
     return typeof user.departmentId === "string" ? user.departmentId : (user.departmentId as any)._id;
   }, [user]);
 
-  // Selected filters state
-  const [selectedDepartmentId, setSelectedDepartmentId] = useState<string>("");
-  const [selectedJobId, setSelectedJobId] = useState<string>("");
+  // Selected filters state with safe initializers
+  const [selectedDepartmentId, setSelectedDepartmentId] = useState<string>(() => {
+    if (isDeptManager && userDeptId) return userDeptId;
+    return initialDepartments.length > 0 ? initialDepartments[0]._id : "";
+  });
+
+  const [selectedJobId, setSelectedJobId] = useState<string>(() => {
+    const defaultDeptId = (isDeptManager && userDeptId) || (initialDepartments.length > 0 ? initialDepartments[0]._id : "");
+    if (defaultDeptId) {
+      const deptJobs = initialJobs.filter((j) => {
+        const dId = typeof j.departmentId === "object" ? j.departmentId?._id : j.departmentId;
+        return dId === defaultDeptId && j.status === JobStatus.JD_CREATED;
+      });
+      if (deptJobs.length > 0) return deptJobs[0]._id;
+    }
+    return "";
+  });
+
   const [searchQuery, setSearchQuery] = useState<string>("");
   const [scoreFilter, setScoreFilter] = useState<string>("all");
 
@@ -78,28 +93,19 @@ export default function KanbanContainer({
     setIsMounted(true);
   }, []);
 
-  // Initialize default department & job selection (filtering only JD_CREATED jobs)
+  // Sync department if user is manager and not set yet
   useEffect(() => {
-    let deptId = selectedDepartmentId;
-    if (!deptId) {
-      if (isDeptManager && userDeptId) {
-        deptId = userDeptId;
-      } else if (initialDepartments.length > 0) {
-        deptId = initialDepartments[0]._id;
-      }
-      if (deptId) setSelectedDepartmentId(deptId);
-    }
-
-    if (deptId && !selectedJobId) {
+    if (isDeptManager && userDeptId && selectedDepartmentId !== userDeptId) {
+      setSelectedDepartmentId(userDeptId);
       const deptJobs = initialJobs.filter((j) => {
         const dId = typeof j.departmentId === "object" ? j.departmentId?._id : j.departmentId;
-        return dId === deptId && j.status === JobStatus.JD_CREATED;
+        return dId === userDeptId && j.status === JobStatus.JD_CREATED;
       });
       if (deptJobs.length > 0) {
         setSelectedJobId(deptJobs[0]._id);
       }
     }
-  }, [isDeptManager, userDeptId, initialDepartments, initialJobs, selectedDepartmentId, selectedJobId]);
+  }, [isDeptManager, userDeptId, selectedDepartmentId, initialJobs]);
 
   // Handle department filter change
   const handleDepartmentChange = (deptId: string) => {
@@ -117,6 +123,8 @@ export default function KanbanContainer({
 
   // Fetch updated applications when filters change
   useEffect(() => {
+    let isSubscribed = true;
+
     if (!selectedJobId) {
       setApplications([]);
       return;
@@ -129,13 +137,19 @@ export default function KanbanContainer({
           jobId: selectedJobId || undefined,
           search: searchQuery || undefined,
         });
-        setApplications(list);
+        if (isSubscribed) {
+          setApplications(list);
+        }
       } catch (err) {
         console.error("Lỗi lấy dữ liệu Kanban:", err);
       }
     };
 
     fetchKanban();
+
+    return () => {
+      isSubscribed = false;
+    };
   }, [selectedDepartmentId, selectedJobId, searchQuery]);
 
   // Determine active pipeline stages from selected JD's pipeline template

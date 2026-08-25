@@ -1,7 +1,7 @@
 "use client";
 
 import { useMemo } from "react";
-import { User as UserIcon, Calendar, Clock, Star } from "lucide-react";
+import { User as UserIcon, Calendar, Clock, Star, AlertTriangle } from "lucide-react";
 import { useSortable } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 import { KanbanApplication } from "../types/kanban.types";
@@ -61,14 +61,8 @@ export default function CandidateKanbanCard({
     return colors[hash % colors.length];
   }, [name]);
 
-  // Mock AI Fit score
-  const aiScore = useMemo(() => {
-    if (application.aiFitScore) return application.aiFitScore;
-    let sum = 0;
-    const str = application._id || name;
-    for (let i = 0; i < str.length; i++) sum += str.charCodeAt(i);
-    return 70 + (sum % 26);
-  }, [application._id, application.aiFitScore, name]);
+  const hasScore = application.aiFitScore !== null && application.aiFitScore !== undefined;
+  const aiScore = application.aiFitScore ?? 0;
 
   // Skills array
   const skillsList = useMemo(() => {
@@ -76,7 +70,7 @@ export default function CandidateKanbanCard({
       return job.requiredSkills.map((s) => (typeof s === "object" ? s.name : s));
     }
     if (candidate?.skills && candidate.skills.length > 0) {
-      return candidate.skills;
+      return candidate.skills.map((s) => (typeof s === "object" ? s.name : s));
     }
     return ["React", "TypeScript", "Next.js"];
   }, [job, candidate]);
@@ -106,13 +100,13 @@ export default function CandidateKanbanCard({
     }
   }, [application.appliedAt]);
 
-  // Score color ring
+  // Score color ring (3 màu: Xanh >= 70, Vàng >= 50, Đỏ < 50)
   const scoreRingColor =
-    aiScore >= 80
-      ? "border-emerald-500 text-emerald-700 bg-emerald-50/60"
-      : aiScore >= 70
-      ? "border-amber-500 text-amber-700 bg-amber-50/60"
-      : "border-slate-400 text-slate-600 bg-slate-50";
+    aiScore >= 70
+      ? "border-emerald-500 text-emerald-700 bg-emerald-50/70"
+      : aiScore >= 50
+      ? "border-amber-500 text-amber-700 bg-amber-50/70"
+      : "border-rose-400 text-rose-600 bg-rose-50";
 
   return (
     <div
@@ -146,13 +140,27 @@ export default function CandidateKanbanCard({
           </div>
         </div>
 
-        <div
-          className={`w-9 h-9 rounded-full border-2 flex items-center justify-center font-extrabold text-xs shrink-0 shadow-2xs ${scoreRingColor}`}
-          title={`Điểm AI Match: ${aiScore}%`}
-        >
-          {aiScore}
-        </div>
+        {hasScore ? (
+          <div
+            className={`w-9 h-9 rounded-full border-2 flex items-center justify-center font-extrabold text-xs shrink-0 shadow-2xs ${scoreRingColor}`}
+            title={`Điểm AI Match: ${aiScore}%`}
+          >
+            {aiScore}
+          </div>
+        ) : (
+          <span className="text-[10px] text-gray-400 font-bold italic bg-gray-50 border border-gray-100 px-2 py-1 rounded-lg shrink-0">
+            AI đang chấm...
+          </span>
+        )}
       </div>
+
+      {/* Cảnh báo Bắt buộc hiển thị nổi bật trên thẻ */}
+      {application.isMissingMandatory && (
+        <div className="p-2 bg-rose-50 border border-rose-200 rounded-xl flex items-center gap-1.5 text-rose-700 text-[11px] font-bold shadow-2xs">
+          <AlertTriangle size={13} className="shrink-0 text-rose-600" />
+          <span className="truncate">Thiếu tiêu chí Bắt buộc</span>
+        </div>
+      )}
 
       {/* Skills Badges Pill Row */}
       <div className="flex flex-wrap items-center gap-1.5 pt-0.5">

@@ -8,10 +8,14 @@ import { JobDescription, JobDescriptionSchema } from '../job-description/schemas
 import { PipelineTemplate, PipelineTemplateSchema } from '../pipeline-template/schemas/pipeline-template.schema';
 import { JwtModule } from '@nestjs/jwt';
 import { ConfigModule, ConfigService } from '@nestjs/config';
+import { AiEvaluation, AiEvaluationSchema } from './schemas/ai-evaluation.schema';
+import { AiMatchingService } from './services/ai-matching.service';
+import { AiMatchingProcessor } from './processors/ai-matching.processor';
 
 @Module({
     imports: [MongooseModule.forFeature([{name: Application.name, schema: ApplicationSchema},
         { name: Candidate.name, schema: CandidateSchema },
+        { name: AiEvaluation.name, schema: AiEvaluationSchema },
       { name: JobDescription.name, schema: JobDescriptionSchema },
       { name: PipelineTemplate.name, schema: PipelineTemplateSchema },
     ]),
@@ -24,7 +28,7 @@ import { ConfigModule, ConfigService } from '@nestjs/config';
     }),
 ],
     controllers: [ApplicationController],
-    providers: [ApplicationService],
+    providers: [ApplicationService, AiMatchingService, AiMatchingProcessor],
     exports: [ApplicationService]
 })
 export class ApplicationsModule {}
