@@ -11,11 +11,15 @@ import { ConfigModule, ConfigService } from '@nestjs/config';
 import { AiEvaluation, AiEvaluationSchema } from './schemas/ai-evaluation.schema';
 import { AiMatchingService } from './services/ai-matching.service';
 import { AiMatchingProcessor } from './processors/ai-matching.processor';
+import { JobDescriptionModule } from '../job-description/job-description.module';
 
 @Module({
-    imports: [MongooseModule.forFeature([{name: Application.name, schema: ApplicationSchema},
-        { name: Candidate.name, schema: CandidateSchema },
-        { name: AiEvaluation.name, schema: AiEvaluationSchema },
+  imports: [
+    JobDescriptionModule,
+    MongooseModule.forFeature([
+      { name: Application.name, schema: ApplicationSchema },
+      { name: Candidate.name, schema: CandidateSchema },
+      { name: AiEvaluation.name, schema: AiEvaluationSchema },
       { name: JobDescription.name, schema: JobDescriptionSchema },
       { name: PipelineTemplate.name, schema: PipelineTemplateSchema },
     ]),
@@ -26,9 +30,9 @@ import { AiMatchingProcessor } from './processors/ai-matching.processor';
       }),
       inject: [ConfigService],
     }),
-],
-    controllers: [ApplicationController],
-    providers: [ApplicationService, AiMatchingService, AiMatchingProcessor],
-    exports: [ApplicationService]
+  ],
+  controllers: [ApplicationController],
+  providers: [ApplicationService, AiMatchingService, AiMatchingProcessor],
+  exports: [ApplicationService],
 })
 export class ApplicationsModule {}

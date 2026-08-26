@@ -8,16 +8,28 @@ export const metadata: Metadata = {
   description: "Theo dõi và quản lý ứng viên qua từng vòng phỏng vấn chuyên nghiệp.",
 };
 
+export const dynamic = 'force-dynamic';
+
 /**
  * Server Component (SSR) for Recruitment Kanban Board
  */
 export default async function KanbanPage() {
-  // Pre-fetch initial data server-side
-  const [departments, jobs, applications] = await Promise.all([
-    jobDescriptionApi.getDepartments(),
-    jobDescriptionApi.getJobs(),
-    kanbanApi.getKanbanApplications(),
-  ]);
+  let departments: any[] = [];
+  let jobs: any[] = [];
+  let applications: any[] = [];
+
+  try {
+    const results = await Promise.all([
+      jobDescriptionApi.getDepartments().catch(() => []),
+      jobDescriptionApi.getJobs().catch(() => []),
+      kanbanApi.getKanbanApplications().catch(() => []),
+    ]);
+    departments = results[0];
+    jobs = results[1];
+    applications = results[2];
+  } catch (error) {
+    console.warn("⚠️ Khởi tạo dữ liệu Kanban server-side fallback:", error);
+  }
 
   return (
     <KanbanContainer

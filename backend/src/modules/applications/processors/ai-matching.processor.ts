@@ -7,6 +7,7 @@ import { Candidate, CandidateDocument } from 'src/modules/candidates/schema/cand
 import { JobDescription, JobDescriptionDocument } from 'src/modules/job-description/schemas/job-description.schema';
 import { PipelineTemplate, PipelineTemplateDocument } from 'src/modules/pipeline-template/schemas/pipeline-template.schema';
 import { AiMatchingService } from '../services/ai-matching.service';
+import { EventsGateway } from 'src/modules/job-description/gateways/events.gateway';
 
 @Injectable()
 export class AiMatchingProcessor {
@@ -19,6 +20,7 @@ export class AiMatchingProcessor {
     @InjectModel(JobDescription.name) private jobModel: Model<JobDescriptionDocument>,
     @InjectModel(PipelineTemplate.name) private pipelineModel: Model<PipelineTemplateDocument>,
     private readonly aiMatchingService: AiMatchingService,
+    private readonly eventsGateway: EventsGateway,
   ) {}
 
   async processMatching(applicationId: string) {
@@ -56,7 +58,7 @@ export class AiMatchingProcessor {
       );
 
       // 4. Lưu kết quả vào Collection AiEvaluation
-      await this.aiEvaluationModel.findOneAndUpdate(
+      const savedEval = await this.aiEvaluationModel.findOneAndUpdate(
         { applicationId: application._id },
         { ...finalEvaluation, applicationId: application._id },
         { upsert: true, returnDocument: 'after' },
@@ -74,13 +76,44 @@ export class AiMatchingProcessor {
         if (currentIndex === 0 && sortedStages.length > 1) {
           const nextStage = sortedStages[1];
           application.currentStageId = nextStage._id;
-          await application.save();
           this.logger.log(`[AI Matching] Hoàn thành! Tự động chuyển Application sang Stage: ${nextStage.name}`);
         }
       }
+
+      await application.save();
+
+      // 6. Broadcast real-time update event via WebSocket Gateway
+      const populatedApp: any = await this.applicationModel
+        .findById(application._id)
+        .populate({
+          path: 'candidateId',
+          populate: { path: 'userId', select: 'name email phone avatar' },
+        })
+        .populate({
+          path: 'jobDescriptionId',
+          populate: [
+            { path: 'departmentId' },
+            { path: 'pipelineTemplateId' },
+            { path: 'requiredSkills' },
+            { path: 'interviewerIds', select: 'name email role' },
+            { path: 'interviewerId', select: 'name email role' },
+          ],
+        })
+        .lean()
+        .exec();
+
+      if (populatedApp) {
+        const fullApp = {
+          ...populatedApp,
+          aiFitScore: savedEval?.aiFitScore ?? null,
+          isMissingMandatory: Boolean(savedEval?.isMissingMandatory),
+          aiEvaluation: savedEval || null,
+        };
+        this.eventsGateway.emitApplicationUpdated(fullApp);
+      }
     } catch (error: any) {
       this.logger.error(`Lỗi xử lý AI Matching cho Application ${applicationId}:`, error);
-      throw error; // Kích hoạt retry của BullMQ nếu cấu hình
+      throw error;
     }
   }
 }

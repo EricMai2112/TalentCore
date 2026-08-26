@@ -14,6 +14,7 @@ import {
   closestCorners,
 } from "@dnd-kit/core";
 import { Department, JobDescription, PipelineStage, JobStatus } from "@/src/features/job-description/types/job-description.types";
+import { io, Socket } from "socket.io-client";
 import { KanbanApplication } from "../types/kanban.types";
 import { kanbanApi } from "../services/kanban.api";
 import { useAuth } from "@/src/providers/AuthProvider";
@@ -151,6 +152,48 @@ export default function KanbanContainer({
       isSubscribed = false;
     };
   }, [selectedDepartmentId, selectedJobId, searchQuery]);
+
+  // Real-time WebSocket Listener for New Applications & AI Updates
+  useEffect(() => {
+    const backendUrl = process.env.NEXT_PUBLIC_API_URL?.replace('/api', '') || 'http://localhost:4000';
+    const socket: Socket = io(backendUrl, {
+      transports: ['websocket', 'polling'],
+    });
+
+    socket.on('connect', () => {
+      console.log('⚡ Connected to TalentCore Realtime Socket:', socket.id);
+    });
+
+    socket.on('new_application', (newApp: KanbanApplication) => {
+      console.log('⚡ Realtime Event: Candidate Applied!', newApp);
+
+      const appJobId = typeof newApp.jobDescriptionId === 'object' 
+        ? newApp.jobDescriptionId?._id 
+        : newApp.jobDescriptionId;
+
+      if (!selectedJobId || appJobId === selectedJobId) {
+        setApplications((prev) => {
+          const exists = prev.some((a) => a._id === newApp._id);
+          if (exists) {
+            return prev.map((a) => (a._id === newApp._id ? { ...a, ...newApp } : a));
+          }
+          return [newApp, ...prev];
+        });
+      }
+    });
+
+    socket.on('application_updated', (updatedApp: KanbanApplication) => {
+      console.log('⚡ Realtime Event: Application Updated (AI Fit Score / Stage)!', updatedApp);
+
+      setApplications((prev) => {
+        return prev.map((a) => (a._id === updatedApp._id ? { ...a, ...updatedApp } : a));
+      });
+    });
+
+    return () => {
+      socket.disconnect();
+    };
+  }, [selectedJobId]);
 
   // Determine active pipeline stages from selected JD's pipeline template
   const activeStages = useMemo(() => {

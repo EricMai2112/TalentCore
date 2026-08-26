@@ -8,6 +8,8 @@ import { PipelineTemplate, PipelineTemplateDocument } from 'src/modules/pipeline
 import { AiMatchingProcessor } from '../processors/ai-matching.processor';
 import { AiEvaluation, AiEvaluationDocument } from '../schemas/ai-evaluation.schema';
 
+import { EventsGateway } from '../../job-description/gateways/events.gateway';
+
 @Injectable()
 export class ApplicationService {
   constructor(
@@ -26,7 +28,8 @@ export class ApplicationService {
     @InjectModel(AiEvaluation.name)
     private readonly aiEvaluationModel: Model<AiEvaluationDocument>,
 
-    private readonly aiMatchingProcessor: AiMatchingProcessor
+    private readonly aiMatchingProcessor: AiMatchingProcessor,
+    private readonly eventsGateway: EventsGateway,
   ) {}
 
   async applyJob(userId: string, jobDescriptionId: string, candidateId: string) {
@@ -73,6 +76,35 @@ export class ApplicationService {
       currentStageId: initialStage._id,
       appliedAt: new Date(),
     });
+
+    // Populate full application data for real-time WebSocket broadcast
+    const populatedApp: any = await this.applicationModel
+      .findById(newApplication._id)
+      .populate({
+        path: 'candidateId',
+        populate: { path: 'userId', select: 'name email phone avatar' },
+      })
+      .populate({
+        path: 'jobDescriptionId',
+        populate: [
+          { path: 'departmentId' },
+          { path: 'pipelineTemplateId' },
+          { path: 'requiredSkills' },
+          { path: 'interviewerIds', select: 'name email role' },
+          { path: 'interviewerId', select: 'name email role' },
+        ],
+      })
+      .lean()
+      .exec();
+
+    if (populatedApp) {
+      this.eventsGateway.emitNewApplication({
+        ...populatedApp,
+        aiFitScore: null,
+        isMissingMandatory: false,
+        aiEvaluation: null,
+      });
+    }
 
     setImmediate(() => {
       this.aiMatchingProcessor.processMatching(newApplication._id.toString());

@@ -1,32 +1,60 @@
-import { BadRequestException, Injectable, NotFoundException, InternalServerErrorException } from '@nestjs/common';
+import {
+  BadRequestException,
+  Injectable,
+  NotFoundException,
+  InternalServerErrorException,
+} from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { isValidObjectId, Model } from 'mongoose';
 import { GoogleGenAI, Type, Schema } from '@google/genai';
-import { JobDescription, JobDescriptionDocument, JobStatus } from '../schemas/job-description.schema';
-import { CreateJobDescriptionDto, UpdateJobDescriptionDto } from '../dtos/job-description.dto';
+import OpenAI from 'openai';
+import {
+  JobDescription,
+  JobDescriptionDocument,
+  JobStatus,
+} from '../schemas/job-description.schema';
+import {
+  CreateJobDescriptionDto,
+  UpdateJobDescriptionDto,
+} from '../dtos/job-description.dto';
 import { SuggestCriteriaWeightsDto } from '../dtos/suggest-criteria-weights.dto';
 import { GenerateJdContentDto } from '../dtos/generate-jd-content.dto';
 import { EventsGateway } from '../gateways/events.gateway';
 
 @Injectable()
 export class JobDescriptionService {
-  private ai: GoogleGenAI;
+  private ai?: GoogleGenAI;
+  private openrouter?: OpenAI;
 
   constructor(
     @InjectModel(JobDescription.name)
     private readonly jobDescriptionModel: Model<JobDescriptionDocument>,
     private readonly eventsGateway: EventsGateway,
   ) {
-    const apiKey = process.env.GEMINI_API_KEY;
-    if (!apiKey) {
-      console.warn('⚠️ Thiếu GEMINI_API_KEY trong file .env');
+    const openrouterKey = process.env.OPENROUTER_API_KEY;
+    if (openrouterKey && openrouterKey.trim().length > 0) {
+      this.openrouter = new OpenAI({
+        baseURL: 'https://openrouter.ai/api/v1',
+        apiKey: openrouterKey,
+        defaultHeaders: {
+          'HTTP-Referer': 'http://localhost:4000',
+          'X-Title': 'TalentCore ATS',
+        },
+      });
     }
-    this.ai = new GoogleGenAI({ apiKey: apiKey || '' });
+
+    const apiKey = process.env.GEMINI_API_KEY;
+    if (apiKey) {
+      this.ai = new GoogleGenAI({ apiKey });
+    }
   }
 
   private validateCriteriaWeights(criteria?: any[]): void {
     if (criteria && criteria.length > 0) {
-      const totalWeight = criteria.reduce((sum, c) => sum + (Number(c.weight) || 0), 0);
+      const totalWeight = criteria.reduce(
+        (sum, c) => sum + (Number(c.weight) || 0),
+        0,
+      );
       if (Math.abs(totalWeight - 100) > 0.01) {
         throw new BadRequestException(
           `Tổng trọng số các tiêu chí phải bằng đúng 100% (Hiện tại: ${totalWeight}%)`,
@@ -58,15 +86,24 @@ export class JobDescriptionService {
     const responseSchema: Schema = {
       type: Type.OBJECT,
       properties: {
-        reasoning: { type: Type.STRING, description: 'Lời giải thích lý do phân bổ trọng số' },
+        reasoning: {
+          type: Type.STRING,
+          description: 'Lời giải thích lý do phân bổ trọng số',
+        },
         suggestedWeights: {
           type: Type.ARRAY,
           items: {
             type: Type.OBJECT,
             properties: {
-              index: { type: Type.NUMBER, description: 'Chỉ số index của tiêu chí' },
+              index: {
+                type: Type.NUMBER,
+                description: 'Chỉ số index của tiêu chí',
+              },
               name: { type: Type.STRING, description: 'Tên tiêu chí' },
-              weight: { type: Type.NUMBER, description: 'Trọng số phần trăm (số nguyên)' },
+              weight: {
+                type: Type.NUMBER,
+                description: 'Trọng số phần trăm (số nguyên)',
+              },
             },
             required: ['index', 'name', 'weight'],
           },
@@ -76,7 +113,10 @@ export class JobDescriptionService {
     };
 
     const criteriaListText = dto.criteria
-      .map((c, i) => `[Index ${i}] Tên: "${c.name}", LoaiYeuCau: "${c.requirementType}"`)
+      .map(
+        (c, i) =>
+          `[Index ${i}] Tên: "${c.name}", LoaiYeuCau: "${c.requirementType}"`,
+      )
       .join('\n');
 
     const promptText = `
@@ -91,19 +131,40 @@ export class JobDescriptionService {
     `;
 
     try {
-      const response = await this.ai.models.generateContent({
-        model: 'gemini-3.6-flash',
-        contents: [{ role: 'user', parts: [{ text: promptText }] }],
-        config: {
-          systemInstruction,
-          responseMimeType: 'application/json',
-          responseSchema,
+      let rawText = '';
+      if (this.openrouter) {
+        const model =
+          process.env.OPENROUTER_MODEL || 'google/gemini-2.0-flash-001';
+        const response = await this.openrouter.chat.completions.create({
+          model,
+          messages: [
+            { role: 'system', content: systemInstruction },
+            { role: 'user', content: promptText },
+          ],
+          response_format: { type: 'json_object' },
           temperature: 0.2,
-          maxOutputTokens: 2048,
-        },
-      });
+          max_tokens: 2048,
+        });
+        rawText = response.choices[0]?.message?.content || '';
+      } else if (this.ai) {
+        const response = await this.ai.models.generateContent({
+          model: 'gemini-3.6-flash',
+          contents: [{ role: 'user', parts: [{ text: promptText }] }],
+          config: {
+            systemInstruction,
+            responseMimeType: 'application/json',
+            responseSchema,
+            temperature: 0.2,
+            maxOutputTokens: 2048,
+          },
+        });
+        rawText = response.text || '';
+      } else {
+        throw new InternalServerErrorException(
+          'Chưa cấu hình API Key cho OpenRouter hoặc Gemini.',
+        );
+      }
 
-      let rawText = response.text || '';
       if (rawText.startsWith('```json')) {
         rawText = rawText.replace(/^```json\s*/, '').replace(/\s*```$/, '');
       } else if (rawText.startsWith('```')) {
@@ -113,7 +174,10 @@ export class JobDescriptionService {
       const parsed = JSON.parse(rawText.trim());
 
       if (parsed.suggestedWeights && parsed.suggestedWeights.length > 0) {
-        const sum = parsed.suggestedWeights.reduce((a: number, b: any) => a + (Number(b.weight) || 0), 0);
+        const sum = parsed.suggestedWeights.reduce(
+          (a: number, b: any) => a + (Number(b.weight) || 0),
+          0,
+        );
         if (sum > 0 && Math.abs(sum - 100) > 0.01) {
           const factor = 100 / sum;
           let runningSum = 0;
@@ -131,7 +195,9 @@ export class JobDescriptionService {
       return parsed;
     } catch (err: any) {
       console.error('Lỗi Gemini AI suggest weights:', err?.message || err);
-      throw new InternalServerErrorException('Có lỗi xảy ra khi gọi AI gợi ý trọng số. Vui lòng thử lại!');
+      throw new InternalServerErrorException(
+        'Có lỗi xảy ra khi gọi AI gợi ý trọng số. Vui lòng thử lại!',
+      );
     }
   }
 
@@ -155,7 +221,7 @@ export class JobDescriptionService {
       - Trình bày trực diện, cô đọng bằng tiếng Việt chuyên nghiệp.
       - TUYỆT ĐỐI BẮT BUỘC ĐI THẲNG VÀO CÁC GẠCH ĐẦU DÒNG NỘI DUNG CHÍNH (bullet points: "• "). KHÔNG ĐƯỢC VIẾT CÂU MỞ ĐẦU HOẶC ĐOẠN GIỚI THIỆU THỪA THÃI (ví dụ: KHÔNG viết "Hiện tại phòng ban... đang tìm kiếm vị trí..."). Bắt đầu ngay dòng đầu tiên bằng gạch đầu dòng "• ".
       - TUYỆT ĐỐI KHÔNG SỬ DỤNG CÚ PHÁP IN ĐẬM MARKDOWN (KHÔNG DÙNG dấu "**" như **Backend Developer** hay **Nest.js**). Chỉ trả về văn bản thuần (plain text).
-      - Mỗi ý chính nằm trên 1 gạch đầu dòng ("• ") riêng biệt và xuống dòng rõ ràng.
+      - Mỗi ý chính nằm trên 1 gạch đầu dòng ("- ") riêng biệt và xuống dòng rõ ràng.
     `;
 
     const responseSchema: Schema = {
@@ -163,24 +229,36 @@ export class JobDescriptionService {
       properties: {
         description: {
           type: Type.STRING,
-          description: 'Mô tả chi tiết công việc dạng văn bản thuần gạch đầu dòng "• ", không dùng in đậm **, bắt đầu ngay bằng gạch đầu dòng',
+          description:
+            'Mô tả chi tiết công việc dạng văn bản thuần gạch đầu dòng "• ", không dùng in đậm **, bắt đầu ngay bằng gạch đầu dòng',
         },
         requirements: {
           type: Type.STRING,
-          description: 'Yêu cầu ứng viên dạng văn bản thuần gạch đầu dòng "• ", không dùng in đậm **, bắt đầu ngay bằng gạch đầu dòng',
+          description:
+            'Yêu cầu ứng viên dạng văn bản thuần gạch đầu dòng "• ", không dùng in đậm **, bắt đầu ngay bằng gạch đầu dòng',
         },
         benefits: {
           type: Type.STRING,
-          description: 'Quyền lợi đãi ngộ dạng văn bản thuần gạch đầu dòng "• ", không dùng in đậm **, bắt đầu ngay bằng gạch đầu dòng',
+          description:
+            'Quyền lợi đãi ngộ dạng văn bản thuần gạch đầu dòng "• ", không dùng in đậm **, bắt đầu ngay bằng gạch đầu dòng',
         },
       },
       required: ['description', 'requirements', 'benefits'],
     };
 
-    const skillsText = dto.skillNames && dto.skillNames.length > 0 ? dto.skillNames.join(', ') : 'Chưa chỉ định';
-    const criteriaText = dto.criteria && dto.criteria.length > 0
-      ? dto.criteria.map((c) => `- ${c.name} (${c.requirementType === 'MANDATORY' ? 'Bắt buộc' : 'Ưu tiên'} - Trọng số ${c.weight}%)`).join('\n')
-      : 'Chưa có tiêu chí cụ thể';
+    const skillsText =
+      dto.skillNames && dto.skillNames.length > 0
+        ? dto.skillNames.join(', ')
+        : 'Chưa chỉ định';
+    const criteriaText =
+      dto.criteria && dto.criteria.length > 0
+        ? dto.criteria
+            .map(
+              (c) =>
+                `- ${c.name} (${c.requirementType === 'MANDATORY' ? 'Bắt buộc' : 'Ưu tiên'} - Trọng số ${c.weight}%)`,
+            )
+            .join('\n')
+        : 'Chưa có tiêu chí cụ thể';
 
     const promptText = `
       Thông tin cấu hình tuyển dụng ở Bước 1:
@@ -199,19 +277,40 @@ export class JobDescriptionService {
     `;
 
     try {
-      const response = await this.ai.models.generateContent({
-        model: 'gemini-3.6-flash',
-        contents: [{ role: 'user', parts: [{ text: promptText }] }],
-        config: {
-          systemInstruction,
-          responseMimeType: 'application/json',
-          responseSchema,
+      let rawText = '';
+      if (this.openrouter) {
+        const model =
+          process.env.OPENROUTER_MODEL || 'google/gemini-2.0-flash-001';
+        const response = await this.openrouter.chat.completions.create({
+          model,
+          messages: [
+            { role: 'system', content: systemInstruction },
+            { role: 'user', content: promptText },
+          ],
+          response_format: { type: 'json_object' },
           temperature: 0.2,
-          maxOutputTokens: 4096,
-        },
-      });
+          max_tokens: 4096,
+        });
+        rawText = response.choices[0]?.message?.content || '';
+      } else if (this.ai) {
+        const response = await this.ai.models.generateContent({
+          model: 'gemini-3.6-flash',
+          contents: [{ role: 'user', parts: [{ text: promptText }] }],
+          config: {
+            systemInstruction,
+            responseMimeType: 'application/json',
+            responseSchema,
+            temperature: 0.2,
+            maxOutputTokens: 4096,
+          },
+        });
+        rawText = response.text || '';
+      } else {
+        throw new InternalServerErrorException(
+          'Chưa cấu hình API Key cho OpenRouter hoặc Gemini.',
+        );
+      }
 
-      let rawText = response.text || '';
       if (rawText.startsWith('```json')) {
         rawText = rawText.replace(/^```json\s*/, '').replace(/\s*```$/, '');
       } else if (rawText.startsWith('```')) {
@@ -236,11 +335,15 @@ export class JobDescriptionService {
       };
     } catch (err: any) {
       console.error('Lỗi Gemini AI generate JD content:', err?.message || err);
-      throw new InternalServerErrorException('Có lỗi xảy ra khi AI soạn thảo JD. Vui lòng thử lại!');
+      throw new InternalServerErrorException(
+        'Có lỗi xảy ra khi AI soạn thảo JD. Vui lòng thử lại!',
+      );
     }
   }
 
-  async create(createDto: CreateJobDescriptionDto): Promise<JobDescriptionDocument> {
+  async create(
+    createDto: CreateJobDescriptionDto,
+  ): Promise<JobDescriptionDocument> {
     this.validateCriteriaWeights(createDto.criteria);
 
     const newJob = new this.jobDescriptionModel(createDto);
@@ -256,7 +359,9 @@ export class JobDescriptionService {
     const now = new Date();
     await this.jobDescriptionModel.updateMany(
       {
-        status: { $in: [JobStatus.JD_CREATED, JobStatus.APPROVED, JobStatus.PENDING] },
+        status: {
+          $in: [JobStatus.JD_CREATED, JobStatus.APPROVED, JobStatus.PENDING],
+        },
         applicationDeadline: { $exists: true, $ne: null, $lt: now },
       },
       { $set: { status: JobStatus.COMPLETED } },
@@ -308,12 +413,17 @@ export class JobDescriptionService {
       .populate('postedById')
       .exec();
     if (!job) {
-      throw new NotFoundException(`Không tìm thấy Job Description với id "${id}"`);
+      throw new NotFoundException(
+        `Không tìm thấy Job Description với id "${id}"`,
+      );
     }
     return job;
   }
 
-  async update(id: string, updateDto: UpdateJobDescriptionDto): Promise<JobDescriptionDocument> {
+  async update(
+    id: string,
+    updateDto: UpdateJobDescriptionDto,
+  ): Promise<JobDescriptionDocument> {
     if (!isValidObjectId(id)) {
       throw new BadRequestException(`Id "${id}" không hợp lệ`);
     }
@@ -321,7 +431,11 @@ export class JobDescriptionService {
     this.validateCriteriaWeights(updateDto.criteria);
 
     const updatedJob = await this.jobDescriptionModel
-      .findByIdAndUpdate(id, { $set: updateDto }, { new: true, runValidators: true })
+      .findByIdAndUpdate(
+        id,
+        { $set: updateDto },
+        { new: true, runValidators: true },
+      )
       .populate('departmentId')
       .populate('pipelineTemplateId')
       .populate('requiredSkills')
@@ -332,7 +446,9 @@ export class JobDescriptionService {
       .exec();
 
     if (!updatedJob) {
-      throw new NotFoundException(`Không tìm thấy Job Description với id "${id}"`);
+      throw new NotFoundException(
+        `Không tìm thấy Job Description với id "${id}"`,
+      );
     }
 
     if (updatedJob.status === JobStatus.JD_CREATED) {

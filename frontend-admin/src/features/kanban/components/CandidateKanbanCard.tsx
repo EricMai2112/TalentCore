@@ -12,6 +12,58 @@ interface CandidateKanbanCardProps {
   isOverlay?: boolean;
 }
 
+function CircularScoreProgress({ score }: { score: number }) {
+  const radius = 11.5;
+  const strokeWidth = 2.6;
+  const circumference = 2 * Math.PI * radius; // ~72.25
+  const strokeDashoffset = circumference - (score / 100) * circumference;
+
+  let strokeColor = "#10b981"; // emerald-500
+  let trackColor = "#d1fae5"; // emerald-100
+
+  if (score < 50) {
+    strokeColor = "#f43f5e"; // rose-500
+    trackColor = "#ffe4e6"; // rose-100
+  } else if (score < 80) {
+    strokeColor = "#f59e0b"; // amber-500
+    trackColor = "#dbeafe"; // blue-100 track matching reference image
+  }
+
+  return (
+    <div
+      className="relative w-8 h-8 flex items-center justify-center shrink-0 cursor-pointer"
+      title={`Điểm AI Match: ${score}%`}
+    >
+      <svg height="32" width="32" className="transform -rotate-90">
+        {/* Background Track Circle */}
+        <circle
+          stroke={trackColor}
+          fill="transparent"
+          strokeWidth={strokeWidth}
+          r={radius}
+          cx="16"
+          cy="16"
+        />
+        {/* Foreground Progress Arc */}
+        <circle
+          stroke={strokeColor}
+          fill="transparent"
+          strokeWidth={strokeWidth}
+          strokeDasharray={`${circumference} ${circumference}`}
+          style={{ strokeDashoffset, transition: "stroke-dashoffset 0.5s ease-in-out" }}
+          strokeLinecap="round"
+          r={radius}
+          cx="16"
+          cy="16"
+        />
+      </svg>
+      <span className="absolute text-[10px] font-extrabold text-gray-900 tracking-tight">
+        {score}
+      </span>
+    </div>
+  );
+}
+
 export default function CandidateKanbanCard({
   application,
   onSelect,
@@ -48,17 +100,16 @@ export default function CandidateKanbanCard({
   }, [name]);
 
   // Deterministic pastel color palette for avatars
-  const avatarBg = useMemo(() => {
-    const colors = [
-      "bg-purple-100 text-purple-700 border-purple-200",
-      "bg-indigo-100 text-indigo-700 border-indigo-200",
-      "bg-blue-100 text-blue-700 border-blue-200",
-      "bg-pink-100 text-pink-700 border-pink-200",
-      "bg-teal-100 text-teal-700 border-teal-200",
+  const avatarStyle = useMemo(() => {
+    const styles = [
+      "bg-blue-100/80 text-blue-700 border-blue-200/60",
+      "bg-purple-100/80 text-purple-700 border-purple-200/60",
+      "bg-indigo-100/80 text-indigo-700 border-indigo-200/60",
+      "bg-teal-100/80 text-teal-700 border-teal-200/60",
     ];
     let hash = 0;
     for (let i = 0; i < name.length; i++) hash += name.charCodeAt(i);
-    return colors[hash % colors.length];
+    return styles[hash % styles.length];
   }, [name]);
 
   const hasScore = application.aiFitScore !== null && application.aiFitScore !== undefined;
@@ -66,11 +117,11 @@ export default function CandidateKanbanCard({
 
   // Skills array
   const skillsList = useMemo(() => {
-    if (job?.requiredSkills && job.requiredSkills.length > 0) {
-      return job.requiredSkills.map((s) => (typeof s === "object" ? s.name : s));
-    }
     if (candidate?.skills && candidate.skills.length > 0) {
       return candidate.skills.map((s) => (typeof s === "object" ? s.name : s));
+    }
+    if (job?.requiredSkills && job.requiredSkills.length > 0) {
+      return job.requiredSkills.map((s) => (typeof s === "object" ? s.name : s));
     }
     return ["React", "TypeScript", "Next.js"];
   }, [job, candidate]);
@@ -82,31 +133,23 @@ export default function CandidateKanbanCard({
   const interviewerName = useMemo(() => {
     if (job?.interviewerIds && job.interviewerIds.length > 0) {
       const first = job.interviewerIds[0];
-      return typeof first === "object" ? first.name : "Nhà tuyển dụng";
+      return typeof first === "object" ? first.name : "Eric Mai";
     }
     if (job?.interviewerId) {
-      return typeof job.interviewerId === "object" ? job.interviewerId.name : "Nhà tuyển dụng";
+      return typeof job.interviewerId === "object" ? job.interviewerId.name : "Eric Mai";
     }
-    return null;
+    return "Eric Mai";
   }, [job]);
 
-  // Format applied date
+  // Format applied date (YYYY-MM-DD)
   const formattedDate = useMemo(() => {
-    if (!application.appliedAt) return "2026-07-20";
+    if (!application.appliedAt) return "2026-08-25";
     try {
       return new Date(application.appliedAt).toISOString().split("T")[0];
     } catch {
-      return "2026-07-20";
+      return "2026-08-25";
     }
   }, [application.appliedAt]);
-
-  // Score color ring (3 màu: Xanh >= 70, Vàng >= 50, Đỏ < 50)
-  const scoreRingColor =
-    aiScore >= 70
-      ? "border-emerald-500 text-emerald-700 bg-emerald-50/70"
-      : aiScore >= 50
-      ? "border-amber-500 text-amber-700 bg-amber-50/70"
-      : "border-rose-400 text-rose-600 bg-rose-50";
 
   return (
     <div
@@ -115,93 +158,91 @@ export default function CandidateKanbanCard({
       {...attributes}
       {...listeners}
       onClick={() => onSelect && onSelect(application)}
-      className={`bg-white border rounded-2xl p-4 transition-all cursor-grab active:cursor-grabbing space-y-3.5 group select-none relative ${
+      className={`bg-white border rounded-2xl p-2.5 transition-all cursor-grab active:cursor-grabbing space-y-2 group select-none relative ${
         isOverlay
           ? "border-indigo-400 shadow-2xl ring-2 ring-indigo-500/30 scale-105"
-          : "border-gray-100 hover:border-indigo-200 shadow-2xs hover:shadow-md"
+          : "border-gray-100 hover:border-indigo-200/80 shadow-2xs hover:shadow-md"
       }`}
     >
-      {/* Header Row: Avatar, Name, Job Title & AI Fit Score Circle Badge */}
-      <div className="flex items-start justify-between gap-3">
-        <div className="flex items-center gap-3 min-w-0">
+      {/* Top Header Row: Avatar, Name, Position & AI Score Arc */}
+      <div className="flex items-center justify-between gap-2">
+        <div className="flex items-center gap-2.5 min-w-0">
           <div
-            className={`w-10 h-10 rounded-2xl flex items-center justify-center font-bold text-xs shrink-0 border ${avatarBg}`}
+            className={`w-9 h-9 rounded-xl flex items-center justify-center font-extrabold text-xs shrink-0 border ${avatarStyle}`}
           >
             {initials}
           </div>
 
-          <div className="min-w-0">
-            <h4 className="text-sm font-extrabold text-gray-900 truncate group-hover:text-indigo-600 transition-colors">
+          <div className="min-w-0 space-y-0.5">
+            <h4 className="text-xs font-extrabold text-gray-900 truncate group-hover:text-indigo-600 transition-colors tracking-tight">
               {name}
             </h4>
-            <p className="text-xs font-medium text-gray-500 truncate">
-              {job?.title || "Vị trí tuyển dụng"}
+            <p className="text-[11px] font-medium text-gray-500 truncate leading-tight">
+              {job?.title || "Frontend Developer"}
             </p>
           </div>
         </div>
 
         {hasScore ? (
-          <div
-            className={`w-9 h-9 rounded-full border-2 flex items-center justify-center font-extrabold text-xs shrink-0 shadow-2xs ${scoreRingColor}`}
-            title={`Điểm AI Match: ${aiScore}%`}
-          >
-            {aiScore}
-          </div>
+          <CircularScoreProgress score={aiScore} />
         ) : (
-          <span className="text-[10px] text-gray-400 font-bold italic bg-gray-50 border border-gray-100 px-2 py-1 rounded-lg shrink-0">
+          <span className="text-[9px] text-gray-400 font-semibold italic bg-gray-50/80 border border-gray-100 px-1.5 py-0.5 rounded-md shrink-0">
             AI đang chấm...
           </span>
         )}
       </div>
 
-      {/* Cảnh báo Bắt buộc hiển thị nổi bật trên thẻ */}
+      {/* Mandatory Criterion Missing Warning Alert */}
       {application.isMissingMandatory && (
-        <div className="p-2 bg-rose-50 border border-rose-200 rounded-xl flex items-center gap-1.5 text-rose-700 text-[11px] font-bold shadow-2xs">
-          <AlertTriangle size={13} className="shrink-0 text-rose-600" />
+        <div className="p-1.5 bg-rose-50 border border-rose-200/80 rounded-lg flex items-center gap-1 text-rose-700 text-[10px] font-bold shadow-2xs">
+          <AlertTriangle size={12} className="shrink-0 text-rose-600" />
           <span className="truncate">Thiếu tiêu chí Bắt buộc</span>
         </div>
       )}
 
-      {/* Skills Badges Pill Row */}
-      <div className="flex flex-wrap items-center gap-1.5 pt-0.5">
+      {/* Skills Badges Row */}
+      <div className="flex flex-wrap items-center gap-1 pt-0.5">
         {visibleSkills.map((skill, idx) => (
           <span
             key={idx}
-            className="px-2.5 py-1 bg-purple-50/80 border border-purple-100 text-purple-700 text-[11px] font-semibold rounded-lg"
+            className="px-2 py-0.5 bg-purple-50/80 border border-purple-100/70 text-purple-700 text-[10px] font-semibold rounded-md"
           >
             {skill}
           </span>
         ))}
         {remainingSkillsCount > 0 && (
-          <span className="px-2 py-1 bg-gray-100 text-gray-600 text-[11px] font-bold rounded-lg">
+          <span className="text-[10px] font-medium text-gray-400 pl-0.5">
             +{remainingSkillsCount}
           </span>
         )}
       </div>
 
-      {/* Review Status / Rating Score Bar */}
+      {/* Review Rating Bar if present */}
       {application.ratingScore && (
-        <div className="p-2 bg-amber-50/70 border border-amber-100 rounded-xl flex items-center justify-between text-[11px]">
-          <div className="flex items-center gap-1.5 text-amber-800 font-semibold">
-            <Clock size={12} className="text-amber-600" />
+        <div className="p-1.5 bg-amber-50/70 border border-amber-100 rounded-lg flex items-center justify-between text-[10px]">
+          <div className="flex items-center gap-1 text-amber-800 font-semibold">
+            <Clock size={11} className="text-amber-600" />
             <span>Pending</span>
           </div>
           <div className="flex items-center gap-1 font-extrabold text-amber-900">
-            <Star size={12} className="fill-amber-400 text-amber-400" />
+            <Star size={11} className="fill-amber-400 text-amber-400" />
             <span>{application.ratingScore}</span>
           </div>
         </div>
       )}
 
+      {/* Divider */}
+      <div className="border-t border-gray-100 pt-1.5" />
+
       {/* Footer Info: Interviewer & Applied Date */}
-      <div className="pt-2 border-t border-gray-100/80 flex items-center justify-between text-[11px] text-gray-400 font-medium">
-        <div className="flex items-center gap-1 truncate max-w-[140px]">
-          <UserIcon size={12} className="shrink-0 text-gray-400" />
-          <span className="truncate">{interviewerName || "Tuyển dụng"}</span>
+      <div className="flex items-center justify-between text-[10px] text-gray-400 font-medium">
+        <div className="flex items-center gap-1 truncate max-w-[120px]">
+          <UserIcon size={11} className="shrink-0 text-gray-400" />
+          <span className="truncate">{interviewerName}</span>
         </div>
 
         <div className="flex items-center gap-1 shrink-0">
-          <Calendar size={12} className="text-gray-400" />
+          <Calendar size={11} className="text-gray-400" />
           <span>{formattedDate}</span>
         </div>
       </div>

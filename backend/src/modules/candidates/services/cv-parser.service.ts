@@ -1,17 +1,30 @@
 import { Injectable, BadRequestException, InternalServerErrorException, ServiceUnavailableException } from '@nestjs/common';
 import { GoogleGenAI, Type, Schema } from '@google/genai';
+import OpenAI from 'openai';
 import * as mammoth from 'mammoth';
 
 @Injectable()
 export class CvParserService {
-  private ai: GoogleGenAI;
+  private ai?: GoogleGenAI;
+  private openrouter?: OpenAI;
 
   constructor() {
-    const apiKey = process.env.GEMINI_API_KEY;
-    if (!apiKey) {
-      console.warn('⚠️ Thiếu GEMINI_API_KEY trong file .env');
+    const openrouterKey = process.env.OPENROUTER_API_KEY;
+    if (openrouterKey && openrouterKey.trim().length > 0) {
+      this.openrouter = new OpenAI({
+        baseURL: 'https://openrouter.ai/api/v1',
+        apiKey: openrouterKey,
+        defaultHeaders: {
+          'HTTP-Referer': 'http://localhost:4000',
+          'X-Title': 'TalentCore ATS',
+        },
+      });
     }
-    this.ai = new GoogleGenAI({ apiKey: apiKey || '' });
+
+    const apiKey = process.env.GEMINI_API_KEY;
+    if (apiKey) {
+      this.ai = new GoogleGenAI({ apiKey });
+    }
   }
 
   async parseCvFileWithAi(file: Express.Multer.File) {
@@ -32,6 +45,7 @@ export class CvParserService {
       3. Đánh giá số năm kinh nghiệm (yearsOfExperience) dạng số thực (number) dựa trên lịch sử làm việc. Nếu là Intern/Fresher thì để 0.
       4. Phân loại proficiency kỹ năng thành một trong các giá trị: BEGINNER, INTERMEDIATE, ADVANCED, EXPERT.
       5. Không bịa đặt dữ liệu. Nếu không tìm thấy trường thông tin, để chuỗi rỗng "" hoặc mảng rỗng [].
+      6. Trả về duy nhất 1 JSON object chứa các trường: fullName, headline, summary, careerObjective, address, phone, yearsOfExperience, currentLevel, socialLinks, skills, experiences, educations, projects, certifications, languages.
     `;
 
     const responseSchema: Schema = {
@@ -142,85 +156,148 @@ export class CvParserService {
     };
 
     try {
-      let parts: any[] = [];
+      // 1. Try OpenRouter Client first if configured
+      if (this.openrouter) {
+        const model = process.env.OPENROUTER_MODEL || 'google/gemini-2.0-flash-001';
+        let userContent: any;
 
-      if (originalName.endsWith('.docx') || mimeType.includes('wordprocessingml')) {
-        const { value: extractedText } = await mammoth.extractRawText({
-          buffer: file.buffer,
-        });
+        if (originalName.endsWith('.docx') || mimeType.includes('wordprocessingml')) {
+          const { value: extractedText } = await mammoth.extractRawText({
+            buffer: file.buffer,
+          });
 
-        if (!extractedText || extractedText.trim().length < 30) {
-          throw new BadRequestException('Không thể đọc nội dung văn bản từ file Word.');
+          if (!extractedText || extractedText.trim().length < 30) {
+            throw new BadRequestException('Không thể đọc nội dung văn bản từ file Word.');
+          }
+
+          userContent = `Dưới đây là toàn bộ nội dung trích xuất từ CV định dạng Word. Hãy bóc tách thành JSON theo đúng các trường thông tin:\n\n${extractedText}`;
+        } else if (
+          mimeType === 'application/pdf' ||
+          mimeType.startsWith('image/') ||
+          originalName.match(/\.(pdf|png|jpg|jpeg|webp)$/)
+        ) {
+          const targetMime =
+            mimeType === 'application/pdf' || originalName.endsWith('.pdf')
+              ? 'application/pdf'
+              : mimeType.startsWith('image/')
+              ? mimeType
+              : 'image/jpeg';
+
+          const base64Data = file.buffer.toString('base64');
+          const dataUrl = `data:${targetMime};base64,${base64Data}`;
+
+          userContent = [
+            { type: 'text', text: 'Hãy đọc toàn bộ tài liệu CV đính kèm và trích xuất dữ liệu hồ sơ ứng viên thành JSON.' },
+            { type: 'image_url', image_url: { url: dataUrl } },
+          ];
+        } else {
+          throw new BadRequestException('Định dạng file không được hỗ trợ. Vui lòng tải lên PDF, DOCX hoặc Ảnh (PNG, JPG).');
         }
 
-        parts = [
-          {
-            text: `Dưới đây là toàn bộ nội dung trích xuất từ CV định dạng Word. Hãy bóc tách thành JSON theo schema:\n\n${extractedText}`,
-          },
-        ];
-      }
-      else if (
-        mimeType === 'application/pdf' ||
-        mimeType.startsWith('image/') ||
-        originalName.match(/\.(pdf|png|jpg|jpeg|webp)$/)
-      ) {
-        const targetMime =
-          mimeType === 'application/pdf' || originalName.endsWith('.pdf')
-            ? 'application/pdf'
-            : mimeType.startsWith('image/')
-            ? mimeType
-            : 'image/jpeg';
-
-        parts = [
-          {
-            inlineData: {
-              mimeType: targetMime,
-              data: file.buffer.toString('base64'),
-            },
-          },
-          {
-            text: 'Hãy đọc toàn bộ tài liệu CV đính kèm và trích xuất dữ liệu hồ sơ ứng viên theo đúng cấu trúc schema được yêu cầu.',
-          },
-        ];
-      } else {
-        throw new BadRequestException(
-          'Định dạng file không được hỗ trợ. Vui lòng tải lên PDF, DOCX hoặc Ảnh (PNG, JPG).'
-        );
-      }
-
-      const response = await this.ai.models.generateContent({
-        model: 'gemini-3.6-flash',
-        contents: [
-          {
-            role: 'user',
-            parts,
-          },
-        ],
-        config: {
-          systemInstruction,
-          responseMimeType: 'application/json',
-          responseSchema: responseSchema,
+        const response = await this.openrouter.chat.completions.create({
+          model,
+          messages: [
+            { role: 'system', content: systemInstruction },
+            { role: 'user', content: userContent },
+          ],
+          response_format: { type: 'json_object' },
           temperature: 0.0,
-          maxOutputTokens: 8192,
-        },
-      });
+          max_tokens: 4096,
+        });
 
-      let rawText = response.text || '';
-      if (rawText.startsWith('```json')) {
-        rawText = rawText.replace(/^```json\s*/, '').replace(/\s*```$/, '');
-      } else if (rawText.startsWith('```')) {
-        rawText = rawText.replace(/^```\s*/, '').replace(/\s*```$/, '');
+        let rawText = response.choices[0]?.message?.content || '';
+        if (rawText.startsWith('```json')) {
+          rawText = rawText.replace(/^```json\s*/, '').replace(/\s*```$/, '');
+        } else if (rawText.startsWith('```')) {
+          rawText = rawText.replace(/^```\s*/, '').replace(/\s*```$/, '');
+        }
+
+        return JSON.parse(rawText.trim());
       }
 
-      return JSON.parse(rawText.trim());
+      // 2. Fallback to GoogleGenAI Client
+      if (this.ai) {
+        let parts: any[] = [];
+
+        if (originalName.endsWith('.docx') || mimeType.includes('wordprocessingml')) {
+          const { value: extractedText } = await mammoth.extractRawText({
+            buffer: file.buffer,
+          });
+
+          if (!extractedText || extractedText.trim().length < 30) {
+            throw new BadRequestException('Không thể đọc nội dung văn bản từ file Word.');
+          }
+
+          parts = [
+            {
+              text: `Dưới đây là toàn bộ nội dung trích xuất từ CV định dạng Word. Hãy bóc tách thành JSON theo schema:\n\n${extractedText}`,
+            },
+          ];
+        } else if (
+          mimeType === 'application/pdf' ||
+          mimeType.startsWith('image/') ||
+          originalName.match(/\.(pdf|png|jpg|jpeg|webp)$/)
+        ) {
+          const targetMime =
+            mimeType === 'application/pdf' || originalName.endsWith('.pdf')
+              ? 'application/pdf'
+              : mimeType.startsWith('image/')
+              ? mimeType
+              : 'image/jpeg';
+
+          parts = [
+            {
+              inlineData: {
+                mimeType: targetMime,
+                data: file.buffer.toString('base64'),
+              },
+            },
+            {
+              text: 'Hãy đọc toàn bộ tài liệu CV đính kèm và trích xuất dữ liệu hồ sơ ứng viên theo đúng cấu trúc schema được yêu cầu.',
+            },
+          ];
+        } else {
+          throw new BadRequestException(
+            'Định dạng file không được hỗ trợ. Vui lòng tải lên PDF, DOCX hoặc Ảnh (PNG, JPG).'
+          );
+        }
+
+        const response = await this.ai.models.generateContent({
+          model: 'gemini-3.6-flash',
+          contents: [
+            {
+              role: 'user',
+              parts,
+            },
+          ],
+          config: {
+            systemInstruction,
+            responseMimeType: 'application/json',
+            responseSchema: responseSchema,
+            temperature: 0.0,
+            maxOutputTokens: 8192,
+          },
+        });
+
+        let rawText = response.text || '';
+        if (rawText.startsWith('```json')) {
+          rawText = rawText.replace(/^```json\s*/, '').replace(/\s*```$/, '');
+        } else if (rawText.startsWith('```')) {
+          rawText = rawText.replace(/^```\s*/, '').replace(/\s*```$/, '');
+        }
+
+        return JSON.parse(rawText.trim());
+      }
+
+      throw new InternalServerErrorException('Chưa cấu hình API Key cho OpenRouter hoặc Gemini.');
     } catch (error: any) {
-      console.error('Lỗi khi bóc tách CV qua Gemini:', error?.message || error);
+      console.error('Lỗi khi bóc tách CV qua AI:', error?.message || error);
 
       if (error?.status === 503 || error?.message?.includes('503') || error?.message?.includes('high demand')) {
         throw new ServiceUnavailableException('Hệ thống AI đang bận hoặc quá tải. Vui lòng thử lại sau giây lát!');
       }
 
-      throw new InternalServerErrorException('Có lỗi xảy ra, vui lòng thử lại');
-        }
+      throw new InternalServerErrorException('Có lỗi xảy ra khi bóc tách CV, vui lòng thử lại');
+    }
   }
 }

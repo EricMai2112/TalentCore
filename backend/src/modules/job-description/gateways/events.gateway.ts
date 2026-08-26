@@ -43,4 +43,14 @@ export class EventsGateway
     this.logger.log(`Broadcasting job_updated event for job: ${job._id}`);
     this.server.emit('job_updated', job);
   }
+
+  emitNewApplication(application: any) {
+    this.logger.log(`Broadcasting new_application event for application: ${application._id}`);
+    this.server.emit('new_application', application);
+  }
+
+  emitApplicationUpdated(application: any) {
+    this.logger.log(`Broadcasting application_updated event for application: ${application._id}`);
+    this.server.emit('application_updated', application);
+  }
 }
