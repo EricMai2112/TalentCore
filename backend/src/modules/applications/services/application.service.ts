@@ -214,19 +214,11 @@ export class ApplicationService {
       (s: any) => s._id.toString() === application.currentStageId.toString(),
     );
 
-    const aiEval = await this.aiEvaluationModel
-      .findOne({ applicationId: application._id })
-      .lean()
-      .exec();
-
     return {
       ...application.toObject(),
       stageName: currentStage?.name || 'Không xác định',
       stageColor: currentStage?.color || '#94a3b8',
       currentStage,
-      aiFitScore: aiEval?.aiFitScore ?? null,
-      isMissingMandatory: Boolean(aiEval?.isMissingMandatory),
-      aiEvaluation: aiEval || null,
     };
   }
 }

@@ -252,10 +252,10 @@ export default function CandidateProfileView({ profileId }: CandidateProfileView
 
   return (
     <ActiveProfileProvider profileId={profileId}>
-    <div className="mmin-h-screen bg-slate-50/50 py-8 px-4 sm:px-6 lg:px-10 xl:px-12">
-      <div className="max-w-6xl mx-auto space-y-6 pb-20 text-slate-900">
+    <div className="w-full">
+      <div className="max-w-[1560px] mx-auto space-y-4 pb-16 text-slate-900">
         {profile?.profileName && (
-          <div className="flex items-center justify-between bg-white border border-slate-200 rounded-2xl px-5 py-3.5 shadow-xs">
+          <div className="flex items-center justify-between bg-white border border-slate-200 rounded-2xl px-5 py-2.5 shadow-xs">
             <div className="flex items-center gap-3">
               <div className="w-2 h-2 rounded-full bg-blue-500 shrink-0" />
               <span className="text-sm font-bold text-slate-800">
@@ -276,23 +276,23 @@ export default function CandidateProfileView({ profileId }: CandidateProfileView
             </a>
           </div>
         )}
-      <div className="bg-gradient-to-r from-blue-600 via-indigo-600 to-violet-600 rounded-3xl p-6 sm:p-7 text-white shadow-lg shadow-blue-500/10 flex flex-col sm:flex-row items-center justify-between gap-6">
-        <div className="space-y-1.5 text-center sm:text-left">
-          <div className="inline-flex items-center gap-1.5 px-3 py-1 bg-white/20 backdrop-blur-md rounded-full text-xs font-bold text-blue-50 mb-1">
+      <div className="bg-gradient-to-r from-blue-600 via-indigo-600 to-violet-600 rounded-3xl p-5 sm:p-6 text-white shadow-lg shadow-blue-500/10 flex flex-col sm:flex-row items-center justify-between gap-5">
+        <div className="space-y-1 text-center sm:text-left">
+          <div className="inline-flex items-center gap-1.5 px-3 py-0.5 bg-white/20 backdrop-blur-md rounded-full text-xs font-bold text-blue-50 mb-0.5">
             <Sparkles size={14} className="text-yellow-300 animate-spin" />
             <span>Tính năng AI thông minh</span>
           </div>
           <h2 className="text-xl sm:text-2xl font-extrabold tracking-tight">
             Tự động điền hồ sơ bằng CV sẵn có
           </h2>
-          <p className="text-xs sm:text-sm text-blue-100 max-w-xl font-medium">
+          <p className="text-xs sm:text-sm text-blue-100 max-w-2xl font-medium">
             Hỗ trợ tải lên file <strong>PDF, Word hoặc Ảnh CV</strong>. Hệ thống TalentCore sẽ tự động trích xuất các thông tin chỉ trong vài giây.
           </p>
         </div>
 
         <div className="shrink-0 w-full sm:w-auto">
           <label
-            className={`inline-flex items-center justify-center gap-2 px-6 py-3.5 bg-white text-blue-700 hover:bg-blue-50 active:scale-95 text-xs font-extrabold rounded-2xl shadow-md cursor-pointer transition-all w-full sm:w-auto ${
+            className={`inline-flex items-center justify-center gap-2 px-6 py-3 bg-white text-blue-700 hover:bg-blue-50 active:scale-95 text-xs font-extrabold rounded-2xl shadow-md cursor-pointer transition-all w-full sm:w-auto ${
               isParsingCv ? "opacity-75 pointer-events-none" : ""
             }`}
           >
@@ -318,11 +318,11 @@ export default function CandidateProfileView({ profileId }: CandidateProfileView
         </div>
       </div>
 
-      <div className="flex flex-col lg:flex-row items-start gap-6">
-        <div className="hidden lg:block w-72 shrink-0 self-stretch">
+      <div className="flex flex-col lg:flex-row items-start gap-5">
+        <div className="hidden lg:block w-72 xl:w-80 shrink-0 self-stretch">
           <ProfileNavSidebar profile={profile} />
         </div>
-        <div className="flex-1 w-full space-y-6">
+        <div className="flex-1 min-w-0 w-full space-y-4">
           {/* 1. THÔNG TIN CÁ NHÂN & SOCIAL LINKS (HEADER CARD) */}
           <section id="section-personal-info" className="bg-white rounded-2xl p-6 sm:p-8 shadow-xs border border-slate-200/90">
             {/* Header hàng trên: Avatar + Thông tin bên trái & DUY NHẤT 1 NÚT CHỈNH SỬA bên phải */}

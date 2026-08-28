@@ -45,6 +45,7 @@ export class AiMatchingProcessor {
       const aiResult = await this.aiMatchingService.evaluateCriteriaWithAi(
         fullCvText,
         job.title,
+        job.experienceLevel,
         job.criteria,
       );
 
