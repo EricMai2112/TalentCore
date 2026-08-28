@@ -14,7 +14,7 @@ export default async function EditProfileByIdPage({ params }: PageProps) {
   const { id } = await params;
 
   return (
-    <div className="min-h-screen bg-[#f8fafc] text-slate-900 py-10 px-4 sm:px-6 lg:px-8">
+    <div className="min-h-screen bg-[#f8fafc] text-slate-900 py-3 px-2 sm:px-4 lg:px-6 xl:px-8">
       <CandidateProfileView profileId={id} />
     </div>
   );

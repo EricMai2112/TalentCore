@@ -157,7 +157,6 @@ export default function CandidateJobsClient({ initialJobs }: CandidateJobsClient
             <JobCard
               key={job._id}
               job={job}
-              onApply={handleApplyJob}
             />
           ))}
         </div>
