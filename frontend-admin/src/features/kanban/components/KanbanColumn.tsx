@@ -34,7 +34,7 @@ export default function KanbanColumn({
   return (
     <div
       ref={setNodeRef}
-      className={`bg-gray-50/70 border rounded-3xl p-4 min-w-[290px] max-w-[340px] flex-1 flex flex-col transition-all duration-200 ${
+      className={`bg-gray-50/70 border rounded-3xl p-4 min-w-[300px] max-w-[360px] flex-1 flex flex-col transition-all duration-200 ${
         isOver
           ? "border-indigo-400 bg-indigo-50/40 ring-2 ring-indigo-500/20"
           : "border-gray-100"

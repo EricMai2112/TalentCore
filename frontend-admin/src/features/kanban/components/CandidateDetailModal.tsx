@@ -212,14 +212,25 @@ export default function CandidateDetailModal({
                     </p>
                   </div>
 
-                  <div className="flex items-center gap-3 self-end sm:self-center">
+                  <div className="flex items-center gap-2.5 self-end sm:self-center">
+                    {typeof (application.evidenceStrengthScore ?? aiEval?.evidenceStrengthScore) === "number" &&
+                      (application.evidenceStrengthScore ?? aiEval?.evidenceStrengthScore ?? 0) > 0 && (
+                        <div className="px-4 py-2 rounded-2xl border border-violet-200 bg-violet-50/90 text-center shadow-2xs">
+                          <span className="text-[10px] font-bold uppercase tracking-wider block text-violet-700 opacity-80">
+                            Evidence Score
+                          </span>
+                          <span className="text-2xl font-black text-violet-800 tracking-tight">
+                            {application.evidenceStrengthScore ?? aiEval?.evidenceStrengthScore}/100
+                          </span>
+                        </div>
+                      )}
                     <div
                       className={`px-5 py-3 rounded-2xl border text-center shadow-xs ${getScoreColor(
                         aiScore
                       )}`}
                     >
                       <span className="text-[10px] font-bold uppercase tracking-wider block opacity-70">
-                        Overall Score
+                        AI Match Score
                       </span>
                       <span className="text-3xl font-black tracking-tight">{aiScore}%</span>
                     </div>
