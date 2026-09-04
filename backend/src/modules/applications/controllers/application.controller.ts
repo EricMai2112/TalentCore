@@ -53,6 +53,38 @@ export class ApplicationController {
     }
   }
 
+  @Get('my-applications')
+  async getMyApplications(@Req() req: Request) {
+    let token = req.cookies?.['accessToken'];
+
+    if (!token && req.headers.authorization) {
+      const parts = req.headers.authorization.split(' ');
+      if (parts.length === 2 && parts[0] === 'Bearer') {
+        token = parts[1];
+      }
+    }
+
+    if (!token) {
+      throw new UnauthorizedException('Chưa đăng nhập');
+    }
+
+    try {
+      const payload = this.jwtService.verify(token);
+      const userId = payload.sub || payload.id || payload._id;
+
+      const data = await this.applicationService.getApplicationsByUserId(userId);
+      return {
+        message: 'Lấy danh sách đơn ứng tuyển của tôi thành công',
+        data,
+      };
+    } catch (error: any) {
+      if (error?.status && error.status !== 500) {
+        throw error;
+      }
+      throw new UnauthorizedException('Token không hợp lệ hoặc đã hết hạn');
+    }
+  }
+
   @Get('kanban')
   async getKanbanApplications(
     @Query('departmentId') departmentId?: string,

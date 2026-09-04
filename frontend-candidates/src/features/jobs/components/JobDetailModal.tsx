@@ -1,3 +1,7 @@
+"use client";
+
+import { useEffect, useState } from "react";
+import { createPortal } from "react-dom";
 import { X, MapPin, DollarSign, Briefcase, Calendar, CheckCircle2, Building2, Send, Sparkles } from "lucide-react";
 import { CandidateJob, EmploymentType } from "../types/job.types";
 
@@ -14,7 +18,13 @@ export default function JobDetailModal({
   job,
   onApply,
 }: JobDetailModalProps) {
-  if (!isOpen || !job) return null;
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
+
+  if (!isOpen || !job || !mounted) return null;
 
   const deptName = typeof job.departmentId === "object" ? job.departmentId?.name : "Công nghệ";
   const pipeline = typeof job.pipelineTemplateId === "object" ? job.pipelineTemplateId : null;
@@ -31,10 +41,11 @@ export default function JobDetailModal({
     }
   };
 
-  return (
-    <div className="fixed inset-0 z-50 bg-slate-900/50 backdrop-blur-xs flex items-center justify-center p-4 animate-in fade-in duration-200">
+  const modalContent = (
+    <div className="fixed inset-0 z-[9999] bg-slate-900/50 backdrop-blur-xs flex items-center justify-center p-4 animate-in fade-in duration-200">
+      <div className="fixed inset-0" onClick={onClose} />
       <div
-        className="bg-white border border-slate-200/80 rounded-3xl w-full max-w-3xl shadow-2xl overflow-hidden flex flex-col max-h-[90vh] text-slate-900 animate-in zoom-in-95 duration-200"
+        className="relative bg-white border border-slate-200/80 rounded-3xl w-full max-w-3xl shadow-2xl overflow-hidden flex flex-col max-h-[90vh] text-slate-900 animate-in zoom-in-95 duration-200 z-10"
         onClick={(e) => e.stopPropagation()}
       >
         {/* Header */}
@@ -191,4 +202,6 @@ export default function JobDetailModal({
       </div>
     </div>
   );
+
+  return createPortal(modalContent, document.body);
 }

@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { createPortal } from "react-dom";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import {
@@ -9,7 +10,6 @@ import {
   CheckCircle2,
   AlertTriangle,
   Loader2,
-  FileText,
   Layers,
   Plus,
 } from "lucide-react";
@@ -29,12 +29,17 @@ export default function ApplyModal({ isOpen, onClose, job }: ApplyModalProps) {
   const router = useRouter();
   const { user } = useAuth();
 
+  const [mounted, setMounted] = useState(false);
   const [profiles, setProfiles] = useState<CandidateProfile[]>([]);
   const [selectedCandidateId, setSelectedCandidateId] = useState<string>("");
   const [isLoadingProfiles, setIsLoadingProfiles] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [isSuccess, setIsSuccess] = useState(false);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
 
   // Tải danh sách các hồ sơ của ứng viên khi mở modal
   useEffect(() => {
@@ -59,7 +64,7 @@ export default function ApplyModal({ isOpen, onClose, job }: ApplyModalProps) {
     }
   }, [isOpen, user]);
 
-  if (!isOpen || !job) return null;
+  if (!isOpen || !job || !mounted) return null;
 
   const deptName =
     typeof job.departmentId === "object" ? job.departmentId?.name : "Công nghệ";
@@ -100,12 +105,12 @@ export default function ApplyModal({ isOpen, onClose, job }: ApplyModalProps) {
     }
   };
 
-  return (
-    <div className="fixed inset-0 z-50 bg-slate-950/70 backdrop-blur-xs flex items-center justify-center p-4 animate-in fade-in duration-150">
+  const modalContent = (
+    <div className="fixed inset-0 z-[9999] bg-slate-950/70 backdrop-blur-xs flex items-center justify-center p-4 animate-in fade-in duration-150">
       <div className="fixed inset-0" onClick={onClose} />
 
       <div
-        className="relative bg-white rounded-3xl w-full max-w-lg shadow-2xl overflow-hidden text-slate-900 z-10 animate-in zoom-in-95 duration-150"
+        className="relative bg-white rounded-3xl w-full max-w-lg shadow-2xl overflow-hidden text-slate-900 z-[10000] animate-in zoom-in-95 duration-150"
         onClick={(e) => e.stopPropagation()}
       >
         {/* Header */}
@@ -208,7 +213,7 @@ export default function ApplyModal({ isOpen, onClose, job }: ApplyModalProps) {
                     Bạn chưa có hồ sơ nào. Vui lòng tạo hồ sơ trước khi ứng tuyển.
                   </p>
                   <Link
-                    href="/user/profiles"
+                    href="/user/profile"
                     className="inline-block font-bold text-blue-600 underline"
                   >
                     Tạo hồ sơ ngay &rarr;
@@ -250,4 +255,6 @@ export default function ApplyModal({ isOpen, onClose, job }: ApplyModalProps) {
       </div>
     </div>
   );
+
+  return createPortal(modalContent, document.body);
 }

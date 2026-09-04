@@ -115,7 +115,7 @@ export default function MobileMenu({ navItems }: MobileMenuProps) {
 
               {/* Applied Jobs Link */}
               <Link
-                href="/jobs"
+                href="/user/applications"
                 onClick={() => setIsOpen(false)}
                 className="flex items-center gap-3 px-4 py-3 rounded-xl bg-slate-900/60 border border-slate-800/80 text-sm font-semibold text-slate-200 hover:text-blue-400 hover:bg-slate-900 transition-all"
               >

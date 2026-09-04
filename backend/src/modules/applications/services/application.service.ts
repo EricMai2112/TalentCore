@@ -293,4 +293,102 @@ export class ApplicationService {
     await this.applicationModel.findByIdAndDelete(applicationId);
     return { success: true };
   }
+
+  async getApplicationsByUserId(userId: string) {
+    const userObjId = new Types.ObjectId(userId);
+    const candidateProfiles = await this.candidateModel
+      .find({ userId: userObjId }, { _id: 1 })
+      .exec();
+
+    const candidateIds = candidateProfiles.map((p) => p._id);
+
+    const applications = await this.applicationModel
+      .find({ candidateId: { $in: candidateIds } })
+      .populate({
+        path: 'jobDescriptionId',
+        populate: [
+          { path: 'departmentId' },
+          { path: 'pipelineTemplateId' },
+        ],
+      })
+      .populate({
+        path: 'candidateId',
+        populate: { path: 'userId', select: 'name email phone avatar' },
+      })
+      .sort({ appliedAt: -1 })
+      .lean()
+      .exec();
+
+    const appIds = applications.map((app) => app._id);
+    const evaluations = await this.aiEvaluationModel
+      .find({ applicationId: { $in: appIds } })
+      .lean()
+      .exec();
+
+    const evalMap = new Map<string, any>();
+    evaluations.forEach((item) => {
+      evalMap.set(item.applicationId.toString(), item);
+    });
+
+    const mappedApps = applications.map((app: any) => {
+      const aiEval = evalMap.get(app._id.toString());
+      const job = app.jobDescriptionId as any;
+      const pipeline = job?.pipelineTemplateId;
+
+      const rawStages = pipeline?.stages
+        ? [...pipeline.stages].sort((a: any, b: any) => a.order - b.order)
+        : [];
+
+      const currentStageIndex = rawStages.findIndex(
+        (s: any) => s._id?.toString() === app.currentStageId?.toString(),
+      );
+
+      const currentStage =
+        currentStageIndex >= 0 ? rawStages[currentStageIndex] : null;
+
+      return {
+        ...app,
+        stageName: currentStage?.name || 'Mới ứng tuyển',
+        stageColor: currentStage?.color || '#4f46e5',
+        currentStage,
+        currentStageIndex: currentStageIndex >= 0 ? currentStageIndex : 0,
+        stages: rawStages,
+        aiFitScore: aiEval?.aiFitScore ?? app?.aiFitScore ?? null,
+        aiEvaluation: aiEval || null,
+      };
+    });
+
+    const totalApplied = mappedApps.length;
+    let processingCount = 0;
+    let interviewCount = 0;
+    let offerCount = 0;
+
+    mappedApps.forEach((app) => {
+      const sName = (app.stageName || '').toLowerCase();
+      if (sName.includes('offer')) {
+        offerCount++;
+      } else if (
+        sName.includes('phỏng vấn') ||
+        sName.includes('interview') ||
+        sName.includes('tech') ||
+        sName.includes('phone') ||
+        sName.includes('culture')
+      ) {
+        interviewCount++;
+        processingCount++;
+      } else {
+        processingCount++;
+      }
+    });
+
+    return {
+      applications: mappedApps,
+      stats: {
+        totalApplied,
+        processingCount,
+        interviewCount,
+        offerCount,
+      },
+    };
+  }
 }
