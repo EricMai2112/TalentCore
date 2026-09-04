@@ -21,7 +21,7 @@ import { UserRole } from "@/src/features/users/types/user.types";
 import KanbanHeaderFilters from "./KanbanHeaderFilters";
 import KanbanColumn from "./KanbanColumn";
 import CandidateKanbanCard from "./CandidateKanbanCard";
-import CandidateDetailModal from "./CandidateDetailModal";
+import CandidateDetailModal from "@/src/features/candidates/components/CandidateDetailModal";
 
 interface KanbanContainerProps {
   initialDepartments: Department[];
