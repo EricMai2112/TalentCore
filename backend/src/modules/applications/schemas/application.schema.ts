@@ -3,6 +3,14 @@ import { Document, Types } from 'mongoose';
 
 export type ApplicationDocument = Application & Document;
 
+export class ApplicationNote {
+  _id?: Types.ObjectId;
+  authorName: string;
+  authorRole: string;
+  content: string;
+  createdAt: Date;
+}
+
 @Schema({ timestamps: true })
 export class Application {
   @Prop({ type: Types.ObjectId, ref: 'Candidate', required: true, index: true })
@@ -16,6 +24,19 @@ export class Application {
 
   @Prop({ type: Date, default: Date.now })
   appliedAt: Date;
+
+  @Prop({
+    type: [
+      {
+        authorName: { type: String, required: true },
+        authorRole: { type: String, required: true },
+        content: { type: String, required: true },
+        createdAt: { type: Date, default: Date.now },
+      },
+    ],
+    default: [],
+  })
+  notes: ApplicationNote[];
 }
 
 export const ApplicationSchema = SchemaFactory.createForClass(Application);

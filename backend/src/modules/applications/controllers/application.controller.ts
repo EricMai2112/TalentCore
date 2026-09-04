@@ -3,6 +3,7 @@ import {
   Post,
   Get,
   Put,
+  Delete,
   Body,
   Param,
   Query,
@@ -77,6 +78,27 @@ export class ApplicationController {
     const data = await this.applicationService.updateApplicationStage(id, stageId);
     return {
       message: 'Cập nhật giai đoạn phỏng vấn thành công',
+      data,
+    };
+  }
+
+  @Post(':id/notes')
+  async addNote(
+    @Param('id') id: string,
+    @Body() dto: { authorName: string; authorRole: string; content: string },
+  ) {
+    const data = await this.applicationService.addNote(id, dto);
+    return {
+      message: 'Thêm ghi chú thành công',
+      data,
+    };
+  }
+
+  @Delete(':id')
+  async deleteApplication(@Param('id') id: string) {
+    const data = await this.applicationService.deleteApplication(id);
+    return {
+      message: 'Xóa đơn ứng tuyển thành công',
       data,
     };
   }

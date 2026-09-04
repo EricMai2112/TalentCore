@@ -130,8 +130,17 @@ export class ApplicationService {
 
     let filtered = applications.map((app: any) => {
       const aiEval = evalMap.get(app._id.toString());
+      const job = app.jobDescriptionId as any;
+      const pipeline = job?.pipelineTemplateId;
+      const currentStage = pipeline?.stages?.find(
+        (s: any) => s._id?.toString() === app.currentStageId?.toString(),
+      );
+
       return {
         ...app,
+        stageName: currentStage?.name || 'Mới',
+        stageColor: currentStage?.color || '#94a3b8',
+        currentStage: currentStage || null,
         aiFitScore: aiEval?.aiFitScore ?? app?.aiFitScore ?? null,
         evidenceStrengthScore: aiEval?.evidenceStrengthScore ?? 0,
         isMissingMandatory: Boolean(aiEval?.isMissingMandatory),
@@ -245,5 +254,43 @@ export class ApplicationService {
       stageColor: currentStage?.color || '#94a3b8',
       currentStage,
     };
+  }
+
+  async addNote(
+    applicationId: string,
+    dto: { authorName: string; authorRole: string; content: string },
+  ) {
+    if (!Types.ObjectId.isValid(applicationId)) {
+      throw new BadRequestException('ID đơn ứng tuyển không hợp lệ');
+    }
+
+    const application = await this.applicationModel.findById(applicationId);
+    if (!application) {
+      throw new NotFoundException('Không tìm thấy đơn ứng tuyển');
+    }
+
+    const newNote = {
+      authorName: dto.authorName,
+      authorRole: dto.authorRole,
+      content: dto.content,
+      createdAt: new Date(),
+    };
+
+    if (!application.notes) {
+      application.notes = [];
+    }
+
+    application.notes.push(newNote as any);
+    await application.save();
+
+    return this.getApplicationById(applicationId);
+  }
+
+  async deleteApplication(applicationId: string) {
+    if (!Types.ObjectId.isValid(applicationId)) {
+      throw new BadRequestException('ID đơn ứng tuyển không hợp lệ');
+    }
+    await this.applicationModel.findByIdAndDelete(applicationId);
+    return { success: true };
   }
 }

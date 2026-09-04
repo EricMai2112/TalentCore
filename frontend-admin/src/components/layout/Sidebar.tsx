@@ -33,7 +33,7 @@ const navItems: NavItem[] = [
   { label: "Tổng quan", href: "/dashboard", icon: LayoutDashboard, roles: [UserRole.HR_ADMIN] },
   { label: "Tin tuyển dụng", href: "/job-description", icon: Briefcase, roles: [UserRole.DEPARTMENT_MANAGER, UserRole.HR_ADMIN] },
   { label: "Kanban Tuyển dụng", href: "/kanban", icon: LayoutGrid, roles: [UserRole.HR_ADMIN] },
-  { label: "Ứng viên", href: "/candidates", icon: UserRound, roles: [UserRole.HR_ADMIN] },
+  { label: "Ứng viên", href: "/candidates", icon: UserRound, roles: [UserRole.HR_ADMIN, UserRole.DEPARTMENT_MANAGER, UserRole.EMPLOYEE] },
   { label: "Phỏng vấn", href: "/interviews", icon: MessageSquare, roles: [UserRole.HR_ADMIN, UserRole.DEPARTMENT_MANAGER, UserRole.EMPLOYEE] },
   { label: "Offer", href: "/offers", icon: FileText, roles: [UserRole.HR_ADMIN] },
   { label: "Thông báo", href: "/notifications", icon: Bell, roles: [UserRole.HR_ADMIN] },
