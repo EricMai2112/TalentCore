@@ -182,7 +182,7 @@ export default function KanbanContainer({
     });
   }, [applications, scoreFilter]);
 
-  // Group applications by stageId
+  // Group applications by stageId and sort by score & evidence
   const applicationsByStage = useMemo(() => {
     const map = new Map<string, KanbanApplication[]>();
     activeStages.forEach((stg) => {
@@ -200,6 +200,34 @@ export default function KanbanContainer({
           map.get(firstStageId)!.push(app);
         }
       }
+    });
+
+    // Sắp xếp ứng viên trong từng cột theo quy tắc:
+    // 1. Điểm chính aiFitScore từ cao xuống thấp (chưa chấm xếp sau cùng)
+    // 2. Nếu điểm bằng nhau -> xét tới điểm độ mạnh bằng chứng (evidenceStrengthScore từ cao xuống thấp)
+    // 3. Nếu bằng nhau tiếp -> ngày nộp đơn (appliedAt) mới nhất lên trước
+    const sortApps = (a: KanbanApplication, b: KanbanApplication) => {
+      const scoreA = a.aiFitScore !== null && a.aiFitScore !== undefined ? a.aiFitScore : -1;
+      const scoreB = b.aiFitScore !== null && b.aiFitScore !== undefined ? b.aiFitScore : -1;
+
+      if (scoreB !== scoreA) {
+        return scoreB - scoreA;
+      }
+
+      const evidenceA = a.evidenceStrengthScore ?? a.aiEvaluation?.evidenceStrengthScore ?? 0;
+      const evidenceB = b.evidenceStrengthScore ?? b.aiEvaluation?.evidenceStrengthScore ?? 0;
+
+      if (evidenceB !== evidenceA) {
+        return evidenceB - evidenceA;
+      }
+
+      const timeA = new Date(a.appliedAt || 0).getTime();
+      const timeB = new Date(b.appliedAt || 0).getTime();
+      return timeB - timeA;
+    };
+
+    map.forEach((list) => {
+      list.sort(sortApps);
     });
 
     return map;

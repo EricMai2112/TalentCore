@@ -142,6 +142,7 @@ export class ApplicationService {
         stageColor: currentStage?.color || '#94a3b8',
         currentStage: currentStage || null,
         aiFitScore: aiEval?.aiFitScore ?? app?.aiFitScore ?? null,
+        evidenceStrengthScore: aiEval?.evidenceStrengthScore ?? 0,
         isMissingMandatory: Boolean(aiEval?.isMissingMandatory),
         aiEvaluation: aiEval || null,
       };
@@ -180,6 +181,30 @@ export class ApplicationService {
         return name.toLowerCase().includes(term) || jobTitle.toLowerCase().includes(term);
       });
     }
+
+    // Sắp xếp theo thứ tự ưu tiên:
+    // 1. Điểm chính aiFitScore từ cao xuống thấp (hồ sơ chưa chấm xếp sau)
+    // 2. Nếu điểm bằng nhau -> xét tới điểm độ mạnh bằng chứng (evidenceStrengthScore từ cao xuống thấp)
+    // 3. Nếu bằng nhau tiếp -> xét theo thời gian ứng tuyển (appliedAt mới nhất trước)
+    filtered.sort((a: any, b: any) => {
+      const scoreA = a.aiFitScore !== null && a.aiFitScore !== undefined ? a.aiFitScore : -1;
+      const scoreB = b.aiFitScore !== null && b.aiFitScore !== undefined ? b.aiFitScore : -1;
+
+      if (scoreB !== scoreA) {
+        return scoreB - scoreA;
+      }
+
+      const evidenceA = a.evidenceStrengthScore ?? a.aiEvaluation?.evidenceStrengthScore ?? 0;
+      const evidenceB = b.evidenceStrengthScore ?? b.aiEvaluation?.evidenceStrengthScore ?? 0;
+
+      if (evidenceB !== evidenceA) {
+        return evidenceB - evidenceA;
+      }
+
+      const timeA = new Date(a.appliedAt || 0).getTime();
+      const timeB = new Date(b.appliedAt || 0).getTime();
+      return timeB - timeA;
+    });
 
     return filtered;
   }

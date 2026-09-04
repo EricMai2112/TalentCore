@@ -115,6 +115,7 @@ export interface KanbanApplication {
   currentStageId: string;
   appliedAt: string;
   aiFitScore?: number;
+  evidenceStrengthScore?: number;
   isMissingMandatory?: boolean;
   ratingScore?: number;
   reviewStatus?: "Pending" | "Approved" | "Rejected";
