@@ -28,6 +28,9 @@ export class EvaluatedCriterion {
 
   @Prop({ default: false })
   isPassed: boolean;
+
+  @Prop({ required: false, type: Number, default: 0 })
+  evidenceStrengthScore: number; // Chỉ số phụ: Điểm độ mạnh bằng chứng (0 - 100)
 }
 export const EvaluatedCriterionSchema = SchemaFactory.createForClass(EvaluatedCriterion);
 
@@ -38,6 +41,9 @@ export class AiEvaluation {
 
   @Prop({ required: true, type: Number })
   aiFitScore: number;
+
+  @Prop({ required: false, type: Number, default: 0 })
+  evidenceStrengthScore: number; // Điểm độ mạnh bằng chứng tổng hợp (0 - 100)
 
   @Prop({ required: true, default: false })
   isMissingMandatory: boolean;

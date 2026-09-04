@@ -632,13 +632,22 @@ export default function CandidateDetailModal({
                           )}
                         </div>
 
-                        <div className="flex items-center gap-2">
+                        <div className="flex items-center gap-2 flex-wrap">
                           <span className="text-slate-500 font-medium text-xs">
                             Trọng số: <strong>{c.weight}%</strong>
                           </span>
                           <span className="px-3 py-1 rounded-xl bg-white border border-slate-200 text-indigo-600 font-extrabold text-xs shadow-2xs">
-                            {c.score}/100 (+{c.scoreContribution}%)
+                            Rubric: {c.score}/100 (+{c.scoreContribution}%)
                           </span>
+                          {typeof c.evidenceStrengthScore === "number" && (
+                            <span
+                              title="Điểm độ mạnh bằng chứng (Evidence Strength Score: tính toán độc lập theo độ khớp, số liệu định lượng & độ dài)"
+                              className="px-2.5 py-1 rounded-xl bg-violet-50 border border-violet-200 text-violet-700 font-extrabold text-xs flex items-center gap-1 shadow-2xs"
+                            >
+                              <Sparkles size={11} className="text-violet-500" />
+                              <span>Evidence: {c.evidenceStrengthScore}/100</span>
+                            </span>
+                          )}
                         </div>
                       </div>
 
