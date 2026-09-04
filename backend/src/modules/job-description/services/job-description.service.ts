@@ -92,7 +92,7 @@ export class JobDescriptionService {
 
     try {
       const response = await this.ai.models.generateContent({
-        model: 'gemini-3.6-flash',
+        model: 'gemini-3.8-flash',
         contents: [{ role: 'user', parts: [{ text: promptText }] }],
         config: {
           systemInstruction,

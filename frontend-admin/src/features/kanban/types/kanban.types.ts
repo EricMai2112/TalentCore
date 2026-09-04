@@ -8,6 +8,7 @@ export interface EvaluatedCriterion {
   scoreContribution: number;
   evidence: string;
   isEvidenceVerified: boolean;
+  evidenceStrengthScore?: number;
   isPassed: boolean;
 }
 
@@ -15,6 +16,7 @@ export interface AiEvaluationData {
   _id?: string;
   applicationId?: string;
   aiFitScore: number;
+  evidenceStrengthScore?: number;
   isMissingMandatory: boolean;
   warnings?: string[];
   summary?: string;
