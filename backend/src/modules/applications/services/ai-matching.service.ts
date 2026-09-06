@@ -169,18 +169,133 @@ export class AiMatchingService {
       """
     `;
 
-    const response = await this.ai.models.generateContent({
-      model: 'gemini-3.6-flash',
-      contents: [{ role: 'user', parts: [{ text: prompt }] }],
-      config: {
-        systemInstruction,
-        responseMimeType: 'application/json',
-        responseSchema,
-        temperature: 0.0,
+    const response = await this.executeWithRetry(
+      () =>
+        this.ai.models.generateContent({
+          model: 'gemini-3.8-flash',
+          contents: [{ role: 'user', parts: [{ text: prompt }] }],
+          config: {
+            systemInstruction,
+            responseMimeType: 'application/json',
+            responseSchema,
+            temperature: 0.0,
+          },
+        }),
+      {
+        maxAttempts: 5,
+        baseDelayMs: 2000,
+        maxDelayMs: 32000,
+        operationName: 'AiMatchingService.evaluateCriteriaWithAi',
       },
-    });
+    );
 
     return JSON.parse(response.text?.trim() || '{}');
+  }
+
+  private isTransientError(error: any): boolean {
+    const status = error?.status || error?.code || error?.error?.code;
+    const statusStr = String(error?.status || error?.error?.status || '').toUpperCase();
+    const message = String(error?.message || error?.error?.message || '').toLowerCase();
+
+    // 1. Lỗi vĩnh viễn (Permanent Errors): Fail ngay lập tức
+    if (
+      [400, 401, 403, 404].includes(status) ||
+      ['INVALID_ARGUMENT', 'UNAUTHENTICATED', 'PERMISSION_DENIED', 'NOT_FOUND'].includes(statusStr) ||
+      message.includes('api key') ||
+      message.includes('not valid') ||
+      message.includes('permission denied') ||
+      message.includes('not found') ||
+      message.includes('invalid argument')
+    ) {
+      return false;
+    }
+
+    // 2. Lỗi tạm thời theo mã trạng thái HTTP (Transient Status Codes)
+    if ([503, 429, 500, 502, 504].includes(status)) {
+      return true;
+    }
+
+    // 3. Lỗi tạm thời theo chuỗi trạng thái của Google GenAI SDK
+    if (['UNAVAILABLE', 'RESOURCE_EXHAUSTED', 'DEADLINE_EXCEEDED'].includes(statusStr)) {
+      return true;
+    }
+
+    // 4. Lỗi tạm thời theo nội dung thông báo lỗi
+    if (
+      message.includes('503') ||
+      message.includes('unavailable') ||
+      message.includes('high demand') ||
+      message.includes('temporarily') ||
+      message.includes('resource_exhausted') ||
+      message.includes('rate limit') ||
+      message.includes('quota') ||
+      message.includes('timeout') ||
+      message.includes('econnreset') ||
+      message.includes('etimedout')
+    ) {
+      return true;
+    }
+
+    return false;
+  }
+
+  private async executeWithRetry<T>(
+    operation: () => Promise<T>,
+    options: {
+      maxAttempts?: number;
+      baseDelayMs?: number;
+      maxDelayMs?: number;
+      operationName?: string;
+    } = {},
+  ): Promise<T> {
+    const maxAttempts = options.maxAttempts ?? 5;
+    const baseDelayMs = options.baseDelayMs ?? 2000;
+    const maxDelayMs = options.maxDelayMs ?? 32000;
+    const opName = options.operationName ?? 'Gemini API';
+
+    let lastError: any = null;
+
+    for (let attempt = 1; attempt <= maxAttempts; attempt++) {
+      try {
+        return await operation();
+      } catch (error: any) {
+        lastError = error;
+
+        // Bóc tách thông tin lỗi an toàn (che dấu API key nếu có trong log)
+        const status = error?.status || error?.code || error?.error?.code || 'UNKNOWN';
+        const rawMsg = error?.message || error?.error?.message || String(error);
+        const safeMsg = rawMsg.replace(/key=[a-zA-Z0-9_\-]+/gi, 'key=***');
+
+        // Nếu là lỗi vĩnh viễn (400, 401, 403, 404), fail ngay lập tức
+        if (!this.isTransientError(error)) {
+          this.logger.error(
+            `[${opName}] Lỗi vĩnh viễn (Permanent Error ${status}): ${safeMsg}. Hủy bỏ ngay lập tức, không retry.`,
+          );
+          throw error;
+        }
+
+        // Nếu đã hết số lần retry cho phép
+        if (attempt >= maxAttempts) {
+          this.logger.error(
+            `[${opName}] Đã thử lại tối đa ${maxAttempts} lần nhưng vẫn gặp lỗi tạm thời [${status}]: ${safeMsg}.`,
+          );
+          break;
+        }
+
+        // Tính toán Exponential Backoff + Jitter
+        const exponentialDelay = Math.min(baseDelayMs * Math.pow(2, attempt - 1), maxDelayMs);
+        const jitter = Math.floor(Math.random() * 500); // Thêm 0-500ms ngẫu nhiên tránh xung đột đồng thời
+        const actualDelay = Math.min(exponentialDelay + jitter, maxDelayMs);
+
+        this.logger.warn(
+          `[${opName}] Lỗi tạm thời (Lần thử ${attempt}/${maxAttempts}) [${status}]: ${safeMsg}. Đang chờ ${(actualDelay / 1000).toFixed(1)}s trước khi thử lại...`,
+        );
+
+        await new Promise((resolve) => setTimeout(resolve, actualDelay));
+      }
+    }
+
+    throw lastError;
   }
 
   /**
