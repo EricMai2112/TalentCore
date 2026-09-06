@@ -24,7 +24,12 @@ import {
   RefreshCw,
   Info
 } from 'lucide-react'
-import CustomDatePicker from '@/src/components/common/CustomDatePicker'
+import {
+  CustomInput,
+  CustomSelect,
+  CustomDatePicker,
+  CustomTextarea
+} from '@/src/components/common'
 import {
   JobDescription,
   EmploymentType,
@@ -941,160 +946,125 @@ export default function JobRequestFormWizard({
 
               {/* Row 1: Department & Position */}
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <div className="space-y-1.5">
-                  <label className="text-xs font-bold text-gray-700 uppercase tracking-wider block">
-                    Phòng ban <span className="text-rose-500">*</span>
-                  </label>
-                  <select
-                    value={departmentId}
-                    onChange={(e) => handleDepartmentChange(e.target.value)}
-                    disabled={isDeptManager}
-                    className={`w-full px-4 py-3 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-600 transition-all ${
-                      isDeptManager
-                        ? 'bg-gray-100 text-gray-500 cursor-not-allowed'
-                        : 'bg-gray-50/50 hover:bg-gray-50 focus:bg-white text-gray-800'
-                    }`}
-                  >
-                    <option value="">-- Chọn phòng ban --</option>
-                    {departments.map((dept) => (
-                      <option key={dept._id} value={dept._id}>
-                        {dept.name}
-                      </option>
-                    ))}
-                  </select>
-                </div>
+                <CustomSelect
+                  label="Phòng ban"
+                  required
+                  value={departmentId}
+                  onChange={(val) => handleDepartmentChange(val)}
+                  isLocked={isDeptManager}
+                  disabled={isDeptManager}
+                  placeholder="-- Chọn phòng ban --"
+                  options={[
+                    { value: "", label: "-- Chọn phòng ban --" },
+                    ...departments.map((dept) => ({
+                      value: dept._id,
+                      label: dept.name,
+                    })),
+                  ]}
+                />
 
-                <div className="space-y-1.5">
-                  <label className="text-xs font-bold text-gray-700 uppercase tracking-wider block">
-                    Vị trí tuyển dụng <span className="text-rose-500">*</span>
-                  </label>
-                  <select
-                    value={positionId}
-                    onChange={(e) => handlePositionChange(e.target.value)}
-                    disabled={!departmentId}
-                    className="w-full px-4 py-3 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-600 transition-all bg-gray-50/50 hover:bg-gray-50 focus:bg-white text-gray-800 disabled:bg-gray-50 disabled:text-gray-400"
-                  >
-                    <option value="">-- Chọn vị trí từ danh mục --</option>
-                    {filteredPositions.map((pos) => (
-                      <option key={pos._id} value={pos._id}>
-                        {pos.name}
-                      </option>
-                    ))}
-                  </select>
-                </div>
+                <CustomSelect
+                  label="Vị trí tuyển dụng"
+                  required
+                  value={positionId}
+                  onChange={(val) => handlePositionChange(val)}
+                  disabled={!departmentId}
+                  placeholder="-- Chọn vị trí từ danh mục --"
+                  options={[
+                    { value: "", label: "-- Chọn vị trí từ danh mục --" },
+                    ...filteredPositions.map((pos) => ({
+                      value: pos._id,
+                      label: pos.name,
+                    })),
+                  ]}
+                />
               </div>
 
               {/* Row 2: Title (Col-span 2) + Experience Level (Col-span 1) */}
               <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                <div className="md:col-span-2 space-y-1.5">
-                  <label className="text-xs font-bold text-gray-700 uppercase tracking-wider block">
-                    Tiêu đề công việc <span className="text-rose-500">*</span>
-                  </label>
-                  <input
-                    type="text"
+                <div className="md:col-span-2">
+                  <CustomInput
+                    label="Tiêu đề công việc"
+                    required
                     placeholder="VD: Senior Frontend Developer (ReactJS / Next.js)"
                     value={title}
                     onChange={(e) => setTitle(e.target.value)}
-                    className="w-full px-4 py-3 border border-gray-200 rounded-xl text-sm font-semibold text-gray-900 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-600 transition-all bg-gray-50/50 hover:bg-gray-50 focus:bg-white"
                   />
                 </div>
 
-                <div className="md:col-span-1 space-y-1.5">
-                  <label className="text-xs font-bold text-gray-700 uppercase tracking-wider block">
-                    Kinh nghiệm yêu cầu
-                  </label>
-                  <select
+                <div className="md:col-span-1">
+                  <CustomSelect
+                    label="Kinh nghiệm yêu cầu"
                     value={experienceLevel}
-                    onChange={(e) => setExperienceLevel(e.target.value)}
-                    className="w-full px-4 py-3 border border-gray-200 rounded-xl text-sm text-gray-800 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-600 transition-all bg-gray-50/50 hover:bg-gray-50 focus:bg-white"
-                  >
-                    <option value="Intern">Intern (Thực tập sinh - Dưới 6 tháng)</option>
-                    <option value="Fresher">Fresher (Mới tốt nghiệp - Dưới 1 năm)</option>
-                    <option value="Junior">Junior (1 - 3 năm)</option>
-                    <option value="Mid-level">Mid-level (3 - 5 năm)</option>
-                    <option value="Senior">Senior (5+ năm)</option>
-                    <option value="Lead / Manager">Lead / Manager (7+ năm)</option>
-                  </select>
+                    onChange={(val) => setExperienceLevel(val)}
+                    options={[
+                      { value: "Intern", label: "Intern (Thực tập sinh - Dưới 6 tháng)" },
+                      { value: "Fresher", label: "Fresher (Mới tốt nghiệp - Dưới 1 năm)" },
+                      { value: "Junior", label: "Junior (1 - 3 năm)" },
+                      { value: "Mid-level", label: "Mid-level (3 - 5 năm)" },
+                      { value: "Senior", label: "Senior (5+ năm)" },
+                      { value: "Lead / Manager", label: "Lead / Manager (7+ năm)" },
+                    ]}
+                  />
                 </div>
               </div>
 
               {/* Row 3: Location, Employment Type & Headcount */}
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-6">
-                <div className="space-y-1.5">
-                  <label className="text-xs font-bold text-gray-700 uppercase tracking-wider block">
-                    Địa điểm làm việc <span className="text-rose-500">*</span>
-                  </label>
-                  <input
-                    type="text"
-                    placeholder="VD: Hà Nội, TP. Hồ Chí Minh"
-                    value={location}
-                    onChange={(e) => setLocation(e.target.value)}
-                    className="w-full px-4 py-3 border border-gray-200 rounded-xl text-sm text-gray-800 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-600 transition-all bg-gray-50/50 hover:bg-gray-50 focus:bg-white"
-                  />
-                </div>
+                <CustomInput
+                  label="Địa điểm làm việc"
+                  required
+                  placeholder="VD: Hà Nội, TP. Hồ Chí Minh"
+                  value={location}
+                  onChange={(e) => setLocation(e.target.value)}
+                />
 
-                <div className="space-y-1.5">
-                  <label className="text-xs font-bold text-gray-700 uppercase tracking-wider block">
-                    Hình thức làm việc
-                  </label>
-                  <select
-                    value={employmentType}
-                    onChange={(e) => setEmploymentType(e.target.value as EmploymentType)}
-                    className="w-full px-4 py-3 border border-gray-200 rounded-xl text-sm text-gray-800 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-600 transition-all bg-gray-50/50 hover:bg-gray-50 focus:bg-white"
-                  >
-                    <option value={EmploymentType.FULL_TIME}>Full-time</option>
-                    <option value={EmploymentType.PART_TIME}>Part-time</option>
-                    <option value={EmploymentType.CONTRACT}>Hợp đồng</option>
-                    <option value={EmploymentType.REMOTE}>Remote</option>
-                    <option value={EmploymentType.HYBRID}>Hybrid</option>
-                  </select>
-                </div>
+                <CustomSelect
+                  label="Hình thức làm việc"
+                  value={employmentType}
+                  onChange={(val) => setEmploymentType(val as EmploymentType)}
+                  options={[
+                    { value: EmploymentType.FULL_TIME, label: "Full-time" },
+                    { value: EmploymentType.PART_TIME, label: "Part-time" },
+                    { value: EmploymentType.CONTRACT, label: "Hợp đồng" },
+                    { value: EmploymentType.REMOTE, label: "Remote" },
+                    { value: EmploymentType.HYBRID, label: "Hybrid" },
+                  ]}
+                />
 
-                <div className="space-y-1.5">
-                  <label className="text-xs font-bold text-gray-700 uppercase tracking-wider block">
-                    Số lượng cần tuyển <span className="text-rose-500">*</span>
-                  </label>
-                  <input
-                    type="number"
-                    min={1}
-                    value={headcount}
-                    onChange={(e) => setHeadcount(Number(e.target.value))}
-                    className="w-full px-4 py-3 border border-gray-200 rounded-xl text-sm font-bold text-gray-900 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-600 transition-all bg-gray-50/50 hover:bg-gray-50 focus:bg-white"
-                  />
-                </div>
+                <CustomInput
+                  label="Số lượng cần tuyển"
+                  required
+                  type="number"
+                  min={1}
+                  value={headcount}
+                  onChange={(e) => setHeadcount(Number(e.target.value))}
+                />
               </div>
 
               {/* Row 4: Min Salary, Max Salary, Application Deadline, Priority */}
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 pt-2">
-                <div className="space-y-1.5">
-                  <label className="text-xs font-bold text-gray-700 uppercase tracking-wider block">
-                    Lương tối thiểu (USD) <span className="text-rose-500">*</span>
-                  </label>
-                  <input
-                    type="number"
-                    placeholder="VD: 1000"
-                    value={minimumSalary}
-                    onChange={(e) =>
-                      setMinimumSalary(e.target.value === '' ? '' : Number(e.target.value))
-                    }
-                    className="w-full px-4 py-3 border border-gray-200 rounded-xl text-sm font-extrabold text-gray-900 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-600 transition-all bg-gray-50/50 hover:bg-gray-50 focus:bg-white"
-                  />
-                </div>
+                <CustomInput
+                  label="Lương tối thiểu (USD)"
+                  required
+                  type="number"
+                  placeholder="VD: 1000"
+                  value={minimumSalary}
+                  onChange={(e) =>
+                    setMinimumSalary(e.target.value === '' ? '' : Number(e.target.value))
+                  }
+                />
 
-                <div className="space-y-1.5">
-                  <label className="text-xs font-bold text-gray-700 uppercase tracking-wider block">
-                    Lương tối đa (USD) <span className="text-rose-500">*</span>
-                  </label>
-                  <input
-                    type="number"
-                    placeholder="VD: 2500"
-                    value={maximumSalary}
-                    onChange={(e) =>
-                      setMaximumSalary(e.target.value === '' ? '' : Number(e.target.value))
-                    }
-                    className="w-full px-4 py-3 border border-gray-200 rounded-xl text-sm font-extrabold text-gray-900 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-600 transition-all bg-gray-50/50 hover:bg-gray-50 focus:bg-white"
-                  />
-                </div>
+                <CustomInput
+                  label="Lương tối đa (USD)"
+                  required
+                  type="number"
+                  placeholder="VD: 2500"
+                  value={maximumSalary}
+                  onChange={(e) =>
+                    setMaximumSalary(e.target.value === '' ? '' : Number(e.target.value))
+                  }
+                />
 
                 {/* Application Deadline */}
                 <div className="space-y-1.5">
@@ -1108,20 +1078,16 @@ export default function JobRequestFormWizard({
                   />
                 </div>
 
-                <div className="space-y-1.5">
-                  <label className="text-xs font-bold text-gray-700 uppercase tracking-wider block">
-                    Mức độ ưu tiên
-                  </label>
-                  <select
-                    value={priority}
-                    onChange={(e) => setPriority(e.target.value as JobPriority)}
-                    className="w-full px-4 py-3 border border-gray-200 rounded-xl text-sm text-gray-800 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-600 transition-all bg-gray-50/50 hover:bg-gray-50 focus:bg-white"
-                  >
-                    <option value={JobPriority.LOW}>Thấp</option>
-                    <option value={JobPriority.MEDIUM}>Bình thường</option>
-                    <option value={JobPriority.HIGH}>Gấp</option>
-                  </select>
-                </div>
+                <CustomSelect
+                  label="Mức độ ưu tiên"
+                  value={priority}
+                  onChange={(val) => setPriority(val as JobPriority)}
+                  options={[
+                    { value: JobPriority.LOW, label: "Thấp" },
+                    { value: JobPriority.MEDIUM, label: "Bình thường" },
+                    { value: JobPriority.HIGH, label: "Gấp" },
+                  ]}
+                />
               </div>
 
               {/* Redesigned Interviewers Section */}
@@ -1499,94 +1465,34 @@ export default function JobRequestFormWizard({
               </div>
 
               {/* Description */}
-              <div className="space-y-2">
-                <div className="flex items-center justify-between">
-                  <label className="text-xs font-bold text-gray-700 uppercase tracking-wider block">
-                    Mô tả công việc <span className="text-rose-500">*</span>
-                  </label>
-                  <button
-                    type="button"
-                    onClick={() => handleAiGenerateJdContent('description')}
-                    disabled={isAiGeneratingContent}
-                    className="text-[11px] font-bold text-purple-700 hover:text-purple-900 bg-purple-50 hover:bg-purple-100 border border-purple-200/80 px-2.5 py-1 rounded-lg transition-all cursor-pointer flex items-center gap-1.5 disabled:opacity-40"
-                    title="Viết lại riêng phần Mô tả công việc bằng AI"
-                  >
-                    {isAiGeneratingContent && aiGeneratingSection === 'description' ? (
-                      <Loader2 size={12} className="animate-spin text-purple-600" />
-                    ) : (
-                      <Sparkles size={12} className="text-purple-600" />
-                    )}
-                    AI Viết lại Mô tả
-                  </button>
-                </div>
-                <textarea
-                  rows={7}
-                  placeholder="Mô tả chi tiết nhiệm vụ hàng ngày, quy trình làm việc, sản phẩm phát triển..."
-                  value={description}
-                  onChange={(e) => setDescription(e.target.value)}
-                  className="w-full px-4 py-3 border border-gray-200 rounded-xl text-sm text-gray-800 leading-relaxed focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-600 transition-all bg-gray-50/50 hover:bg-gray-50 focus:bg-white whitespace-pre-line"
-                />
-              </div>
+              <CustomTextarea
+                label="Mô tả công việc"
+                required
+                rows={7}
+                placeholder="Mô tả chi tiết nhiệm vụ hàng ngày, quy trình làm việc, sản phẩm phát triển..."
+                value={description}
+                onChange={(e) => setDescription(e.target.value)}
+              />
 
               {/* Requirements */}
-              <div className="space-y-2">
-                <div className="flex items-center justify-between">
-                  <label className="text-xs font-bold text-gray-700 uppercase tracking-wider block">
-                    Yêu cầu ứng viên <span className="text-rose-500">*</span>
-                  </label>
-                  <button
-                    type="button"
-                    onClick={() => handleAiGenerateJdContent('requirements')}
-                    disabled={isAiGeneratingContent}
-                    className="text-[11px] font-bold text-purple-700 hover:text-purple-900 bg-purple-50 hover:bg-purple-100 border border-purple-200/80 px-2.5 py-1 rounded-lg transition-all cursor-pointer flex items-center gap-1.5 disabled:opacity-40"
-                    title="Viết lại riêng phần Yêu cầu ứng viên bằng AI"
-                  >
-                    {isAiGeneratingContent && aiGeneratingSection === 'requirements' ? (
-                      <Loader2 size={12} className="animate-spin text-purple-600" />
-                    ) : (
-                      <Sparkles size={12} className="text-purple-600" />
-                    )}
-                    AI Viết lại Yêu cầu
-                  </button>
-                </div>
-                <textarea
-                  rows={7}
-                  placeholder="Kinh nghiệm chuyên môn tối thiểu, bằng cấp, ngoại ngữ, kỹ năng làm việc nhóm..."
-                  value={requirements}
-                  onChange={(e) => setRequirements(e.target.value)}
-                  className="w-full px-4 py-3 border border-gray-200 rounded-xl text-sm text-gray-800 leading-relaxed focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-600 transition-all bg-gray-50/50 hover:bg-gray-50 focus:bg-white whitespace-pre-line"
-                />
-              </div>
+              <CustomTextarea
+                label="Yêu cầu ứng viên"
+                required
+                rows={7}
+                placeholder="Kinh nghiệm chuyên môn tối thiểu, bằng cấp, ngoại ngữ, kỹ năng làm việc nhóm..."
+                value={requirements}
+                onChange={(e) => setRequirements(e.target.value)}
+              />
 
               {/* Benefits */}
-              <div className="space-y-2">
-                <div className="flex items-center justify-between">
-                  <label className="text-xs font-bold text-gray-700 uppercase tracking-wider block">
-                    Quyền lợi đãi ngộ <span className="text-rose-500">*</span>
-                  </label>
-                  <button
-                    type="button"
-                    onClick={() => handleAiGenerateJdContent('benefits')}
-                    disabled={isAiGeneratingContent}
-                    className="text-[11px] font-bold text-purple-700 hover:text-purple-900 bg-purple-50 hover:bg-purple-100 border border-purple-200/80 px-2.5 py-1 rounded-lg transition-all cursor-pointer flex items-center gap-1.5 disabled:opacity-40"
-                    title="Viết lại riêng phần Quyền lợi đãi ngộ bằng AI"
-                  >
-                    {isAiGeneratingContent && aiGeneratingSection === 'benefits' ? (
-                      <Loader2 size={12} className="animate-spin text-purple-600" />
-                    ) : (
-                      <Sparkles size={12} className="text-purple-600" />
-                    )}
-                    AI Viết lại Quyền lợi
-                  </button>
-                </div>
-                <textarea
-                  rows={6}
-                  placeholder="Lương thưởng hấp dẫn, bảo hiểm sức khỏe, máy tính làm việc, du lịch hàng năm..."
-                  value={benefits}
-                  onChange={(e) => setBenefits(e.target.value)}
-                  className="w-full px-4 py-3 border border-gray-200 rounded-xl text-sm text-gray-800 leading-relaxed focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-600 transition-all bg-gray-50/50 hover:bg-gray-50 focus:bg-white whitespace-pre-line"
-                />
-              </div>
+              <CustomTextarea
+                label="Quyền lợi đãi ngộ"
+                required
+                rows={6}
+                placeholder="Lương thưởng hấp dẫn, bảo hiểm sức khỏe, máy tính làm việc, du lịch hàng năm..."
+                value={benefits}
+                onChange={(e) => setBenefits(e.target.value)}
+              />
             </div>
           )}
 
@@ -1609,45 +1515,37 @@ export default function JobRequestFormWizard({
 
               {/* Pipeline template select & Status */}
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <div className="space-y-1.5">
-                  <label className="text-xs font-bold text-gray-700 uppercase tracking-wider block">
-                    Mẫu Quy trình phỏng vấn <span className="text-rose-500">*</span>
-                  </label>
-                  <select
-                    value={selectedPipelineTemplateId}
-                    onChange={(e) => handlePipelineTemplateChange(e.target.value)}
-                    className="w-full px-4 py-3 border border-gray-200 rounded-xl text-sm font-semibold text-gray-800 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-600 transition-all bg-gray-50/50 hover:bg-gray-50 focus:bg-white"
-                  >
-                    <option value="">-- Chọn Mẫu Pipeline --</option>
-                    {pipelineTemplates.map((t) => (
-                      <option key={t._id} value={t._id}>
-                        {t.name} ({t.stages.length} giai đoạn)
-                      </option>
-                    ))}
-                  </select>
-                </div>
+                <CustomSelect
+                  label="Mẫu Quy trình phỏng vấn"
+                  required
+                  value={selectedPipelineTemplateId}
+                  onChange={(val) => handlePipelineTemplateChange(val)}
+                  placeholder="-- Chọn Mẫu Pipeline --"
+                  options={[
+                    { value: "", label: "-- Chọn Mẫu Pipeline --" },
+                    ...pipelineTemplates.map((t) => ({
+                      value: t._id,
+                      label: `${t.name} (${t.stages.length} giai đoạn)`,
+                    })),
+                  ]}
+                />
 
-                <div className="space-y-1.5">
-                  <label className="text-xs font-bold text-gray-700 uppercase tracking-wider block">
-                    Trạng thái yêu cầu
-                  </label>
-                  <select
-                    value={isDeptManager ? JobStatus.PENDING : status}
-                    onChange={(e) => setStatus(e.target.value as JobStatus)}
-                    disabled={isDeptManager}
-                    className={`w-full px-4 py-3 border border-gray-200 rounded-xl text-sm font-semibold focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-600 transition-all ${
-                      isDeptManager
-                        ? 'bg-gray-100 text-gray-500 cursor-not-allowed'
-                        : 'bg-gray-50/50 hover:bg-gray-50 focus:bg-white text-gray-800'
-                    }`}
-                  >
-                    <option value={JobStatus.PENDING}>Chờ duyệt</option>
-                    {!isDeptManager && <option value={JobStatus.APPROVED}>Đã duyệt</option>}
-                    {!isDeptManager && <option value={JobStatus.REJECTED}>Từ chối</option>}
-                    {!isDeptManager && <option value={JobStatus.JD_CREATED}>Đã tạo JD</option>}
-                    {!isDeptManager && <option value={JobStatus.COMPLETED}>Hoàn thành</option>}
-                  </select>
-                </div>
+                <CustomSelect
+                  label="Trạng thái yêu cầu"
+                  value={isDeptManager ? JobStatus.PENDING : status}
+                  onChange={(val) => setStatus(val as JobStatus)}
+                  isLocked={isDeptManager}
+                  disabled={isDeptManager}
+                  options={[
+                    { value: JobStatus.PENDING, label: "Chờ duyệt" },
+                    ...(!isDeptManager ? [
+                      { value: JobStatus.APPROVED, label: "Đã duyệt" },
+                      { value: JobStatus.REJECTED, label: "Từ chối" },
+                      { value: JobStatus.JD_CREATED, label: "Đã tạo JD" },
+                      { value: JobStatus.COMPLETED, label: "Hoàn thành" },
+                    ] : []),
+                  ]}
+                />
               </div>
 
               {/* Pipeline Stage Preview */}

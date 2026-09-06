@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { X, Check, Loader2, AlertTriangle, Zap, Plus } from "lucide-react";
 import { Skill, DeptOption, PositionWithSkills, CreateSkillDto } from "../types/skill.types";
+import { CustomInput, CustomSelect } from "@/src/components/common";
 
 type ModalMode = "add-skill" | "add-position";
 
@@ -150,41 +151,36 @@ export default function AddSkillModal({
           {isAddSkill ? (
             <>
               {/* Skill name */}
-              <div className="space-y-1.5">
-                <label className="text-xs font-bold text-gray-600 uppercase tracking-wider">
-                  Tên kỹ năng <span className="text-red-500">*</span>
-                </label>
-                <input
-                  type="text"
-                  value={skillName}
-                  onChange={(e) => setSkillName(e.target.value)}
-                  placeholder="React, TypeScript, Docker..."
-                  autoFocus
-                  className="w-full px-3.5 py-2.5 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 bg-white text-gray-800 placeholder-gray-400"
-                />
-              </div>
+              <CustomInput
+                label="Tên kỹ năng"
+                required
+                value={skillName}
+                onChange={(e) => setSkillName(e.target.value)}
+                placeholder="React, TypeScript, Docker..."
+                autoFocus
+              />
 
               {/* Aliases */}
               <div className="space-y-1.5">
-                <label className="text-xs font-bold text-gray-600 uppercase tracking-wider">
+                <label className="text-xs font-bold text-gray-600 uppercase tracking-wider block">
                   Tên khác (aliases)
                   <span className="text-gray-400 font-normal ml-1 normal-case">(tuỳ chọn)</span>
                 </label>
-                <div className="flex gap-2">
-                  <input
-                    type="text"
-                    value={aliasInput}
-                    onChange={(e) => setAliasInput(e.target.value)}
-                    placeholder="ReactJS, React.js..."
-                    onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); addAlias(); } }}
-                    className="flex-1 px-3.5 py-2.5 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 bg-white text-gray-800 placeholder-gray-400"
-                  />
+                <div className="flex gap-2 items-center">
+                  <div className="flex-1">
+                    <CustomInput
+                      value={aliasInput}
+                      onChange={(e) => setAliasInput(e.target.value)}
+                      placeholder="ReactJS, React.js..."
+                      onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); addAlias(); } }}
+                    />
+                  </div>
                   <button
                     type="button"
                     onClick={addAlias}
-                    className="px-3 py-2 bg-gray-100 hover:bg-gray-200 text-gray-600 rounded-xl transition-colors cursor-pointer"
+                    className="p-3 bg-gray-100 hover:bg-gray-200 text-gray-600 rounded-2xl transition-colors cursor-pointer shrink-0"
                   >
-                    <Plus size={15} />
+                    <Plus size={18} />
                   </button>
                 </div>
                 {aliases.length > 0 && (
@@ -211,39 +207,32 @@ export default function AddSkillModal({
           ) : (
             <>
               {/* Position name */}
-              <div className="space-y-1.5">
-                <label className="text-xs font-bold text-gray-600 uppercase tracking-wider">
-                  Tên vị trí <span className="text-red-500">*</span>
-                </label>
-                <input
-                  type="text"
-                  value={posName}
-                  onChange={(e) => setPosName(e.target.value)}
-                  placeholder="Frontend Developer, Data Engineer..."
-                  autoFocus
-                  className="w-full px-3.5 py-2.5 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 bg-white text-gray-800 placeholder-gray-400"
-                />
-              </div>
+              <CustomInput
+                label="Tên vị trí"
+                required
+                value={posName}
+                onChange={(e) => setPosName(e.target.value)}
+                placeholder="Frontend Developer, Data Engineer..."
+                autoFocus
+              />
 
               {/* Department */}
-              <div className="space-y-1.5">
-                <label className="text-xs font-bold text-gray-600 uppercase tracking-wider">
-                  Phòng ban <span className="text-red-500">*</span>
-                </label>
-                <select
-                  value={isDeptManager && userDeptId ? userDeptId : posDeptId}
-                  onChange={(e) => setPosDeptId(e.target.value)}
-                  disabled={isDeptManager}
-                  className={`w-full px-3.5 py-2.5 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 text-gray-800 ${
-                    isDeptManager ? "bg-gray-100 text-gray-500 cursor-not-allowed" : "bg-white"
-                  }`}
-                >
-                  <option value="">— Chọn phòng ban —</option>
-                  {departments.map((d) => (
-                    <option key={d._id} value={d._id}>{d.name}</option>
-                  ))}
-                </select>
-              </div>
+              <CustomSelect
+                label="Phòng ban"
+                required
+                value={isDeptManager && userDeptId ? userDeptId : posDeptId}
+                onChange={(val) => setPosDeptId(val)}
+                isLocked={isDeptManager}
+                disabled={isDeptManager}
+                placeholder="— Chọn phòng ban —"
+                options={[
+                  { value: "", label: "— Chọn phòng ban —" },
+                  ...departments.map((d) => ({
+                    value: d._id,
+                    label: d.name,
+                  })),
+                ]}
+              />
             </>
           )}
         </form>

@@ -6,6 +6,7 @@ import { CandidateApplication } from "../types/candidate.types";
 import { candidateApi } from "../services/candidate.api";
 import { useAuth } from "@/src/providers/AuthProvider";
 import { USER_ROLE_LABEL } from "@/src/features/users/types/user.types";
+import { CustomTextarea } from "@/src/components/common";
 
 interface RejectConfirmModalProps {
   application: CandidateApplication | null;
@@ -92,16 +93,13 @@ export default function RejectConfirmModal({
         </div>
 
         {/* Reason Textarea */}
-        <div className="space-y-1.5">
-          <label className="block text-xs font-bold text-slate-700">Lý do từ chối</label>
-          <textarea
-            rows={3}
-            placeholder="Nhập lý do từ chối ứng viên..."
-            value={rejectReason}
-            onChange={(e) => setRejectReason(e.target.value)}
-            className="w-full p-3.5 border border-slate-200 rounded-2xl text-xs text-slate-900 focus:outline-none focus:ring-2 focus:ring-rose-500/20 focus:border-rose-500 transition-all resize-none placeholder:text-slate-400 bg-slate-50/50 hover:bg-slate-50"
-          />
-        </div>
+        <CustomTextarea
+          label="Lý do từ chối"
+          rows={3}
+          placeholder="Nhập lý do từ chối ứng viên..."
+          value={rejectReason}
+          onChange={(e) => setRejectReason(e.target.value)}
+        />
 
         {/* Footer Buttons */}
         <div className="pt-2 flex items-center justify-end gap-3">

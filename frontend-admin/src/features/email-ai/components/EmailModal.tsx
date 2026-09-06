@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from "react";
 import { X, Check, Loader2, AlertTriangle } from "lucide-react";
 import { EmailTemplate, EmailTemplateType } from "../types/email-ai.types";
+import { CustomInput, CustomSelect, CustomTextarea } from "@/src/components/common";
 
 interface EmailModalProps {
   isOpen: boolean;
@@ -198,70 +199,49 @@ export default function EmailModal({
 
           {/* Form row 1: Template Name and Type */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div className="space-y-1.5">
-              <label className="text-xs font-bold text-gray-600 uppercase tracking-wider">
-                Tên template
-              </label>
-              <input
-                type="text"
-                value={templateName}
-                onChange={(e) => setTemplateName(e.target.value)}
-                placeholder="Email gửi Offer"
-                required
-                className="w-full px-3.5 py-2.5 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent bg-white font-medium text-gray-800"
-              />
-            </div>
+            <CustomInput
+              label="Tên template"
+              required
+              value={templateName}
+              onChange={(e) => setTemplateName(e.target.value)}
+              placeholder="Email gửi Offer"
+            />
             
-            <div className="space-y-1.5">
-              <label className="text-xs font-bold text-gray-600 uppercase tracking-wider">
-                Loại
-              </label>
-              <select
-                value={templateType}
-                onChange={(e) => setTemplateType(e.target.value as EmailTemplateType)}
-                className="w-full px-3.5 py-2.5 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent bg-white font-medium text-gray-800"
-              >
-                <option value={EmailTemplateType.INTERVIEW_INVITATION}>Mới phỏng vấn</option>
-                <option value={EmailTemplateType.OFFER_LETTER}>Offer Letter</option>
-                <option value={EmailTemplateType.REJECTION}>Từ chối</option>
-                <option value={EmailTemplateType.CUSTOM}>Custom / AI Prompt</option>
-              </select>
-            </div>
+            <CustomSelect
+              label="Loại"
+              value={templateType}
+              onChange={(val) => setTemplateType(val as EmailTemplateType)}
+              options={[
+                { value: EmailTemplateType.INTERVIEW_INVITATION, label: "Mới phỏng vấn" },
+                { value: EmailTemplateType.OFFER_LETTER, label: "Offer Letter" },
+                { value: EmailTemplateType.REJECTION, label: "Từ chối" },
+                { value: EmailTemplateType.CUSTOM, label: "Custom / AI Prompt" },
+              ]}
+            />
           </div>
 
           {/* Form row 2: Subject */}
-          <div className="space-y-1.5">
-            <label className="text-xs font-bold text-gray-600 uppercase tracking-wider">
-              Tiêu đề email
-            </label>
-            <input
-              type="text"
-              ref={subjectInputRef}
-              value={subject}
-              onChange={(e) => setSubject(e.target.value)}
-              onFocus={() => handleFocus("subject")}
-              placeholder="[TalentCore] Offer Letter - {{jobTitle}}"
-              required
-              className="w-full px-3.5 py-2.5 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent bg-white font-medium text-gray-800"
-            />
-          </div>
+          <CustomInput
+            ref={subjectInputRef}
+            label="Tiêu đề email"
+            required
+            value={subject}
+            onChange={(e) => setSubject(e.target.value)}
+            onFocus={() => handleFocus("subject")}
+            placeholder="[TalentCore] Offer Letter - {{jobTitle}}"
+          />
 
           {/* Form row 3: Body / Content */}
-          <div className="space-y-1.5">
-            <label className="text-xs font-bold text-gray-600 uppercase tracking-wider">
-              Nội dung
-            </label>
-            <textarea
-              ref={bodyTextareaRef}
-              value={body}
-              onChange={(e) => setBody(e.target.value)}
-              onFocus={() => handleFocus("body")}
-              placeholder="Nhập nội dung email..."
-              required
-              rows={8}
-              className="w-full px-3.5 py-2.5 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent bg-white font-medium text-gray-800 font-sans"
-            />
-          </div>
+          <CustomTextarea
+            ref={bodyTextareaRef}
+            label="Nội dung"
+            required
+            rows={8}
+            value={body}
+            onChange={(e) => setBody(e.target.value)}
+            onFocus={() => handleFocus("body")}
+            placeholder="Nhập nội dung email..."
+          />
 
           {/* Form row 4: Placeholders pills */}
           <div className="space-y-2">
