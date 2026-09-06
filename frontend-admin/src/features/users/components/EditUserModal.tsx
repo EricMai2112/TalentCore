@@ -7,6 +7,7 @@ import {
   UserRole,
   USER_ROLE_LABEL,
 } from "../types/user.types";
+import { CustomInput, CustomSelect } from "@/src/components/common";
 
 interface EditUserModalProps {
   isOpen: boolean;
@@ -108,80 +109,58 @@ export default function EditUserModal({
           )}
 
           {/* Họ tên */}
-          <div className="space-y-1.5">
-            <label className="text-xs font-bold text-gray-600 uppercase tracking-wider">
-              Họ và tên <span className="text-red-500">*</span>
-            </label>
-            <input
-              type="text"
-              name="name"
-              value={form.name}
-              onChange={handleChange}
-              className="w-full px-3.5 py-2.5 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent bg-white text-gray-800"
-            />
-          </div>
+          <CustomInput
+            label="Họ và tên"
+            required
+            name="name"
+            value={form.name}
+            onChange={handleChange}
+          />
 
           {/* Email — readonly */}
-          <div className="space-y-1.5">
-            <label className="text-xs font-bold text-gray-600 uppercase tracking-wider">
-              Email
-            </label>
-            <input
-              type="email"
-              value={user.email}
-              disabled
-              className="w-full px-3.5 py-2.5 border border-gray-100 rounded-xl text-sm bg-gray-50 text-gray-400 cursor-not-allowed"
-            />
-          </div>
+          <CustomInput
+            label="Email"
+            type="email"
+            value={user.email}
+            disabled
+          />
 
           {/* Số điện thoại */}
-          <div className="space-y-1.5">
-            <label className="text-xs font-bold text-gray-600 uppercase tracking-wider">
-              Số điện thoại <span className="text-red-500">*</span>
-            </label>
-            <input
-              type="tel"
-              name="phone"
-              value={form.phone}
-              onChange={handleChange}
-              className="w-full px-3.5 py-2.5 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent bg-white text-gray-800"
-            />
-          </div>
+          <CustomInput
+            label="Số điện thoại"
+            required
+            type="tel"
+            name="phone"
+            value={form.phone}
+            onChange={handleChange}
+          />
 
           {/* Vai trò & Phòng ban */}
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <div className="space-y-1.5">
-              <label className="text-xs font-bold text-gray-600 uppercase tracking-wider">
-                Vai trò <span className="text-red-500">*</span>
-              </label>
-              <select
-                name="role"
-                value={form.role}
-                onChange={handleChange}
-                className="w-full px-3.5 py-2.5 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent bg-white text-gray-800"
-              >
-                {ROLE_OPTIONS.map((r) => (
-                  <option key={r} value={r}>{USER_ROLE_LABEL[r]}</option>
-                ))}
-              </select>
-            </div>
+            <CustomSelect
+              label="Vai trò"
+              required
+              value={form.role}
+              onChange={(val) => setForm((prev) => ({ ...prev, role: val as UserRole }))}
+              options={ROLE_OPTIONS.map((r) => ({
+                value: r,
+                label: USER_ROLE_LABEL[r],
+              }))}
+            />
 
-            <div className="space-y-1.5">
-              <label className="text-xs font-bold text-gray-600 uppercase tracking-wider">
-                Phòng ban
-              </label>
-              <select
-                name="departmentId"
-                value={form.departmentId}
-                onChange={handleChange}
-                className="w-full px-3.5 py-2.5 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent bg-white text-gray-800"
-              >
-                <option value="">— Chưa phân công —</option>
-                {departments.map((d) => (
-                  <option key={d._id} value={d._id}>{d.name}</option>
-                ))}
-              </select>
-            </div>
+            <CustomSelect
+              label="Phòng ban"
+              value={form.departmentId}
+              onChange={(val) => setForm((prev) => ({ ...prev, departmentId: val }))}
+              placeholder="— Chưa phân công —"
+              options={[
+                { value: "", label: "— Chưa phân công —" },
+                ...departments.map((d) => ({
+                  value: d._id,
+                  label: d.name,
+                })),
+              ]}
+            />
           </div>
         </form>
 
