@@ -21,27 +21,44 @@ export class AiMatchingProcessor {
     private readonly aiMatchingService: AiMatchingService,
   ) {}
 
-  async processMatching(applicationId: string) {
-    this.logger.log(`[AI Matching Queue] Bắt đầu đánh giá cho Application: ${applicationId}`);
+  async processMatching(
+    applicationId: string,
+    options?: { isFromBullMQ?: boolean; jobId?: string; attempt?: number },
+  ) {
+    const isFromBullMQ = options?.isFromBullMQ ?? false;
+    const jobId = options?.jobId ?? 'IN_PROCESS';
+    const attempt = options?.attempt ?? 1;
 
-    const application = await this.applicationModel.findById(applicationId);
-    if (!application) return;
+    this.logger.log(
+      `[AI Matching Processor] Bắt đầu đánh giá cho Application: ${applicationId} (Job: ${jobId}, Attempt: ${attempt})`,
+    );
 
-    const [candidate, job] = await Promise.all([
-      this.candidateModel.findById(application.candidateId),
-      this.jobModel.findById(application.jobDescriptionId),
-    ]);
-
-    if (!candidate || !job || !job.criteria?.length) {
-      this.logger.warn(`Không đủ dữ liệu criteria để thực hiện AI Matching cho Application: ${applicationId}`);
-      return;
-    }
+    let job: any = null;
 
     try {
-      // 1. Trích xuất toàn văn hồ sơ
+      const application = await this.applicationModel.findById(applicationId);
+      if (!application) {
+        this.logger.warn(`[AI Matching] Không tìm thấy Application ${applicationId}`);
+        return;
+      }
+
+      const [candidate, foundJob] = await Promise.all([
+        this.candidateModel.findById(application.candidateId),
+        this.jobModel.findById(application.jobDescriptionId),
+      ]);
+      job = foundJob;
+
+      if (!candidate || !job || !job.criteria?.length) {
+        this.logger.warn(
+          `[AI Matching] Không đủ dữ liệu criteria để thực hiện AI Matching cho Application: ${applicationId} (JobId: ${job?._id || 'N/A'})`,
+        );
+        return;
+      }
+
+      // 1. Trích xuất toàn văn hồ sơ ứng viên thành văn bản chuẩn hóa
       const fullCvText = this.aiMatchingService.buildFullCvText(candidate);
 
-      // 2. Chấm điểm qua LLM với Temperature = 0
+      // 2. Chấm điểm qua Gemini LLM (đã tích hợp tự động retry với exponential backoff & jitter)
       const aiResult = await this.aiMatchingService.evaluateCriteriaWithAi(
         fullCvText,
         job.title,
@@ -49,21 +66,21 @@ export class AiMatchingProcessor {
         job.criteria,
       );
 
-      // 3. Backend validate & tính điểm tất định
+      // 3. Backend validate bằng chứng & tính điểm tất định theo rubric 6 mức
       const finalEvaluation = this.aiMatchingService.processDeterministicScoring(
         fullCvText,
         job.criteria,
         aiResult,
       );
 
-      // 4. Lưu kết quả vào Collection AiEvaluation
+      // 4. Lưu kết quả vào Collection AiEvaluation (Idempotent: Upsert dựa trên applicationId duy nhất)
       await this.aiEvaluationModel.findOneAndUpdate(
         { applicationId: application._id },
         { ...finalEvaluation, applicationId: application._id },
         { upsert: true, returnDocument: 'after' },
       );
 
-      // 5. Tự động nhảy qua Stage kế tiếp trong Pipeline
+      // 5. Tự động chuyển Application sang Stage tiếp theo trong Pipeline
       const pipeline = await this.pipelineModel.findById(job.pipelineTemplateId);
       if (pipeline?.stages?.length) {
         const sortedStages = [...pipeline.stages].sort((a, b) => a.order - b.order);
@@ -76,12 +93,27 @@ export class AiMatchingProcessor {
           const nextStage = sortedStages[1];
           application.currentStageId = nextStage._id;
           await application.save();
-          this.logger.log(`[AI Matching] Hoàn thành! Tự động chuyển Application sang Stage: ${nextStage.name}`);
+          this.logger.log(
+            `[AI Matching] Hoàn thành! Tự động chuyển Application ${applicationId} sang Stage: ${nextStage.name}`,
+          );
         }
       }
     } catch (error: any) {
-      this.logger.error(`Lỗi xử lý AI Matching cho Application ${applicationId}:`, error);
-      throw error; // Kích hoạt retry của BullMQ nếu cấu hình
+      // Bóc tách thông tin lỗi an toàn (không log API key hoặc dữ liệu nhạy cảm)
+      const status = error?.status || error?.code || error?.error?.code || 'UNKNOWN';
+      const rawMessage = error?.message || error?.error?.message || String(error);
+      const safeMessage = rawMessage.replace(/key=[a-zA-Z0-9_\-]+/gi, 'key=***');
+
+      this.logger.error(
+        `[AI Matching Processor] Lỗi xử lý Application ${applicationId} (Job: ${jobId}, Attempt: ${attempt}) [${status}]: ${safeMessage}`,
+      );
+
+      // Nếu chạy qua BullMQ Worker, re-throw lỗi để BullMQ kích hoạt cơ chế retry của Job
+      if (isFromBullMQ) {
+        throw error;
+      }
+
+      // Nếu chạy trực tiếp ở chế độ nền (setImmediate), bắt lỗi tại đây để TUYỆT ĐỐI KHÔNG làm crash tiến trình Node.js
     }
   }
 }

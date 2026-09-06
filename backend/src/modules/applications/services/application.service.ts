@@ -1,4 +1,4 @@
-import { Injectable, BadRequestException, NotFoundException } from '@nestjs/common';
+import { Injectable, BadRequestException, NotFoundException, Logger } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model, Types } from 'mongoose';
 import { Application, ApplicationDocument } from '../schemas/application.schema';
@@ -10,6 +10,8 @@ import { AiEvaluation, AiEvaluationDocument } from '../schemas/ai-evaluation.sch
 
 @Injectable()
 export class ApplicationService {
+  private readonly logger = new Logger(ApplicationService.name);
+
   constructor(
     @InjectModel(Application.name)
     private readonly applicationModel: Model<ApplicationDocument>,
@@ -75,7 +77,13 @@ export class ApplicationService {
     });
 
     setImmediate(() => {
-      this.aiMatchingProcessor.processMatching(newApplication._id.toString());
+      this.aiMatchingProcessor
+        .processMatching(newApplication._id.toString())
+        .catch((err) => {
+          this.logger.error(
+            `[ApplicationService] Xử lý nền AI Matching thất bại cho Application ${newApplication._id}: ${err?.message || err}`,
+          );
+        });
     });
 
     return {
