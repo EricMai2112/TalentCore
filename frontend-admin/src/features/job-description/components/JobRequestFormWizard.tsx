@@ -24,6 +24,7 @@ import {
   RefreshCw,
   Info
 } from 'lucide-react'
+import CustomDatePicker from '@/src/components/common/CustomDatePicker'
 import {
   JobDescription,
   EmploymentType,
@@ -1100,11 +1101,10 @@ export default function JobRequestFormWizard({
                   <label className="text-xs font-bold text-gray-700 uppercase tracking-wider block">
                     Hạn nộp hồ sơ
                   </label>
-                  <input
-                    type="date"
+                  <CustomDatePicker
                     value={applicationDeadline}
-                    onChange={(e) => setApplicationDeadline(e.target.value)}
-                    className="w-full px-4 py-3 border border-gray-200 rounded-xl text-sm text-gray-800 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-600 transition-all bg-gray-50/50 hover:bg-gray-50 focus:bg-white cursor-pointer"
+                    onChange={(val) => setApplicationDeadline(val)}
+                    placeholder="dd/mm/yyyy"
                   />
                 </div>
 
