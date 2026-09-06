@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { X, Plus, ChevronUp, ChevronDown, Trash2, Check, Loader2, AlertTriangle } from "lucide-react";
 import { Stage, PipelineTemplate } from "../types/pipeline.types";
+import { CustomInput } from "@/src/components/common";
 
 interface PipelineModalProps {
   isOpen: boolean;
@@ -172,19 +173,13 @@ export default function PipelineModal({
           )}
 
           {/* Template Name Input */}
-          <div className="space-y-1.5">
-            <label className="text-xs font-bold text-gray-600 uppercase tracking-wider">
-              Tên template
-            </label>
-            <input
-              type="text"
-              value={templateName}
-              onChange={(e) => setTemplateName(e.target.value)}
-              placeholder="VD: Standard Tech Hiring"
-              required
-              className="w-full px-3.5 py-2.5 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent bg-white font-medium text-gray-800 placeholder-gray-400"
-            />
-          </div>
+          <CustomInput
+            label="Tên template"
+            required
+            value={templateName}
+            onChange={(e) => setTemplateName(e.target.value)}
+            placeholder="VD: Standard Tech Hiring"
+          />
 
           {/* Stages List */}
           <div className="space-y-2">

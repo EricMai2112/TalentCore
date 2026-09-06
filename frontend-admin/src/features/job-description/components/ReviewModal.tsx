@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { X, Check, AlertTriangle, Loader2 } from "lucide-react";
 import { JobDescription, JobStatus } from "../types/job-description.types";
+import { CustomTextarea } from "@/src/components/common";
 
 interface ReviewModalProps {
   isOpen: boolean;
@@ -144,27 +145,19 @@ export default function ReviewModal({
           </div>
 
           {/* Textarea Note */}
-          <div className="space-y-1.5">
-            <div className="flex justify-between items-center">
-              <label className="text-xs font-bold text-gray-600 uppercase tracking-wider">
-                {decision === JobStatus.APPROVED ? "Ghi chú cho trưởng phòng" : "Lý do từ chối"}
-                {decision === JobStatus.REJECTED && <span className="text-red-500"> *</span>}
-              </label>
-              <span className="text-[10px] font-semibold text-gray-400">{note.length}/500</span>
-            </div>
-            <textarea
-              value={note}
-              onChange={(e) => setNote(e.target.value.slice(0, 500))}
-              placeholder={
-                decision === JobStatus.APPROVED
-                  ? "VD: Đồng ý, sẽ tạo JD trong tuần này..."
-                  : "VD: Ngân sách hiện tại chưa đủ, đề xuất xem xét lại Q4..."
-              }
-              rows={4}
-              required={decision === JobStatus.REJECTED}
-              className="w-full px-3.5 py-2.5 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 bg-white font-medium text-gray-800"
-            />
-          </div>
+          <CustomTextarea
+            label={decision === JobStatus.APPROVED ? "Ghi chú cho trưởng phòng" : "Lý do từ chối"}
+            required={decision === JobStatus.REJECTED}
+            value={note}
+            onChange={(e) => setNote(e.target.value.slice(0, 500))}
+            placeholder={
+              decision === JobStatus.APPROVED
+                ? "VD: Đồng ý, sẽ tạo JD trong tuần này..."
+                : "VD: Ngân sách hiện tại chưa đủ, đề xuất xem xét lại Q4..."
+            }
+            rows={4}
+            helperText={`${note.length}/500 ký tự`}
+          />
         </div>
 
         {/* Footer */}

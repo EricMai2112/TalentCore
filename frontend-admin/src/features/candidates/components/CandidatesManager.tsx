@@ -317,7 +317,7 @@ export default function CandidatesManager() {
       </div>
 
       {/* Filter Toolbar */}
-      <div className="flex flex-wrap items-center justify-between gap-3">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-white p-3.5 rounded-2xl border border-slate-200/80 shadow-2xs">
         {/* Left: Candidate Search */}
         <div className="relative flex-1 min-w-[200px] max-w-md">
           <input
@@ -325,16 +325,16 @@ export default function CandidatesManager() {
             placeholder="Tìm kiếm ứng viên..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            className="w-full pl-10 pr-4 py-2.5 bg-white border border-slate-200 rounded-2xl text-xs font-medium text-slate-800 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-600 transition-all placeholder:text-slate-400"
+            className="w-full pl-10 pr-4 py-2 bg-slate-50/80 border border-slate-200 rounded-xl text-xs font-medium text-slate-800 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-600 focus:bg-white transition-all placeholder:text-slate-400"
           />
           <Search
             size={16}
-            className="absolute left-3.5 top-3 text-slate-400 pointer-events-none"
+            className="absolute left-3.5 top-2.5 text-slate-400 pointer-events-none"
           />
         </div>
 
         {/* Right Controls: CustomSelect for Department, Position, Stage */}
-        <div className="flex flex-wrap items-center gap-2 sm:gap-3">
+        <div className="flex flex-wrap items-center gap-3">
           {/* Department Select */}
           <CustomSelect
             value={selectedDepartmentId}
@@ -344,6 +344,8 @@ export default function CandidatesManager() {
             disabled={isRestrictedDept}
             isLocked={isRestrictedDept}
             icon={<Building2 size={14} />}
+            size="sm"
+            className="w-full sm:w-auto"
           />
 
           {/* Position Select */}
@@ -353,6 +355,8 @@ export default function CandidatesManager() {
             options={positionSelectOptions}
             placeholder="Tất cả vị trí"
             icon={<Briefcase size={14} />}
+            size="sm"
+            className="w-full sm:w-auto"
           />
 
           {/* Stage Select with right alignment to prevent horizontal scroll */}
@@ -363,6 +367,8 @@ export default function CandidatesManager() {
             placeholder="Tất cả giai đoạn"
             align="right"
             icon={<Layers size={14} />}
+            size="sm"
+            className="w-full sm:w-auto"
           />
         </div>
       </div>

@@ -6,6 +6,7 @@ import { CandidateApplication, CandidateNote } from "../types/candidate.types";
 import { useAuth } from "@/src/providers/AuthProvider";
 import { USER_ROLE_LABEL } from "@/src/features/users/types/user.types";
 import { candidateApi } from "../services/candidate.api";
+import { CustomTextarea } from "@/src/components/common";
 
 interface CandidateNotesModalProps {
   application: CandidateApplication | null;
@@ -159,8 +160,8 @@ export default function CandidateNotesModal({
 
           {/* Add New Note Section */}
           <div className="space-y-2">
-            <label className="block text-xs font-bold text-slate-800">Thêm ghi chú mới</label>
-            <textarea
+            <CustomTextarea
+              label="Thêm ghi chú mới"
               rows={4}
               maxLength={500}
               placeholder="Nhập ghi chú về ứng viên..."
@@ -169,7 +170,6 @@ export default function CandidateNotesModal({
                 setNoteContent(e.target.value);
                 if (errorMsg) setErrorMsg("");
               }}
-              className="w-full p-3.5 border border-slate-200 rounded-2xl text-xs text-slate-900 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-600 transition-all resize-none placeholder:text-slate-400 bg-slate-50/50 hover:bg-slate-50"
             />
             <div className="flex justify-end">
               <span className="text-[11px] font-medium text-slate-400">

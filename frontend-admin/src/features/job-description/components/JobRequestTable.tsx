@@ -4,6 +4,7 @@ import { useState, useEffect } from "react";
 import { createPortal } from "react-dom";
 import { Eye, Edit2, Trash2, Plus, CheckCheck, Briefcase, CheckCircle2, MoreVertical, FileText, Clock, XCircle, Award } from "lucide-react";
 import { JobDescription, JobStatus, JobPriority, Department } from "../types/job-description.types";
+import { CustomSelect } from "@/src/components/common";
 
 interface JobRequestTableProps {
   jobs: JobDescription[];
@@ -227,46 +228,53 @@ export default function JobRequestTable({
       </div>
 
       {/* Filters Bar */}
-      <div className="flex flex-wrap gap-3">
-        <select
+      <div className="flex flex-wrap items-center gap-3">
+        <CustomSelect
           value={isDeptManager && userDeptId ? userDeptId : selectedDept}
-          onChange={(e) => setSelectedDept(e.target.value)}
+          onChange={(val) => setSelectedDept(val)}
+          isLocked={isDeptManager}
           disabled={isDeptManager}
-          className={`px-3.5 py-2 border border-gray-200 rounded-xl text-xs font-semibold focus:outline-none focus:ring-2 focus:ring-indigo-500 ${
-            isDeptManager ? "bg-gray-100 text-gray-500 cursor-not-allowed" : "bg-white text-gray-700"
-          }`}
-        >
-          {!isDeptManager && <option value="all">Tất cả phòng ban</option>}
-          {departments.map((dept) => (
-            <option key={dept._id} value={dept._id}>
-              {dept.name}
-            </option>
-          ))}
-        </select>
+          size="sm"
+          className="w-full sm:w-auto"
+          placeholder="Tất cả phòng ban"
+          options={[
+            ...(!isDeptManager ? [{ value: "all", label: "Tất cả phòng ban" }] : []),
+            ...departments.map((dept) => ({
+              value: dept._id,
+              label: dept.name,
+            })),
+          ]}
+        />
 
-        <select
+        <CustomSelect
           value={selectedStatus}
-          onChange={(e) => setSelectedStatus(e.target.value)}
-          className="px-3.5 py-2 border border-gray-200 rounded-xl text-xs font-semibold text-gray-700 focus:outline-none focus:ring-2 focus:ring-indigo-500 bg-white"
-        >
-          <option value="all">Tất cả trạng thái</option>
-          <option value={JobStatus.PENDING}>Chờ duyệt</option>
-          <option value={JobStatus.APPROVED}>Đã duyệt</option>
-          <option value={JobStatus.REJECTED}>Từ chối</option>
-          <option value={JobStatus.JD_CREATED}>Đã tạo JD</option>
-          <option value={JobStatus.COMPLETED}>Hoàn thành</option>
-        </select>
+          onChange={(val) => setSelectedStatus(val)}
+          size="sm"
+          className="w-full sm:w-auto"
+          placeholder="Tất cả trạng thái"
+          options={[
+            { value: "all", label: "Tất cả trạng thái" },
+            { value: JobStatus.PENDING, label: "Chờ duyệt" },
+            { value: JobStatus.APPROVED, label: "Đã duyệt" },
+            { value: JobStatus.REJECTED, label: "Từ chối" },
+            { value: JobStatus.JD_CREATED, label: "Đã tạo JD" },
+            { value: JobStatus.COMPLETED, label: "Hoàn thành" },
+          ]}
+        />
 
-        <select
+        <CustomSelect
           value={selectedPriority}
-          onChange={(e) => setSelectedPriority(e.target.value)}
-          className="px-3.5 py-2 border border-gray-200 rounded-xl text-xs font-semibold text-gray-700 focus:outline-none focus:ring-2 focus:ring-indigo-500 bg-white"
-        >
-          <option value="all">Tất cả ưu tiên</option>
-          <option value={JobPriority.HIGH}>Gấp</option>
-          <option value={JobPriority.MEDIUM}>Bình thường</option>
-          <option value={JobPriority.LOW}>Thấp</option>
-        </select>
+          onChange={(val) => setSelectedPriority(val)}
+          size="sm"
+          className="w-full sm:w-auto"
+          placeholder="Tất cả ưu tiên"
+          options={[
+            { value: "all", label: "Tất cả ưu tiên" },
+            { value: JobPriority.HIGH, label: "Gấp" },
+            { value: JobPriority.MEDIUM, label: "Bình thường" },
+            { value: JobPriority.LOW, label: "Thấp" },
+          ]}
+        />
       </div>
 
       {/* Table grid */}
