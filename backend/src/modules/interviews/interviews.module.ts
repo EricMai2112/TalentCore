@@ -1,5 +1,7 @@
 import { Module } from '@nestjs/common';
 import { MongooseModule } from '@nestjs/mongoose';
+import { JwtModule } from '@nestjs/jwt';
+import { ConfigModule, ConfigService } from '@nestjs/config';
 import { Interview, InterviewSchema } from './schemas/interview.schema';
 import { Application, ApplicationSchema } from '../applications/schemas/application.schema';
 import { JobDescription, JobDescriptionSchema } from '../job-description/schemas/job-description.schema';
@@ -17,6 +19,13 @@ import { InterviewController } from './controllers/interview.controller';
       { name: Candidate.name, schema: CandidateSchema },
       { name: User.name, schema: UserSchema },
     ]),
+    JwtModule.registerAsync({
+      imports: [ConfigModule],
+      useFactory: async (configService: ConfigService) => ({
+        secret: configService.get<string>('JWT_SECRET') || 'your-secret-key',
+      }),
+      inject: [ConfigService],
+    }),
   ],
   controllers: [InterviewController],
   providers: [InterviewService],

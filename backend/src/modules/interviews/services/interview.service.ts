@@ -319,4 +319,54 @@ export class InterviewService {
 
     return await interview.save();
   }
+
+  /**
+   * Lấy danh sách lịch phỏng vấn của ứng viên đang đăng nhập
+   * (Tự động loại bỏ thông tin đánh giá / feedback riêng của nhà tuyển dụng)
+   */
+  async getMyInterviews(userId: string) {
+    const candidateDocs = await this.candidateModel
+      .find({ userId: new Types.ObjectId(userId) })
+      .select('_id')
+      .exec();
+
+    const candidateIds = candidateDocs.map((c) => c._id);
+
+    const interviews = await this.interviewModel
+      .find({ candidateId: { $in: candidateIds } })
+      .populate({
+        path: 'candidateId',
+        model: 'Candidate',
+        populate: { path: 'userId', model: 'User', select: 'name email phone' },
+      })
+      .populate({
+        path: 'jobDescriptionId',
+        model: 'JobDescription',
+        populate: { path: 'departmentId', model: 'Department' },
+      })
+      .populate({ path: 'interviewerId', model: 'User', select: 'name email role' })
+      .populate({ path: 'interviewerIds', model: 'User', select: 'name email role' })
+      .sort({ date: -1, startTime: 1 })
+      .exec();
+
+    return interviews.map((item: any) => {
+      const doc = item.toObject ? item.toObject() : item;
+      // Loại bỏ thông tin đánh giá / feedback cho ứng viên
+      delete doc.feedback;
+      delete doc.notes;
+      return doc;
+    });
+  }
+
+  /**
+   * Cập nhật trạng thái xác nhận tham gia của ứng viên
+   */
+  async updateCandidateConfirmation(id: string, confirmationStatus: string) {
+    const interview = await this.interviewModel.findById(id).exec();
+    if (!interview) {
+      throw new NotFoundException('Không tìm thấy lịch phỏng vấn.');
+    }
+    interview.confirmationStatus = confirmationStatus;
+    return await interview.save();
+  }
 }
