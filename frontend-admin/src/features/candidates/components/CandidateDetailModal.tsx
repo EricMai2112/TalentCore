@@ -610,6 +610,63 @@ export default function CandidateDetailModal({
                   </div>
                 </div>
               )}
+
+              {/* Certifications */}
+              {candidate?.certifications && candidate.certifications.length > 0 && (
+                <div className="p-4.5 bg-white border border-slate-200 rounded-2xl space-y-2.5">
+                  <span className="font-bold text-slate-500 uppercase tracking-wider text-[10px] flex items-center gap-1.5">
+                    <Award size={13} className="text-indigo-600" /> Chứng chỉ ({candidate.certifications.length})
+                  </span>
+                  <div className="space-y-2">
+                    {candidate.certifications.map((cert: any, idx: number) => (
+                      <div key={idx} className="p-3 bg-slate-50 rounded-xl flex items-center justify-between gap-3 border border-slate-100">
+                        <div className="space-y-0.5">
+                          <div className="flex items-center gap-2 flex-wrap">
+                            <h5 className="font-bold text-slate-900 text-xs">{cert.name}</h5>
+                            {cert.scoreOrLevel && (
+                              <span className="px-2 py-0.5 bg-indigo-50 border border-indigo-200 text-indigo-700 font-extrabold text-[10px] rounded-md">
+                                {cert.scoreOrLevel}
+                              </span>
+                            )}
+                          </div>
+                          {cert.organization && (
+                            <p className="text-[11px] text-slate-500">Cấp bởi: <span className="font-semibold text-slate-700">{cert.organization}</span></p>
+                          )}
+                        </div>
+                        {cert.issueDate && (
+                          <span className="text-[11px] text-slate-400 font-medium shrink-0">
+                            {cert.issueDate}
+                          </span>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Languages */}
+              {candidate?.languages && candidate.languages.length > 0 && (
+                <div className="p-4.5 bg-white border border-slate-200 rounded-2xl space-y-2.5">
+                  <span className="font-bold text-slate-500 uppercase tracking-wider text-[10px] flex items-center gap-1.5">
+                    <Globe size={13} className="text-indigo-600" /> Ngoại ngữ ({candidate.languages.length})
+                  </span>
+                  <div className="flex flex-wrap gap-2">
+                    {candidate.languages.map((lang: any, idx: number) => (
+                      <div
+                        key={idx}
+                        className="px-3 py-1.5 bg-slate-50 border border-slate-200 rounded-xl flex items-center gap-2"
+                      >
+                        <span className="text-xs font-bold text-slate-800">{lang.language}</span>
+                        {lang.proficiency && (
+                          <span className="px-2 py-0.5 bg-indigo-100/80 text-indigo-700 font-extrabold text-[10px] rounded-md">
+                            {lang.proficiency}
+                          </span>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
             </div>
           )}
 
