@@ -78,7 +78,7 @@ export interface KanbanCandidate {
   experiences?: CandidateExperience[];
   educations?: CandidateEducation[];
   projects?: CandidateProject[];
-  certifications?: Array<{ name: string; organization?: string; issueDate?: string }>;
+  certifications?: Array<{ name: string; organization?: string; scoreOrLevel?: string; issueDate?: string }>;
   languages?: Array<{ language: string; proficiency?: string }>;
   socialLinks?: Array<{ platform: string; url: string }>;
   userId?: {

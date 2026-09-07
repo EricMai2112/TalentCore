@@ -42,7 +42,24 @@ export class AiMatchingService {
     }
 
     if (candidate.certifications?.length) {
-      sections.push('Chứng chỉ:\n' + candidate.certifications.map((c) => `- ${c.name} cấp bởi ${c.organization || ''}`).join('\n'));
+      sections.push(
+        'Chứng chỉ:\n' +
+          candidate.certifications
+            .map(
+              (c) =>
+                `- ${c.name}${c.scoreOrLevel ? ` (Điểm/Trình độ: ${c.scoreOrLevel})` : ''}${c.organization ? ` cấp bởi ${c.organization}` : ''}${c.issueDate ? ` (${c.issueDate})` : ''}`,
+            )
+            .join('\n'),
+      );
+    }
+
+    if (candidate.languages?.length) {
+      sections.push(
+        'Ngoại ngữ:\n' +
+          candidate.languages
+            .map((l) => `- ${l.language}${l.proficiency ? ` (Trình độ: ${l.proficiency})` : ''}`)
+            .join('\n'),
+      );
     }
 
     return sections.join('\n\n');
@@ -172,7 +189,7 @@ export class AiMatchingService {
     const response = await this.executeWithRetry(
       () =>
         this.ai.models.generateContent({
-          model: 'gemini-3.8-flash',
+          model: 'gemini-3.6-flash',
           contents: [{ role: 'user', parts: [{ text: prompt }] }],
           config: {
             systemInstruction,
@@ -373,7 +390,7 @@ export class AiMatchingService {
     return Number(Math.min(1, Math.max(0, similarity)).toFixed(2));
   }
 
-  calculateEvidenceStrengthScore(evidence: string, cvText: string): number {
+  calculateEvidenceStrengthScore(evidence: string, cvText: string, precomputedSimilarity?: number): number {
     if (!evidence || !evidence.trim()) {
       return 0;
     }
@@ -381,7 +398,10 @@ export class AiMatchingService {
     const trimmedEvidence = evidence.trim();
 
     // 1. Thành phần 1: Độ tương đồng với CV gốc (Trọng số 50%)
-    const similarity = this.calculateEvidenceSimilarity(trimmedEvidence, cvText);
+    const similarity =
+      precomputedSimilarity !== undefined
+        ? precomputedSimilarity
+        : this.calculateEvidenceSimilarity(trimmedEvidence, cvText);
     const similarityScore = similarity * 50;
 
     // 2. Thành phần 2: Số liệu định lượng (Trọng số 30%)
@@ -399,7 +419,6 @@ export class AiMatchingService {
 
   // 3. Giai đoạn 5 — Validate Bằng Chứng & Tính Điểm Tất Định
   processDeterministicScoring(cvText: string, jobCriteria: JobCriteria[], aiResult: any) {
-    const lowerCvText = cvText.toLowerCase();
     const warnings: string[] = [];
     let isMissingMandatory = false;
     let totalScore = 0;
@@ -409,12 +428,24 @@ export class AiMatchingService {
         r.name?.toLowerCase().trim() === criterion.name.toLowerCase().trim()
       ) || { score: 0, evidence: '', isPassed: false };
 
-      // Validate bằng chứng: kiểm tra xem evidence có trong CV không
+      // Validate bằng chứng dựa trên độ tương đồng (Fuzzy-match) làm nguồn chân lý duy nhất
       const evidence = (matched.evidence || '').trim();
-      const isEvidenceVerified = evidence.length > 0 && lowerCvText.includes(evidence.toLowerCase().slice(0, 30));
+      const similarity = evidence.length > 0 ? this.calculateEvidenceSimilarity(evidence, cvText) : 0;
+      const similarityPct = Math.round(similarity * 100);
 
-      if (evidence.length > 0 && !isEvidenceVerified) {
-        warnings.push(`Cảnh báo ảo giác AI: Bằng chứng cho tiêu chí "${criterion.name}" cần được xem xét thủ công.`);
+      // Đánh giá 3 mức độ xác thực bằng chứng & cảnh báo
+      let isEvidenceVerified = false;
+      if (evidence.length > 0) {
+        if (similarity >= 0.7) {
+          isEvidenceVerified = true;
+          // similarity >= 0.7: Đạt chuẩn xác thực cao, không tạo cảnh báo
+        } else if (similarity >= 0.5) {
+          isEvidenceVerified = false;
+          warnings.push(`Bằng chứng cho tiêu chí "${criterion.name}" khớp một phần (${similarityPct}%), nên xem lại.`);
+        } else {
+          isEvidenceVerified = false;
+          warnings.push(`Cảnh báo ảo giác AI: Bằng chứng cho tiêu chí "${criterion.name}" độ khớp thấp (${similarityPct}%), cần xem xét thủ công.`);
+        }
       }
 
       // Xử lý tiêu chí Bắt buộc (MANDATORY)
@@ -429,7 +460,7 @@ export class AiMatchingService {
       const scoreContribution = Number(((score / 100) * criterion.weight).toFixed(2));
       totalScore += scoreContribution;
 
-      const evidenceStrengthScore = this.calculateEvidenceStrengthScore(evidence, cvText);
+      const evidenceStrengthScore = this.calculateEvidenceStrengthScore(evidence, cvText, similarity);
 
       return {
         name: criterion.name,
