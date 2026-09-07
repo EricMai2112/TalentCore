@@ -399,4 +399,30 @@ export class ApplicationService {
       },
     };
   }
+
+  async reEvaluateApplication(applicationId: string) {
+    const app = await this.applicationModel.findById(applicationId);
+    if (!app) {
+      throw new NotFoundException('Không tìm thấy đơn ứng tuyển');
+    }
+
+    setImmediate(() => {
+      this.aiMatchingProcessor
+        .processMatching(applicationId, {
+          jobId: 'MANUAL_RE_EVALUATE',
+          attempt: 1,
+        })
+        .catch((err) => {
+          this.logger.error(
+            `[ApplicationService] Chấm lại thủ công thất bại cho Application ${applicationId}: ${err?.message || err}`,
+          );
+        });
+    });
+
+    return {
+      applicationId,
+      status: 'PROCESSING',
+      message: 'Đã đưa vào tiến trình chấm điểm AI',
+    };
+  }
 }

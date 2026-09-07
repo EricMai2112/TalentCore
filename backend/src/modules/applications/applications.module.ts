@@ -11,6 +11,7 @@ import { ConfigModule, ConfigService } from '@nestjs/config';
 import { AiEvaluation, AiEvaluationSchema } from './schemas/ai-evaluation.schema';
 import { AiMatchingService } from './services/ai-matching.service';
 import { AiMatchingProcessor } from './processors/ai-matching.processor';
+import { AiMatchingCronService } from './services/ai-matching-cron.service';
 
 @Module({
     imports: [MongooseModule.forFeature([{name: Application.name, schema: ApplicationSchema},
@@ -28,7 +29,7 @@ import { AiMatchingProcessor } from './processors/ai-matching.processor';
     }),
 ],
     controllers: [ApplicationController],
-    providers: [ApplicationService, AiMatchingService, AiMatchingProcessor],
-    exports: [ApplicationService]
+    providers: [ApplicationService, AiMatchingService, AiMatchingProcessor, AiMatchingCronService],
+    exports: [ApplicationService, AiMatchingCronService]
 })
 export class ApplicationsModule {}

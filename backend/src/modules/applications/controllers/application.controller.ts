@@ -143,4 +143,13 @@ export class ApplicationController {
       data,
     };
   }
+
+  @Post(':id/re-evaluate')
+  async reEvaluateApplication(@Param('id') id: string) {
+    const data = await this.applicationService.reEvaluateApplication(id);
+    return {
+      message: 'Đã kích hoạt chấm điểm lại cho đơn ứng tuyển',
+      data,
+    };
+  }
 }
