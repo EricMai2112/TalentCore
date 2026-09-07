@@ -66,6 +66,9 @@ export class Interview {
 
   @Prop({ required: false, trim: true })
   feedback?: string;
+
+  @Prop({ required: false, trim: true, default: 'CONFIRMED' })
+  confirmationStatus?: string;
 }
 
 export const InterviewSchema = SchemaFactory.createForClass(Interview);

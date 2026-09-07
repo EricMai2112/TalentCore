@@ -41,3 +41,29 @@ export interface MyApplicationsResponseData {
   applications: CandidateApplicationItem[];
   stats: ApplicationStats;
 }
+
+export interface InterviewUserRef {
+  _id: string;
+  name?: string;
+  email?: string;
+  role?: string;
+}
+
+export interface CandidateInterviewItem {
+  _id: string;
+  applicationId: string;
+  candidateId: any;
+  jobDescriptionId: AppliedJobDescription;
+  interviewerId?: InterviewUserRef;
+  interviewerIds?: InterviewUserRef[];
+  date: string;
+  startTime: string;
+  endTime: string;
+  locationType: 'ONLINE' | 'OFFSITE';
+  meetingLink?: string;
+  offsiteLocation?: string;
+  status: 'SCHEDULED' | 'COMPLETED' | 'CANCELLED';
+  result: 'PENDING' | 'PASS' | 'FAIL';
+  confirmationStatus?: 'CONFIRMED' | 'PENDING' | 'RESCHEDULE_REQUESTED';
+  createdAt?: string;
+}
