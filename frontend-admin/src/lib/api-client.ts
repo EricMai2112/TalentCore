@@ -1,4 +1,6 @@
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000";
+import { env } from "@/src/config/env.config";
+
+const API_BASE_URL = env.apiUrl;
 
 interface RequestOptions extends RequestInit {
   params?: Record<string, string>;

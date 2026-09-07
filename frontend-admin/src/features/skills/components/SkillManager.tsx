@@ -15,6 +15,8 @@ import DepartmentGroup from "./DepartmentGroup";
 import AddSkillModal from "./AddSkillModal";
 import EditPositionModal from "./EditPositionModal";
 import DeletePositionModal from "./DeletePositionModal";
+import { useAuth } from "@/src/providers/AuthProvider";
+import { UserRole, Department } from "@/src/features/users/types/user.types";
 
 interface SkillManagerProps {
   initialPositions: PositionWithSkills[];
@@ -24,12 +26,24 @@ interface SkillManagerProps {
 
 type ModalMode = "add-skill" | "add-position";
 
+const getDeptIdStr = (dept: string | Department | DeptOption | { _id: string } | undefined): string => {
+  if (!dept) return "";
+  if (typeof dept === "string") return dept;
+  if (typeof dept === "object" && "_id" in dept && typeof dept._id === "string") return dept._id;
+  return "";
+};
+
 export default function SkillManager({
   initialPositions,
   initialSkills,
   initialDepartments,
 }: SkillManagerProps) {
   const router = useRouter();
+  const { user: currentUser } = useAuth();
+
+  const isDeptManager = currentUser?.role === UserRole.DEPARTMENT_MANAGER;
+  const userDeptId = getDeptIdStr(currentUser?.departmentId);
+
   const [positions, setPositions] = useState<PositionWithSkills[]>(initialPositions);
   const [allSkills, setAllSkills] = useState<Skill[]>(initialSkills);
   const [departments] = useState<DeptOption[]>(initialDepartments);
@@ -74,7 +88,7 @@ export default function SkillManager({
   // ── Add modal ──────────────────────────────────────────────────────────
   const openAddModal = (mode: ModalMode, deptId?: string) => {
     setAddModalMode(mode);
-    setPreselectedDeptId(deptId);
+    setPreselectedDeptId(deptId || (isDeptManager ? userDeptId : undefined));
     setAddModalOpen(true);
   };
 
@@ -96,7 +110,8 @@ export default function SkillManager({
   const handleCreatePosition = async (name: string, departmentId: string) => {
     setIsSubmitting(true);
     try {
-      await positionApi.create({ name, departmentId });
+      const finalDeptId = isDeptManager ? userDeptId : departmentId;
+      await positionApi.create({ name, departmentId: finalDeptId });
       showToast("Tạo vị trí thành công!", "success");
       setAddModalOpen(false);
       await fetchPositions();
@@ -151,7 +166,8 @@ export default function SkillManager({
   const handleEditSubmit = async (id: string, name: string, departmentId: string) => {
     setIsSubmitting(true);
     try {
-      await positionApi.update(id, { name, departmentId });
+      const finalDeptId = isDeptManager ? userDeptId : departmentId;
+      await positionApi.update(id, { name, departmentId: finalDeptId });
       showToast("Cập nhật vị trí thành công!", "success");
       setEditModalOpen(false);
       setEditingPosition(null);
@@ -188,7 +204,15 @@ export default function SkillManager({
   };
 
   // ── View ───────────────────────────────────────────────────────────────
-  const groups = buildDepartmentGroups(positions);
+  const scopedPositions = positions.filter((p) => {
+    if (isDeptManager && userDeptId) {
+      const pDeptId = getDeptIdStr(p.departmentId);
+      if (pDeptId !== userDeptId) return false;
+    }
+    return true;
+  });
+
+  const groups = buildDepartmentGroups(scopedPositions);
 
   return (
     <div className="space-y-5">
@@ -214,7 +238,9 @@ export default function SkillManager({
             Danh mục kỹ năng
           </h2>
           <p className="text-sm text-gray-500 mt-0.5">
-            Quản lý kỹ năng theo phòng ban và vị trí
+            {isDeptManager
+              ? "Quản lý kỹ năng và vị trí thuộc phòng ban của bạn"
+              : "Quản lý kỹ năng theo phòng ban và vị trí"}
           </p>
         </div>
         <button
@@ -251,7 +277,7 @@ export default function SkillManager({
         </div>
       ) : (
         <div className="space-y-3">
-          {groups.map((group, idx) => (
+          {groups.map((group) => (
             <DepartmentGroup
               key={group.deptId}
               group={group}
@@ -261,7 +287,7 @@ export default function SkillManager({
               onEditPosition={handleOpenEdit}
               onDeletePosition={handleOpenDelete}
               onAddPosition={(deptId) => openAddModal("add-position", deptId)}
-              defaultOpen={false}
+              defaultOpen={isDeptManager}
             />
           ))}
         </div>
@@ -276,10 +302,12 @@ export default function SkillManager({
         onCreatePosition={handleCreatePosition}
         onAddSkillToPosition={handleAddSkill}
         departments={departments}
-        positions={positions}
+        positions={scopedPositions}
         allSkills={allSkills}
-        preselectedDeptId={preselectedDeptId}
+        preselectedDeptId={preselectedDeptId || (isDeptManager ? userDeptId : undefined)}
         isSubmitting={isSubmitting}
+        isDeptManager={isDeptManager}
+        userDeptId={userDeptId}
       />
 
       {/* Edit position modal */}
@@ -290,6 +318,8 @@ export default function SkillManager({
         position={editingPosition}
         departments={departments}
         isSubmitting={isSubmitting}
+        isDeptManager={isDeptManager}
+        userDeptId={userDeptId}
       />
 
       {/* Delete position modal */}

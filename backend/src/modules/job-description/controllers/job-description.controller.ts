@@ -13,11 +13,31 @@ import {
 } from '@nestjs/common';
 import { JobDescriptionService } from '../services/job-description.service';
 import { CreateJobDescriptionDto, UpdateJobDescriptionDto } from '../dtos/job-description.dto';
+import { SuggestCriteriaWeightsDto } from '../dtos/suggest-criteria-weights.dto';
+import { GenerateJdContentDto } from '../dtos/generate-jd-content.dto';
 
 @Controller('job-descriptions')
 @UsePipes(new ValidationPipe({ whitelist: true }))
 export class JobDescriptionController {
   constructor(private readonly jobDescriptionService: JobDescriptionService) {}
+
+  @Post('ai-suggest-weights')
+  async suggestCriteriaWeightsWithAi(@Body() dto: SuggestCriteriaWeightsDto) {
+    const result = await this.jobDescriptionService.suggestCriteriaWeightsWithAi(dto);
+    return {
+      message: 'Gợi ý trọng số tiêu chí bằng AI thành công',
+      data: result,
+    };
+  }
+
+  @Post('ai-generate-content')
+  async generateJdContentWithAi(@Body() dto: GenerateJdContentDto) {
+    const result = await this.jobDescriptionService.generateJdContentWithAi(dto);
+    return {
+      message: 'Soạn thảo nội dung JD bằng AI thành công',
+      data: result,
+    };
+  }
 
   @Post()
   async create(@Body() createDto: CreateJobDescriptionDto) {
@@ -33,6 +53,15 @@ export class JobDescriptionController {
     const jobs = await this.jobDescriptionService.findAll();
     return {
       message: 'Lấy danh sách Job Description thành công',
+      data: jobs,
+    };
+  }
+
+  @Get('public')
+  async findPublicJobs() {
+    const jobs = await this.jobDescriptionService.findPublicJobs();
+    return {
+      message: 'Lấy danh sách Job tuyển dụng công khai thành công',
       data: jobs,
     };
   }

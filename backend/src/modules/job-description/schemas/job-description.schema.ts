@@ -17,6 +17,7 @@ export enum JobStatus {
   APPROVED = 'APPROVED',     // Đã duyệt
   REJECTED = 'REJECTED',     // Từ chối
   JD_CREATED = 'JD_CREATED', // Đã tạo JD
+  COMPLETED = 'COMPLETED',   // Hoàn thành
 }
 
 export enum JobPriority {
@@ -24,6 +25,28 @@ export enum JobPriority {
   MEDIUM = 'MEDIUM',   // Bình thường
   LOW = 'LOW',         // Thấp
 }
+
+export enum CriteriaRequirementType {
+  MANDATORY = 'MANDATORY', // Bắt buộc
+  PREFERRED = 'PREFERRED', // Ưu tiên
+}
+
+@Schema({ _id: false })
+export class JobCriteria {
+  @Prop({ required: true, trim: true })
+  name: string;
+
+  @Prop({ required: true, enum: CriteriaRequirementType, default: CriteriaRequirementType.MANDATORY })
+  requirementType: CriteriaRequirementType;
+
+  @Prop({ required: true, type: Number, min: 0, max: 100 })
+  weight: number;
+
+  @Prop({ type: Types.ObjectId, ref: 'Skill', required: false })
+  skillId?: Types.ObjectId;
+}
+
+export const JobCriteriaSchema = SchemaFactory.createForClass(JobCriteria);
 
 @Schema({ timestamps: true })
 export class JobDescription {
@@ -38,6 +61,9 @@ export class JobDescription {
 
   @Prop({ type: Types.ObjectId, ref: 'User', required: false })
   interviewerId?: Types.ObjectId;
+
+  @Prop({ type: [{ type: Types.ObjectId, ref: 'User' }], default: [] })
+  interviewerIds: Types.ObjectId[];
 
   @Prop({ required: true, trim: true })
   title: string;
@@ -56,6 +82,9 @@ export class JobDescription {
 
   @Prop({ type: [Types.ObjectId], ref: 'Skill', default: [] })
   requiredSkills: Types.ObjectId[];
+
+  @Prop({ type: [JobCriteriaSchema], default: [] })
+  criteria: JobCriteria[];
 
   @Prop({ required: true, trim: true })
   experienceLevel: string;

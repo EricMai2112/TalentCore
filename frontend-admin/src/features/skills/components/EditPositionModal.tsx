@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { X, Check, Loader2, AlertTriangle, Briefcase } from "lucide-react";
 import { PositionWithSkills, DeptOption } from "../types/skill.types";
+import { CustomInput, CustomSelect } from "@/src/components/common";
 
 interface EditPositionModalProps {
   isOpen: boolean;
@@ -9,6 +10,8 @@ interface EditPositionModalProps {
   position: PositionWithSkills | null;
   departments: DeptOption[];
   isSubmitting: boolean;
+  isDeptManager?: boolean;
+  userDeptId?: string;
 }
 
 export default function EditPositionModal({
@@ -18,6 +21,8 @@ export default function EditPositionModal({
   position,
   departments,
   isSubmitting,
+  isDeptManager = false,
+  userDeptId = "",
 }: EditPositionModalProps) {
   const [name, setName] = useState("");
   const [deptId, setDeptId] = useState("");
@@ -26,9 +31,9 @@ export default function EditPositionModal({
   useEffect(() => {
     if (!isOpen || !position) return;
     setName(position.name);
-    setDeptId(position.departmentId._id);
+    setDeptId(isDeptManager && userDeptId ? userDeptId : position.departmentId._id);
     setError(null);
-  }, [isOpen, position]);
+  }, [isOpen, position, isDeptManager, userDeptId]);
 
   if (!isOpen || !position) return null;
 
@@ -36,9 +41,10 @@ export default function EditPositionModal({
     e.preventDefault();
     setError(null);
     if (!name.trim()) return setError("Tên vị trí không được để trống");
-    if (!deptId) return setError("Vui lòng chọn phòng ban");
+    const finalDeptId = isDeptManager ? userDeptId : deptId;
+    if (!finalDeptId) return setError("Vui lòng chọn phòng ban");
     try {
-      await onSubmit(position._id, name.trim(), deptId);
+      await onSubmit(position._id, name.trim(), finalDeptId);
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : "Đã xảy ra lỗi");
     }
@@ -72,34 +78,30 @@ export default function EditPositionModal({
             </div>
           )}
 
-          <div className="space-y-1.5">
-            <label className="text-xs font-bold text-gray-600 uppercase tracking-wider">
-              Tên vị trí <span className="text-red-500">*</span>
-            </label>
-            <input
-              type="text"
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-              autoFocus
-              className="w-full px-3.5 py-2.5 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 bg-white text-gray-800"
-            />
-          </div>
+          <CustomInput
+            label="Tên vị trí"
+            required
+            autoFocus
+            value={name}
+            onChange={(e) => setName(e.target.value)}
+          />
 
-          <div className="space-y-1.5">
-            <label className="text-xs font-bold text-gray-600 uppercase tracking-wider">
-              Phòng ban <span className="text-red-500">*</span>
-            </label>
-            <select
-              value={deptId}
-              onChange={(e) => setDeptId(e.target.value)}
-              className="w-full px-3.5 py-2.5 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 bg-white text-gray-800"
-            >
-              <option value="">— Chọn phòng ban —</option>
-              {departments.map((d) => (
-                <option key={d._id} value={d._id}>{d.name}</option>
-              ))}
-            </select>
-          </div>
+          <CustomSelect
+            label="Phòng ban"
+            required
+            value={isDeptManager && userDeptId ? userDeptId : deptId}
+            onChange={(val) => setDeptId(val)}
+            isLocked={isDeptManager}
+            disabled={isDeptManager}
+            placeholder="— Chọn phòng ban —"
+            options={[
+              { value: "", label: "— Chọn phòng ban —" },
+              ...departments.map((d) => ({
+                value: d._id,
+                label: d.name,
+              })),
+            ]}
+          />
         </form>
 
         {/* Footer */}

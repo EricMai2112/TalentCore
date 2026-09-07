@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { X, Check, Loader2, AlertTriangle, Building2 } from "lucide-react";
 import { Department, CreateDepartmentDto, UpdateDepartmentDto } from "../types/department.types";
+import { CustomInput, CustomSelect, CustomTextarea } from "@/src/components/common";
 import { User } from "@/src/features/users/types/user.types";
 
 interface DepartmentModalProps {
@@ -122,55 +123,40 @@ export default function DepartmentModal({
 
           {/* Tên & Mã — 2 cột */}
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <div className="space-y-1.5">
-              <label className="text-xs font-bold text-gray-600 uppercase tracking-wider">
-                Tên phòng ban <span className="text-red-500">*</span>
-              </label>
-              <input
-                type="text"
-                name="name"
-                value={form.name}
-                onChange={handleChange}
-                placeholder="Engineering"
-                className="w-full px-3.5 py-2.5 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent bg-white text-gray-800 placeholder-gray-400"
-              />
-            </div>
+            <CustomInput
+              label="Tên phòng ban"
+              required
+              name="name"
+              value={form.name}
+              onChange={handleChange}
+              placeholder="Engineering"
+            />
 
-            <div className="space-y-1.5">
-              <label className="text-xs font-bold text-gray-600 uppercase tracking-wider">
-                Mã phòng ban <span className="text-red-500">*</span>
-              </label>
-              <input
-                type="text"
-                name="code"
-                value={form.code}
-                onChange={handleChange}
-                placeholder="ENG"
-                maxLength={10}
-                className="w-full px-3.5 py-2.5 border border-gray-200 rounded-xl text-sm font-mono font-bold focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent bg-white text-gray-800 placeholder-gray-400 uppercase"
-              />
-            </div>
+            <CustomInput
+              label="Mã phòng ban"
+              required
+              name="code"
+              value={form.code}
+              onChange={handleChange}
+              placeholder="ENG"
+              maxLength={10}
+            />
           </div>
 
           {/* Trưởng phòng */}
-          <div className="space-y-1.5">
-            <label className="text-xs font-bold text-gray-600 uppercase tracking-wider">
-              Trưởng phòng
-            </label>
-            <select
-              name="managerId"
-              value={form.managerId}
-              onChange={handleChange}
-              className="w-full px-3.5 py-2.5 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent bg-white text-gray-800"
-            >
-              <option value="">— Chưa phân công —</option>
-              {managers.map((m) => (
-                <option key={m._id} value={m._id}>
-                  {m.name}
-                </option>
-              ))}
-            </select>
-          </div>
+          <CustomSelect
+            label="Trưởng phòng"
+            value={form.managerId}
+            onChange={(val) => setForm((prev) => ({ ...prev, managerId: val }))}
+            placeholder="— Chưa phân công —"
+            options={[
+              { value: "", label: "— Chưa phân công —" },
+              ...managers.map((m) => ({
+                value: m._id,
+                label: m.name,
+              })),
+            ]}
+          />
         </form>
 
         {/* Footer */}

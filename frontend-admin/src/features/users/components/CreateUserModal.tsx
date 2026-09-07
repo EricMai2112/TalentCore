@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { X, Check, Loader2, AlertTriangle, UserPlus } from "lucide-react";
 import { CreateEmployeeDto, Department, UserRole, USER_ROLE_LABEL } from "../types/user.types";
+import { CustomInput, CustomSelect } from "@/src/components/common";
 
 interface CreateUserModalProps {
   isOpen: boolean;
@@ -8,6 +9,8 @@ interface CreateUserModalProps {
   onSubmit: (data: CreateEmployeeDto) => Promise<void>;
   departments: Department[];
   isSubmitting: boolean;
+  isDeptManager?: boolean;
+  userDeptId?: string;
 }
 
 const ROLE_OPTIONS = [
@@ -16,31 +19,37 @@ const ROLE_OPTIONS = [
   UserRole.EMPLOYEE,
 ];
 
-const emptyForm = (): CreateEmployeeDto => ({
-  name: "",
-  email: "",
-  phone: "",
-  role: UserRole.EMPLOYEE,
-  departmentId: "",
-});
-
 export default function CreateUserModal({
   isOpen,
   onClose,
   onSubmit,
   departments,
   isSubmitting,
+  isDeptManager = false,
+  userDeptId = "",
 }: CreateUserModalProps) {
-  const [form, setForm] = useState<CreateEmployeeDto>(emptyForm());
+  const [form, setForm] = useState<CreateEmployeeDto>({
+    name: "",
+    email: "",
+    phone: "",
+    role: UserRole.EMPLOYEE,
+    departmentId: isDeptManager ? userDeptId : "",
+  });
   const [error, setError] = useState<string | null>(null);
 
-  // Reset form mỗi lần mở
+  // Reset form mỗi lần mở modal
   useEffect(() => {
     if (isOpen) {
-      setForm(emptyForm());
+      setForm({
+        name: "",
+        email: "",
+        phone: "",
+        role: UserRole.EMPLOYEE,
+        departmentId: isDeptManager ? userDeptId : "",
+      });
       setError(null);
     }
-  }, [isOpen]);
+  }, [isOpen, isDeptManager, userDeptId]);
 
   if (!isOpen) return null;
 
@@ -63,9 +72,11 @@ export default function CreateUserModal({
       name: form.name.trim(),
       email: form.email.trim(),
       phone: form.phone.trim(),
-      role: form.role,
+      role: isDeptManager ? UserRole.EMPLOYEE : form.role,
     };
-    if (form.departmentId) payload.departmentId = form.departmentId;
+
+    const finalDeptId = isDeptManager ? userDeptId : form.departmentId;
+    if (finalDeptId) payload.departmentId = finalDeptId;
 
     try {
       await onSubmit(payload);
@@ -107,90 +118,69 @@ export default function CreateUserModal({
           )}
 
           {/* Họ tên */}
-          <div className="space-y-1.5">
-            <label className="text-xs font-bold text-gray-600 uppercase tracking-wider">
-              Họ và tên <span className="text-red-500">*</span>
-            </label>
-            <input
-              type="text"
-              name="name"
-              value={form.name}
-              onChange={handleChange}
-              placeholder="Nguyễn Văn A"
-              className="w-full px-3.5 py-2.5 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent bg-white text-gray-800 placeholder-gray-400"
-            />
-          </div>
+          <CustomInput
+            label="Họ và tên"
+            required
+            name="name"
+            value={form.name}
+            onChange={handleChange}
+            placeholder="Nguyễn Văn A"
+          />
 
           {/* Email */}
-          <div className="space-y-1.5">
-            <label className="text-xs font-bold text-gray-600 uppercase tracking-wider">
-              Email <span className="text-red-500">*</span>
-            </label>
-            <input
-              type="email"
-              name="email"
-              value={form.email}
-              onChange={handleChange}
-              placeholder="email@talentcore.vn"
-              className="w-full px-3.5 py-2.5 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent bg-white text-gray-800 placeholder-gray-400"
-            />
-          </div>
+          <CustomInput
+            label="Email"
+            required
+            type="email"
+            name="email"
+            value={form.email}
+            onChange={handleChange}
+            placeholder="email@talentcore.vn"
+          />
 
           {/* Số điện thoại */}
-          <div className="space-y-1.5">
-            <label className="text-xs font-bold text-gray-600 uppercase tracking-wider">
-              Số điện thoại <span className="text-red-500">*</span>
-            </label>
-            <input
-              type="tel"
-              name="phone"
-              value={form.phone}
-              onChange={handleChange}
-              placeholder="0901234567"
-              className="w-full px-3.5 py-2.5 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent bg-white text-gray-800 placeholder-gray-400"
-            />
-          </div>
+          <CustomInput
+            label="Số điện thoại"
+            required
+            type="tel"
+            name="phone"
+            value={form.phone}
+            onChange={handleChange}
+            placeholder="0901234567"
+          />
 
           {/* Vai trò & Phòng ban — 2 cột trên md */}
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             {/* Vai trò */}
-            <div className="space-y-1.5">
-              <label className="text-xs font-bold text-gray-600 uppercase tracking-wider">
-                Vai trò <span className="text-red-500">*</span>
-              </label>
-              <select
-                name="role"
-                value={form.role}
-                onChange={handleChange}
-                className="w-full px-3.5 py-2.5 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent bg-white text-gray-800"
-              >
-                {ROLE_OPTIONS.map((role) => (
-                  <option key={role} value={role}>
-                    {USER_ROLE_LABEL[role]}
-                  </option>
-                ))}
-              </select>
-            </div>
+            <CustomSelect
+              label="Vai trò"
+              required
+              value={isDeptManager ? UserRole.EMPLOYEE : form.role}
+              onChange={(val) => setForm((prev) => ({ ...prev, role: val as UserRole }))}
+              isLocked={isDeptManager}
+              disabled={isDeptManager}
+              options={ROLE_OPTIONS.map((role) => ({
+                value: role,
+                label: USER_ROLE_LABEL[role],
+              }))}
+            />
 
             {/* Phòng ban */}
-            <div className="space-y-1.5">
-              <label className="text-xs font-bold text-gray-600 uppercase tracking-wider">
-                Phòng ban
-              </label>
-              <select
-                name="departmentId"
-                value={form.departmentId ?? ""}
-                onChange={handleChange}
-                className="w-full px-3.5 py-2.5 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent bg-white text-gray-800"
-              >
-                <option value="">— Chưa phân công —</option>
-                {departments.map((dept) => (
-                  <option key={dept._id} value={dept._id}>
-                    {dept.name}
-                  </option>
-                ))}
-              </select>
-            </div>
+            <CustomSelect
+              label="Phòng ban"
+              value={isDeptManager ? userDeptId || "" : form.departmentId ?? ""}
+              onChange={(val) => setForm((prev) => ({ ...prev, departmentId: val }))}
+              isLocked={isDeptManager}
+              disabled={isDeptManager}
+              placeholder="— Chưa phân công —"
+              options={[
+                { value: "", label: "— Chưa phân công —" },
+                ...departments.map((dept) => ({
+                  value: dept._id,
+                  label: dept.name,
+                })),
+              ]}
+            />
           </div>
 
           {/* Ghi chú mật khẩu mặc định */}

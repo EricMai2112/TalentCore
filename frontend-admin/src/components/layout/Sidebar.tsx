@@ -30,10 +30,10 @@ interface NavItem {
 }
 
 const navItems: NavItem[] = [
-  { label: "Tổng quan", href: "/dashboard", icon: LayoutDashboard },
+  { label: "Tổng quan", href: "/dashboard", icon: LayoutDashboard, roles: [UserRole.HR_ADMIN] },
   { label: "Tin tuyển dụng", href: "/job-description", icon: Briefcase, roles: [UserRole.DEPARTMENT_MANAGER, UserRole.HR_ADMIN] },
   { label: "Kanban Tuyển dụng", href: "/kanban", icon: LayoutGrid, roles: [UserRole.HR_ADMIN] },
-  { label: "Ứng viên", href: "/candidates", icon: UserRound, roles: [UserRole.HR_ADMIN] },
+  { label: "Ứng viên", href: "/candidates", icon: UserRound, roles: [UserRole.HR_ADMIN, UserRole.DEPARTMENT_MANAGER, UserRole.EMPLOYEE] },
   { label: "Phỏng vấn", href: "/interviews", icon: MessageSquare, roles: [UserRole.HR_ADMIN, UserRole.DEPARTMENT_MANAGER, UserRole.EMPLOYEE] },
   { label: "Offer", href: "/offers", icon: FileText, roles: [UserRole.HR_ADMIN] },
   { label: "Thông báo", href: "/notifications", icon: Bell, roles: [UserRole.HR_ADMIN] },
@@ -153,7 +153,7 @@ export default function Sidebar() {
 
       {/* Bottom: Settings + Collapse */}
       <div className="px-2 py-3 border-t border-white/10 flex flex-col gap-1">
-        {user?.role === UserRole.HR_ADMIN && (
+        {(user?.role === UserRole.HR_ADMIN || user?.role === UserRole.DEPARTMENT_MANAGER) && (
           <div className="relative group">
             <Link
               href="/settings"

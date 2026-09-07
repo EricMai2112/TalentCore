@@ -12,12 +12,26 @@ export enum JobStatus {
   APPROVED = 'APPROVED',     // Đã duyệt
   REJECTED = 'REJECTED',     // Từ chối
   JD_CREATED = 'JD_CREATED', // Đã tạo JD
+  COMPLETED = 'COMPLETED',   // Hoàn thành
 }
 
 export enum JobPriority {
   HIGH = 'HIGH',       // Gấp
   MEDIUM = 'MEDIUM',   // Bình thường
   LOW = 'LOW',         // Thấp
+}
+
+export enum CriteriaRequirementType {
+  MANDATORY = 'MANDATORY', // Bắt buộc
+  PREFERRED = 'PREFERRED', // Ưu tiên
+}
+
+export interface JobCriteria {
+  _id?: string;
+  name: string;
+  requirementType: CriteriaRequirementType;
+  weight: number;
+  skillId?: string | Skill;
 }
 
 export interface Department {
@@ -73,12 +87,14 @@ export interface JobDescription {
   departmentId: string | Department;
   positionId?: string;
   interviewerId?: string | User;
+  interviewerIds?: (string | User)[];
   title: string;
   location: string;
   employmentType: EmploymentType;
   minimumSalary: number;
   maximumSalary: number;
   requiredSkills: (string | Skill)[];
+  criteria?: JobCriteria[];
   experienceLevel: string;
   description: string;
   requirements: string;
@@ -98,12 +114,14 @@ export interface CreateJobDescriptionDto {
   departmentId: string;
   positionId?: string;
   interviewerId?: string;
+  interviewerIds?: string[];
   title: string;
   location: string;
   employmentType: EmploymentType;
   minimumSalary: number;
   maximumSalary: number;
   requiredSkills?: string[];
+  criteria?: JobCriteria[];
   experienceLevel: string;
   description: string;
   requirements: string;
@@ -121,12 +139,14 @@ export interface UpdateJobDescriptionDto {
   departmentId?: string;
   positionId?: string;
   interviewerId?: string;
+  interviewerIds?: string[];
   title?: string;
   location?: string;
   employmentType?: EmploymentType;
   minimumSalary?: number;
   maximumSalary?: number;
   requiredSkills?: string[];
+  criteria?: JobCriteria[];
   experienceLevel?: string;
   description?: string;
   requirements?: string;
