@@ -167,7 +167,11 @@ export function CandidateInterviewsView() {
       ) : (
         <div className="space-y-4">
           {filteredInterviews.map((item) => (
-            <CandidateInterviewCardItem key={item._id} interview={item} />
+            <CandidateInterviewCardItem
+              key={item._id}
+              interview={item}
+              onStatusUpdated={fetchInterviews}
+            />
           ))}
         </div>
       )}

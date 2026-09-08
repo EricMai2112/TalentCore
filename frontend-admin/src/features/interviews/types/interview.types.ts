@@ -22,6 +22,16 @@ export interface StaffUser {
   role: string;
 }
 
+export interface AvailableSlot {
+  date: string;
+  startTime: string;
+  endTime: string;
+  label: string;
+  dayOfWeek: string;
+  isAvailable?: boolean;
+  disabledReason?: string;
+}
+
 export interface CandidateSelectOption {
   applicationId: string;
   candidateId: string;
@@ -70,6 +80,17 @@ export interface InterviewItem {
   result: InterviewResult;
   notes?: string;
   feedback?: string;
+  confirmationStatus?: 'PENDING' | 'CONFIRMED' | 'RESCHEDULE_REQUESTED' | 'RESCHEDULE_REJECTED' | 'ADMIN_PROPOSED' | 'CANCEL_REQUESTED' | 'CANCELLED';
+  rescheduleCount?: number;
+  rescheduleReason?: string;
+  rescheduleRejectReason?: string;
+  cancelReason?: string;
+  proposedCustomDate?: string;
+  proposedCustomStartTime?: string;
+  proposedCustomEndTime?: string;
+  proposedSlots?: { date: string; startTime: string; endTime: string }[];
+  proposedBy?: string;
+  isEscalated?: boolean;
   createdAt?: string;
 }
 

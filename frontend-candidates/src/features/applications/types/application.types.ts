@@ -49,6 +49,16 @@ export interface InterviewUserRef {
   role?: string;
 }
 
+export interface AvailableSlot {
+  date: string;
+  startTime: string;
+  endTime: string;
+  label: string;
+  dayOfWeek: string;
+  isAvailable?: boolean;
+  disabledReason?: string;
+}
+
 export interface CandidateInterviewItem {
   _id: string;
   applicationId: string;
@@ -64,6 +74,16 @@ export interface CandidateInterviewItem {
   offsiteLocation?: string;
   status: 'SCHEDULED' | 'COMPLETED' | 'CANCELLED';
   result: 'PENDING' | 'PASS' | 'FAIL';
-  confirmationStatus?: 'CONFIRMED' | 'PENDING' | 'RESCHEDULE_REQUESTED';
+  confirmationStatus?: 'CONFIRMED' | 'PENDING' | 'RESCHEDULE_REQUESTED' | 'RESCHEDULE_REJECTED' | 'ADMIN_PROPOSED' | 'CANCEL_REQUESTED' | 'CANCELLED';
+  rescheduleCount?: number;
+  rescheduleReason?: string;
+  rescheduleRejectReason?: string;
+  cancelReason?: string;
+  proposedCustomDate?: string;
+  proposedCustomStartTime?: string;
+  proposedCustomEndTime?: string;
+  proposedSlots?: { date: string; startTime: string; endTime: string }[];
+  proposedBy?: string;
+  isEscalated?: boolean;
   createdAt?: string;
 }

@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import { useRouter } from 'next/navigation';
 import { Loader2, Calendar as CalendarIcon } from 'lucide-react';
 import {
   InterviewItem,
@@ -18,6 +19,9 @@ import {
   InterviewsListView,
   InterviewsCalendarView,
   InterviewStatusModal,
+  EditInterviewModal,
+  AdminRescheduleModal,
+  CandidateRescheduleRequestModal,
 } from './';
 
 export default function InterviewsManager() {
@@ -63,6 +67,18 @@ export default function InterviewsManager() {
   );
   const [feedbackText, setFeedbackText] = useState<string>('');
   const [isUpdating, setIsUpdating] = useState<boolean>(false);
+
+  // State cho Modal Chỉnh sửa Lịch phỏng vấn
+  const [selectedEditInterview, setSelectedEditInterview] = useState<InterviewItem | null>(null);
+  const [isEditModalOpen, setIsEditModalOpen] = useState<boolean>(false);
+
+  // State cho Modal Đề xuất Lịch khác từ HR
+  const [selectedRescheduleInterview, setSelectedRescheduleInterview] = useState<InterviewItem | null>(null);
+  const [isAdminRescheduleModalOpen, setIsAdminRescheduleModalOpen] = useState<boolean>(false);
+
+  // State cho Modal Xem chi tiết yêu cầu đổi lịch của Ứng viên
+  const [selectedRequestInterview, setSelectedRequestInterview] = useState<InterviewItem | null>(null);
+  const [isRequestModalOpen, setIsRequestModalOpen] = useState<boolean>(false);
 
   // Active dropdown action ID
   const [activeMenuId, setActiveMenuId] = useState<string | null>(null);
@@ -185,6 +201,66 @@ export default function InterviewsManager() {
     setHoveredInterview(null);
   };
 
+  const router = useRouter();
+
+  const handleOpenEditModal = (interview: InterviewItem) => {
+    setActiveMenuId(null);
+    setHoveredInterview(null);
+    router.push(`/interviews/edit/${interview._id}`);
+  };
+
+  const handleOpenRescheduleModal = (interview: InterviewItem) => {
+    setSelectedRescheduleInterview(interview);
+    setIsAdminRescheduleModalOpen(true);
+    setActiveMenuId(null);
+    setHoveredInterview(null);
+  };
+
+  const handleOpenRescheduleRequestModal = (interview: InterviewItem) => {
+    setSelectedRequestInterview(interview);
+    setIsRequestModalOpen(true);
+    setActiveMenuId(null);
+    setHoveredInterview(null);
+  };
+
+  const handleApproveReschedule = async (interview: InterviewItem) => {
+    try {
+      await interviewsApi.approveReschedule(interview._id);
+      fetchInterviews();
+    } catch (err: any) {
+      alert(err?.response?.data?.message || err?.message || 'Lỗi khi chấp nhận đổi lịch phỏng vấn');
+    }
+  };
+
+  const handleRejectReschedule = async (interview: InterviewItem) => {
+    const reason = window.prompt(
+      'Nhập lý do từ chối yêu cầu đổi lịch (tùy chọn):',
+      'Hội đồng phỏng vấn bận/không thể thu xếp khung giờ này.'
+    );
+    if (reason === null) return;
+
+    try {
+      await interviewsApi.rejectReschedule(interview._id, reason);
+      fetchInterviews();
+    } catch (err: any) {
+      alert(err?.response?.data?.message || err?.message || 'Lỗi khi từ chối đổi lịch phỏng vấn');
+    }
+  };
+
+  const handleApproveCandidateCancellation = async (interview: InterviewItem) => {
+    const candName = typeof interview.candidateId === 'object' ? interview.candidateId.fullName || interview.candidateId.name : 'Ứng viên';
+    if (!window.confirm(`Xác nhận hủy lịch phỏng vấn của ứng viên "${candName}"?`)) {
+      return;
+    }
+
+    try {
+      await interviewsApi.approveCandidateCancellation(interview._id);
+      fetchInterviews();
+    } catch (err: any) {
+      alert(err?.response?.data?.message || err?.message || 'Lỗi khi xác nhận hủy lịch phỏng vấn');
+    }
+  };
+
   const handleSaveStatus = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!selectedInterview) return;
@@ -215,9 +291,16 @@ export default function InterviewsManager() {
     return `${y}-${m}-${day}`;
   };
 
-  const getStatusBadge = (status: InterviewStatus) => {
+  const getStatusBadge = (status: InterviewStatus, confirmationStatus?: string) => {
     switch (status) {
       case InterviewStatus.SCHEDULED:
+        if (confirmationStatus === 'CONFIRMED') {
+          return (
+            <span className="px-2.5 py-0.5 rounded-full text-xs font-bold bg-emerald-50 text-emerald-700 border border-emerald-200">
+              Xác nhận phỏng vấn
+            </span>
+          );
+        }
         return (
           <span className="px-2.5 py-0.5 rounded-full text-xs font-bold bg-indigo-50 text-indigo-600 border border-indigo-100">
             Đã lên lịch
@@ -305,6 +388,12 @@ export default function InterviewsManager() {
           activeMenuId={activeMenuId}
           setActiveMenuId={setActiveMenuId}
           onOpenStatusModal={handleOpenStatusModal}
+          onOpenEditModal={handleOpenEditModal}
+          onOpenRescheduleModal={handleOpenRescheduleModal}
+          onOpenRescheduleRequestModal={handleOpenRescheduleRequestModal}
+          onApproveReschedule={handleApproveReschedule}
+          onRejectReschedule={handleRejectReschedule}
+          onApproveCandidateCancellation={handleApproveCandidateCancellation}
           formatDate={formatDate}
           getStatusBadge={getStatusBadge}
           getResultBadge={getResultBadge}
@@ -337,6 +426,38 @@ export default function InterviewsManager() {
         setFeedbackText={setFeedbackText}
         isUpdating={isUpdating}
         onSaveStatus={handleSaveStatus}
+      />
+
+      {/* Edit Interview Schedule Modal */}
+      <EditInterviewModal
+        isOpen={isEditModalOpen}
+        onClose={() => setIsEditModalOpen(false)}
+        selectedInterview={selectedEditInterview}
+        onSaveSuccess={fetchInterviews}
+      />
+
+      {/* Admin Reschedule / Propose Alternate Slot Modal */}
+      <AdminRescheduleModal
+        isOpen={isAdminRescheduleModalOpen}
+        onClose={() => setIsAdminRescheduleModalOpen(false)}
+        interview={selectedRescheduleInterview}
+        onSuccess={() => {
+          setIsAdminRescheduleModalOpen(false);
+          setIsRequestModalOpen(false);
+          fetchInterviews();
+        }}
+      />
+
+      {/* Candidate Reschedule Request Details Modal */}
+      <CandidateRescheduleRequestModal
+        isOpen={isRequestModalOpen}
+        onClose={() => setIsRequestModalOpen(false)}
+        interview={selectedRequestInterview}
+        onApprove={handleApproveReschedule}
+        onProposeOther={(interviewItem) => {
+          handleOpenRescheduleModal(interviewItem);
+        }}
+        formatDate={formatDate}
       />
     </div>
   );
