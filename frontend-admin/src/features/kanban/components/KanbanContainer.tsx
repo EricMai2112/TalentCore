@@ -320,7 +320,7 @@ export default function KanbanContainer({
         >
           {/* Horizontal Scrollable Kanban Board Columns Container */}
           <div className="w-full overflow-x-auto pb-6 scrollbar-thin scrollbar-thumb-gray-200">
-            <div className="flex items-start gap-4 min-w-max">
+            <div className="flex items-stretch gap-4 min-w-max">
               {activeStages.map((stage) => (
                 <KanbanColumn
                   key={stage._id || stage.name}
@@ -345,7 +345,7 @@ export default function KanbanContainer({
       ) : (
         /* Fallback SSR render before client hydration */
         <div className="w-full overflow-x-auto pb-6 scrollbar-thin scrollbar-thumb-gray-200">
-          <div className="flex items-start gap-4 min-w-max">
+          <div className="flex items-stretch gap-4 min-w-max">
             {activeStages.map((stage) => (
               <KanbanColumn
                 key={stage._id || stage.name}

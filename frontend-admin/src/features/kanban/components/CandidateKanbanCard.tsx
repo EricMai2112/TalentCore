@@ -86,13 +86,6 @@ export default function CandidateKanbanCard({
     }
   }, [application.appliedAt]);
 
-  // Score color ring (3 màu: Xanh >= 70, Vàng >= 50, Đỏ < 50)
-  const scoreRingColor =
-    aiScore >= 70
-      ? "border-emerald-500 text-emerald-700 bg-emerald-50/70"
-      : aiScore >= 50
-      ? "border-amber-500 text-amber-700 bg-amber-50/70"
-      : "border-rose-400 text-rose-600 bg-rose-50";
 
   return (
     <div
@@ -128,10 +121,57 @@ export default function CandidateKanbanCard({
 
           {hasScore ? (
             <div
-              className={`w-8.5 h-8.5 rounded-full border-2 flex items-center justify-center font-extrabold text-xs shadow-2xs shrink-0 ${scoreRingColor}`}
+              className="relative w-10 h-10 shrink-0 flex items-center justify-center"
               title={`Điểm AI Match: ${aiScore}%`}
             >
-              {aiScore}
+              <svg className="w-10 h-10 -rotate-90 transform" viewBox="0 0 40 40">
+                {/* Background Ring Track (Màu nhạt đồng điệu, không để màu trắng) */}
+                <circle
+                  cx="20"
+                  cy="20"
+                  r="16"
+                  fill="none"
+                  className={
+                    aiScore >= 70
+                      ? "text-emerald-100"
+                      : aiScore >= 50
+                      ? "text-amber-100"
+                      : "text-rose-100"
+                  }
+                  stroke="currentColor"
+                  strokeWidth="3.5"
+                />
+                {/* Quantitative Progress Ring */}
+                <circle
+                  cx="20"
+                  cy="20"
+                  r="16"
+                  fill="none"
+                  className={
+                    aiScore >= 70
+                      ? "text-emerald-500"
+                      : aiScore >= 50
+                      ? "text-amber-500"
+                      : "text-rose-500"
+                  }
+                  stroke="currentColor"
+                  strokeWidth="3.5"
+                  strokeDasharray={100.5}
+                  strokeDashoffset={100.5 - (Math.min(100, Math.max(0, aiScore)) / 100) * 100.5}
+                  strokeLinecap="round"
+                />
+              </svg>
+              <span
+                className={`absolute text-xs font-black tracking-tight ${
+                  aiScore >= 70
+                    ? "text-emerald-700"
+                    : aiScore >= 50
+                    ? "text-amber-700"
+                    : "text-rose-600"
+                }`}
+              >
+                {aiScore}
+              </span>
             </div>
           ) : (
             <span className="text-[10px] text-gray-400 font-bold italic bg-gray-50 border border-gray-100 px-2 py-0.5 rounded-lg shrink-0">

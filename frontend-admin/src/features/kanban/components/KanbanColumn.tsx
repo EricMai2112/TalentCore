@@ -65,9 +65,9 @@ export default function KanbanColumn({
 
       {/* Column Body with SortableContext */}
       <SortableContext items={itemIds} strategy={verticalListSortingStrategy}>
-        <div className="flex-1 space-y-3.5 min-h-[420px]">
+        <div className="flex-1 space-y-3.5 min-h-[420px] flex flex-col">
           {applications.length === 0 ? (
-            <div className="h-full flex flex-col items-center justify-center py-16 text-gray-300 space-y-2 select-none">
+            <div className="h-full flex-1 flex flex-col items-center justify-center py-16 text-gray-300 space-y-2 select-none">
               <div className="w-12 h-12 rounded-full bg-gray-100 border border-gray-200/60 flex items-center justify-center text-gray-400">
                 <Inbox size={22} />
               </div>
