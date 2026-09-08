@@ -16,7 +16,7 @@ interface InterviewPopoverTooltipProps {
     y: number;
   };
   formatDate: (dateStr?: string) => string;
-  getStatusBadge: (status: InterviewStatus) => React.ReactNode;
+  getStatusBadge: (status: InterviewStatus, confirmationStatus?: string) => React.ReactNode;
   getResultBadge: (result: InterviewResult) => React.ReactNode;
 }
 
@@ -67,7 +67,7 @@ export default function InterviewPopoverTooltip({
       <div className="p-4 space-y-3">
         {/* Status Header */}
       <div className="flex items-center justify-between">
-        {getStatusBadge(item.status)}
+        {getStatusBadge(item.status, item.confirmationStatus)}
         {item.result &&
           item.result !== InterviewResult.PENDING &&
           getResultBadge(item.result)}

@@ -27,7 +27,7 @@ interface InterviewsCalendarViewProps {
   >;
   onOpenStatusModal: (interview: InterviewItem) => void;
   formatDate: (dateStr?: string) => string;
-  getStatusBadge: (status: InterviewStatus) => React.ReactNode;
+  getStatusBadge: (status: InterviewStatus, confirmationStatus?: string) => React.ReactNode;
   getResultBadge: (result: InterviewResult) => React.ReactNode;
 }
 

@@ -69,6 +69,45 @@ export class Interview {
 
   @Prop({ required: false, trim: true, default: 'CONFIRMED' })
   confirmationStatus?: string;
+
+  @Prop({ default: 0 })
+  rescheduleCount?: number;
+
+  @Prop({ required: false, trim: true })
+  rescheduleReason?: string;
+
+  @Prop({ required: false, trim: true })
+  rescheduleRejectReason?: string;
+
+  @Prop({ required: false, trim: true })
+  cancelReason?: string;
+
+  @Prop({ required: false, type: Date })
+  proposedCustomDate?: Date;
+
+  @Prop({ required: false, trim: true })
+  proposedCustomStartTime?: string;
+
+  @Prop({ required: false, trim: true })
+  proposedCustomEndTime?: string;
+
+  @Prop({
+    type: [
+      {
+        date: { type: Date },
+        startTime: { type: String },
+        endTime: { type: String },
+      },
+    ],
+    default: [],
+  })
+  proposedSlots?: { date: Date; startTime: string; endTime: string }[];
+
+  @Prop({ required: false, trim: true })
+  proposedBy?: string;
+
+  @Prop({ default: false })
+  isEscalated?: boolean;
 }
 
 export const InterviewSchema = SchemaFactory.createForClass(Interview);
