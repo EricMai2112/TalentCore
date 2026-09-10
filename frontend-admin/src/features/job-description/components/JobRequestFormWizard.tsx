@@ -144,7 +144,6 @@ export default function JobRequestFormWizard({
   const [applicationDeadline, setApplicationDeadline] = useState(getDefaultDeadline())
   const [selectedSkills, setSelectedSkills] = useState<string[]>([])
   const [criteria, setCriteria] = useState<JobCriteria[]>([])
-  const [selectedInterviewerIds, setSelectedInterviewerIds] = useState<string[]>([])
 
   // Step 2 State
   const [description, setDescription] = useState('')
@@ -238,22 +237,6 @@ export default function JobRequestFormWizard({
         setCriteria(defaultCriteriaList)
       }
 
-      // Populate selected interviewers
-      if (initialJob.interviewerIds && initialJob.interviewerIds.length > 0) {
-        const intvIds = initialJob.interviewerIds.map((emp) =>
-          typeof emp === 'object' ? emp?._id : emp
-        )
-        setSelectedInterviewerIds(intvIds)
-      } else if (initialJob.interviewerId) {
-        const singleId =
-          typeof initialJob.interviewerId === 'object'
-            ? initialJob.interviewerId?._id
-            : initialJob.interviewerId
-        setSelectedInterviewerIds(singleId ? [singleId] : [])
-      } else {
-        setSelectedInterviewerIds([])
-      }
-
       setDescription(initialJob.description)
       setRequirements(initialJob.requirements)
       setBenefits(initialJob.benefits)
@@ -292,7 +275,6 @@ export default function JobRequestFormWizard({
       setApplicationDeadline(getDefaultDeadline())
       setSelectedSkills([])
       setCriteria([])
-      setSelectedInterviewerIds([])
       setDescription('')
       setRequirements('')
       setBenefits('')
@@ -334,7 +316,6 @@ export default function JobRequestFormWizard({
     applicationDeadline,
     selectedSkills,
     criteria,
-    selectedInterviewerIds,
     description,
     requirements,
     benefits,
@@ -465,15 +446,6 @@ export default function JobRequestFormWizard({
     }
     setSelectedSkills(nextSkills)
     syncCriteriaFromSkillIds(nextSkills)
-  }
-
-  // Toggle interviewer selection
-  const handleToggleInterviewer = (empId: string) => {
-    if (selectedInterviewerIds.includes(empId)) {
-      setSelectedInterviewerIds(selectedInterviewerIds.filter((id) => id !== empId))
-    } else {
-      setSelectedInterviewerIds([...selectedInterviewerIds, empId])
-    }
   }
 
   // Add custom criteria row
@@ -736,30 +708,12 @@ export default function JobRequestFormWizard({
     ? skillsList.filter((sk) => posSkillIds.includes(sk._id))
     : []
 
-  const filteredEmployees = employees.filter((emp) => {
-    const empDeptId = emp.departmentId
-    return empDeptId === departmentId
-  })
-
-  const getRoleLabel = (role: string) => {
-    switch (role) {
-      case 'DEPARTMENT_MANAGER':
-        return 'Trưởng phòng'
-      case 'HR_ADMIN':
-        return 'HR Admin'
-      case 'EMPLOYEE':
-      default:
-        return 'Interviewer'
-    }
-  }
-
   const handleDepartmentChange = (deptId: string) => {
     setDepartmentId(deptId)
     setPositionId('')
     setTitle('')
     setSelectedSkills([])
     setCriteria([])
-    setSelectedInterviewerIds([])
   }
 
   const handlePositionChange = (posId: string) => {
@@ -826,8 +780,6 @@ export default function JobRequestFormWizard({
               ? (c.skillId as any)._id
               : undefined
       })),
-      interviewerId: selectedInterviewerIds.length > 0 ? selectedInterviewerIds[0] : undefined,
-      interviewerIds: selectedInterviewerIds,
       description: description.trim(),
       requirements: requirements.trim(),
       benefits: benefits.trim(),
@@ -938,8 +890,7 @@ export default function JobRequestFormWizard({
                     Thông tin vị trí & Phòng ban
                   </h3>
                   <p className="text-xs text-gray-500">
-                    Khai báo phòng ban, vị trí công việc, địa điểm, hình thức và danh sách người
-                    phỏng vấn.
+                    Khai báo phòng ban, vị trí công việc, địa điểm và hình thức làm việc.
                   </p>
                 </div>
               </div>
@@ -1088,52 +1039,6 @@ export default function JobRequestFormWizard({
                     { value: JobPriority.HIGH, label: "Gấp" },
                   ]}
                 />
-              </div>
-
-              {/* Redesigned Interviewers Section */}
-              <div className="space-y-2 pt-2">
-                <label className="text-xs font-bold text-gray-700 uppercase tracking-wider block">
-                  Người phỏng vấn (Có thể chọn nhiều nhân sự thuộc phòng ban)
-                </label>
-                <div className="p-4 border border-gray-100 rounded-2xl bg-gray-50/60 space-y-3">
-                  {!departmentId ? (
-                    <p className="text-xs text-gray-400 italic text-center py-2">
-                      Vui lòng chọn Phòng ban ở trên để hiển thị danh sách nhân sự phỏng vấn
-                    </p>
-                  ) : filteredEmployees.length === 0 ? (
-                    <p className="text-xs text-gray-400 italic text-center py-2">
-                      Phòng ban này chưa có nhân sự phỏng vấn được thiết lập
-                    </p>
-                  ) : (
-                    <div className="flex flex-wrap gap-2">
-                      {filteredEmployees.map((emp) => {
-                        const isSelected = selectedInterviewerIds.includes(emp._id)
-                        return (
-                          <button
-                            key={emp._id}
-                            type="button"
-                            onClick={() => handleToggleInterviewer(emp._id)}
-                            className={`px-3.5 py-2 rounded-xl text-xs font-semibold transition-all cursor-pointer flex items-center gap-2 ${
-                              isSelected
-                                ? 'bg-indigo-600 text-white shadow-xs'
-                                : 'bg-white border border-gray-200 text-gray-700 hover:bg-gray-100'
-                            }`}
-                          >
-                            <span>{emp.name}</span>
-                            <span
-                              className={`text-[11px] font-medium px-1.5 py-0.5 rounded-md ${
-                                isSelected ? 'bg-white/20 text-white' : 'bg-gray-100 text-gray-500'
-                              }`}
-                            >
-                              {getRoleLabel(emp.role)}
-                            </span>
-                            {isSelected && <Check size={14} />}
-                          </button>
-                        )
-                      })}
-                    </div>
-                  )}
-                </div>
               </div>
 
               {/* Skills Tags Bar */}
