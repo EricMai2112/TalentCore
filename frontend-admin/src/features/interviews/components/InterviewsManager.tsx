@@ -23,6 +23,8 @@ import {
   AdminRescheduleModal,
   CandidateRescheduleRequestModal,
 } from './';
+import { DeptScheduleFormModal } from './DeptScheduleFormModal';
+import { HrApproveScheduleModal } from './HrApproveScheduleModal';
 
 export default function InterviewsManager() {
   const { user } = useAuth();
@@ -79,6 +81,24 @@ export default function InterviewsManager() {
   // State cho Modal Xem chi tiết yêu cầu đổi lịch của Ứng viên
   const [selectedRequestInterview, setSelectedRequestInterview] = useState<InterviewItem | null>(null);
   const [isRequestModalOpen, setIsRequestModalOpen] = useState<boolean>(false);
+
+  // State cho Modal Xếp lịch của Trưởng phòng
+  const [selectedDeptScheduleInterview, setSelectedDeptScheduleInterview] = useState<InterviewItem | null>(null);
+  const [isDeptScheduleModalOpen, setIsDeptScheduleModalOpen] = useState<boolean>(false);
+
+  const handleOpenDeptScheduleModal = (interview: InterviewItem) => {
+    setSelectedDeptScheduleInterview(interview);
+    setIsDeptScheduleModalOpen(true);
+  };
+
+  // State cho Modal HR Duyệt lịch xem trước
+  const [selectedHrApproveInterview, setSelectedHrApproveInterview] = useState<InterviewItem | null>(null);
+  const [isHrApproveModalOpen, setIsHrApproveModalOpen] = useState<boolean>(false);
+
+  const handleApproveHrSchedule = (interview: InterviewItem) => {
+    setSelectedHrApproveInterview(interview);
+    setIsHrApproveModalOpen(true);
+  };
 
   // Active dropdown action ID
   const [activeMenuId, setActiveMenuId] = useState<string | null>(null);
@@ -294,6 +314,20 @@ export default function InterviewsManager() {
   const getStatusBadge = (status: InterviewStatus, confirmationStatus?: string) => {
     switch (status) {
       case InterviewStatus.SCHEDULED:
+        if (confirmationStatus === 'WAITING_DEPT_SCHEDULE') {
+          return (
+            <span className="px-2.5 py-0.5 rounded-full text-xs font-bold bg-amber-50 text-amber-700 border border-amber-200">
+              Chờ lên lịch
+            </span>
+          );
+        }
+        if (confirmationStatus === 'WAITING_HR_APPROVAL') {
+          return (
+            <span className="px-2.5 py-0.5 rounded-full text-xs font-bold bg-sky-50 text-sky-700 border border-sky-200">
+              Chờ duyệt
+            </span>
+          );
+        }
         if (confirmationStatus === 'CONFIRMED') {
           return (
             <span className="px-2.5 py-0.5 rounded-full text-xs font-bold bg-emerald-50 text-emerald-700 border border-emerald-200">
@@ -394,6 +428,8 @@ export default function InterviewsManager() {
           onApproveReschedule={handleApproveReschedule}
           onRejectReschedule={handleRejectReschedule}
           onApproveCandidateCancellation={handleApproveCandidateCancellation}
+          onOpenDeptScheduleModal={handleOpenDeptScheduleModal}
+          onApproveHrSchedule={handleApproveHrSchedule}
           formatDate={formatDate}
           getStatusBadge={getStatusBadge}
           getResultBadge={getResultBadge}
@@ -412,6 +448,22 @@ export default function InterviewsManager() {
           getResultBadge={getResultBadge}
         />
       )}
+
+      {/* Trưởng phòng Xếp lịch & Chọn Interviewer Modal */}
+      <DeptScheduleFormModal
+        isOpen={isDeptScheduleModalOpen}
+        onClose={() => setIsDeptScheduleModalOpen(false)}
+        interview={selectedDeptScheduleInterview}
+        onSuccess={fetchInterviews}
+      />
+
+      {/* HR Duyệt lịch xem trước Modal */}
+      <HrApproveScheduleModal
+        isOpen={isHrApproveModalOpen}
+        onClose={() => setIsHrApproveModalOpen(false)}
+        interview={selectedHrApproveInterview}
+        onSuccess={fetchInterviews}
+      />
 
       {/* Status & Feedback Modal */}
       <InterviewStatusModal

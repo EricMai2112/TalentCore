@@ -499,7 +499,10 @@ export class InterviewService {
     const candidateIds = candidateDocs.map((c) => c._id);
 
     const interviews = await this.interviewModel
-      .find({ candidateId: { $in: candidateIds } })
+      .find({
+        candidateId: { $in: candidateIds },
+        confirmationStatus: { $nin: ['WAITING_DEPT_SCHEDULE', 'WAITING_HR_APPROVAL'] },
+      })
       .populate({
         path: 'candidateId',
         model: 'Candidate',
@@ -522,6 +525,109 @@ export class InterviewService {
       delete doc.notes;
       return doc;
     });
+  }
+
+  /**
+   * Lấy thông tin phỏng vấn theo applicationId
+   */
+  async getInterviewByApplicationId(applicationId: string) {
+    if (!Types.ObjectId.isValid(applicationId)) {
+      return null;
+    }
+    return await this.interviewModel.findOne({ applicationId: new Types.ObjectId(applicationId) }).exec();
+  }
+
+  /**
+   * HR Yêu cầu Trưởng phòng lên lịch phỏng vấn cho ứng viên
+   */
+  async requestDeptSchedule(applicationId: string) {
+    const application = await this.applicationModel
+      .findById(applicationId)
+      .populate('jobDescriptionId')
+      .exec();
+
+    if (!application) {
+      throw new NotFoundException('Không tìm thấy hồ sơ ứng tuyển');
+    }
+
+    let interview = await this.interviewModel.findOne({ applicationId: application._id }).exec();
+
+    if (!interview) {
+      const job: any = application.jobDescriptionId;
+      const defaultInterviewer = job?.interviewerId || application.candidateId;
+
+      interview = new this.interviewModel({
+        applicationId: application._id,
+        candidateId: application.candidateId,
+        jobDescriptionId: application.jobDescriptionId,
+        interviewerId: defaultInterviewer || new Types.ObjectId(),
+        date: new Date(),
+        startTime: '09:00',
+        endTime: '10:00',
+        locationType: LocationType.ONLINE,
+        status: InterviewStatus.SCHEDULED,
+        result: InterviewResult.PENDING,
+        confirmationStatus: 'WAITING_DEPT_SCHEDULE',
+      });
+    } else {
+      interview.confirmationStatus = 'WAITING_DEPT_SCHEDULE';
+    }
+
+    return await interview.save();
+  }
+
+  /**
+   * Trưởng phòng chọn lịch phỏng vấn và chọn Người phỏng vấn (Interviewer) thuộc phòng ban
+   */
+  async submitDeptSchedule(
+    id: string,
+    dto: {
+      date: string;
+      startTime: string;
+      endTime: string;
+      locationType?: LocationType;
+      meetingLink?: string;
+      offsiteLocation?: string;
+      interviewerId: string;
+      interviewerIds?: string[];
+      notes?: string;
+    },
+  ) {
+    const interview = await this.interviewModel.findById(id).exec();
+    if (!interview) {
+      throw new NotFoundException('Không tìm thấy thông tin phỏng vấn');
+    }
+
+    interview.date = new Date(dto.date);
+    interview.startTime = dto.startTime;
+    interview.endTime = dto.endTime;
+    if (dto.locationType) interview.locationType = dto.locationType;
+    if (dto.meetingLink) interview.meetingLink = dto.meetingLink;
+    if (dto.offsiteLocation) interview.offsiteLocation = dto.offsiteLocation;
+    if (dto.interviewerId && Types.ObjectId.isValid(dto.interviewerId)) {
+      interview.interviewerId = new Types.ObjectId(dto.interviewerId);
+    }
+    if (dto.interviewerIds && Array.isArray(dto.interviewerIds)) {
+      interview.interviewerIds = dto.interviewerIds
+        .filter((idStr) => Types.ObjectId.isValid(idStr))
+        .map((idStr) => new Types.ObjectId(idStr));
+    }
+    if (dto.notes) interview.notes = dto.notes;
+
+    interview.confirmationStatus = 'WAITING_HR_APPROVAL';
+    return await interview.save();
+  }
+
+  /**
+   * HR Duyệt lịch phỏng vấn do Trưởng phòng đề xuất
+   */
+  async approveInterviewSchedule(id: string) {
+    const interview = await this.interviewModel.findById(id).exec();
+    if (!interview) {
+      throw new NotFoundException('Không tìm thấy lịch phỏng vấn');
+    }
+    interview.confirmationStatus = 'SCHEDULED';
+    return await interview.save();
   }
 
   /**

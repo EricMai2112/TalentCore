@@ -3,22 +3,19 @@
 import { useState } from 'react'
 import {
   Calendar,
-  Clock,
   Video,
   MapPin,
   User,
   ExternalLink,
   CheckCircle2,
-  CalendarClock,
   Sparkles,
   Building2,
-  XCircle,
   AlertTriangle
 } from 'lucide-react'
 import { CandidateInterviewItem } from '../../types/application.types'
 import { candidateInterviewsApi } from '../../services/candidate-interviews.api'
-import { RescheduleModal } from './RescheduleModal'
 import { CancelInterviewModal } from './CancelInterviewModal'
+import { ConfirmInterviewModal } from './ConfirmInterviewModal'
 
 interface UpcomingInterviewBannerProps {
   interview: CandidateInterviewItem
@@ -33,15 +30,15 @@ export function UpcomingInterviewBanner({
     interview.confirmationStatus || 'CONFIRMED'
   )
   const [isSubmitting, setIsSubmitting] = useState(false)
-  const [isRescheduleOpen, setIsRescheduleOpen] = useState(false)
   const [isCancelModalOpen, setIsCancelModalOpen] = useState(false)
+  const [isConfirmModalOpen, setIsConfirmModalOpen] = useState(false)
   const [cancelReasonText, setCancelReasonText] = useState<string>(
     interview.cancelReason || ''
   )
 
   const job = interview.jobDescriptionId
   const deptName =
-    typeof job?.departmentId === 'object' ? job?.departmentId?.name : 'Phòng CNTT'
+    typeof job?.departmentId === 'object' ? job?.departmentId?.name : 'Phòng ban'
   const jobTitle = job?.title || 'Vị trí tuyển dụng'
 
   const interviewerName =
@@ -169,53 +166,20 @@ export function UpcomingInterviewBanner({
                   </span>
                 )}
               </div>
-            ) : confirmationStatus === 'ADMIN_PROPOSED' ? (
-              <button
-                type="button"
-                onClick={() => setIsRescheduleOpen(true)}
-                className="inline-flex items-center justify-center gap-2 px-5 py-3 rounded-2xl bg-amber-500 hover:bg-amber-600 text-slate-950 font-bold text-xs sm:text-sm shadow-md transition-all cursor-pointer animate-bounce"
-              >
-                <CalendarClock size={16} />
-                <span>HR đã đề xuất lịch mới — Chọn 1 khung giờ</span>
-              </button>
-            ) : confirmationStatus === 'RESCHEDULE_REQUESTED' ? (
-              <div className="inline-flex flex-col items-center justify-center gap-1 px-4 py-2.5 rounded-2xl bg-amber-500/20 border border-amber-500/40 text-amber-300 font-bold text-xs text-center">
-                <div className="flex items-center gap-1.5">
-                  <CalendarClock size={15} />
-                  <span>Đã đề nghị đổi lịch — Chờ nhà tuyển dụng duyệt</span>
-                </div>
-                {interview.proposedCustomDate && (
-                  <span className="text-[11px] font-normal text-amber-200/90">
-                    Giờ đề xuất: {formatDate(interview.proposedCustomDate)} ({interview.proposedCustomStartTime} - {interview.proposedCustomEndTime})
-                  </span>
-                )}
-              </div>
-            ) : confirmationStatus === 'RESCHEDULE_REJECTED' ? (
-              <div className="inline-flex flex-col items-center justify-center gap-1 px-4 py-2.5 rounded-2xl bg-rose-500/20 border border-rose-500/40 text-rose-200 font-bold text-xs text-center max-w-xs">
-                <div className="flex items-center gap-1.5 text-rose-300">
-                  <XCircle size={15} />
-                  <span>Đã từ chối yêu cầu đổi lịch</span>
-                </div>
-                {interview.rescheduleRejectReason && (
-                  <span className="text-[11px] font-normal text-rose-200/90 italic">
-                    Lý do: &ldquo;{interview.rescheduleRejectReason}&rdquo;
-                  </span>
-                )}
-              </div>
             ) : (
               <button
                 type="button"
                 disabled={isSubmitting}
-                onClick={handleConfirm}
+                onClick={() => setIsConfirmModalOpen(true)}
                 className="inline-flex items-center justify-center gap-2 px-5 py-2.5 rounded-2xl bg-emerald-600 hover:bg-emerald-700 border border-emerald-500 text-white font-bold text-xs sm:text-sm shadow-md transition-all cursor-pointer"
               >
                 <CheckCircle2 size={16} className="text-white" />
-                <span>Xác nhận tham gia</span>
+                <span>Xác nhận phỏng vấn</span>
               </button>
             )}
 
-            {/* Action 3: Request Reschedule or Cancel Interview */}
-            {confirmationStatus === 'CONFIRMED' ? (
+            {/* Action 3: Cancel Interview */}
+            {confirmationStatus !== 'CANCEL_REQUESTED' && (
               <button
                 type="button"
                 disabled={isSubmitting}
@@ -225,27 +189,17 @@ export function UpcomingInterviewBanner({
                 <AlertTriangle size={14} className="text-rose-400" />
                 <span>Yêu cầu hủy lịch phỏng vấn</span>
               </button>
-            ) : confirmationStatus !== 'RESCHEDULE_REQUESTED' && confirmationStatus !== 'CANCEL_REQUESTED' && (
-              <button
-                type="button"
-                disabled={isSubmitting}
-                onClick={() => setIsRescheduleOpen(true)}
-                className="inline-flex items-center justify-center gap-2 px-4 py-2 rounded-2xl bg-white/5 hover:bg-white/10 border border-white/10 text-indigo-200 hover:text-white font-semibold text-xs transition-all cursor-pointer"
-              >
-                <Clock size={14} />
-                <span>Đề nghị đổi lịch</span>
-              </button>
             )}
           </div>
         </div>
       </div>
 
-      <RescheduleModal
-        isOpen={isRescheduleOpen}
-        onClose={() => setIsRescheduleOpen(false)}
+      <ConfirmInterviewModal
+        isOpen={isConfirmModalOpen}
+        onClose={() => setIsConfirmModalOpen(false)}
         interview={interview}
         onSuccess={() => {
-          setConfirmationStatus('RESCHEDULE_REQUESTED')
+          setConfirmationStatus('CONFIRMED')
           if (onStatusUpdated) onStatusUpdated()
         }}
       />

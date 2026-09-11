@@ -80,7 +80,7 @@ export interface InterviewItem {
   result: InterviewResult;
   notes?: string;
   feedback?: string;
-  confirmationStatus?: 'PENDING' | 'CONFIRMED' | 'RESCHEDULE_REQUESTED' | 'RESCHEDULE_REJECTED' | 'ADMIN_PROPOSED' | 'CANCEL_REQUESTED' | 'CANCELLED';
+  confirmationStatus?: 'PENDING' | 'CONFIRMED' | 'WAITING_DEPT_SCHEDULE' | 'WAITING_HR_APPROVAL' | 'RESCHEDULE_REQUESTED' | 'RESCHEDULE_REJECTED' | 'ADMIN_PROPOSED' | 'CANCEL_REQUESTED' | 'CANCELLED' | string;
   rescheduleCount?: number;
   rescheduleReason?: string;
   rescheduleRejectReason?: string;

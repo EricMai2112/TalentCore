@@ -74,7 +74,7 @@ export interface CandidateInterviewItem {
   offsiteLocation?: string;
   status: 'SCHEDULED' | 'COMPLETED' | 'CANCELLED';
   result: 'PENDING' | 'PASS' | 'FAIL';
-  confirmationStatus?: 'CONFIRMED' | 'PENDING' | 'RESCHEDULE_REQUESTED' | 'RESCHEDULE_REJECTED' | 'ADMIN_PROPOSED' | 'CANCEL_REQUESTED' | 'CANCELLED';
+  confirmationStatus?: 'CONFIRMED' | 'PENDING' | 'WAITING_DEPT_SCHEDULE' | 'WAITING_HR_APPROVAL' | 'RESCHEDULE_REQUESTED' | 'RESCHEDULE_REJECTED' | 'ADMIN_PROPOSED' | 'CANCEL_REQUESTED' | 'CANCELLED' | string;
   rescheduleCount?: number;
   rescheduleReason?: string;
   rescheduleRejectReason?: string;
