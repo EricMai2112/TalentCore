@@ -86,6 +86,11 @@ export class InterviewController {
     return await this.interviewService.getInterviews(status);
   }
 
+  @Get('application/:applicationId')
+  async getInterviewByApplicationId(@Param('applicationId') applicationId: string) {
+    return await this.interviewService.getInterviewByApplicationId(applicationId);
+  }
+
   @Get(':id')
   async getInterviewById(@Param('id') id: string) {
     return await this.interviewService.getInterviewById(id);
@@ -94,6 +99,21 @@ export class InterviewController {
   @Post()
   async createInterview(@Body() dto: CreateInterviewDto) {
     return await this.interviewService.createInterview(dto);
+  }
+
+  @Post('request-dept-schedule')
+  async requestDeptSchedule(@Body('applicationId') applicationId: string) {
+    return await this.interviewService.requestDeptSchedule(applicationId);
+  }
+
+  @Patch(':id/submit-dept-schedule')
+  async submitDeptSchedule(@Param('id') id: string, @Body() dto: any) {
+    return await this.interviewService.submitDeptSchedule(id, dto);
+  }
+
+  @Patch(':id/hr-approve-schedule')
+  async approveInterviewSchedule(@Param('id') id: string) {
+    return await this.interviewService.approveInterviewSchedule(id);
   }
 
   @Post(':id/reschedule-request')

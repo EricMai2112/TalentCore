@@ -24,6 +24,15 @@ export const interviewsApi = {
     return res;
   },
 
+  getInterviewByApplicationId: async (applicationId: string): Promise<InterviewItem | null> => {
+    try {
+      const res = await apiClient.get<InterviewItem>(`/interviews/application/${applicationId}`);
+      return res || null;
+    } catch {
+      return null;
+    }
+  },
+
   getCandidatesForSelect: async (): Promise<CandidateSelectOption[]> => {
     const res = await apiClient.get<CandidateSelectOption[]>("/interviews/candidates-select");
     return res || [];
@@ -114,6 +123,21 @@ export const interviewsApi = {
 
   approveCandidateCancellation: async (id: string): Promise<InterviewItem> => {
     const res = await apiClient.patch<InterviewItem>(`/interviews/${id}/approve-cancel`, {});
+    return res;
+  },
+
+  requestDeptSchedule: async (applicationId: string): Promise<InterviewItem> => {
+    const res = await apiClient.post<InterviewItem>("/interviews/request-dept-schedule", { applicationId });
+    return res;
+  },
+
+  submitDeptSchedule: async (id: string, payload: any): Promise<InterviewItem> => {
+    const res = await apiClient.patch<InterviewItem>(`/interviews/${id}/submit-dept-schedule`, payload);
+    return res;
+  },
+
+  hrApproveSchedule: async (id: string): Promise<InterviewItem> => {
+    const res = await apiClient.patch<InterviewItem>(`/interviews/${id}/hr-approve-schedule`, {});
     return res;
   },
 };

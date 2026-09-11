@@ -23,6 +23,9 @@ import {
   InterviewResult,
   LocationType,
 } from '../types/interview.types';
+import { InterviewWorkflowStatusBadge } from './InterviewWorkflowStatusBadge';
+import { useAuth } from '@/src/providers/AuthProvider';
+import { UserRole } from '@/src/features/users/types/user.types';
 
 interface InterviewCardProps {
   item: InterviewItem;
@@ -33,6 +36,8 @@ interface InterviewCardProps {
   onApproveReschedule?: (interview: InterviewItem) => void;
   onRejectReschedule?: (interview: InterviewItem) => void;
   onApproveCandidateCancellation?: (interview: InterviewItem) => void;
+  onOpenDeptScheduleModal?: (interview: InterviewItem) => void;
+  onApproveHrSchedule?: (interview: InterviewItem) => void;
   activeMenuId: string | null;
   setActiveMenuId: (id: string | null) => void;
   formatDate: (dateStr?: string) => string;
@@ -49,12 +54,20 @@ export default function InterviewCard({
   onApproveReschedule,
   onRejectReschedule,
   onApproveCandidateCancellation,
+  onOpenDeptScheduleModal,
+  onApproveHrSchedule,
   activeMenuId,
   setActiveMenuId,
   formatDate,
   getStatusBadge,
   getResultBadge,
 }: InterviewCardProps) {
+  const { user: currentUser } = useAuth();
+  const roleStr = currentUser?.role as string | undefined;
+  const isHrAdmin = roleStr === UserRole.HR_ADMIN || roleStr === "HR_ADMIN" || roleStr === "ADMIN";
+  const isDeptManager = roleStr === UserRole.DEPARTMENT_MANAGER || roleStr === "DEPARTMENT_MANAGER";
+  const isApproved = item.confirmationStatus === 'SCHEDULED' || item.confirmationStatus === 'CONFIRMED';
+
   const cand = item.candidateId;
   const candName = typeof cand === 'object' ? cand?.fullName || cand?.name : 'Ứng viên';
   const jobTitle =
@@ -80,7 +93,7 @@ export default function InterviewCard({
             <h3 className="text-base sm:text-lg font-bold text-slate-900 tracking-tight">
               {candName}
             </h3>
-            {getStatusBadge(item.status, item.confirmationStatus)}
+            <InterviewWorkflowStatusBadge status={item.status} confirmationStatus={item.confirmationStatus} />
             {item.result && item.result !== InterviewResult.PENDING && getResultBadge(item.result)}
             
             {item.confirmationStatus === 'RESCHEDULE_REQUESTED' && (
@@ -98,13 +111,6 @@ export default function InterviewCard({
               <span className="px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-rose-100 text-rose-700 border border-rose-200 inline-flex items-center gap-1">
                 <AlertTriangle size={12} className="animate-pulse" />
                 <span>Ứng viên yêu cầu hủy lịch</span>
-              </span>
-            )}
-
-            {item.confirmationStatus === 'PENDING' && item.status === InterviewStatus.SCHEDULED && (
-              <span className="px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-sky-50 text-sky-700 border border-sky-200 inline-flex items-center gap-1">
-                <Clock size={12} />
-                <span>Chờ ứng viên xác nhận</span>
               </span>
             )}
 
@@ -179,8 +185,6 @@ export default function InterviewCard({
           )}
 
           {/* Feedback quote if available */}
-
-          {/* Feedback quote if available */}
           {item.feedback && (
             <div className="mt-3 p-3 bg-slate-50 border border-slate-100 rounded-2xl text-xs font-medium italic text-slate-600 max-w-2xl">
               &ldquo;{item.feedback}&rdquo;
@@ -191,7 +195,27 @@ export default function InterviewCard({
 
       {/* Right Action Buttons */}
       <div className="flex items-center gap-3 shrink-0 self-end md:self-center pt-2 md:pt-0 border-t md:border-t-0 border-slate-100">
-        {item.locationType === LocationType.ONLINE && item.meetingLink && (
+        {isDeptManager && item.confirmationStatus === 'WAITING_DEPT_SCHEDULE' && onOpenDeptScheduleModal && (
+          <button
+            type="button"
+            onClick={() => onOpenDeptScheduleModal(item)}
+            className="px-4 py-2 rounded-xl bg-amber-500 hover:bg-amber-600 text-white font-bold text-xs shadow-xs transition-all cursor-pointer"
+          >
+            Xếp lịch & Chọn Interviewer
+          </button>
+        )}
+
+        {isHrAdmin && item.confirmationStatus === 'WAITING_HR_APPROVAL' && onApproveHrSchedule && (
+          <button
+            type="button"
+            onClick={() => onApproveHrSchedule(item)}
+            className="px-4 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs shadow-xs transition-all cursor-pointer"
+          >
+            Duyệt lịch phỏng vấn
+          </button>
+        )}
+
+        {isApproved && item.locationType === LocationType.ONLINE && item.meetingLink && (
           <a
             href={item.meetingLink}
             target="_blank"

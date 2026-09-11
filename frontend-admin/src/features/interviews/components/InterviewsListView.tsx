@@ -19,6 +19,8 @@ interface InterviewsListViewProps {
   onApproveReschedule?: (interview: InterviewItem) => void;
   onRejectReschedule?: (interview: InterviewItem) => void;
   onApproveCandidateCancellation?: (interview: InterviewItem) => void;
+  onOpenDeptScheduleModal?: (interview: InterviewItem) => void;
+  onApproveHrSchedule?: (interview: InterviewItem) => void;
   formatDate: (dateStr?: string) => string;
   getStatusBadge: (status: InterviewStatus, confirmationStatus?: string) => React.ReactNode;
   getResultBadge: (result: InterviewResult) => React.ReactNode;
@@ -35,6 +37,8 @@ export default function InterviewsListView({
   onApproveReschedule,
   onRejectReschedule,
   onApproveCandidateCancellation,
+  onOpenDeptScheduleModal,
+  onApproveHrSchedule,
   formatDate,
   getStatusBadge,
   getResultBadge,
@@ -52,6 +56,8 @@ export default function InterviewsListView({
           onApproveReschedule={onApproveReschedule}
           onRejectReschedule={onRejectReschedule}
           onApproveCandidateCancellation={onApproveCandidateCancellation}
+          onOpenDeptScheduleModal={onOpenDeptScheduleModal}
+          onApproveHrSchedule={onApproveHrSchedule}
           activeMenuId={activeMenuId}
           setActiveMenuId={setActiveMenuId}
           formatDate={formatDate}

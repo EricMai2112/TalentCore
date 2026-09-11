@@ -3,7 +3,6 @@
 import { useState } from 'react'
 import {
   Calendar,
-  Clock,
   Video,
   MapPin,
   User,
@@ -11,11 +10,13 @@ import {
   ExternalLink,
   CheckCircle2,
   XCircle,
-  CalendarClock
+  AlertTriangle
 } from 'lucide-react'
 import { CandidateInterviewItem } from '../../types/application.types'
 import { candidateInterviewsApi } from '../../services/candidate-interviews.api'
-import { RescheduleModal } from './RescheduleModal'
+import { HrContactNoteCallout } from './HrContactNoteCallout'
+import { CancelInterviewModal } from './CancelInterviewModal'
+import { ConfirmInterviewModal } from './ConfirmInterviewModal'
 
 interface CandidateInterviewCardItemProps {
   interview: CandidateInterviewItem
@@ -30,7 +31,8 @@ export function CandidateInterviewCardItem({
     interview.confirmationStatus || 'PENDING'
   )
   const [isSubmitting, setIsSubmitting] = useState(false)
-  const [isRescheduleOpen, setIsRescheduleOpen] = useState(false)
+  const [isCancelModalOpen, setIsCancelModalOpen] = useState(false)
+  const [isConfirmModalOpen, setIsConfirmModalOpen] = useState(false)
 
   const job = interview.jobDescriptionId
   const deptName =
@@ -95,19 +97,13 @@ export function CandidateInterviewCardItem({
       case 'CONFIRMED':
         return (
           <span className="px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-emerald-50 text-emerald-600 border border-emerald-100">
-            ✓ Đã xác nhận
+            ✓ Đã xác nhận tham gia
           </span>
         )
-      case 'RESCHEDULE_REQUESTED':
-        return (
-          <span className="px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-amber-50 text-amber-700 border border-amber-200">
-            🕒 Đã đề nghị đổi lịch (Chờ NTD duyệt)
-          </span>
-        )
-      case 'RESCHEDULE_REJECTED':
+      case 'CANCEL_REQUESTED':
         return (
           <span className="px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-rose-50 text-rose-700 border border-rose-200">
-            ❌ Đã bị từ chối đề nghị đổi lịch
+            ⚠️ Đã gửi yêu cầu hủy lịch (Chờ duyệt)
           </span>
         )
       case 'PENDING':
@@ -178,38 +174,36 @@ export function CandidateInterviewCardItem({
           </div>
         </div>
 
+        {/* HR Support Zalo/Phone Contact Callout Note */}
+        {interview.status === 'SCHEDULED' && (
+          <HrContactNoteCallout phone="0987654321" zaloPhone="0987654321" />
+        )}
+
         {/* Card Footer Actions */}
         {interview.status === 'SCHEDULED' && (
           <div className="flex flex-wrap items-center justify-end gap-2 pt-3 border-t border-slate-100">
-            {confirmationStatus !== 'RESCHEDULE_REQUESTED' && confirmationStatus !== 'CONFIRMED' && (
+            {confirmationStatus !== 'CONFIRMED' && confirmationStatus !== 'CANCEL_REQUESTED' && (
               <button
                 type="button"
                 disabled={isSubmitting}
-                onClick={handleConfirm}
-                className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl bg-emerald-50 hover:bg-emerald-100 text-emerald-700 font-bold text-xs border border-emerald-200 transition-colors cursor-pointer"
+                onClick={() => setIsConfirmModalOpen(true)}
+                className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs shadow-xs transition-colors cursor-pointer"
               >
                 <CheckCircle2 size={14} />
-                <span>Xác nhận tham gia</span>
+                <span>Xác nhận phỏng vấn</span>
               </button>
             )}
 
-            {confirmationStatus !== 'RESCHEDULE_REQUESTED' && (
+            {confirmationStatus !== 'CANCEL_REQUESTED' && (
               <button
                 type="button"
                 disabled={isSubmitting}
-                onClick={() => setIsRescheduleOpen(true)}
-                className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 font-semibold text-xs border border-slate-200 transition-colors cursor-pointer"
+                onClick={() => setIsCancelModalOpen(true)}
+                className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-rose-50 hover:bg-rose-100 text-rose-700 font-semibold text-xs border border-rose-200 transition-colors cursor-pointer"
               >
-                <Clock size={14} />
-                <span>Đề nghị đổi lịch</span>
+                <AlertTriangle size={14} />
+                <span>Yêu cầu hủy lịch phỏng vấn</span>
               </button>
-            )}
-
-            {confirmationStatus === 'RESCHEDULE_REQUESTED' && (
-              <span className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl bg-amber-50 text-amber-700 font-bold text-xs border border-amber-200">
-                <CalendarClock size={14} />
-                <span>Đã gửi yêu cầu đổi lịch</span>
-              </span>
             )}
 
             {interview.meetingLink && (
@@ -217,7 +211,7 @@ export function CandidateInterviewCardItem({
                 href={interview.meetingLink}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="inline-flex items-center gap-1.5 px-4 py-1.5 rounded-xl bg-indigo-50 hover:bg-indigo-100 text-indigo-700 font-bold text-xs transition-colors cursor-pointer"
+                className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-indigo-50 hover:bg-indigo-100 text-indigo-700 font-bold text-xs transition-colors cursor-pointer"
               >
                 <Video size={14} />
                 <span>Vào phòng phỏng vấn</span>
@@ -228,16 +222,25 @@ export function CandidateInterviewCardItem({
         )}
       </div>
 
-      <RescheduleModal
-        isOpen={isRescheduleOpen}
-        onClose={() => setIsRescheduleOpen(false)}
+      <ConfirmInterviewModal
+        isOpen={isConfirmModalOpen}
+        onClose={() => setIsConfirmModalOpen(false)}
         interview={interview}
         onSuccess={() => {
-          setConfirmationStatus('RESCHEDULE_REQUESTED')
+          setConfirmationStatus('CONFIRMED')
+          if (onStatusUpdated) onStatusUpdated()
+        }}
+      />
+
+      <CancelInterviewModal
+        isOpen={isCancelModalOpen}
+        onClose={() => setIsCancelModalOpen(false)}
+        interview={interview}
+        onSuccess={() => {
+          setConfirmationStatus('CANCEL_REQUESTED')
           if (onStatusUpdated) onStatusUpdated()
         }}
       />
     </>
   )
 }
-
