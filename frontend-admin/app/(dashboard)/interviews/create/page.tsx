@@ -1,7 +1,5 @@
-'use client';
-
-import { InterviewForm } from '@/src/features/interviews/components';
+import { redirect } from 'next/navigation';
 
 export default function CreateInterviewPage() {
-  return <InterviewForm mode="create" />;
+  redirect('/interviews');
 }

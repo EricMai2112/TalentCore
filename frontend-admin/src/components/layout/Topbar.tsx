@@ -2,31 +2,52 @@
 "use client";
 
 import { useState } from "react";
-import { Bell, Moon, ChevronDown, Search, LogOut, User as UserIcon } from "lucide-react";
+import { usePathname } from "next/navigation";
+import { Bell, Moon, ChevronDown, LogOut } from "lucide-react";
 import { useAuth } from "@/src/providers/AuthProvider";
 import { USER_ROLE_LABEL } from "@/src/features/users/types/user.types";
 
+function getPageTitle(pathname: string): string {
+  if (pathname === "/dashboard") return "Dashboard";
+  if (pathname === "/job-description") return "Yêu cầu tuyển dụng";
+  if (pathname === "/job-description/create") return "Tạo yêu cầu tuyển dụng";
+  if (pathname.startsWith("/job-description/") && pathname.endsWith("/edit")) return "Chỉnh sửa yêu cầu tuyển dụng";
+  if (pathname.startsWith("/job-description/")) return "Chi tiết yêu cầu tuyển dụng";
+
+  if (pathname === "/kanban") return "Kanban Tuyển dụng";
+  if (pathname === "/candidates") return "Quản lý ứng viên";
+
+  if (pathname === "/interviews") return "Quản lý phỏng vấn";
+  if (pathname.startsWith("/interviews/edit/")) return "Chỉnh sửa lịch phỏng vấn";
+
+  if (pathname === "/offers") return "Quản lý Offer";
+  if (pathname === "/notifications") return "Thông báo hệ thống";
+
+  if (pathname.startsWith("/settings")) return "Cấu hình hệ thống";
+
+  return "TalentCore Admin";
+}
+
 export default function Topbar() {
+  const pathname = usePathname();
   const { user, logout } = useAuth();
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
 
   // Lấy chữ cái đầu làm Avatar
   const initial = user?.name ? user.name.charAt(0).toUpperCase() : "A";
   const roleName = user?.role ? USER_ROLE_LABEL[user.role] : "Người dùng";
+  const title = getPageTitle(pathname);
 
   return (
     <header
       className="flex items-center justify-between px-6 py-3 border-b border-gray-200 bg-white shrink-0"
       style={{ minHeight: 60 }}
     >
-      {/* Search */}
-      <div className="flex items-center gap-2 bg-gray-100 rounded-lg px-3 py-2 w-64">
-        <Search size={16} className="text-gray-400 shrink-0" />
-        <input
-          type="text"
-          placeholder="Tìm kiếm..."
-          className="bg-transparent text-sm text-gray-700 placeholder-gray-400 outline-none w-full"
-        />
+      {/* Page Title Replacement for Search Bar */}
+      <div className="flex items-center gap-3">
+        <h1 className="text-lg sm:text-xl font-bold text-gray-900 tracking-tight">
+          {title}
+        </h1>
       </div>
 
       {/* Right side */}

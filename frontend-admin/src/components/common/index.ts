@@ -12,3 +12,6 @@ export type { CustomTimePickerProps } from './CustomTimePicker';
 
 export { default as CustomTextarea } from './CustomTextarea';
 export type { CustomTextareaProps } from './CustomTextarea';
+
+export { default as CustomPagination } from './CustomPagination';
+export { CustomPagination as CustomPaginationComponent } from './CustomPagination';

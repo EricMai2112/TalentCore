@@ -41,14 +41,23 @@ export default function InterviewsManager() {
   const [departmentFilter, setDepartmentFilter] = useState<string>('ALL');
   const [positionFilter, setPositionFilter] = useState<string>('ALL');
 
+  // Pagination State for List View
+  const [currentPage, setCurrentPage] = useState<number>(1);
+  const pageSize = 10;
+
+  // Reset page when filters change
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [departmentFilter, positionFilter, statusFilter]);
+
   const [departments, setDepartments] = useState<Department[]>([]);
   const [interviews, setInterviews] = useState<InterviewItem[]>([]);
   const [isLoading, setIsLoading] = useState<boolean>(true);
 
   // Calendar Month Navigation
   const [currentMonthDate, setCurrentMonthDate] = useState<Date>(
-    new Date(2026, 8, 1)
-  ); // Default Sept 2026
+    new Date()
+  ); // Default Current Month
 
   // Hover Popover State cho Calendar Event
   const [hoveredInterview, setHoveredInterview] = useState<{
@@ -433,6 +442,9 @@ export default function InterviewsManager() {
           formatDate={formatDate}
           getStatusBadge={getStatusBadge}
           getResultBadge={getResultBadge}
+          currentPage={currentPage}
+          pageSize={pageSize}
+          onPageChange={setCurrentPage}
         />
       ) : (
         /* CALENDAR VIEW MODE */

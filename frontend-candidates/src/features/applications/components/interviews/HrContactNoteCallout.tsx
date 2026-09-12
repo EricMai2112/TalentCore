@@ -8,8 +8,8 @@ interface HrContactNoteCalloutProps {
 }
 
 export function HrContactNoteCallout({
-  phone = '0987654321',
-  zaloPhone = '0987654321'
+  phone = process.env.NEXT_PUBLIC_HR_CONTACT_PHONE || '0987654321',
+  zaloPhone = process.env.NEXT_PUBLIC_HR_ZALO_PHONE || '0987654321'
 }: HrContactNoteCalloutProps) {
   return (
     <div className="p-4 bg-amber-50/90 border border-amber-200/90 rounded-2xl flex items-start gap-3 text-xs text-amber-900 shadow-2xs">

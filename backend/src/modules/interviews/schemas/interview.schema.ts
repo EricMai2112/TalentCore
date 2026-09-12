@@ -20,6 +20,19 @@ export enum InterviewResult {
   FAIL = 'FAIL',
 }
 
+export enum InterviewConfirmationStatus {
+  PENDING = 'PENDING',                             // Chờ xác nhận
+  WAITING_DEPT_SCHEDULE = 'WAITING_DEPT_SCHEDULE', // Chờ Trưởng phòng xếp lịch
+  WAITING_HR_APPROVAL = 'WAITING_HR_APPROVAL',     // Chờ HR phê duyệt lịch
+  SCHEDULED = 'SCHEDULED',                         // Đã duyệt lịch (chờ ứng viên)
+  CONFIRMED = 'CONFIRMED',                         // Ứng viên đã xác nhận tham gia
+  RESCHEDULE_REQUESTED = 'RESCHEDULE_REQUESTED',   // Ứng viên yêu cầu đổi lịch
+  RESCHEDULE_REJECTED = 'RESCHEDULE_REJECTED',     // Nhà tuyển dụng từ chối đổi lịch
+  ADMIN_PROPOSED = 'ADMIN_PROPOSED',               // Nhà tuyển dụng đề xuất khung giờ mới
+  CANCEL_REQUESTED = 'CANCEL_REQUESTED',           // Ứng viên yêu cầu hủy lịch
+  CANCELLED = 'CANCELLED',                         // Đã hủy lịch
+}
+
 @Schema({ timestamps: true })
 export class Interview {
   @Prop({ type: Types.ObjectId, ref: 'Application', required: true, index: true })
@@ -67,8 +80,8 @@ export class Interview {
   @Prop({ required: false, trim: true })
   feedback?: string;
 
-  @Prop({ required: false, trim: true, default: 'CONFIRMED' })
-  confirmationStatus?: string;
+  @Prop({ required: false, enum: InterviewConfirmationStatus, default: InterviewConfirmationStatus.CONFIRMED })
+  confirmationStatus?: InterviewConfirmationStatus;
 
   @Prop({ default: 0 })
   rescheduleCount?: number;

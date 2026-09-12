@@ -1,8 +1,16 @@
 import { Controller, Get, Post, Put, Patch, Body, Param, Query, Req, UnauthorizedException } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import { InterviewService } from '../services/interview.service';
-import { CreateInterviewDto, UpdateInterviewDto } from '../dtos/interview.dto';
-import { InterviewStatus, InterviewResult } from '../schemas/interview.schema';
+import {
+  CreateInterviewDto,
+  UpdateInterviewDto,
+  SubmitDeptScheduleDto,
+  CandidateRescheduleDto,
+  ProposeAdminSlotsDto,
+  CandidateCancelDto,
+  UpdateInterviewStatusDto,
+} from '../dtos/interview.dto';
+import { InterviewStatus, InterviewResult, InterviewConfirmationStatus } from '../schemas/interview.schema';
 
 @Controller('interviews')
 export class InterviewController {
@@ -107,7 +115,7 @@ export class InterviewController {
   }
 
   @Patch(':id/submit-dept-schedule')
-  async submitDeptSchedule(@Param('id') id: string, @Body() dto: any) {
+  async submitDeptSchedule(@Param('id') id: string, @Body() dto: SubmitDeptScheduleDto) {
     return await this.interviewService.submitDeptSchedule(id, dto);
   }
 
@@ -119,11 +127,7 @@ export class InterviewController {
   @Post(':id/reschedule-request')
   async requestCandidateReschedule(
     @Param('id') id: string,
-    @Body() dto: {
-      selectedSlot?: { date: string; startTime: string; endTime: string };
-      customSlot?: { date: string; startTime: string; endTime: string };
-      reason?: string;
-    },
+    @Body() dto: CandidateRescheduleDto,
   ) {
     return await this.interviewService.requestCandidateReschedule(id, dto);
   }
@@ -149,17 +153,15 @@ export class InterviewController {
   @Patch(':id/status')
   async updateStatus(
     @Param('id') id: string,
-    @Body('status') status?: InterviewStatus,
-    @Body('result') result?: InterviewResult,
-    @Body('feedback') feedback?: string,
+    @Body() dto: UpdateInterviewStatusDto,
   ) {
-    return await this.interviewService.updateStatus(id, status, result, feedback);
+    return await this.interviewService.updateStatus(id, dto.status, dto.result, dto.feedback);
   }
 
   @Patch(':id/candidate-confirm')
   async updateCandidateConfirmation(
     @Param('id') id: string,
-    @Body('confirmationStatus') confirmationStatus: string,
+    @Body('confirmationStatus') confirmationStatus: InterviewConfirmationStatus,
   ) {
     return await this.interviewService.updateCandidateConfirmation(id, confirmationStatus);
   }
@@ -167,10 +169,9 @@ export class InterviewController {
   @Patch(':id/propose-admin-slots')
   async proposeAdminSlots(
     @Param('id') id: string,
-    @Body('proposedSlots') proposedSlots: { date: string; startTime: string; endTime: string }[],
-    @Body('notes') notes?: string,
+    @Body() dto: ProposeAdminSlotsDto,
   ) {
-    return await this.interviewService.proposeAdminSlots(id, proposedSlots, notes);
+    return await this.interviewService.proposeAdminSlots(id, dto.proposedSlots, dto.notes);
   }
 
   @Patch(':id/accept-proposed-slot')
@@ -184,9 +185,9 @@ export class InterviewController {
   @Patch(':id/request-cancel')
   async requestCandidateCancellation(
     @Param('id') id: string,
-    @Body('reason') reason: string,
+    @Body() dto: CandidateCancelDto,
   ) {
-    return await this.interviewService.requestCandidateCancellation(id, reason);
+    return await this.interviewService.requestCandidateCancellation(id, dto.reason);
   }
 
   @Patch(':id/approve-cancel')

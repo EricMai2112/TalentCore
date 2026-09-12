@@ -8,6 +8,8 @@ import {
   InterviewResult,
 } from '../types/interview.types';
 
+import CustomPagination from '@/src/components/common/CustomPagination';
+
 interface InterviewsListViewProps {
   interviews: InterviewItem[];
   activeMenuId: string | null;
@@ -24,6 +26,9 @@ interface InterviewsListViewProps {
   formatDate: (dateStr?: string) => string;
   getStatusBadge: (status: InterviewStatus, confirmationStatus?: string) => React.ReactNode;
   getResultBadge: (result: InterviewResult) => React.ReactNode;
+  currentPage?: number;
+  pageSize?: number;
+  onPageChange?: (page: number) => void;
 }
 
 export default function InterviewsListView({
@@ -42,29 +47,51 @@ export default function InterviewsListView({
   formatDate,
   getStatusBadge,
   getResultBadge,
+  currentPage = 1,
+  pageSize = 10,
+  onPageChange,
 }: InterviewsListViewProps) {
+  const paginatedInterviews = interviews.slice(
+    (currentPage - 1) * pageSize,
+    currentPage * pageSize
+  );
+
   return (
     <div className="space-y-4">
-      {interviews.map((item) => (
-        <InterviewCard
-          key={item._id}
-          item={item}
-          onOpenStatusModal={onOpenStatusModal}
-          onOpenEditModal={onOpenEditModal}
-          onOpenRescheduleModal={onOpenRescheduleModal}
-          onOpenRescheduleRequestModal={onOpenRescheduleRequestModal}
-          onApproveReschedule={onApproveReschedule}
-          onRejectReschedule={onRejectReschedule}
-          onApproveCandidateCancellation={onApproveCandidateCancellation}
-          onOpenDeptScheduleModal={onOpenDeptScheduleModal}
-          onApproveHrSchedule={onApproveHrSchedule}
-          activeMenuId={activeMenuId}
-          setActiveMenuId={setActiveMenuId}
-          formatDate={formatDate}
-          getStatusBadge={getStatusBadge}
-          getResultBadge={getResultBadge}
-        />
-      ))}
+      <div className="space-y-4">
+        {paginatedInterviews.map((item) => (
+          <InterviewCard
+            key={item._id}
+            item={item}
+            onOpenStatusModal={onOpenStatusModal}
+            onOpenEditModal={onOpenEditModal}
+            onOpenRescheduleModal={onOpenRescheduleModal}
+            onOpenRescheduleRequestModal={onOpenRescheduleRequestModal}
+            onApproveReschedule={onApproveReschedule}
+            onRejectReschedule={onRejectReschedule}
+            onApproveCandidateCancellation={onApproveCandidateCancellation}
+            onOpenDeptScheduleModal={onOpenDeptScheduleModal}
+            onApproveHrSchedule={onApproveHrSchedule}
+            activeMenuId={activeMenuId}
+            setActiveMenuId={setActiveMenuId}
+            formatDate={formatDate}
+            getStatusBadge={getStatusBadge}
+            getResultBadge={getResultBadge}
+          />
+        ))}
+      </div>
+
+      {onPageChange && (
+        <div className="bg-white border border-slate-200/80 rounded-2xl overflow-hidden shadow-2xs">
+          <CustomPagination
+            currentPage={currentPage}
+            totalPages={Math.ceil(interviews.length / pageSize)}
+            totalItems={interviews.length}
+            pageSize={pageSize}
+            onPageChange={onPageChange}
+          />
+        </div>
+      )}
     </div>
   );
 }

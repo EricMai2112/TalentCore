@@ -4,7 +4,7 @@ import { useState, useEffect } from "react";
 import { createPortal } from "react-dom";
 import { Eye, Edit2, Trash2, Plus, CheckCheck, Briefcase, CheckCircle2, MoreVertical, FileText, Clock, XCircle, Award } from "lucide-react";
 import { JobDescription, JobStatus, JobPriority, Department } from "../types/job-description.types";
-import { CustomSelect } from "@/src/components/common";
+import { CustomSelect, CustomPagination } from "@/src/components/common";
 
 interface JobRequestTableProps {
   jobs: JobDescription[];
@@ -40,6 +40,15 @@ export default function JobRequestTable({
   );
   const [selectedStatus, setSelectedStatus] = useState("all");
   const [selectedPriority, setSelectedPriority] = useState("all");
+
+  // Pagination state
+  const [currentPage, setCurrentPage] = useState(1);
+  const pageSize = 10;
+
+  // Reset page when filters change
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [selectedDept, selectedStatus, selectedPriority]);
 
   // Portal & Floating Popover state
   const [mounted, setMounted] = useState(false);
@@ -139,25 +148,6 @@ export default function JobRequestTable({
 
   return (
     <div className="space-y-6">
-      {/* Header section */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h2 className="text-xl font-bold text-gray-900">Yêu cầu tuyển dụng</h2>
-          <p className="text-sm text-gray-500 mt-0.5">
-            {isDeptManager
-              ? "Tạo yêu cầu tuyển dụng cho phòng ban của bạn"
-              : "Trưởng phòng gửi yêu cầu — HR xem xét và phê duyệt"}
-          </p>
-        </div>
-        <button
-          onClick={onAdd}
-          className="flex items-center gap-1.5 px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white font-semibold text-sm rounded-xl transition-all duration-150 shadow-sm cursor-pointer"
-        >
-          <Plus size={16} />
-          Tạo yêu cầu mới
-        </button>
-      </div>
-
       {/* Metrics Row - Modern, Premium 6-Card Single Horizontal Row */}
       <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
         {/* 1. Tổng yêu cầu */}
@@ -227,54 +217,64 @@ export default function JobRequestTable({
         </div>
       </div>
 
-      {/* Filters Bar */}
-      <div className="flex flex-wrap items-center gap-3">
-        <CustomSelect
-          value={isDeptManager && userDeptId ? userDeptId : selectedDept}
-          onChange={(val) => setSelectedDept(val)}
-          isLocked={isDeptManager}
-          disabled={isDeptManager}
-          size="sm"
-          className="w-full sm:w-auto"
-          placeholder="Tất cả phòng ban"
-          options={[
-            ...(!isDeptManager ? [{ value: "all", label: "Tất cả phòng ban" }] : []),
-            ...departments.map((dept) => ({
-              value: dept._id,
-              label: dept.name,
-            })),
-          ]}
-        />
+      {/* Filters Bar with Action Button */}
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <div className="flex flex-wrap items-center gap-3">
+          <CustomSelect
+            value={isDeptManager && userDeptId ? userDeptId : selectedDept}
+            onChange={(val) => setSelectedDept(val)}
+            isLocked={isDeptManager}
+            disabled={isDeptManager}
+            size="sm"
+            className="w-full sm:w-auto"
+            placeholder="Tất cả phòng ban"
+            options={[
+              ...(!isDeptManager ? [{ value: "all", label: "Tất cả phòng ban" }] : []),
+              ...departments.map((dept) => ({
+                value: dept._id,
+                label: dept.name,
+              })),
+            ]}
+          />
 
-        <CustomSelect
-          value={selectedStatus}
-          onChange={(val) => setSelectedStatus(val)}
-          size="sm"
-          className="w-full sm:w-auto"
-          placeholder="Tất cả trạng thái"
-          options={[
-            { value: "all", label: "Tất cả trạng thái" },
-            { value: JobStatus.PENDING, label: "Chờ duyệt" },
-            { value: JobStatus.APPROVED, label: "Đã duyệt" },
-            { value: JobStatus.REJECTED, label: "Từ chối" },
-            { value: JobStatus.JD_CREATED, label: "Đã tạo JD" },
-            { value: JobStatus.COMPLETED, label: "Hoàn thành" },
-          ]}
-        />
+          <CustomSelect
+            value={selectedStatus}
+            onChange={(val) => setSelectedStatus(val)}
+            size="sm"
+            className="w-full sm:w-auto"
+            placeholder="Tất cả trạng thái"
+            options={[
+              { value: "all", label: "Tất cả trạng thái" },
+              { value: JobStatus.PENDING, label: "Chờ duyệt" },
+              { value: JobStatus.APPROVED, label: "Đã duyệt" },
+              { value: JobStatus.REJECTED, label: "Từ chối" },
+              { value: JobStatus.JD_CREATED, label: "Đã tạo JD" },
+              { value: JobStatus.COMPLETED, label: "Hoàn thành" },
+            ]}
+          />
 
-        <CustomSelect
-          value={selectedPriority}
-          onChange={(val) => setSelectedPriority(val)}
-          size="sm"
-          className="w-full sm:w-auto"
-          placeholder="Tất cả ưu tiên"
-          options={[
-            { value: "all", label: "Tất cả ưu tiên" },
-            { value: JobPriority.HIGH, label: "Gấp" },
-            { value: JobPriority.MEDIUM, label: "Bình thường" },
-            { value: JobPriority.LOW, label: "Thấp" },
-          ]}
-        />
+          <CustomSelect
+            value={selectedPriority}
+            onChange={(val) => setSelectedPriority(val)}
+            size="sm"
+            className="w-full sm:w-auto"
+            placeholder="Tất cả ưu tiên"
+            options={[
+              { value: "all", label: "Tất cả ưu tiên" },
+              { value: JobPriority.HIGH, label: "Gấp" },
+              { value: JobPriority.MEDIUM, label: "Bình thường" },
+              { value: JobPriority.LOW, label: "Thấp" },
+            ]}
+          />
+        </div>
+
+        <button
+          onClick={onAdd}
+          className="flex items-center gap-1.5 px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white font-semibold text-sm rounded-xl transition-all duration-150 shadow-sm cursor-pointer shrink-0 ml-auto sm:ml-0"
+        >
+          <Plus size={16} />
+          Tạo yêu cầu mới
+        </button>
       </div>
 
       {/* Table grid */}
@@ -301,85 +301,96 @@ export default function JobRequestTable({
                   </td>
                 </tr>
               ) : (
-                filteredJobs.map((job) => {
-                  const deptName = typeof job.departmentId === "object" ? job.departmentId?.name : "Chưa rõ";
-                  const postedByName = typeof job.postedById === "object" ? job.postedById?.name : "Tuyển dụng";
-                  const statusConf = getStatusConfig(job.status);
-                  const priorityConf = getPriorityConfig(job.priority);
-                  const createdDate = job.createdAt ? new Date(job.createdAt).toISOString().split("T")[0] : "";
-                  const isMenuOpen = activeMenu?.job._id === job._id;
+                filteredJobs
+                  .slice((currentPage - 1) * pageSize, currentPage * pageSize)
+                  .map((job) => {
+                    const deptName = typeof job.departmentId === "object" ? job.departmentId?.name : "Chưa rõ";
+                    const postedByName = typeof job.postedById === "object" ? job.postedById?.name : "Tuyển dụng";
+                    const statusConf = getStatusConfig(job.status);
+                    const priorityConf = getPriorityConfig(job.priority);
+                    const createdDate = job.createdAt ? new Date(job.createdAt).toISOString().split("T")[0] : "";
+                    const isMenuOpen = activeMenu?.job._id === job._id;
 
-                  return (
-                    <tr key={job._id} className="hover:bg-gray-50/40 transition-colors">
-                      {/* Job Title & Details */}
-                      <td className="px-6 py-4.5">
-                        <div className="space-y-1">
-                          <span className="font-bold text-gray-900 text-sm block">
-                            {job.title}
+                    return (
+                      <tr key={job._id} className="hover:bg-gray-50/40 transition-colors">
+                        {/* Job Title & Details */}
+                        <td className="px-6 py-4.5">
+                          <div className="space-y-1">
+                            <span className="font-bold text-gray-900 text-sm block">
+                              {job.title}
+                            </span>
+                            <span className="text-xs text-gray-400 font-medium block">
+                              ${(job.minimumSalary ?? 0).toLocaleString("en-US")} - ${(job.maximumSalary ?? 0).toLocaleString("en-US")} · {job.location}
+                            </span>
+                          </div>
+                        </td>
+
+                        {/* Department */}
+                        <td className="px-6 py-4.5 font-medium text-gray-600">
+                          {deptName}
+                        </td>
+
+                        {/* Headcount */}
+                        <td className="px-6 py-4.5 text-center font-bold text-gray-800">
+                          {job.headcount}
+                        </td>
+
+                        {/* Priority */}
+                        <td className="px-6 py-4.5">
+                          <span className={`px-2 py-0.5 rounded-lg border text-xs font-semibold ${priorityConf.style}`}>
+                            {priorityConf.label}
                           </span>
-                          <span className="text-xs text-gray-400 font-medium block">
-                            ${(job.minimumSalary ?? 0).toLocaleString("en-US")} - ${(job.maximumSalary ?? 0).toLocaleString("en-US")} · {job.location}
+                        </td>
+
+                        {/* Status */}
+                        <td className="px-6 py-4.5">
+                          <span className={`px-2.5 py-0.5 rounded-lg border text-xs font-semibold ${statusConf.style}`}>
+                            {statusConf.label}
                           </span>
-                        </div>
-                      </td>
+                        </td>
 
-                      {/* Department */}
-                      <td className="px-6 py-4.5 font-medium text-gray-600">
-                        {deptName}
-                      </td>
+                        {/* Requester */}
+                        <td className="px-6 py-4.5 text-gray-600 font-medium">
+                          {postedByName}
+                        </td>
 
-                      {/* Headcount */}
-                      <td className="px-6 py-4.5 text-center font-bold text-gray-800">
-                        {job.headcount}
-                      </td>
+                        {/* Created Date */}
+                        <td className="px-6 py-4.5 text-gray-400 font-medium">
+                          {createdDate}
+                        </td>
 
-                      {/* Priority */}
-                      <td className="px-6 py-4.5">
-                        <span className={`px-2 py-0.5 rounded-lg border text-xs font-semibold ${priorityConf.style}`}>
-                          {priorityConf.label}
-                        </span>
-                      </td>
-
-                      {/* Status */}
-                      <td className="px-6 py-4.5">
-                        <span className={`px-2.5 py-0.5 rounded-lg border text-xs font-semibold ${statusConf.style}`}>
-                          {statusConf.label}
-                        </span>
-                      </td>
-
-                      {/* Requester */}
-                      <td className="px-6 py-4.5 text-gray-600 font-medium">
-                        {postedByName}
-                      </td>
-
-                      {/* Created Date */}
-                      <td className="px-6 py-4.5 text-gray-400 font-medium">
-                        {createdDate}
-                      </td>
-
-                      {/* Actions Button */}
-                      <td className="px-6 py-4.5 text-center">
-                        <div className="flex items-center justify-center">
-                          <button
-                            onClick={(e) => handleToggleMenu(e, job)}
-                            className={`p-1.5 rounded-xl transition-colors cursor-pointer ${
-                              isMenuOpen
-                                ? "bg-indigo-50 text-indigo-600"
-                                : "text-gray-400 hover:text-gray-700 hover:bg-gray-100"
-                            }`}
-                            title="Thao tác"
-                          >
-                            <MoreVertical size={18} />
-                          </button>
-                        </div>
-                      </td>
-                    </tr>
-                  );
-                })
+                        {/* Actions Button */}
+                        <td className="px-6 py-4.5 text-center">
+                          <div className="flex items-center justify-center">
+                            <button
+                              onClick={(e) => handleToggleMenu(e, job)}
+                              className={`p-1.5 rounded-xl transition-colors cursor-pointer ${
+                                isMenuOpen
+                                  ? "bg-indigo-50 text-indigo-600"
+                                  : "text-gray-400 hover:text-gray-700 hover:bg-gray-100"
+                              }`}
+                              title="Thao tác"
+                            >
+                              <MoreVertical size={18} />
+                            </button>
+                          </div>
+                        </td>
+                      </tr>
+                    );
+                  })
               )}
             </tbody>
           </table>
         </div>
+
+        {/* Reusable Table Pagination */}
+        <CustomPagination
+          currentPage={currentPage}
+          totalPages={Math.ceil(filteredJobs.length / pageSize)}
+          totalItems={filteredJobs.length}
+          pageSize={pageSize}
+          onPageChange={setCurrentPage}
+        />
       </div>
 
       {/* Floating Action Menu Portal (Rendered at document.body level - Bypasses table overflow & clipping) */}

@@ -39,11 +39,11 @@ export default function SettingsLayout({ children }: { children: React.ReactNode
     <div className="min-h-full">
       {/* Page Header */}
       <div className="mb-6">
-        <h1 className="text-2xl font-bold text-gray-900">Cấu hình hệ thống</h1>
+        <h1 className="text-2xl font-bold text-gray-900">Trung tâm Quản trị & Thiết lập</h1>
         <p className="mt-1 text-sm text-gray-500">
           {isDeptManager
             ? 'Quản lý danh sách nhân viên và danh mục kỹ năng thuộc phòng ban'
-            : 'Quản lý nhân viên, phòng ban, quy trình, Kỹ năng và mẫu email'}
+            : 'Quản lý nhân viên, phòng ban, quy trình tuyển dụng, kỹ năng và mẫu email'}
         </p>
       </div>
 

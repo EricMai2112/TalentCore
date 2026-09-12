@@ -24,6 +24,7 @@ import CandidateDetailModal from './CandidateDetailModal'
 import CandidateNotesModal from './CandidateNotesModal'
 import RejectConfirmModal from './RejectConfirmModal'
 import CustomSelect, { CustomSelectOption } from '@/src/components/common/CustomSelect'
+import CustomPagination from '@/src/components/common/CustomPagination'
 
 export default function CandidatesManager() {
   const { user } = useAuth()
@@ -37,6 +38,15 @@ export default function CandidatesManager() {
   const [selectedDepartmentId, setSelectedDepartmentId] = useState('')
   const [selectedPosition, setSelectedPosition] = useState('')
   const [selectedStage, setSelectedStage] = useState('')
+
+  // Pagination state
+  const [currentPage, setCurrentPage] = useState(1)
+  const pageSize = 10
+
+  // Reset page when filters change
+  useEffect(() => {
+    setCurrentPage(1)
+  }, [searchQuery, selectedDepartmentId, selectedPosition, selectedStage])
 
   // Modals state
   const [detailApp, setDetailApp] = useState<CandidateApplication | null>(null)
@@ -308,13 +318,6 @@ export default function CandidatesManager() {
         </div>
       )}
 
-      {/* Header section */}
-      <div>
-        <h1 className="text-2xl font-bold tracking-tight text-slate-900">Quản lý ứng viên</h1>
-        <p className="mt-1 text-xs font-medium text-slate-400">
-          {filteredApplications.length} ứng viên trong hệ thống
-        </p>
-      </div>
 
       {/* Filter Toolbar */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-white p-3.5 rounded-2xl border border-slate-200/80 shadow-2xs">
@@ -403,100 +406,111 @@ export default function CandidatesManager() {
                 </tr>
               </thead>
               <tbody className="text-xs divide-y divide-slate-100">
-                {filteredApplications.map((app) => {
-                  const candidate = app.candidateId
-                  const u = candidate?.userId
-                  const name =
-                    u?.name || candidate?.fullName || candidate?.profileName || 'Ứng viên'
-                  const email = u?.email || candidate?.email || 'Chưa có email'
-                  const position = app.jobDescriptionId?.title || 'Vị trí tuyển dụng'
-                  const aiScore = app.aiFitScore ?? app.aiEvaluation?.aiFitScore
-                  const interviewer = getInterviewerName(app)
-                  const appliedDate = formatDate(app.appliedAt)
-                  const initials = getInitials(name)
+                {filteredApplications
+                  .slice((currentPage - 1) * pageSize, currentPage * pageSize)
+                  .map((app) => {
+                    const candidate = app.candidateId
+                    const u = candidate?.userId
+                    const name =
+                      u?.name || candidate?.fullName || candidate?.profileName || 'Ứng viên'
+                    const email = u?.email || candidate?.email || 'Chưa có email'
+                    const position = app.jobDescriptionId?.title || 'Vị trí tuyển dụng'
+                    const aiScore = app.aiFitScore ?? app.aiEvaluation?.aiFitScore
+                    const interviewer = getInterviewerName(app)
+                    const appliedDate = formatDate(app.appliedAt)
+                    const initials = getInitials(name)
 
-                  return (
-                    <tr key={app._id} className="transition-colors hover:bg-slate-50/80 group">
-                      {/* Candidate Name & Avatar */}
-                      <td className="px-6 py-4">
-                        <div className="flex items-center gap-3">
-                          <div className="flex items-center justify-center w-10 h-10 text-xs font-extrabold text-indigo-700 bg-indigo-100 rounded-full shrink-0">
-                            {initials}
+                    return (
+                      <tr key={app._id} className="transition-colors hover:bg-slate-50/80 group">
+                        {/* Candidate Name & Avatar */}
+                        <td className="px-6 py-4">
+                          <div className="flex items-center gap-3">
+                            <div className="flex items-center justify-center w-10 h-10 text-xs font-extrabold text-indigo-700 bg-indigo-100 rounded-full shrink-0">
+                              {initials}
+                            </div>
+                            <div>
+                              <p className="text-sm font-bold transition-colors text-slate-900 group-hover:text-indigo-600">
+                                {name}
+                              </p>
+                              <p className="text-slate-400 font-medium text-[11px] mt-0.5">{email}</p>
+                            </div>
                           </div>
-                          <div>
-                            <p className="text-sm font-bold transition-colors text-slate-900 group-hover:text-indigo-600">
-                              {name}
-                            </p>
-                            <p className="text-slate-400 font-medium text-[11px] mt-0.5">{email}</p>
+                        </td>
+
+                        {/* Position */}
+                        <td className="px-4 py-4 font-medium text-slate-700">{position}</td>
+
+                        {/* AI Score */}
+                        <td className="px-4 py-4 text-center">{getAiScoreBadge(aiScore)}</td>
+
+                        {/* Stage Badge */}
+                        <td className="px-4 py-4 text-center">{getStageBadge(app)}</td>
+
+                        {/* Person in charge */}
+                        <td className="px-4 py-4 italic font-medium text-slate-600">
+                          {interviewer === 'Chưa phân công' ? (
+                            <span className="text-slate-400">{interviewer}</span>
+                          ) : (
+                            <span className="font-semibold text-slate-800">{interviewer}</span>
+                          )}
+                        </td>
+
+                        {/* Applied Date */}
+                        <td className="px-4 py-4 font-medium text-slate-500">{appliedDate}</td>
+
+                        {/* Actions */}
+                        <td className="px-6 py-4 text-center">
+                          <div className="flex items-center justify-center gap-1.5">
+                            {/* View Detail Modal */}
+                            <button
+                              type="button"
+                              onClick={() => setDetailApp(app)}
+                              className="p-1.5 text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-xl transition-all cursor-pointer"
+                              title="Xem chi tiết"
+                            >
+                              <Eye size={16} />
+                            </button>
+
+                            {/* Notes Modal */}
+                            <button
+                              type="button"
+                              onClick={() => setNotesApp(app)}
+                              className="p-1.5 text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-xl transition-all cursor-pointer relative"
+                              title="Ghi chú ứng viên"
+                            >
+                              <FileText size={16} />
+                              {app.notes && app.notes.length > 0 && (
+                                <span className="absolute w-2 h-2 bg-indigo-500 rounded-full top-1 right-1" />
+                              )}
+                            </button>
+
+                            {/* Reject / Delete Modal Trigger */}
+                            <button
+                              type="button"
+                              onClick={() => setRejectApp(app)}
+                              className="p-1.5 text-rose-400 hover:text-rose-600 hover:bg-rose-50 rounded-xl transition-all cursor-pointer"
+                              title="Từ chối ứng viên"
+                            >
+                              <XCircle size={16} />
+                            </button>
                           </div>
-                        </div>
-                      </td>
-
-                      {/* Position */}
-                      <td className="px-4 py-4 font-medium text-slate-700">{position}</td>
-
-                      {/* AI Score */}
-                      <td className="px-4 py-4 text-center">{getAiScoreBadge(aiScore)}</td>
-
-                      {/* Stage Badge */}
-                      <td className="px-4 py-4 text-center">{getStageBadge(app)}</td>
-
-                      {/* Person in charge */}
-                      <td className="px-4 py-4 italic font-medium text-slate-600">
-                        {interviewer === 'Chưa phân công' ? (
-                          <span className="text-slate-400">{interviewer}</span>
-                        ) : (
-                          <span className="font-semibold text-slate-800">{interviewer}</span>
-                        )}
-                      </td>
-
-                      {/* Applied Date */}
-                      <td className="px-4 py-4 font-medium text-slate-500">{appliedDate}</td>
-
-                      {/* Actions */}
-                      <td className="px-6 py-4 text-center">
-                        <div className="flex items-center justify-center gap-1.5">
-                          {/* View Detail Modal */}
-                          <button
-                            type="button"
-                            onClick={() => setDetailApp(app)}
-                            className="p-1.5 text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-xl transition-all cursor-pointer"
-                            title="Xem chi tiết"
-                          >
-                            <Eye size={16} />
-                          </button>
-
-                          {/* Notes Modal */}
-                          <button
-                            type="button"
-                            onClick={() => setNotesApp(app)}
-                            className="p-1.5 text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-xl transition-all cursor-pointer relative"
-                            title="Ghi chú ứng viên"
-                          >
-                            <FileText size={16} />
-                            {app.notes && app.notes.length > 0 && (
-                              <span className="absolute w-2 h-2 bg-indigo-500 rounded-full top-1 right-1" />
-                            )}
-                          </button>
-
-                          {/* Reject / Delete Modal Trigger */}
-                          <button
-                            type="button"
-                            onClick={() => setRejectApp(app)}
-                            className="p-1.5 text-rose-400 hover:text-rose-600 hover:bg-rose-50 rounded-xl transition-all cursor-pointer"
-                            title="Từ chối ứng viên"
-                          >
-                            <XCircle size={16} />
-                          </button>
-                        </div>
-                      </td>
-                    </tr>
-                  )
-                })}
+                        </td>
+                      </tr>
+                    )
+                  })}
               </tbody>
             </table>
           </div>
         )}
+
+        {/* Custom Pagination Component */}
+        <CustomPagination
+          currentPage={currentPage}
+          totalPages={Math.ceil(filteredApplications.length / pageSize)}
+          totalItems={filteredApplications.length}
+          pageSize={pageSize}
+          onPageChange={setCurrentPage}
+        />
       </div>
 
       {/* Candidate Detail Side Drawer Modal */}
