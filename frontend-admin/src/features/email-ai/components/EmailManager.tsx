@@ -128,10 +128,10 @@ export default function EmailManager({ initialTemplates }: EmailManagerProps) {
       )}
 
       {/* Header section */}
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
         <div>
           <h2 className="text-xl font-bold text-gray-900 flex items-center gap-2">
-            <Mail className="text-indigo-600" size={22} />
+            <Mail className="text-indigo-600 shrink-0" size={22} />
             Email &amp; AI Templates
           </h2>
           <p className="text-sm text-gray-500 mt-0.5">
@@ -140,7 +140,7 @@ export default function EmailManager({ initialTemplates }: EmailManagerProps) {
         </div>
         <button
           onClick={handleOpenCreateModal}
-          className="flex items-center gap-1.5 px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white font-semibold text-sm rounded-xl transition-all duration-150 shadow-sm shadow-indigo-100 cursor-pointer"
+          className="flex items-center gap-1.5 px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white font-semibold text-sm rounded-xl transition-all duration-150 shadow-sm shadow-indigo-100 cursor-pointer self-start sm:self-auto shrink-0"
         >
           <Plus size={16} />
           Thêm template

@@ -92,3 +92,101 @@ export class UpdateInterviewDto {
   @IsOptional()
   feedback?: string;
 }
+
+export class RequestDeptScheduleDto {
+  @IsNotEmpty()
+  @IsString()
+  applicationId: string;
+}
+
+export class SubmitDeptScheduleDto {
+  @IsNotEmpty()
+  @IsString()
+  date: string;
+
+  @IsNotEmpty()
+  @IsString()
+  startTime: string;
+
+  @IsNotEmpty()
+  @IsString()
+  endTime: string;
+
+  @IsEnum(LocationType)
+  @IsOptional()
+  locationType?: LocationType;
+
+  @IsString()
+  @IsOptional()
+  meetingLink?: string;
+
+  @IsString()
+  @IsOptional()
+  offsiteLocation?: string;
+
+  @IsNotEmpty()
+  @IsString()
+  interviewerId: string;
+
+  @IsOptional()
+  interviewerIds?: string[];
+
+  @IsString()
+  @IsOptional()
+  notes?: string;
+}
+
+export class TimeSlotDto {
+  @IsNotEmpty()
+  @IsString()
+  date: string;
+
+  @IsNotEmpty()
+  @IsString()
+  startTime: string;
+
+  @IsNotEmpty()
+  @IsString()
+  endTime: string;
+}
+
+export class CandidateRescheduleDto {
+  @IsOptional()
+  selectedSlot?: TimeSlotDto;
+
+  @IsOptional()
+  customSlot?: TimeSlotDto;
+
+  @IsString()
+  @IsOptional()
+  reason?: string;
+}
+
+export class ProposeAdminSlotsDto {
+  @IsNotEmpty()
+  proposedSlots: TimeSlotDto[];
+
+  @IsString()
+  @IsOptional()
+  notes?: string;
+}
+
+export class CandidateCancelDto {
+  @IsNotEmpty()
+  @IsString()
+  reason: string;
+}
+
+export class UpdateInterviewStatusDto {
+  @IsEnum(InterviewStatus)
+  @IsOptional()
+  status?: InterviewStatus;
+
+  @IsEnum(InterviewResult)
+  @IsOptional()
+  result?: InterviewResult;
+
+  @IsString()
+  @IsOptional()
+  feedback?: string;
+}

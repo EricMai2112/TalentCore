@@ -49,14 +49,6 @@ export default function KanbanHeaderFilters({
 
   return (
     <div className="flex flex-wrap items-center justify-between gap-4 bg-white border border-gray-100 rounded-3xl p-5 shadow-2xs">
-      {/* Title & Count Header */}
-      <div>
-        <h1 className="text-2xl font-extrabold text-gray-900 tracking-tight">Kanban Tuyển dụng</h1>
-        <p className="text-xs font-semibold text-gray-500 mt-0.5">
-          {totalCount} ứng viên đang được theo dõi
-        </p>
-      </div>
-
       {/* Candidate Search Input */}
       <div className="relative">
         <input

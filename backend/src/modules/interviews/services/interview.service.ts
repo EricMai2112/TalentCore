@@ -1,7 +1,7 @@
 import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model, Types } from 'mongoose';
-import { Interview, InterviewDocument, LocationType, InterviewStatus, InterviewResult } from '../schemas/interview.schema';
+import { Interview, InterviewDocument, LocationType, InterviewStatus, InterviewResult, InterviewConfirmationStatus } from '../schemas/interview.schema';
 import { Application, ApplicationDocument } from '../../applications/schemas/application.schema';
 import { JobDescription, JobDescriptionDocument } from '../../job-description/schemas/job-description.schema';
 import { Candidate, CandidateDocument } from '../../candidates/schema/candidate.schema';
@@ -42,11 +42,22 @@ export class InterviewService {
   }
 
   /**
-   * Lấy danh sách ứng viên có hồ sơ để chọn trong trang Tạo lịch phỏng vấn
+   * Lấy danh sách ứng viên có hồ sơ để chọn trong trang Tạo lịch phỏng vấn (Đã tối ưu query DB)
    */
   async getCandidatesForSelect() {
+    // 1. Lấy danh sách ID các đơn ứng tuyển đã có lịch phỏng vấn ở trạng thái SCHEDULED (Đã lên lịch)
+    const scheduledInterviews = await this.interviewModel
+      .find({ status: InterviewStatus.SCHEDULED })
+      .select('applicationId')
+      .exec();
+
+    const scheduledAppIds = scheduledInterviews
+      .filter((item) => item.applicationId)
+      .map((item) => item.applicationId);
+
+    // 2. Lấy ứng tuyển hợp lệ trực tiếp từ DB với $nin
     const applications = await this.applicationModel
-      .find()
+      .find({ _id: { $nin: scheduledAppIds } })
       .populate({
         path: 'candidateId',
         model: 'Candidate',
@@ -63,7 +74,7 @@ export class InterviewService {
       })
       .exec();
 
-    // Đồng thời lấy tất cả Nhân viên và Trưởng phòng để dự phòng lọc theo phòng ban
+    // 3. Đồng thời lấy tất cả Nhân viên và Trưởng phòng để dự phòng lọc theo phòng ban
     const staffUsers = await this.userModel
       .find({
         role: { $in: [UserRole.EMPLOYEE, UserRole.DEPARTMENT_MANAGER, UserRole.HR_ADMIN] },
@@ -71,23 +82,8 @@ export class InterviewService {
       .select('_id name email role departmentId')
       .exec();
 
-    // Lấy danh sách ID các đơn ứng tuyển đã có lịch phỏng vấn ở trạng thái SCHEDULED (Đã lên lịch)
-    const scheduledInterviews = await this.interviewModel
-      .find({ status: InterviewStatus.SCHEDULED })
-      .select('applicationId')
-      .exec();
-
-    const scheduledAppIds = new Set(
-      scheduledInterviews.map((item) => (item.applicationId ? item.applicationId.toString() : ''))
-    );
-
     return applications
-      .filter((app) => {
-        if (!app.candidateId || !app.jobDescriptionId) return false;
-        // Loại bỏ những ứng viên/hồ sơ đã có lịch phỏng vấn đang ở trạng thái SCHEDULED (Đã lên lịch)
-        if (scheduledAppIds.has(app._id.toString())) return false;
-        return true;
-      })
+      .filter((app) => app.candidateId && app.jobDescriptionId)
       .map((app: any) => {
         const candidate = app.candidateId;
         const userObj = candidate?.userId;
@@ -421,7 +417,7 @@ export class InterviewService {
       if (dto.endTime) interview.endTime = dto.endTime;
 
       // Khi HR thay đổi thời gian/người phỏng vấn -> chuyển trạng thái chờ ứng viên xác nhận
-      interview.confirmationStatus = 'PENDING';
+      interview.confirmationStatus = InterviewConfirmationStatus.PENDING;
       interview.proposedCustomDate = undefined;
       interview.proposedCustomStartTime = undefined;
       interview.proposedCustomEndTime = undefined;
@@ -501,7 +497,7 @@ export class InterviewService {
     const interviews = await this.interviewModel
       .find({
         candidateId: { $in: candidateIds },
-        confirmationStatus: { $nin: ['WAITING_DEPT_SCHEDULE', 'WAITING_HR_APPROVAL'] },
+        confirmationStatus: { $nin: [InterviewConfirmationStatus.WAITING_DEPT_SCHEDULE, InterviewConfirmationStatus.WAITING_HR_APPROVAL] },
       })
       .populate({
         path: 'candidateId',
@@ -567,10 +563,10 @@ export class InterviewService {
         locationType: LocationType.ONLINE,
         status: InterviewStatus.SCHEDULED,
         result: InterviewResult.PENDING,
-        confirmationStatus: 'WAITING_DEPT_SCHEDULE',
+        confirmationStatus: InterviewConfirmationStatus.WAITING_DEPT_SCHEDULE,
       });
     } else {
-      interview.confirmationStatus = 'WAITING_DEPT_SCHEDULE';
+      interview.confirmationStatus = InterviewConfirmationStatus.WAITING_DEPT_SCHEDULE;
     }
 
     return await interview.save();
@@ -614,7 +610,7 @@ export class InterviewService {
     }
     if (dto.notes) interview.notes = dto.notes;
 
-    interview.confirmationStatus = 'WAITING_HR_APPROVAL';
+    interview.confirmationStatus = InterviewConfirmationStatus.WAITING_HR_APPROVAL;
     return await interview.save();
   }
 
@@ -626,14 +622,14 @@ export class InterviewService {
     if (!interview) {
       throw new NotFoundException('Không tìm thấy lịch phỏng vấn');
     }
-    interview.confirmationStatus = 'SCHEDULED';
+    interview.confirmationStatus = InterviewConfirmationStatus.SCHEDULED;
     return await interview.save();
   }
 
   /**
    * Cập nhật trạng thái xác nhận tham gia của ứng viên
    */
-  async updateCandidateConfirmation(id: string, confirmationStatus: string) {
+  async updateCandidateConfirmation(id: string, confirmationStatus: InterviewConfirmationStatus) {
     const interview = await this.interviewModel.findById(id).exec();
     if (!interview) {
       throw new NotFoundException('Không tìm thấy lịch phỏng vấn.');
@@ -858,7 +854,7 @@ export class InterviewService {
 
     const currentCount = (interview.rescheduleCount || 0) + 1;
     interview.rescheduleCount = currentCount;
-    interview.confirmationStatus = 'RESCHEDULE_REQUESTED';
+    interview.confirmationStatus = InterviewConfirmationStatus.RESCHEDULE_REQUESTED;
     if (dto.reason) interview.rescheduleReason = dto.reason;
 
     const targetSlot = dto.selectedSlot || dto.customSlot;
@@ -918,7 +914,7 @@ export class InterviewService {
     interview.proposedCustomDate = undefined;
     interview.proposedCustomStartTime = undefined;
     interview.proposedCustomEndTime = undefined;
-    interview.confirmationStatus = 'CONFIRMED';
+    interview.confirmationStatus = InterviewConfirmationStatus.CONFIRMED;
     interview.isEscalated = false;
 
     return await interview.save();
@@ -936,7 +932,7 @@ export class InterviewService {
     interview.proposedCustomDate = undefined;
     interview.proposedCustomStartTime = undefined;
     interview.proposedCustomEndTime = undefined;
-    interview.confirmationStatus = 'RESCHEDULE_REJECTED';
+    interview.confirmationStatus = InterviewConfirmationStatus.RESCHEDULE_REJECTED;
     interview.rescheduleRejectReason = reason || 'Hội đồng phỏng vấn bận/không thể thu xếp khung giờ này.';
     interview.isEscalated = false;
 
@@ -962,7 +958,7 @@ export class InterviewService {
       endTime: s.endTime,
     }));
     interview.proposedBy = 'ADMIN';
-    interview.confirmationStatus = 'ADMIN_PROPOSED';
+    interview.confirmationStatus = InterviewConfirmationStatus.ADMIN_PROPOSED;
     if (notes) interview.notes = notes;
 
     return await interview.save();
@@ -1004,7 +1000,7 @@ export class InterviewService {
     interview.proposedCustomDate = undefined;
     interview.proposedCustomStartTime = undefined;
     interview.proposedCustomEndTime = undefined;
-    interview.confirmationStatus = 'CONFIRMED';
+    interview.confirmationStatus = InterviewConfirmationStatus.CONFIRMED;
     interview.isEscalated = false;
 
     return await interview.save();
@@ -1023,7 +1019,7 @@ export class InterviewService {
       throw new BadRequestException('Vui lòng cung cấp lý do hủy lịch phỏng vấn.');
     }
 
-    interview.confirmationStatus = 'CANCEL_REQUESTED';
+    interview.confirmationStatus = InterviewConfirmationStatus.CANCEL_REQUESTED;
     interview.cancelReason = reason.trim();
     return await interview.save();
   }
@@ -1038,7 +1034,7 @@ export class InterviewService {
     }
 
     interview.status = InterviewStatus.CANCELLED;
-    interview.confirmationStatus = 'CANCELLED';
+    interview.confirmationStatus = InterviewConfirmationStatus.CANCELLED;
     return await interview.save();
   }
 }

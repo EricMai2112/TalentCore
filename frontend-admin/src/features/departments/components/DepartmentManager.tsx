@@ -142,7 +142,7 @@ export default function DepartmentManager({
         </div>
       )}
 
-      {/* Header */}
+      {/* Header section */}
       <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
         <div>
           <h2 className="text-xl font-bold text-gray-900 flex items-center gap-2">
@@ -150,7 +150,7 @@ export default function DepartmentManager({
             Quản lý phòng ban
           </h2>
           <p className="text-sm text-gray-500 mt-0.5">
-            Phân công người phỏng vấn cho từng phòng ban
+            Phân công người phỏng vấn và quản lý cấu trúc từng phòng ban
           </p>
         </div>
         <button
