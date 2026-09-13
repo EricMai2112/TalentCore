@@ -19,6 +19,7 @@ import logomini from '@/public/favicon-talentcore.png'
 import Image from 'next/image'
 import { UserRole } from '@/src/features/users/types/user.types'
 import { useAuth } from '@/src/providers/AuthProvider'
+import { BRAND_COLORS } from '@/src/constants/theme'
 
 interface NavItem {
   label: string
@@ -100,7 +101,7 @@ export default function Sidebar() {
                         ? 'text-white font-medium shadow-sm'
                         : 'text-slate-300 hover:text-white'
                     }`}
-                    style={isActive ? { backgroundColor: '#1a64d8' } : undefined}
+                    style={isActive ? { backgroundColor: BRAND_COLORS.primary.DEFAULT } : undefined}
                     onMouseEnter={(e) => {
                       if (!isActive) {
                         ;(e.currentTarget as HTMLElement).style.backgroundColor =
@@ -121,7 +122,7 @@ export default function Sidebar() {
                           <span
                             className="text-[11px] font-semibold rounded-full px-2 py-0.5 leading-none flex items-center justify-center"
                             style={{
-                              backgroundColor: '#1e69ff',
+                              backgroundColor: BRAND_COLORS.primary.DEFAULT,
                               color: 'white',
                               minWidth: 20,
                               height: 20
@@ -144,7 +145,7 @@ export default function Sidebar() {
                       {item.badge !== undefined && (
                         <span
                           className="ml-1.5 text-[10px] font-semibold rounded-full px-1.5 py-0.5"
-                          style={{ backgroundColor: '#1e69ff' }}
+                          style={{ backgroundColor: BRAND_COLORS.primary.DEFAULT }}
                         >
                           {item.badge}
                         </span>
@@ -167,7 +168,7 @@ export default function Sidebar() {
               className={`flex items-center gap-3 rounded-xl px-3 py-2.5 transition-all duration-150 text-slate-300 hover:text-white ${
                 isCollapsed ? 'justify-center' : ''
               } ${pathname === '/settings' ? 'text-white font-medium' : ''}`}
-              style={pathname === '/settings' ? { backgroundColor: '#1a64d8' } : undefined}
+              style={pathname === '/settings' ? { backgroundColor: BRAND_COLORS.primary.DEFAULT } : undefined}
               onMouseEnter={(e) => {
                 if (pathname !== '/settings') {
                   ;(e.currentTarget as HTMLElement).style.backgroundColor = 'rgba(255,255,255,0.08)'
@@ -242,7 +243,7 @@ export default function Sidebar() {
               y2="180"
               gradientUnits="userSpaceOnUse"
             >
-              <stop stopColor="#1a64d8" stopOpacity="0.6" />
+              <stop stopColor={BRAND_COLORS.primary.DEFAULT} stopOpacity="0.6" />
               <stop offset="1" stopColor="#092e6b" stopOpacity="0.15" />
             </linearGradient>
             <linearGradient
