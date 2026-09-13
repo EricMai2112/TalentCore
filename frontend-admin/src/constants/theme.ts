@@ -1,15 +1,15 @@
 /**
  * TalentCore Brand Palette Constants
- * Primary (Chủ đạo 60-70%): #0a65bb
+ * Primary (Chủ đạo 60-70%): #1a64d8
  * Accent (Điểm nhấn 10-15%): #f27317
  */
 
 export const BRAND_COLORS = {
   primary: {
-    DEFAULT: '#0a65bb',
-    hover: '#085299',
-    light: '#e6f0fa',
-    rgb: '10, 101, 187',
+    DEFAULT: '#1a64d8',
+    hover: '#1552b5',
+    light: '#e8f1fd',
+    rgb: '26, 100, 216',
   },
   accent: {
     DEFAULT: '#f27317',
