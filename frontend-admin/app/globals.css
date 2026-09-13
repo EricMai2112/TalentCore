@@ -1,11 +1,28 @@
 @import "tailwindcss";
 
 :root {
+  /* TalentCore Brand Colors */
+  --primary: #0a65bb;
+  --primary-hover: #085299;
+  --primary-light: #e6f0fa;
+
+  --accent: #f27317;
+  --accent-hover: #d9620e;
+  --accent-light: #feefe6;
+
   --background: #ffffff;
   --foreground: #171717;
 }
 
 @theme inline {
+  --color-primary: var(--primary);
+  --color-primary-hover: var(--primary-hover);
+  --color-primary-light: var(--primary-light);
+
+  --color-accent: var(--accent);
+  --color-accent-hover: var(--accent-hover);
+  --color-accent-light: var(--accent-light);
+
   --color-background: var(--background);
   --color-foreground: var(--foreground);
   --font-sans: var(--font-inter);
