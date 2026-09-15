@@ -2,9 +2,10 @@
 
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { Eye, EyeOff, AlertTriangle, Lock, Mail } from 'lucide-react'
+import { Eye, EyeOff, AlertTriangle, Lock, Mail, ArrowRight } from 'lucide-react'
 import { authApi } from '../services/auth.api'
 import { useAuth } from '@/src/providers/AuthProvider'
+import { GlassInput } from '@/src/components/common/glass'
 
 export default function LoginForm() {
   const router = useRouter()
@@ -13,6 +14,7 @@ export default function LoginForm() {
   const [showPassword, setShowPassword] = useState(false)
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
+  const [rememberMe, setRememberMe] = useState(true)
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
@@ -33,80 +35,76 @@ export default function LoginForm() {
 
   return (
     <>
-      {/* Error */}
+      {/* Glass Error Alert */}
       {error && (
-        <div className="mb-5 flex items-start gap-2.5 bg-red-50 border border-red-200 text-red-600 p-3.5 rounded-xl text-sm animate-in fade-in duration-200">
-          <AlertTriangle size={16} className="shrink-0 mt-0.5" />
+        <div className="mb-5 flex items-start gap-2.5 bg-rose-500/15 backdrop-blur-md border border-rose-500/30 text-rose-700 p-3.5 rounded-2xl text-xs font-bold animate-in fade-in duration-200">
+          <AlertTriangle size={16} className="shrink-0 mt-0.5 text-rose-600" />
           <span>{error}</span>
         </div>
       )}
 
-      <form onSubmit={handleSubmit} className="space-y-5">
-        {/* Email */}
-        <div className="space-y-1.5">
-          <label className="block text-sm font-semibold text-gray-700">Email</label>
-          <div className="relative flex items-center">
-            <Mail size={15} className="absolute left-3.5 text-gray-400 pointer-events-none" />
-            <input
-              type="email"
-              required
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              placeholder="Email"
-              className="w-full pl-10 pr-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-sm text-gray-900 placeholder-gray-400 outline-none transition-all"
-              onFocus={(e) => {
-                e.currentTarget.style.borderColor = '#0a65bb'
-                e.currentTarget.style.boxShadow = '0 0 0 3px rgba(10,101,187,0.10)'
-                e.currentTarget.style.backgroundColor = '#ffffff'
-              }}
-              onBlur={(e) => {
-                e.currentTarget.style.borderColor = '#e5e7eb'
-                e.currentTarget.style.boxShadow = 'none'
-                e.currentTarget.style.backgroundColor = '#f9fafb'
-              }}
-            />
-          </div>
-        </div>
+      <form onSubmit={handleSubmit} className="space-y-4">
+        {/* Email Input using GlassInput component with Icon */}
+        <GlassInput
+          label="Email"
+          type="email"
+          required
+          value={email}
+          onChange={(e) => setEmail(e.target.value)}
+          placeholder="admin@gmail.com"
+          icon={<Mail size={18} className="text-[#1261A6]" />}
+        />
 
-        {/* Password */}
-        <div className="space-y-1.5">
-          <label className="block text-sm font-semibold text-gray-700">Mật khẩu</label>
-          <div className="relative flex items-center">
-            <Lock size={15} className="absolute left-3.5 text-gray-400 pointer-events-none" />
-            <input
-              type={showPassword ? 'text' : 'password'}
-              required
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              placeholder="Mật khẩu"
-              className="w-full pl-10 pr-11 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-sm text-gray-900 placeholder-gray-400 outline-none transition-all"
-              onFocus={(e) => {
-                e.currentTarget.style.borderColor = '#0a65bb'
-                e.currentTarget.style.boxShadow = '0 0 0 3px rgba(10,101,187,0.10)'
-                e.currentTarget.style.backgroundColor = '#ffffff'
-              }}
-              onBlur={(e) => {
-                e.currentTarget.style.borderColor = '#e5e7eb'
-                e.currentTarget.style.boxShadow = 'none'
-                e.currentTarget.style.backgroundColor = '#f9fafb'
-              }}
-            />
+        {/* Password Input using GlassInput component with Icon */}
+        <GlassInput
+          label="Mật khẩu"
+          type={showPassword ? 'text' : 'password'}
+          required
+          value={password}
+          onChange={(e) => setPassword(e.target.value)}
+          placeholder="••••••••"
+          icon={<Lock size={18} className="text-[#1261A6]" />}
+          rightElement={
             <button
               type="button"
               onClick={() => setShowPassword(!showPassword)}
-              className="absolute right-3.5 text-gray-400 hover:text-gray-600 transition-colors cursor-pointer"
+              className="text-[#1261A6] hover:text-[#126DA6] transition-colors cursor-pointer p-1 rounded-lg hover:bg-[#1261A6]/10"
               tabIndex={-1}
             >
-              {showPassword ? <EyeOff size={15} /> : <Eye size={15} />}
+              {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
             </button>
-          </div>
+          }
+        />
+
+        {/* Remember Me & Forgot Password */}
+        <div className="flex items-center justify-between pt-1 pb-1">
+          <label className="flex items-center gap-2 cursor-pointer select-none">
+            <input
+              type="checkbox"
+              checked={rememberMe}
+              onChange={(e) => setRememberMe(e.target.checked)}
+              className="w-4 h-4 rounded-md text-[#1261A6] focus:ring-[#1261A6] border-slate-300 accent-[#1261A6] cursor-pointer"
+            />
+            <span className="text-xs font-semibold text-slate-600">Ghi nhớ đăng nhập</span>
+          </label>
+
+          <a
+            href="#"
+            onClick={(e) => {
+              e.preventDefault()
+              alert('Vui lòng liên hệ Admin để khôi phục mật khẩu tài khoản!')
+            }}
+            className="text-xs font-bold text-[#1261A6] hover:text-[#126DA6] hover:underline"
+          >
+            Quên mật khẩu?
+          </a>
         </div>
 
-        {/* Submit */}
+        {/* Submit Button */}
         <button
           type="submit"
           disabled={isLoading}
-          className="w-full py-3 bg-primary hover:bg-primary-hover text-white text-sm font-bold rounded-xl transition-all duration-200 shadow-md shadow-primary/25 hover:shadow-xl hover:shadow-primary/35 hover:-translate-y-0.5 active:translate-y-0 active:scale-[0.99] disabled:opacity-60 disabled:cursor-not-allowed disabled:transform-none disabled:shadow-none cursor-pointer flex items-center justify-center gap-2 group mt-2"
+          className="w-full py-3.5 px-4 bg-gradient-to-r from-[#1261A6] via-[#126DA6] to-[#2A95BF] hover:shadow-lg hover:shadow-[#1261A6]/30 text-white text-sm font-bold rounded-2xl transition-all duration-200 active:scale-[0.98] disabled:opacity-60 disabled:cursor-not-allowed disabled:transform-none disabled:shadow-none cursor-pointer flex items-center justify-center gap-2 group border border-white/20 mt-3"
         >
           {isLoading ? (
             <>
@@ -130,27 +128,15 @@ export default function LoginForm() {
                   d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z"
                 />
               </svg>
-              <span>Đang đăng nhập...</span>
+              <span>Đang xác thực...</span>
             </>
           ) : (
             <>
-              <svg
-                xmlns="http://www.w3.org/2000/svg"
-                width="16"
-                height="16"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="2.5"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                className="group-hover:translate-x-0.5 transition-transform duration-200"
-              >
-                <path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4" />
-                <polyline points="10 17 15 12 10 7" />
-                <line x1="15" y1="12" x2="3" y2="12" />
-              </svg>
-              <span>Đăng nhập</span>
+              <span>Đăng nhập hệ thống</span>
+              <ArrowRight
+                size={16}
+                className="group-hover:translate-x-1 transition-transform duration-200"
+              />
             </>
           )}
         </button>

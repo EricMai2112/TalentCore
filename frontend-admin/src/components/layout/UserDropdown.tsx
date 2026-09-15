@@ -16,9 +16,9 @@ export default function UserDropdown() {
       <button
         type="button"
         onClick={() => setIsDropdownOpen(!isDropdownOpen)}
-        className="flex items-center gap-1.5 p-0.5 rounded-full hover:ring-2 hover:ring-[#0a65bb]/30 transition-all cursor-pointer"
+        className="flex items-center gap-1.5 p-0.5 rounded-full hover:ring-2 hover:ring-[#1261A6]/30 transition-all cursor-pointer"
       >
-        <div className="w-9 h-9 rounded-full bg-[#0a65bb] text-white flex items-center justify-center shadow-sm">
+        <div className="w-9 h-9 rounded-full bg-[#1261A6] text-white flex items-center justify-center shadow-sm">
           <User size={18} />
         </div>
         <ChevronDown size={14} className="text-slate-400 hidden sm:block" />
@@ -30,7 +30,7 @@ export default function UserDropdown() {
           {/* User Profile Card Header */}
           <div className="px-3 py-2.5 bg-slate-50 rounded-xl mb-1 border border-slate-100">
             <div className="flex items-center gap-2 mb-1">
-              <div className="w-7 h-7 rounded-full bg-[#0a65bb] text-white flex items-center justify-center shrink-0 shadow-2xs">
+              <div className="w-7 h-7 rounded-full bg-[#1261A6] text-white flex items-center justify-center shrink-0 shadow-2xs">
                 <User size={14} />
               </div>
               <p className="text-xs font-bold text-slate-900 truncate">
@@ -38,7 +38,7 @@ export default function UserDropdown() {
               </p>
             </div>
             <p className="text-[10px] font-medium text-slate-400 truncate">{user?.email}</p>
-            <span className="inline-block mt-2 px-2 py-0.5 bg-[#0a65bb]/10 text-[#0a65bb] text-[10px] font-extrabold rounded-full border border-[#0a65bb]/20">
+            <span className="inline-block mt-2 px-2 py-0.5 bg-[#2A95BF]/10 text-[#2A95BF] text-[10px] font-extrabold rounded-full border border-[#2A95BF]/20">
               {roleName}
             </span>
           </div>

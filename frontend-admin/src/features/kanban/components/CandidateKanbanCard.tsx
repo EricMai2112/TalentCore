@@ -1,91 +1,85 @@
-"use client";
+'use client'
 
-import { useMemo } from "react";
-import { User as UserIcon, Calendar, Clock, Star, AlertTriangle, Briefcase } from "lucide-react";
-import { useSortable } from "@dnd-kit/sortable";
-import { CSS } from "@dnd-kit/utilities";
-import { KanbanApplication } from "../types/kanban.types";
+import { useMemo } from 'react'
+import { User as UserIcon, Calendar, Clock, Star, AlertTriangle, Briefcase } from 'lucide-react'
+import { useSortable } from '@dnd-kit/sortable'
+import { CSS } from '@dnd-kit/utilities'
+import { KanbanApplication } from '../types/kanban.types'
 
 interface CandidateKanbanCardProps {
-  application: KanbanApplication;
-  onSelect?: (app: KanbanApplication) => void;
-  isOverlay?: boolean;
+  application: KanbanApplication
+  onSelect?: (app: KanbanApplication) => void
+  isOverlay?: boolean
 }
 
 export default function CandidateKanbanCard({
   application,
   onSelect,
-  isOverlay = false,
+  isOverlay = false
 }: CandidateKanbanCardProps) {
-  const candidate = application.candidateId;
-  const job = application.jobDescriptionId;
-  const user = candidate?.userId;
+  const candidate = application.candidateId
+  const job = application.jobDescriptionId
+  const user = candidate?.userId
 
   // dnd-kit sortable hook
-  const {
-    attributes,
-    listeners,
-    setNodeRef,
-    transform,
-    transition,
-    isDragging,
-  } = useSortable({ id: application._id });
+  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
+    id: application._id
+  })
 
   const style = {
     transform: CSS.Translate.toString(transform),
     transition,
-    opacity: isDragging ? 0.35 : 1,
-  };
+    opacity: isDragging ? 0.35 : 1
+  }
 
   // Extract display name & initials
-  const name = user?.name || candidate?.fullName || candidate?.profileName || "Ứng viên";
+  const name = user?.name || candidate?.fullName || candidate?.profileName || 'Ứng viên'
   const initials = useMemo(() => {
-    const parts = name.trim().split(" ");
+    const parts = name.trim().split(' ')
     if (parts.length >= 2) {
-      return `${parts[parts.length - 2][0]}${parts[parts.length - 1][0]}`.toUpperCase();
+      return `${parts[parts.length - 2][0]}${parts[parts.length - 1][0]}`.toUpperCase()
     }
-    return name.slice(0, 2).toUpperCase();
-  }, [name]);
+    return name.slice(0, 2).toUpperCase()
+  }, [name])
 
   // Deterministic pastel color palette for avatars
   const avatarBg = useMemo(() => {
     const colors = [
-      "bg-purple-100 text-purple-700 border-purple-200",
-      "bg-indigo-100 text-indigo-700 border-indigo-200",
-      "bg-blue-100 text-blue-700 border-blue-200",
-      "bg-pink-100 text-pink-700 border-pink-200",
-      "bg-teal-100 text-teal-700 border-teal-200",
-    ];
-    let hash = 0;
-    for (let i = 0; i < name.length; i++) hash += name.charCodeAt(i);
-    return colors[hash % colors.length];
-  }, [name]);
+      'bg-purple-100 text-purple-700 border-purple-200',
+      'bg-indigo-100 text-indigo-700 border-indigo-200',
+      'bg-blue-100 text-blue-700 border-blue-200',
+      'bg-pink-100 text-pink-700 border-pink-200',
+      'bg-teal-100 text-teal-700 border-teal-200'
+    ]
+    let hash = 0
+    for (let i = 0; i < name.length; i++) hash += name.charCodeAt(i)
+    return colors[hash % colors.length]
+  }, [name])
 
-  const hasScore = application.aiFitScore !== null && application.aiFitScore !== undefined;
-  const aiScore = application.aiFitScore ?? 0;
+  const hasScore = application.aiFitScore !== null && application.aiFitScore !== undefined
+  const aiScore = application.aiFitScore ?? 0
 
   // Primary interviewer name
   const interviewerName = useMemo(() => {
     if (job?.interviewerIds && job.interviewerIds.length > 0) {
-      const first = job.interviewerIds[0];
-      return typeof first === "object" ? first.name : "Nhà tuyển dụng";
+      const first = job.interviewerIds[0]
+      return typeof first === 'object' ? first.name : 'Nhà tuyển dụng'
     }
     if (job?.interviewerId) {
-      return typeof job.interviewerId === "object" ? job.interviewerId.name : "Nhà tuyển dụng";
+      return typeof job.interviewerId === 'object' ? job.interviewerId.name : 'Nhà tuyển dụng'
     }
-    return null;
-  }, [job]);
+    return null
+  }, [job])
 
   // Format applied date
   const formattedDate = useMemo(() => {
-    if (!application.appliedAt) return "2026-07-20";
+    if (!application.appliedAt) return '2026-07-20'
     try {
-      return new Date(application.appliedAt).toISOString().split("T")[0];
+      return new Date(application.appliedAt).toISOString().split('T')[0]
     } catch {
-      return "2026-07-20";
+      return '2026-07-20'
     }
-  }, [application.appliedAt]);
-
+  }, [application.appliedAt])
 
   return (
     <div
@@ -94,10 +88,10 @@ export default function CandidateKanbanCard({
       {...attributes}
       {...listeners}
       onClick={() => onSelect && onSelect(application)}
-      className={`bg-white border rounded-2xl p-3.5 transition-all cursor-grab active:cursor-grabbing flex flex-col justify-between h-[158px] group select-none relative ${
+      className={`bg-white/78 backdrop-blur-md border rounded-2xl p-3.5 transition-all cursor-grab active:cursor-grabbing flex flex-col justify-between h-[158px] group select-none relative ${
         isOverlay
-          ? "border-indigo-400 shadow-2xl ring-2 ring-indigo-500/30 scale-105"
-          : "border-gray-100 hover:border-indigo-200 shadow-2xs hover:shadow-md"
+          ? 'border-[#2A95BF] bg-white/95 shadow-2xl ring-4 ring-[#2A95BF]/30 scale-105'
+          : 'border-white/85 hover:border-[#2A95BF]/50 shadow-md shadow-[#1261A6]/5 hover:shadow-xl hover:shadow-[#1261A6]/12 hover:-translate-y-0.5'
       }`}
     >
       {/* Upper section */}
@@ -133,10 +127,10 @@ export default function CandidateKanbanCard({
                   fill="none"
                   className={
                     aiScore >= 70
-                      ? "text-emerald-100"
+                      ? 'text-emerald-100'
                       : aiScore >= 50
-                      ? "text-amber-100"
-                      : "text-rose-100"
+                        ? 'text-amber-100'
+                        : 'text-rose-100'
                   }
                   stroke="currentColor"
                   strokeWidth="3.5"
@@ -149,10 +143,10 @@ export default function CandidateKanbanCard({
                   fill="none"
                   className={
                     aiScore >= 70
-                      ? "text-emerald-500"
+                      ? 'text-emerald-500'
                       : aiScore >= 50
-                      ? "text-amber-500"
-                      : "text-rose-500"
+                        ? 'text-amber-500'
+                        : 'text-rose-500'
                   }
                   stroke="currentColor"
                   strokeWidth="3.5"
@@ -164,10 +158,10 @@ export default function CandidateKanbanCard({
               <span
                 className={`absolute text-xs font-black tracking-tight ${
                   aiScore >= 70
-                    ? "text-emerald-700"
+                    ? 'text-emerald-700'
                     : aiScore >= 50
-                    ? "text-amber-700"
-                    : "text-rose-600"
+                      ? 'text-amber-700'
+                      : 'text-rose-600'
                 }`}
               >
                 {aiScore}
@@ -185,9 +179,9 @@ export default function CandidateKanbanCard({
           <Briefcase size={12} className="text-indigo-500 shrink-0" />
           <span
             className="truncate flex-1 font-semibold text-slate-700 text-xs"
-            title={job?.title || "Vị trí tuyển dụng"}
+            title={job?.title || 'Vị trí tuyển dụng'}
           >
-            {job?.title || "Vị trí tuyển dụng"}
+            {job?.title || 'Vị trí tuyển dụng'}
           </span>
         </div>
       </div>
@@ -217,9 +211,12 @@ export default function CandidateKanbanCard({
 
       {/* Footer Info: Interviewer & Applied Date */}
       <div className="pt-2 border-t border-gray-100/80 flex items-center justify-between text-[11px] text-gray-400 font-medium">
-        <div className="flex items-center gap-1 truncate max-w-[130px]" title={interviewerName || "Tuyển dụng"}>
+        <div
+          className="flex items-center gap-1 truncate max-w-[130px]"
+          title={interviewerName || 'Tuyển dụng'}
+        >
           <UserIcon size={12} className="shrink-0 text-gray-400" />
-          <span className="truncate">{interviewerName || "Tuyển dụng"}</span>
+          <span className="truncate">{interviewerName || 'Tuyển dụng'}</span>
         </div>
 
         <div className="flex items-center gap-1 shrink-0">
@@ -228,5 +225,5 @@ export default function CandidateKanbanCard({
         </div>
       </div>
     </div>
-  );
+  )
 }
