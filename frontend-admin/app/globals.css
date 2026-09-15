@@ -2,38 +2,96 @@
 
 :root {
   /* TalentCore Brand Colors */
-  --primary: #0a65bb;
-  --primary-hover: #085299;
-  --primary-light: #e6f0fa;
+  --primary: #1261A6;
+  --primary-hover: #0e4e85;
 
-  --accent: #f27317;
-  --accent-hover: #d9620e;
-  --accent-light: #feefe6;
+  --secondary: #126DA6;
+  --secondary-hover: #0f5987;
 
-  --background: #ffffff;
+  --accent: #2A95BF;
+  --accent-hover: #217a9e;
+  --accent-light: #73C6D9;
+  --accent-light-bg: #e6f4f8;
+
+  --background: #D5E7F2;
+  --surface: #ffffff;
   --foreground: #171717;
+
+  /* Glassmorphism Tokens */
+  --glass-bg-base: rgba(255, 255, 255, 0.65);
+  --glass-bg-card: rgba(255, 255, 255, 0.78);
+  --glass-bg-hover: rgba(255, 255, 255, 0.90);
+  --glass-bg-primary: rgba(18, 97, 166, 0.90);
+  --glass-bg-accent: rgba(42, 149, 191, 0.12);
+
+  /* Glass Borders & Reflection Highlights */
+  --glass-border-light: rgba(255, 255, 255, 0.85);
+  --glass-border-subtle: rgba(203, 213, 225, 0.50);
+  --glass-border-primary: rgba(18, 97, 166, 0.25);
+  --glass-border-accent: rgba(42, 149, 191, 0.35);
+
+  /* Glass Shadows & Glows */
+  --glass-shadow-sm: 0 4px 16px -2px rgba(18, 97, 166, 0.06), 0 2px 4px -2px rgba(0, 0, 0, 0.04);
+  --glass-shadow-md: 0 12px 32px -4px rgba(18, 97, 166, 0.10), 0 4px 12px -2px rgba(0, 0, 0, 0.05);
+  --glass-shadow-lg: 0 24px 48px -8px rgba(18, 97, 166, 0.15), 0 8px 16px -4px rgba(0, 0, 0, 0.06);
 }
 
 @theme inline {
   --color-primary: var(--primary);
   --color-primary-hover: var(--primary-hover);
-  --color-primary-light: var(--primary-light);
+  --color-secondary: var(--secondary);
+  --color-secondary-hover: var(--secondary-hover);
 
   --color-accent: var(--accent);
   --color-accent-hover: var(--accent-hover);
   --color-accent-light: var(--accent-light);
+  --color-accent-light-bg: var(--accent-light-bg);
 
   --color-background: var(--background);
+  --color-surface: var(--surface);
   --color-foreground: var(--foreground);
   --font-sans: var(--font-inter);
   --font-mono: var(--font-geist-mono);
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
+@utility glass-panel {
+  background: rgba(255, 255, 255, 0.75);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border: 1px solid rgba(255, 255, 255, 0.85);
+  box-shadow: 0 12px 32px -4px rgba(18, 97, 166, 0.10), 0 4px 12px -2px rgba(0, 0, 0, 0.05);
+}
+
+@utility glass-card {
+  background: rgba(255, 255, 255, 0.72);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid rgba(255, 255, 255, 0.80);
+  box-shadow: 0 8px 24px -4px rgba(18, 97, 166, 0.08);
+  transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+@utility glass-card-hover {
+  &:hover {
+    background: rgba(255, 255, 255, 0.90);
+    border-color: rgba(42, 149, 191, 0.40);
+    transform: translateY(-2px);
+    box-shadow: 0 16px 36px -6px rgba(18, 97, 166, 0.14), 0 0 16px rgba(42, 149, 191, 0.20);
   }
+}
+
+@utility glass-header {
+  background: rgba(18, 97, 166, 0.90);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border: 1px solid rgba(255, 255, 255, 0.25);
+  box-shadow: 0 10px 30px -5px rgba(18, 97, 166, 0.25);
+}
+
+@utility glass-modal-overlay {
+  background: rgba(18, 97, 166, 0.20);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
 }
 
 body {

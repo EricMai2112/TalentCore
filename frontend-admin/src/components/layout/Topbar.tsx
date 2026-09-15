@@ -17,7 +17,7 @@ export default function Topbar() {
         {/* Bell Notification */}
         <button
           type="button"
-          className="relative p-2 rounded-xl text-[#0a65bb] hover:bg-[#0a65bb]/10 transition-all cursor-pointer flex items-center justify-center bg-transparent"
+          className="relative p-2 rounded-xl text-[#1261A6] hover:bg-[#1261A6]/10 transition-all cursor-pointer flex items-center justify-center bg-transparent"
         >
           <Bell size={20} />
           <span className="absolute -top-1 -right-1 min-w-[18px] h-[18px] px-1 flex items-center justify-center rounded-full bg-red-600 text-white text-[10px] font-bold shadow-xs leading-none">

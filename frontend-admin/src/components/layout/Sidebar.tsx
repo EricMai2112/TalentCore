@@ -67,7 +67,7 @@ export default function Sidebar() {
   return (
     <aside className="p-2 shrink-0 h-screen sticky top-0 flex flex-col z-20">
       <div
-        className={`flex flex-col h-full bg-white/60 backdrop-blur-md border border-white/80 rounded-2xl shadow-xs transition-all duration-300 ease-in-out ${
+        className={`flex flex-col h-full bg-white/75 backdrop-blur-xl border border-white/90 rounded-3xl shadow-lg shadow-[#1261A6]/10 transition-all duration-300 ease-in-out ${
           isCollapsed ? 'w-14' : 'w-52'
         }`}
       >
@@ -101,21 +101,21 @@ export default function Sidebar() {
                         isCollapsed ? 'justify-center' : ''
                       } ${
                         isActive
-                          ? 'text-white font-bold shadow-md shadow-[#0a65bb]/20'
+                          ? 'text-white font-bold shadow-md shadow-[#1261A6]/20'
                           : 'text-slate-700 hover:text-slate-900 hover:bg-slate-200/60 font-medium'
                       }`}
                       style={
                         isActive
                           ? {
                               background:
-                                'linear-gradient(135deg, #0a65bb 0%, #0284c7 60%, #f27317 100%)'
+                                'linear-gradient(135deg, #1261A6 0%, #126DA6 50%, #2A95BF 100%)'
                             }
                           : undefined
                       }
                     >
                       <Icon
                         size={16}
-                        className={`shrink-0 ${isActive ? 'text-white' : 'text-[#0a65bb]'}`}
+                        className={`shrink-0 ${isActive ? 'text-white' : 'text-[#1261A6]'}`}
                       />
                       {!isCollapsed && (
                         <>
@@ -157,20 +157,20 @@ export default function Sidebar() {
                   isCollapsed ? 'justify-center' : ''
                 } ${
                   pathname.startsWith('/settings')
-                    ? 'text-white font-bold shadow-md shadow-[#0a65bb]/20'
+                    ? 'text-white font-bold shadow-md shadow-[#1261A6]/20'
                     : 'text-slate-700 hover:text-slate-900 hover:bg-slate-200/60 font-medium'
                 }`}
                 style={
                   pathname.startsWith('/settings')
                     ? {
-                        background: 'linear-gradient(135deg, #0a65bb 0%, #0284c7 60%, #f27317 100%)'
+                        background: 'linear-gradient(135deg, #1261A6 0%, #126DA6 50%, #2A95BF 100%)'
                       }
                     : undefined
                 }
               >
                 <Settings
                   size={16}
-                  className={`shrink-0 ${pathname.startsWith('/settings') ? 'text-white' : 'text-[#0a65bb]'}`}
+                  className={`shrink-0 ${pathname.startsWith('/settings') ? 'text-white' : 'text-[#1261A6]'}`}
                 />
                 {!isCollapsed && <span className="text-xs truncate">Cấu hình</span>}
               </Link>
@@ -192,7 +192,7 @@ export default function Sidebar() {
           >
             <ChevronLeft
               size={16}
-              className={`shrink-0 text-[#0a65bb] transition-transform duration-300 ${
+              className={`shrink-0 text-[#1261A6] transition-transform duration-300 ${
                 isCollapsed ? 'rotate-180' : ''
               }`}
             />

@@ -106,7 +106,7 @@ export default function CandidateDetailModal({ application, onClose }: Candidate
     <div className="fixed inset-0 z-50 overflow-hidden flex justify-end">
       {/* Backdrop with Fade In / Fade Out animation */}
       <div
-        className={`fixed inset-0 bg-slate-950/40 backdrop-blur-xs transition-opacity duration-300 ease-in-out ${
+        className={`fixed inset-0 bg-[#1261A6]/20 backdrop-blur-md transition-opacity duration-300 ease-in-out ${
           isOpen ? 'opacity-100' : 'opacity-0'
         }`}
         onClick={handleClose}
@@ -114,21 +114,21 @@ export default function CandidateDetailModal({ application, onClose }: Candidate
 
       {/* Slide-over Right Drawer with Slide-In (Right to Left) and Slide-Out (Left to Right) Animation */}
       <div
-        className={`relative w-full max-w-2xl lg:max-w-3xl xl:max-w-4xl h-full bg-white shadow-2xl flex flex-col z-10 text-slate-900 border-l border-slate-200 transition-transform duration-300 ease-out ${
+        className={`relative w-full max-w-2xl lg:max-w-3xl xl:max-w-4xl h-full bg-white/92 backdrop-blur-2xl shadow-2xl shadow-[#1261A6]/15 flex flex-col z-10 text-slate-900 border-l border-white transition-transform duration-300 ease-out ${
           isOpen ? 'translate-x-0' : 'translate-x-full'
         }`}
         onClick={(e) => e.stopPropagation()}
       >
         {/* Top Header */}
-        <div className="px-6 py-5 border-b border-slate-100 bg-slate-50/70 flex items-start justify-between gap-4 shrink-0">
+        <div className="px-6 py-5 border-b border-slate-200/60 bg-[#1261A6]/5 flex items-start justify-between gap-4 shrink-0">
           <div className="flex items-start gap-4">
-            <div className="w-13 h-13 rounded-2xl bg-indigo-600 text-white font-extrabold text-xl flex items-center justify-center shadow-md shadow-indigo-500/20 shrink-0">
+            <div className="w-13 h-13 rounded-2xl bg-[#1261A6] text-white font-extrabold text-xl flex items-center justify-center shadow-md shadow-[#1261A6]/20 shrink-0">
               {initial}
             </div>
             <div className="space-y-1">
               <div className="flex items-center gap-2.5 flex-wrap">
                 <h3 className="text-xl font-bold text-slate-900 leading-tight">{name}</h3>
-                <span className="px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-indigo-50 text-indigo-700 border border-indigo-100">
+                <span className="px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-[#2A95BF]/15 text-[#1261A6] border border-[#2A95BF]/30">
                   {deptName}
                 </span>
                 {candidate?.currentLevel && (

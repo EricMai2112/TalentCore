@@ -10,7 +10,8 @@ import {
   CloudLightning,
   Snowflake,
   CloudFog,
-  Loader2
+  Loader2,
+  MapPin
 } from 'lucide-react'
 
 interface WeatherData {
@@ -29,42 +30,40 @@ function getWeatherInfo(code: number): {
 } {
   switch (code) {
     case 0:
-      return { description: 'Trời quang', icon: Sun, color: 'text-amber-500' }
     case 1:
-      return { description: 'Nắng nhẹ', icon: Sun, color: 'text-amber-500' }
+      return { description: 'Trời quang', icon: Sun, color: 'text-amber-500 drop-shadow-xs' }
     case 2:
-      return { description: 'Mây rải rác', icon: CloudSun, color: 'text-amber-400' }
+      return { description: 'Mây rải rác', icon: CloudSun, color: 'text-amber-500 drop-shadow-xs' }
     case 3:
-      return { description: 'Nhiều mây', icon: Cloud, color: 'text-slate-400' }
+      return { description: 'Nhiều mây', icon: Cloud, color: 'text-sky-600 drop-shadow-xs' }
     case 45:
     case 48:
-      return { description: 'Sương mù', icon: CloudFog, color: 'text-slate-400' }
+      return { description: 'Sương mù', icon: CloudFog, color: 'text-slate-500' }
     case 51:
     case 53:
     case 55:
-      return { description: 'Mưa phun nhẹ', icon: CloudDrizzle, color: 'text-blue-400' }
+      return { description: 'Mưa phun nhẹ', icon: CloudDrizzle, color: 'text-cyan-600' }
     case 61:
     case 63:
     case 65:
-      return { description: 'Mưa rào', icon: CloudRain, color: 'text-blue-500' }
+      return { description: 'Mưa rào', icon: CloudRain, color: 'text-blue-600' }
     case 71:
     case 73:
     case 75:
-      return { description: 'Có tuyết rơi', icon: Snowflake, color: 'text-sky-300' }
+      return { description: 'Tuyết rơi', icon: Snowflake, color: 'text-sky-400' }
     case 80:
     case 81:
     case 82:
-      return { description: 'Mưa rào nặng hạt', icon: CloudRain, color: 'text-blue-600' }
+      return { description: 'Mưa rào lớn', icon: CloudRain, color: 'text-blue-700' }
     case 95:
     case 96:
     case 99:
-      return { description: 'Có dông bão', icon: CloudLightning, color: 'text-purple-500' }
+      return { description: 'Có dông bão', icon: CloudLightning, color: 'text-purple-600' }
     default:
-      return { description: 'Thời tiết ôn hòa', icon: CloudSun, color: 'text-amber-400' }
+      return { description: 'Thời tiết tốt', icon: CloudSun, color: 'text-amber-500' }
   }
 }
 
-// Default fallback coordinates: Ho Chi Minh City
 const DEFAULT_LAT = 10.8231
 const DEFAULT_LON = 106.6297
 
@@ -83,7 +82,7 @@ export default function WeatherWidget() {
         if (!response.ok) throw new Error('Weather API request failed')
 
         const data = await response.json()
-        const currentTemp = Math.round(data.current?.temperature_2m ?? 30)
+        const currentTemp = Math.round(data.current?.temperature_2m ?? 32)
         const code = data.current?.weather_code ?? 1
         const info = getWeatherInfo(code)
 
@@ -102,7 +101,7 @@ export default function WeatherWidget() {
         if (isMounted) {
           const fallbackInfo = getWeatherInfo(1)
           setWeather({
-            temperature: 30,
+            temperature: 32,
             weatherCode: 1,
             description: fallbackInfo.description,
             icon: fallbackInfo.icon,
@@ -121,7 +120,6 @@ export default function WeatherWidget() {
           fetchWeather(pos.coords.latitude, pos.coords.longitude, 'Vị trí hiện tại')
         },
         () => {
-          // Geolocation rejected or failed -> fallback to HCM City
           fetchWeather(DEFAULT_LAT, DEFAULT_LON, 'TP. Hồ Chí Minh')
         },
         { timeout: 5000 }
@@ -137,11 +135,11 @@ export default function WeatherWidget() {
 
   if (loading) {
     return (
-      <div className="flex items-center gap-2.5 bg-white/45 backdrop-blur-md rounded-2xl px-3 py-1.5 shadow-2xs">
-        <Loader2 size={18} className="animate-spin text-slate-400 shrink-0" />
+      <div className="flex items-center gap-2.5 bg-white/80 backdrop-blur-xl border border-white/90 rounded-2xl px-3.5 py-2 shadow-sm shadow-[#1261A6]/5">
+        <Loader2 size={18} className="animate-spin text-[#1261A6] shrink-0" />
         <div className="flex flex-col leading-none gap-1">
-          <span className="h-3 w-8 bg-slate-300/80 rounded animate-pulse" />
-          <span className="h-2.5 w-16 bg-slate-300/60 rounded animate-pulse" />
+          <span className="h-3 w-10 bg-slate-200 rounded animate-pulse" />
+          <span className="h-2.5 w-16 bg-slate-200/80 rounded animate-pulse" />
         </div>
       </div>
     )
@@ -153,13 +151,21 @@ export default function WeatherWidget() {
 
   return (
     <div
-      className="flex items-center gap-2.5 bg-white/60 backdrop-blur-md border border-white/80 rounded-2xl px-3 py-1.5 shadow-2xs transition-all cursor-default"
+      className="flex items-center gap-3 bg-white/85 backdrop-blur-xl border border-white/90 rounded-2xl px-3.5 py-2 shadow-md shadow-[#1261A6]/8 hover:shadow-lg hover:border-[#2A95BF]/40 hover:bg-white/95 transition-all duration-300 cursor-default group"
       title={`Thời tiết realtime - ${weather.locationName}`}
     >
-      <IconComponent size={18} className={`${weather.iconColor} shrink-0`} />
-      <div className="flex flex-col leading-none">
-        <span className="text-xs font-extrabold text-slate-900">{weather.temperature}°C</span>
-        <span className="text-[10px] font-bold text-slate-600 mt-0.5">{weather.description}</span>
+      <div className="p-1.5 rounded-xl bg-[#1261A6]/10 border border-[#1261A6]/15 group-hover:scale-105 transition-transform duration-200">
+        <IconComponent size={20} className={`${weather.iconColor} shrink-0`} />
+      </div>
+      <div className="flex flex-col leading-tight">
+        <div className="flex items-baseline gap-1.5">
+          <span className="text-sm font-black text-slate-900 tracking-tight">{weather.temperature}°C</span>
+          <span className="text-[11px] font-extrabold text-[#1261A6] truncate">{weather.description}</span>
+        </div>
+        <div className="flex items-center gap-1 text-[10px] font-semibold text-slate-500 mt-0.5">
+          <MapPin size={10} className="text-[#2A95BF] shrink-0" />
+          <span className="truncate max-w-[100px]">{weather.locationName}</span>
+        </div>
       </div>
     </div>
   )

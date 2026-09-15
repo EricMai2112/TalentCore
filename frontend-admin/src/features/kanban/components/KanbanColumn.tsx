@@ -1,43 +1,40 @@
-"use client";
+'use client'
 
-import { useMemo } from "react";
-import { Inbox } from "lucide-react";
-import { useDroppable } from "@dnd-kit/core";
-import { SortableContext, verticalListSortingStrategy } from "@dnd-kit/sortable";
-import { PipelineStage } from "@/src/features/job-description/types/job-description.types";
-import { KanbanApplication } from "../types/kanban.types";
-import CandidateKanbanCard from "./CandidateKanbanCard";
+import { useMemo } from 'react'
+import { Inbox } from 'lucide-react'
+import { useDroppable } from '@dnd-kit/core'
+import { SortableContext, verticalListSortingStrategy } from '@dnd-kit/sortable'
+import { PipelineStage } from '@/src/features/job-description/types/job-description.types'
+import { KanbanApplication } from '../types/kanban.types'
+import CandidateKanbanCard from './CandidateKanbanCard'
 
 interface KanbanColumnProps {
-  stage: PipelineStage;
-  applications: KanbanApplication[];
-  onSelectCandidate: (app: KanbanApplication) => void;
+  stage: PipelineStage
+  applications: KanbanApplication[]
+  onSelectCandidate: (app: KanbanApplication) => void
 }
 
 export default function KanbanColumn({
   stage,
   applications,
-  onSelectCandidate,
+  onSelectCandidate
 }: KanbanColumnProps) {
-  const stageId = stage._id || stage.name;
+  const stageId = stage._id || stage.name
   const { setNodeRef, isOver } = useDroppable({
-    id: stageId,
-  });
+    id: stageId
+  })
 
-  const itemIds = useMemo(
-    () => applications.map((app) => app._id),
-    [applications]
-  );
+  const itemIds = useMemo(() => applications.map((app) => app._id), [applications])
 
-  const stageColorHex = stage.color || "#6366f1";
+  const stageColorHex = stage.color || '#6366f1'
 
   return (
     <div
       ref={setNodeRef}
-      className={`bg-gray-50/70 border rounded-3xl p-4 min-w-[300px] max-w-[360px] flex-1 flex flex-col transition-all duration-200 ${
+      className={`bg-white/50 backdrop-blur-md border rounded-3xl p-4 min-w-[300px] max-w-[360px] flex-1 flex flex-col shadow-sm shadow-[#1261A6]/5 transition-all duration-200 ${
         isOver
-          ? "border-indigo-400 bg-indigo-50/40 ring-2 ring-indigo-500/20"
-          : "border-gray-100"
+          ? 'border-[#2A95BF] bg-[#2A95BF]/10 ring-4 ring-[#2A95BF]/20 shadow-lg'
+          : 'border-white/80'
       }`}
     >
       {/* Column Header */}
@@ -47,7 +44,7 @@ export default function KanbanColumn({
           style={{
             backgroundColor: `${stageColorHex}18`,
             color: stageColorHex,
-            border: `1px solid ${stageColorHex}35`,
+            border: `1px solid ${stageColorHex}35`
           }}
           title={stage.name}
         >
@@ -75,15 +72,11 @@ export default function KanbanColumn({
             </div>
           ) : (
             applications.map((app) => (
-              <CandidateKanbanCard
-                key={app._id}
-                application={app}
-                onSelect={onSelectCandidate}
-              />
+              <CandidateKanbanCard key={app._id} application={app} onSelect={onSelectCandidate} />
             ))
           )}
         </div>
       </SortableContext>
     </div>
-  );
+  )
 }
