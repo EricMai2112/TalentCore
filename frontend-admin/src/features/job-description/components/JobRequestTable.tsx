@@ -4,7 +4,7 @@ import { useState, useEffect } from "react";
 import { createPortal } from "react-dom";
 import { Eye, Edit2, Trash2, Plus, CheckCheck, Briefcase, CheckCircle2, MoreVertical, FileText, Clock, XCircle, Award } from "lucide-react";
 import { JobDescription, JobStatus, JobPriority, Department } from "../types/job-description.types";
-import { CustomSelect, CustomPagination } from "@/src/components/common";
+import { CustomSelect, CustomPagination, CustomButton } from "@/src/components/common";
 
 interface JobRequestTableProps {
   jobs: JobDescription[];
@@ -268,17 +268,18 @@ export default function JobRequestTable({
           />
         </div>
 
-        <button
+        <CustomButton
           onClick={onAdd}
-          className="flex items-center gap-1.5 px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white font-semibold text-sm rounded-xl transition-all duration-150 shadow-sm cursor-pointer shrink-0 ml-auto sm:ml-0"
+          variant="primary"
+          icon={<Plus size={16} />}
+          className="ml-auto sm:ml-0 shrink-0"
         >
-          <Plus size={16} />
           Tạo yêu cầu mới
-        </button>
+        </CustomButton>
       </div>
 
       {/* Table grid */}
-      <div className="bg-white border border-gray-100 rounded-2xl shadow-2xs">
+      <div className="overflow-hidden bg-white/75 backdrop-blur-md border border-white/85 shadow-md shadow-[#1261A6]/5 rounded-3xl">
         <div className="overflow-x-auto">
           <table className="w-full text-left border-collapse text-sm">
             <thead>

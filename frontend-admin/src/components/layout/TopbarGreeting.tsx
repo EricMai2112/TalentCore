@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { Sun, CloudSun, Moon, Smile } from 'lucide-react'
+import { Sun, CloudSun, Moon, Smile, Hand } from 'lucide-react'
 import { useAuth } from '@/src/providers/AuthProvider'
 import { USER_ROLE_LABEL } from '@/src/features/users/types/user.types'
 

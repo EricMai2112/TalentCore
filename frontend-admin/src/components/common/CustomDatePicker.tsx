@@ -169,45 +169,45 @@ export default function CustomDatePicker({
             disabled
               ? "bg-slate-100/90 text-slate-400 border-slate-200 cursor-not-allowed opacity-75"
               : isOpen
-              ? "bg-white text-slate-900 border-indigo-500 ring-4 ring-indigo-500/10"
-              : "bg-slate-50/80 text-slate-900 border-slate-200 hover:bg-slate-100/80 focus:bg-white"
-          } ${error ? "border-rose-300 ring-2 ring-rose-500/10" : ""} cursor-pointer`}
+              ? "bg-white text-slate-900 border-[#1261A6] ring-4 ring-[#1261A6]/15 shadow-md"
+              : "bg-white/95 backdrop-blur-md text-slate-900 border-[#1261A6]/35 hover:border-[#1261A6]/60 focus:bg-white"
+          } ${error ? "border-rose-400 ring-4 ring-rose-500/10" : ""} cursor-pointer`}
         >
           <div className="flex items-center gap-2.5">
-            <CalendarIcon size={18} className="text-indigo-600 shrink-0" />
+            <CalendarIcon size={18} className="text-[#1261A6] shrink-0" />
             <span className={value ? "text-slate-900 font-bold" : "text-slate-400 font-normal"}>
               {value ? formatDisplayDate(value) : placeholder}
             </span>
           </div>
           <ChevronDown
             size={18}
-            className={`text-slate-400 transition-transform duration-200 ${
-              isOpen ? "rotate-180 text-indigo-600" : ""
+            className={`text-[#1261A6] transition-transform duration-200 ${
+              isOpen ? "rotate-180" : ""
             }`}
           />
         </button>
 
         {/* Calendar Dropdown Panel */}
         {isOpen && !disabled && (
-          <div className="absolute left-0 top-full mt-2 w-80 z-50 bg-white border border-slate-200 rounded-2xl shadow-2xl p-4 animate-in fade-in zoom-in-95 duration-150">
+          <div className="absolute left-0 top-full mt-2 w-80 z-50 bg-white/95 backdrop-blur-2xl border border-white rounded-3xl shadow-2xl shadow-[#1261A6]/15 p-4 animate-in fade-in zoom-in-95 duration-150">
             {/* Header Month Navigation */}
-            <div className="flex items-center justify-between mb-3 pb-3 border-b border-slate-100">
+            <div className="flex items-center justify-between mb-3 pb-3 border-b border-slate-200/60">
               <button
                 type="button"
                 onClick={handlePrevMonth}
-                className="p-1.5 rounded-xl border border-slate-200 hover:bg-slate-100 text-slate-600 transition-colors cursor-pointer"
+                className="p-1.5 rounded-xl border border-slate-200 hover:bg-[#1261A6]/10 text-[#1261A6] transition-colors cursor-pointer"
               >
                 <ChevronLeft size={16} />
               </button>
 
-              <span className="text-sm font-extrabold text-slate-800">
+              <span className="text-sm font-extrabold text-slate-900">
                 {monthNamesVi[month]} {year}
               </span>
 
               <button
                 type="button"
                 onClick={handleNextMonth}
-                className="p-1.5 rounded-xl border border-slate-200 hover:bg-slate-100 text-slate-600 transition-colors cursor-pointer"
+                className="p-1.5 rounded-xl border border-slate-200 hover:bg-[#1261A6]/10 text-[#1261A6] transition-colors cursor-pointer"
               >
                 <ChevronRight size={16} />
               </button>
@@ -238,12 +238,12 @@ export default function CustomDatePicker({
                     onClick={() => handleSelectDay(cell.dateStr)}
                     className={`h-9 w-full rounded-xl text-xs font-bold transition-all flex items-center justify-center cursor-pointer ${
                       isSelected
-                        ? "bg-indigo-600 text-white shadow-md shadow-indigo-500/30"
+                        ? "bg-[#1261A6] text-white shadow-md shadow-[#1261A6]/30"
                         : isToday
-                        ? "bg-indigo-50 text-indigo-700 border border-indigo-200"
+                        ? "bg-[#1261A6]/10 text-[#1261A6] border border-[#1261A6]/30 font-extrabold"
                         : isOtherMonth
                         ? "text-slate-300 hover:bg-slate-50"
-                        : "text-slate-700 hover:bg-slate-100"
+                        : "text-slate-800 hover:bg-[#D5E7F2]/40"
                     } ${isDisabled ? "opacity-30 cursor-not-allowed" : ""}`}
                   >
                     {cell.day}
@@ -253,11 +253,11 @@ export default function CustomDatePicker({
             </div>
 
             {/* Footer Quick Action */}
-            <div className="mt-3 pt-2.5 border-t border-slate-100 flex items-center justify-between">
+            <div className="mt-3 pt-2.5 border-t border-slate-200/60 flex items-center justify-between">
               <button
                 type="button"
                 onClick={() => handleSelectDay(todayStr)}
-                className="text-xs font-bold text-indigo-600 hover:text-indigo-800 transition-colors cursor-pointer"
+                className="text-xs font-bold text-[#1261A6] hover:underline transition-colors cursor-pointer"
               >
                 Hôm nay ({formatDisplayDate(todayStr)})
               </button>
@@ -274,7 +274,7 @@ export default function CustomDatePicker({
       </div>
 
       {error ? (
-        <p className="text-[11px] font-medium text-rose-500">{error}</p>
+        <p className="text-[11px] font-bold text-rose-600">{error}</p>
       ) : helperText ? (
         <p className="text-[11px] font-medium text-slate-400">{helperText}</p>
       ) : null}

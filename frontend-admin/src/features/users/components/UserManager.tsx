@@ -16,6 +16,7 @@ import UserRow from './UserRow'
 import CreateUserModal from './CreateUserModal'
 import EditUserModal from './EditUserModal'
 import { useAuth } from '@/src/providers/AuthProvider'
+import { CustomButton } from '@/src/components/common'
 
 interface UserManagerProps {
   initialUsers: User[]
@@ -172,23 +173,24 @@ export default function UserManager({ initialUsers, initialDepartments }: UserMa
       {/* Header section */}
       <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
         <div>
-          <h2 className="text-xl font-bold text-gray-900 flex items-center gap-2">
-            <Users className="text-indigo-600 shrink-0" size={22} />
+          <h2 className="text-xl font-bold text-slate-900 flex items-center gap-2">
+            <Users className="text-[#1261A6] shrink-0" size={22} />
             {isDeptManager ? 'Thành viên phòng ban' : 'Quản lý người dùng'}
           </h2>
-          <p className="text-sm text-gray-500 mt-0.5">
+          <p className="text-sm text-slate-500 mt-0.5">
             {isDeptManager
               ? 'Danh sách nhân viên thuộc phòng ban của bạn'
               : 'Quản lý danh sách tài khoản, phân quyền và thông tin người dùng'}
           </p>
         </div>
-        <button
+        <CustomButton
           onClick={() => setIsCreateOpen(true)}
-          className="inline-flex items-center gap-1.5 px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white font-semibold text-sm rounded-xl transition-all shadow-sm shadow-indigo-100 cursor-pointer self-start sm:self-auto shrink-0"
+          variant="primary"
+          icon={<Plus size={16} />}
+          className="self-start sm:self-auto shrink-0"
         >
-          <Plus size={16} />
           Thêm người dùng
-        </button>
+        </CustomButton>
       </div>
 
       {/* Search bar */}

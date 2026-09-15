@@ -6,7 +6,7 @@ import { CandidateApplication, CandidateNote } from "../types/candidate.types";
 import { useAuth } from "@/src/providers/AuthProvider";
 import { USER_ROLE_LABEL } from "@/src/features/users/types/user.types";
 import { candidateApi } from "../services/candidate.api";
-import { CustomTextarea } from "@/src/components/common";
+import { CustomTextarea, CustomButton } from "@/src/components/common";
 
 interface CandidateNotesModalProps {
   application: CandidateApplication | null;
@@ -181,35 +181,23 @@ export default function CandidateNotesModal({
 
         {/* Modal Footer */}
         <div className="px-6 py-4 bg-slate-50/50 border-t border-slate-100 flex items-center justify-end gap-3">
-          <button
-            type="button"
+          <CustomButton
+            variant="secondary"
+            size="sm"
             onClick={onClose}
-            className="px-5 py-2.5 border border-slate-200 rounded-xl text-xs font-bold text-slate-700 hover:bg-white hover:border-slate-300 transition-all cursor-pointer shadow-2xs"
           >
             Đóng
-          </button>
-          <button
-            type="button"
+          </CustomButton>
+          <CustomButton
+            variant="primary"
+            size="sm"
             onClick={handleAddNote}
-            disabled={isSubmitting || !noteContent.trim()}
-            className={`px-5 py-2.5 rounded-xl text-xs font-bold text-white shadow-md transition-all flex items-center gap-1.5 cursor-pointer ${
-              isSubmitting || !noteContent.trim()
-                ? "bg-indigo-300 cursor-not-allowed"
-                : "bg-indigo-500 hover:bg-indigo-600 active:scale-95 shadow-indigo-500/20"
-            }`}
+            isLoading={isSubmitting}
+            disabled={!noteContent.trim()}
+            icon={Plus}
           >
-            {isSubmitting ? (
-              <>
-                <Loader2 size={14} className="animate-spin" />
-                <span>Đang lưu...</span>
-              </>
-            ) : (
-              <>
-                <Plus size={14} />
-                <span>Thêm ghi chú</span>
-              </>
-            )}
-          </button>
+            Thêm ghi chú
+          </CustomButton>
         </div>
       </div>
     </div>
