@@ -137,7 +137,7 @@ export default function CustomSelect({
   const displayLabel = selectedOption ? selectedOption.label : placeholder;
 
   const sizeClasses = {
-    sm: "px-3 py-1.5 rounded-xl text-xs font-bold",
+    sm: "px-3 py-2 rounded-xl text-xs font-bold",
     md: "px-3.5 py-2.5 rounded-2xl text-xs font-bold",
     lg: "px-4 py-3.5 rounded-2xl text-sm font-bold",
   };
@@ -146,7 +146,7 @@ export default function CustomSelect({
     <div
       ref={dropdownRef}
       style={menuStyle}
-      className="bg-white border border-slate-200 rounded-2xl shadow-2xl p-1.5 space-y-1 animate-in fade-in zoom-in-95 duration-150 max-h-60 overflow-y-auto"
+      className="bg-white/95 backdrop-blur-2xl border border-white rounded-2xl shadow-2xl shadow-[#1261A6]/15 p-1.5 space-y-1 animate-in fade-in zoom-in-95 duration-150 max-h-60 overflow-y-auto"
     >
       {options.length === 0 ? (
         <div className="p-3 text-center text-xs text-slate-400 font-medium">
@@ -162,10 +162,10 @@ export default function CustomSelect({
                 onChange(opt.value);
                 setIsOpen(false);
               }}
-              className={`p-3 rounded-xl text-xs font-bold transition-colors cursor-pointer flex items-center justify-between ${
+              className={`p-3 rounded-xl text-xs font-bold transition-all cursor-pointer flex items-center justify-between ${
                 isSelected
-                  ? "bg-indigo-50 text-indigo-900"
-                  : "hover:bg-slate-50 text-slate-800"
+                  ? "bg-[#1261A6]/12 text-[#1261A6] font-black"
+                  : "hover:bg-[#D5E7F2]/40 text-slate-800"
               }`}
             >
               <div className="min-w-0 pr-2">
@@ -176,7 +176,7 @@ export default function CustomSelect({
                   </span>
                 )}
               </div>
-              {isSelected && <Check size={16} className="text-indigo-600 shrink-0" />}
+              {isSelected && <Check size={16} className="text-[#1261A6] shrink-0" />}
             </div>
           );
         })
@@ -208,12 +208,12 @@ export default function CustomSelect({
             disabled || isLocked
               ? "bg-slate-100/90 text-slate-400 border-slate-200 cursor-not-allowed opacity-75"
               : isOpen
-              ? "bg-white text-slate-900 border-indigo-500 ring-4 ring-indigo-500/10"
-              : "bg-slate-50/80 text-slate-900 border-slate-200 hover:bg-slate-100/80 focus:bg-white"
-          } ${error ? "border-rose-300 ring-2 ring-rose-500/10" : ""} cursor-pointer`}
+              ? "bg-white text-slate-900 border-[#1261A6] ring-4 ring-[#1261A6]/15 shadow-md"
+              : "bg-white/95 backdrop-blur-md text-slate-900 border-[#1261A6]/35 hover:border-[#1261A6]/60 focus:bg-white"
+          } ${error ? "border-rose-400 ring-4 ring-rose-500/10" : ""} cursor-pointer`}
         >
           <div className="flex items-center gap-2.5 min-w-0">
-            {icon && <span className="text-slate-400 shrink-0">{icon}</span>}
+            {icon && <span className="text-[#1261A6] shrink-0">{icon}</span>}
             <span
               className={`whitespace-nowrap ${
                 !selectedOption && placeholder ? "text-slate-400 font-medium" : "text-slate-900"
@@ -229,8 +229,8 @@ export default function CustomSelect({
             ) : (
               <ChevronDown
                 size={18}
-                className={`text-slate-400 transition-transform duration-200 ${
-                  isOpen ? "rotate-180 text-indigo-600" : ""
+                className={`text-[#1261A6] transition-transform duration-200 ${
+                  isOpen ? "rotate-180" : ""
                 }`}
               />
             )}
@@ -239,7 +239,7 @@ export default function CustomSelect({
       </div>
 
       {error ? (
-        <p className="text-[11px] font-medium text-rose-500">{error}</p>
+        <p className="text-[11px] font-bold text-rose-600">{error}</p>
       ) : helperText ? (
         <p className="text-[11px] font-medium text-slate-400">{helperText}</p>
       ) : null}

@@ -109,7 +109,7 @@ export function CustomPagination({
               onClick={() => onPageChange(page)}
               className={`min-w-[32px] h-8 px-2 rounded-xl text-xs font-bold transition-all cursor-pointer ${
                 isActive
-                  ? "bg-indigo-600 text-white shadow-xs shadow-indigo-500/30 scale-105"
+                  ? "bg-primary text-white shadow-xs shadow-primary/30 scale-105 font-bold"
                   : "bg-white border border-slate-200/80 text-slate-600 hover:bg-slate-50 hover:text-slate-900"
               }`}
             >

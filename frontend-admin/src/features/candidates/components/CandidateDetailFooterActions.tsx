@@ -5,6 +5,8 @@ import { CalendarPlus, Loader2, CheckCircle, AlertCircle, X } from "lucide-react
 import { UserRole } from "@/src/features/users/types/user.types";
 import { interviewsApi } from "@/src/features/interviews/services/interviews.api";
 
+import { CustomButton } from "@/src/components/common";
+
 interface CandidateDetailFooterActionsProps {
   applicationId: string;
   candidateName: string;
@@ -106,33 +108,16 @@ export function CandidateDetailFooterActions({
 
         <div className="flex items-center gap-3">
           {isHrAdmin && (
-            <button
-              type="button"
+            <CustomButton
+              variant={isDone ? "secondary" : "primary"}
+              size="sm"
               disabled={isSubmitting || isDone}
+              isLoading={isSubmitting}
               onClick={handleRequestSchedule}
-              className={`inline-flex items-center gap-2 px-5 py-2.5 rounded-xl font-bold text-xs transition-all shadow-md active:scale-95 ${
-                isDone
-                  ? "bg-slate-100 text-slate-500 border border-slate-200 cursor-not-allowed shadow-none"
-                  : "bg-indigo-600 hover:bg-indigo-700 text-white shadow-indigo-500/20 cursor-pointer"
-              } disabled:opacity-75`}
+              icon={isDone ? CheckCircle : CalendarPlus}
             >
-              {isSubmitting ? (
-                <>
-                  <Loader2 size={15} className="animate-spin" />
-                  <span>Đang gửi yêu cầu...</span>
-                </>
-              ) : isDone ? (
-                <>
-                  <CheckCircle size={15} className="text-emerald-600" />
-                  <span>Đã gửi yêu cầu lên lịch</span>
-                </>
-              ) : (
-                <>
-                  <CalendarPlus size={15} />
-                  <span>Yêu cầu lên lịch Phỏng vấn</span>
-                </>
-              )}
-            </button>
+              {isDone ? "Đã gửi yêu cầu lên lịch" : "Yêu cầu lên lịch Phỏng vấn"}
+            </CustomButton>
           )}
         </div>
       </div>

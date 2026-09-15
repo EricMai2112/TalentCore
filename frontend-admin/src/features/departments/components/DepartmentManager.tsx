@@ -13,6 +13,7 @@ import { departmentApi } from "../services/department.api";
 import DepartmentCard from "./DepartmentCard";
 import DepartmentModal from "./DepartmentModal";
 import DeleteConfirmModal from "./DeleteConfirmModal";
+import { CustomButton } from "@/src/components/common";
 
 interface DepartmentManagerProps {
   initialDepartments: Department[];
@@ -153,13 +154,14 @@ export default function DepartmentManager({
             Phân công người phỏng vấn và quản lý cấu trúc từng phòng ban
           </p>
         </div>
-        <button
+        <CustomButton
           onClick={handleOpenCreate}
-          className="inline-flex items-center gap-1.5 px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white font-semibold text-sm rounded-xl transition-all shadow-sm shadow-indigo-100 cursor-pointer self-start sm:self-auto shrink-0"
+          variant="primary"
+          icon={<Plus size={16} />}
+          className="self-start sm:self-auto shrink-0"
         >
-          <Plus size={16} />
           Thêm phòng ban
-        </button>
+        </CustomButton>
       </div>
 
       {/* List */}

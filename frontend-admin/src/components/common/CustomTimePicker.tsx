@@ -97,31 +97,31 @@ export default function CustomTimePicker({
           type="button"
           disabled={disabled}
           onClick={() => setIsOpen((prev) => !prev)}
-          className={`w-full flex items-center justify-between px-3.5 py-3.5 rounded-2xl text-sm font-bold border transition-all shadow-2xs outline-none ${
+          className={`w-full flex items-center justify-between px-4 py-3.5 rounded-2xl text-sm font-bold border transition-all shadow-2xs outline-none ${
             disabled
               ? "bg-slate-100/90 text-slate-400 border-slate-200 cursor-not-allowed opacity-75"
               : isOpen
-              ? "bg-white text-slate-900 border-indigo-500 ring-4 ring-indigo-500/10"
-              : "bg-slate-50/80 text-slate-900 border-slate-200 hover:bg-slate-100/80 focus:bg-white"
-          } ${error ? "border-rose-300 ring-2 ring-rose-500/10" : ""} cursor-pointer`}
+              ? "bg-white text-slate-900 border-[#1261A6] ring-4 ring-[#1261A6]/15 shadow-md"
+              : "bg-white/95 backdrop-blur-md text-slate-900 border-[#1261A6]/35 hover:border-[#1261A6]/60 focus:bg-white"
+          } ${error ? "border-rose-400 ring-4 ring-rose-500/10" : ""} cursor-pointer`}
         >
-          <div className="flex items-center gap-2">
-            <Clock size={16} className="text-indigo-600 shrink-0" />
+          <div className="flex items-center gap-2.5">
+            <Clock size={18} className="text-[#1261A6] shrink-0" />
             <span className={value ? "text-slate-900 font-bold" : "text-slate-400 font-normal"}>
               {value || placeholder}
             </span>
           </div>
           <ChevronDown
-            size={16}
-            className={`text-slate-400 transition-transform duration-200 ${
-              isOpen ? "rotate-180 text-indigo-600" : ""
+            size={18}
+            className={`text-[#1261A6] transition-transform duration-200 ${
+              isOpen ? "rotate-180" : ""
             }`}
           />
         </button>
 
         {/* Time Picker Dropdown Panel */}
         {isOpen && !disabled && (
-          <div className="absolute left-0 top-full mt-2 w-64 z-50 bg-white border border-slate-200 rounded-2xl shadow-2xl p-3 animate-in fade-in zoom-in-95 duration-150">
+          <div className="absolute left-0 top-full mt-2 w-64 z-50 bg-white/95 backdrop-blur-2xl border border-white rounded-3xl shadow-2xl shadow-[#1261A6]/15 p-3.5 animate-in fade-in zoom-in-95 duration-150">
             <div className="text-[11px] font-bold text-slate-400 uppercase tracking-wider mb-2">
               Khung giờ phổ biến
             </div>
@@ -137,8 +137,8 @@ export default function CustomTimePicker({
                     onClick={() => handleSelectSlot(slot)}
                     className={`py-1.5 px-2 rounded-xl text-xs font-bold transition-all cursor-pointer flex items-center justify-center gap-1 ${
                       isSelected
-                        ? "bg-indigo-600 text-white shadow-xs"
-                        : "bg-slate-50 text-slate-700 hover:bg-indigo-50 hover:text-indigo-700 border border-slate-100"
+                        ? "bg-[#1261A6] text-white shadow-md shadow-[#1261A6]/20"
+                        : "bg-slate-50 text-slate-800 hover:bg-[#1261A6]/10 hover:text-[#1261A6] border border-slate-200/60"
                     }`}
                   >
                     <span>{slot}</span>
@@ -149,7 +149,7 @@ export default function CustomTimePicker({
             </div>
 
             {/* Custom Hour & Minute Selectors */}
-            <div className="pt-2 border-t border-slate-100">
+            <div className="pt-2 border-t border-slate-200/60">
               <div className="text-[11px] font-bold text-slate-400 uppercase tracking-wider mb-1.5">
                 Tùy chỉnh giờ
               </div>
@@ -157,7 +157,7 @@ export default function CustomTimePicker({
                 <select
                   value={hour}
                   onChange={(e) => setHour(e.target.value)}
-                  className="w-1/2 p-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold text-slate-800 outline-none focus:border-indigo-500 cursor-pointer"
+                  className="w-1/2 p-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold text-slate-800 outline-none focus:border-[#1261A6] cursor-pointer"
                 >
                   {hoursList.map((h) => (
                     <option key={h} value={h}>
@@ -166,12 +166,12 @@ export default function CustomTimePicker({
                   ))}
                 </select>
 
-                <span className="text-slate-400 font-bold">:</span>
+                <span className="text-[#1261A6] font-bold">:</span>
 
                 <select
                   value={minute}
                   onChange={(e) => setMinute(e.target.value)}
-                  className="w-1/2 p-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold text-slate-800 outline-none focus:border-indigo-500 cursor-pointer"
+                  className="w-1/2 p-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold text-slate-800 outline-none focus:border-[#1261A6] cursor-pointer"
                 >
                   {minutesList.map((m) => (
                     <option key={m} value={m}>
@@ -184,7 +184,7 @@ export default function CustomTimePicker({
               <button
                 type="button"
                 onClick={handleCustomTimeApply}
-                className="mt-2.5 w-full py-2 bg-indigo-50 text-indigo-700 hover:bg-indigo-100 font-bold text-xs rounded-xl transition-colors cursor-pointer"
+                className="mt-2.5 w-full py-2 bg-[#1261A6]/10 text-[#1261A6] hover:bg-[#1261A6]/20 font-bold text-xs rounded-xl transition-colors cursor-pointer"
               >
                 Xác nhận thời gian
               </button>
@@ -194,7 +194,7 @@ export default function CustomTimePicker({
       </div>
 
       {error ? (
-        <p className="text-[11px] font-medium text-rose-500">{error}</p>
+        <p className="text-[11px] font-bold text-rose-600">{error}</p>
       ) : helperText ? (
         <p className="text-[11px] font-medium text-slate-400">{helperText}</p>
       ) : null}

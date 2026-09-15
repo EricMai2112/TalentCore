@@ -23,18 +23,18 @@ const CustomTextarea = forwardRef<HTMLTextAreaElement, CustomTextareaProps>(
           ref={ref}
           rows={rows}
           disabled={disabled}
-          className={`w-full p-4 bg-slate-50/80 border ${
+          className={`w-full p-4 bg-white/95 backdrop-blur-md border ${
             error
-              ? "border-rose-300 ring-2 ring-rose-500/10 focus:border-rose-500"
-              : "border-slate-200 focus:border-indigo-500 focus:ring-4 focus:ring-indigo-500/10"
-          } rounded-2xl text-sm font-medium text-slate-900 placeholder-slate-400 focus:bg-white outline-none resize-none transition-all cursor-text ${
+              ? "border-rose-400 ring-4 ring-rose-500/10 focus:border-rose-500"
+              : "border-[#1261A6]/35 hover:border-[#1261A6]/60 focus:border-[#1261A6] focus:ring-4 focus:ring-[#1261A6]/15 focus:bg-white"
+          } rounded-2xl text-sm font-semibold text-slate-900 placeholder:text-slate-400 placeholder:font-normal outline-none resize-none transition-all shadow-2xs ${
             disabled ? "bg-slate-100/90 text-slate-400 border-slate-200 cursor-not-allowed opacity-75" : ""
           } ${className}`}
           {...props}
         />
 
         {error ? (
-          <p className="text-[11px] font-medium text-rose-500">{error}</p>
+          <p className="text-[11px] font-bold text-rose-600">{error}</p>
         ) : helperText ? (
           <p className="text-[11px] font-medium text-slate-400">{helperText}</p>
         ) : null}
