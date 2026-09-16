@@ -35,19 +35,19 @@ export default function TopbarGreeting() {
   const roleName = user?.role ? USER_ROLE_LABEL[user.role] : 'Người dùng'
 
   return (
-    <div className="hidden sm:flex flex-col justify-center">
+    <div className="hidden sm:flex flex-col justify-center px-3.5 py-2 bg-white/55 backdrop-blur-md border border-white/65 rounded-2xl shadow-2xs transition-all">
       <div className="flex items-center gap-1.5">
         {timeGreeting.icon}
-        <p className="text-sm font-bold text-slate-800 leading-snug">
+        <p className="text-xs sm:text-sm font-bold text-slate-800 leading-snug">
           Chào {timeGreeting.text},{' '}
-          <span className="font-extrabold text-[#1261A6] bg-gradient-to-r from-[#1261A6] to-[#126DA6] bg-clip-text text-transparent">
+          <span className="font-extrabold bg-gradient-to-r from-[#3B82F6] via-[#8B5CF6] to-[#06B6D4] bg-clip-text text-transparent">
             {roleName}
           </span>
         </p>
       </div>
       <div className="flex items-center gap-1 mt-0.5">
-        <Smile size={11} className="text-[#2A95BF]" />
-        <p className="text-xs font-semibold text-slate-600">Chúc bạn một ngày làm việc hiệu quả!</p>
+        <Smile size={12} className="text-[#06B6D4] shrink-0" />
+        <p className="text-[11px] font-medium text-slate-600">Chúc bạn một ngày làm việc hiệu quả!</p>
       </div>
     </div>
   )

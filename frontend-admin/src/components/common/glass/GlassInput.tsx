@@ -26,7 +26,7 @@ const GlassInput = forwardRef<HTMLInputElement, GlassInputProps>(
 
         <div className="relative flex items-center">
           {icon && (
-            <div className="absolute left-3.5 z-10 text-[#1261A6] pointer-events-none flex items-center justify-center shrink-0">
+            <div className="absolute left-3.5 z-10 text-[#3B82F6] pointer-events-none flex items-center justify-center shrink-0">
               {icon}
             </div>
           )}
@@ -36,11 +36,11 @@ const GlassInput = forwardRef<HTMLInputElement, GlassInputProps>(
             disabled={disabled}
             className={`w-full ${icon ? 'pl-11' : 'px-4'} ${
               rightElement ? 'pr-11' : 'pr-4'
-            } py-3.5 bg-white/95 backdrop-blur-md border ${
+            } py-2.5 sm:py-3 bg-white/95 backdrop-blur-md border ${
               error
                 ? 'border-rose-400 ring-4 ring-rose-500/10 focus:border-rose-500'
-                : 'border-[#1261A6]/35 hover:border-[#1261A6]/60 focus:border-[#1261A6] focus:ring-4 focus:ring-[#1261A6]/15 focus:bg-white'
-            } rounded-2xl text-sm  text-slate-900 placeholder:text-slate-400 placeholder:font-normal outline-none transition-all shadow-2xs ${
+                : 'border-slate-200/80 hover:border-[#3B82F6]/50 focus:border-[#3B82F6] focus:ring-4 focus:ring-[#3B82F6]/15 focus:bg-white'
+            } rounded-2xl text-xs sm:text-sm text-slate-900 placeholder:text-slate-400 placeholder:font-normal outline-none transition-all shadow-2xs ${
               disabled
                 ? 'bg-slate-100/90 text-slate-400 border-slate-200 cursor-not-allowed opacity-75'
                 : ''

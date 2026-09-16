@@ -1,4 +1,5 @@
 import Image from 'next/image'
+import { PartyPopper, Sparkles } from 'lucide-react'
 import logo from '@/public/logo-talentcore.png'
 import login_image from '@/public/login_image.png'
 import LoginForm from './LoginForm'
@@ -21,16 +22,19 @@ export default function LoginPage() {
       </div>
 
       {/* ── RIGHT: Form card — Ultra Frosted Glass Panel ── */}
-      <GlassCard className="w-full md:w-[460px] shrink-0 rounded-3xl p-8 sm:p-10 flex flex-col shadow-2xl shadow-[#1261A6]/15 bg-white/80 backdrop-blur-2xl border border-white">
+      <GlassCard className="w-full md:w-[460px] shrink-0 rounded-3xl p-8 sm:p-10 flex flex-col shadow-2xl shadow-purple-500/10 bg-white/80 backdrop-blur-2xl border border-white/90">
         {/* Logo + greeting */}
         <div className="mb-6 text-center">
           <div className="flex justify-center mb-3">
             <Image src={logo} alt="TalentCore" width={175} className="h-auto object-contain" />
           </div>
-          <span className="inline-block px-3 py-1 bg-[#1261A6]/10 border border-[#1261A6]/20 rounded-full text-[11px] font-bold text-[#1261A6] uppercase tracking-wider mb-2">
-            Hệ Thống Quản Trị Tuyển Dụng
-          </span>
-          <p className="text-xs font-semibold text-slate-500">
+          <div className="inline-flex items-center gap-1.5 px-3.5 py-1.5 bg-gradient-to-r from-[#8B5CF6]/12 via-[#3B82F6]/12 to-[#06B6D4]/12 backdrop-blur-md border border-[#8B5CF6]/25 rounded-full shadow-2xs mb-2.5">
+            <PartyPopper size={13} className="text-[#8B5CF6] shrink-0" />
+            <span className="text-[11px] font-black uppercase tracking-wider bg-gradient-to-r from-[#8B5CF6] via-[#3B82F6] to-[#06B6D4] bg-clip-text text-transparent">
+              Hệ Thống Quản Trị Tuyển Dụng
+            </span>
+          </div>
+          <p className="text-xs font-semibold text-[#64748B]">
             Đăng nhập để quản lý ứng viên và lịch phỏng vấn
           </p>
         </div>

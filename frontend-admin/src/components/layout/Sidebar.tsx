@@ -67,7 +67,7 @@ export default function Sidebar() {
   return (
     <aside className="p-2 shrink-0 h-screen sticky top-0 flex flex-col z-20">
       <div
-        className={`flex flex-col h-full bg-white/75 backdrop-blur-xl border border-white/90 rounded-3xl shadow-lg shadow-[#1261A6]/10 transition-all duration-300 ease-in-out ${
+        className={`flex flex-col h-full bg-white/70 backdrop-blur-xl border border-white/90 rounded-3xl shadow-lg shadow-[#1261A6]/10 transition-all duration-300 ease-in-out ${
           isCollapsed ? 'w-14' : 'w-52'
         }`}
       >
@@ -101,21 +101,21 @@ export default function Sidebar() {
                         isCollapsed ? 'justify-center' : ''
                       } ${
                         isActive
-                          ? 'text-white font-bold shadow-md shadow-[#1261A6]/20'
+                          ? 'text-white font-bold shadow-md shadow-blue-500/25'
                           : 'text-slate-700 hover:text-slate-900 hover:bg-slate-200/60 font-medium'
                       }`}
                       style={
                         isActive
                           ? {
                               background:
-                                'linear-gradient(135deg, #1261A6 0%, #126DA6 50%, #2A95BF 100%)'
+                                'linear-gradient(135deg, #3B82F6 0%, #8B5CF6 50%, #06B6D4 100%)'
                             }
                           : undefined
                       }
                     >
                       <Icon
                         size={16}
-                        className={`shrink-0 ${isActive ? 'text-white' : 'text-[#1261A6]'}`}
+                        className={`shrink-0 ${isActive ? 'text-white' : 'text-[#3B82F6]'}`}
                       />
                       {!isCollapsed && (
                         <>

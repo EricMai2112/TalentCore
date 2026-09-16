@@ -20,10 +20,11 @@ export function CustomPagination({
   onPageChange,
   className = "",
 }: CustomPaginationProps) {
-  if (totalItems === 0 || totalPages <= 1) {
+  if (totalItems === 0) {
     return null;
   }
 
+  const safeTotalPages = Math.max(1, totalPages);
   const startItem = Math.min((currentPage - 1) * pageSize + 1, totalItems);
   const endItem = Math.min(currentPage * pageSize, totalItems);
 
@@ -32,20 +33,20 @@ export function CustomPagination({
     const pages: (number | string)[] = [];
     const maxVisible = 5;
 
-    if (totalPages <= maxVisible) {
-      for (let i = 1; i <= totalPages; i++) pages.push(i);
+    if (safeTotalPages <= maxVisible) {
+      for (let i = 1; i <= safeTotalPages; i++) pages.push(i);
     } else {
       pages.push(1);
 
       let start = Math.max(2, currentPage - 1);
-      let end = Math.min(totalPages - 1, currentPage + 1);
+      let end = Math.min(safeTotalPages - 1, currentPage + 1);
 
       if (currentPage <= 3) {
         start = 2;
         end = 4;
-      } else if (currentPage >= totalPages - 2) {
-        start = totalPages - 3;
-        end = totalPages - 1;
+      } else if (currentPage >= safeTotalPages - 2) {
+        start = safeTotalPages - 3;
+        end = safeTotalPages - 1;
       }
 
       if (start > 2) pages.push("...");
@@ -54,9 +55,9 @@ export function CustomPagination({
         pages.push(i);
       }
 
-      if (end < totalPages - 1) pages.push("...");
+      if (end < safeTotalPages - 1) pages.push("...");
 
-      pages.push(totalPages);
+      pages.push(safeTotalPages);
     }
 
     return pages;
@@ -66,7 +67,7 @@ export function CustomPagination({
 
   return (
     <div
-      className={`flex flex-col sm:flex-row items-center justify-between gap-4 px-6 py-4 bg-white border-t border-slate-100 rounded-b-2xl ${className}`}
+      className={`flex flex-col sm:flex-row items-center justify-between gap-4 px-5 py-3.5 bg-white/40 backdrop-blur-md border-t border-white/60 rounded-b-2xl ${className}`}
     >
       {/* Page item summary info */}
       <div className="text-xs text-slate-500 font-medium">
@@ -82,7 +83,7 @@ export function CustomPagination({
           type="button"
           disabled={currentPage === 1}
           onClick={() => onPageChange(currentPage - 1)}
-          className="p-1.5 rounded-xl border border-slate-200 text-slate-600 hover:bg-slate-50 disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:bg-transparent transition-all cursor-pointer"
+          className="p-1.5 rounded-xl border border-white/80 bg-white/60 text-slate-600 hover:bg-white hover:text-slate-900 disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:bg-white/60 transition-all cursor-pointer shadow-2xs"
           title="Trang trước"
         >
           <ChevronLeft size={16} />
@@ -109,8 +110,8 @@ export function CustomPagination({
               onClick={() => onPageChange(page)}
               className={`min-w-[32px] h-8 px-2 rounded-xl text-xs font-bold transition-all cursor-pointer ${
                 isActive
-                  ? "bg-primary text-white shadow-xs shadow-primary/30 scale-105 font-bold"
-                  : "bg-white border border-slate-200/80 text-slate-600 hover:bg-slate-50 hover:text-slate-900"
+                  ? "bg-[#3B82F6] text-white shadow-xs shadow-blue-500/30 scale-105 font-bold border border-[#3B82F6]"
+                  : "bg-white/60 border border-white/80 text-slate-600 hover:bg-white hover:text-slate-900 shadow-2xs"
               }`}
             >
               {page}
@@ -121,9 +122,9 @@ export function CustomPagination({
         {/* Next Button */}
         <button
           type="button"
-          disabled={currentPage === totalPages}
+          disabled={currentPage === safeTotalPages}
           onClick={() => onPageChange(currentPage + 1)}
-          className="p-1.5 rounded-xl border border-slate-200 text-slate-600 hover:bg-slate-50 disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:bg-transparent transition-all cursor-pointer"
+          className="p-1.5 rounded-xl border border-white/80 bg-white/60 text-slate-600 hover:bg-white hover:text-slate-900 disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:bg-white/60 transition-all cursor-pointer shadow-2xs"
           title="Trang sau"
         >
           <ChevronRight size={16} />

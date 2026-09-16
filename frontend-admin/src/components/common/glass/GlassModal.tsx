@@ -46,13 +46,13 @@ export default function GlassModal({
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 overflow-y-auto">
       {/* Backdrop */}
       <div
-        className="fixed inset-0 bg-[#1261A6]/20 backdrop-blur-md transition-opacity animate-in fade-in duration-200"
+        className="fixed inset-0 bg-slate-900/35 backdrop-blur-md transition-opacity animate-in fade-in duration-200"
         onClick={onClose}
       />
 
       {/* Modal Dialog */}
       <div
-        className={`relative w-full ${maxWidthClasses[maxWidth]} bg-white/92 backdrop-blur-2xl border border-white rounded-3xl shadow-2xl shadow-[#1261A6]/15 z-10 p-6 overflow-hidden animate-in fade-in zoom-in-95 duration-200`}
+        className={`relative w-full ${maxWidthClasses[maxWidth]} bg-white/80 backdrop-blur-2xl border border-white/90 rounded-3xl shadow-2xl shadow-purple-500/10 z-10 p-6 overflow-hidden animate-in fade-in zoom-in-95 duration-200`}
       >
         {/* Header */}
         {(title || showCloseButton) && (
