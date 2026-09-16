@@ -1,97 +1,88 @@
 @import "tailwindcss";
 
 :root {
-  /* TalentCore Brand Colors */
-  --primary: #1261A6;
-  --primary-hover: #0e4e85;
+  /* Brand Primary Colors */
+  --primary: #3B82F6;
+  --primary-dark: #1D4ED8;
+  --primary-light: #93C5FD;
+  --primary-soft: #DBEAFE;
 
-  --secondary: #126DA6;
-  --secondary-hover: #0f5987;
+  /* Accent Colors (Matching Background Radiants) */
+  --violet: #8B5CF6;
+  --cyan: #06B6D4;
+  --teal: #14B8A6;
 
-  --accent: #2A95BF;
-  --accent-hover: #217a9e;
-  --accent-light: #73C6D9;
-  --accent-light-bg: #e6f4f8;
+  /* Surface & Glass Levels */
+  --glass-light: rgba(255, 255, 255, 0.42);
+  --glass-medium: rgba(255, 255, 255, 0.55);
+  --glass-strong: rgba(255, 255, 255, 0.72);
+  --border-glass: rgba(255, 255, 255, 0.65);
+  --border-subtle: rgba(15, 23, 42, 0.08);
+  --overlay: rgba(15, 23, 42, 0.35);
 
-  --background: #D5E7F2;
-  --surface: #ffffff;
-  --foreground: #171717;
+  /* Typography Colors */
+  --text-primary: #0F172A;
+  --text-secondary: #334155;
+  --text-muted: #64748B;
+  --text-disabled: #94A3B8;
 
-  /* Glassmorphism Tokens */
-  --glass-bg-base: rgba(255, 255, 255, 0.65);
-  --glass-bg-card: rgba(255, 255, 255, 0.78);
-  --glass-bg-hover: rgba(255, 255, 255, 0.90);
-  --glass-bg-primary: rgba(18, 97, 166, 0.90);
-  --glass-bg-accent: rgba(42, 149, 191, 0.12);
-
-  /* Glass Borders & Reflection Highlights */
-  --glass-border-light: rgba(255, 255, 255, 0.85);
-  --glass-border-subtle: rgba(203, 213, 225, 0.50);
-  --glass-border-primary: rgba(18, 97, 166, 0.25);
-  --glass-border-accent: rgba(42, 149, 191, 0.35);
-
-  /* Glass Shadows & Glows */
-  --glass-shadow-sm: 0 4px 16px -2px rgba(18, 97, 166, 0.06), 0 2px 4px -2px rgba(0, 0, 0, 0.04);
-  --glass-shadow-md: 0 12px 32px -4px rgba(18, 97, 166, 0.10), 0 4px 12px -2px rgba(0, 0, 0, 0.05);
-  --glass-shadow-lg: 0 24px 48px -8px rgba(18, 97, 166, 0.15), 0 8px 16px -4px rgba(0, 0, 0, 0.06);
+  /* Semantic Colors */
+  --success: #10B981;
+  --warning: #F59E0B;
+  --error: #EF4444;
+  --info: #3B82F6;
 }
 
 @theme inline {
   --color-primary: var(--primary);
-  --color-primary-hover: var(--primary-hover);
-  --color-secondary: var(--secondary);
-  --color-secondary-hover: var(--secondary-hover);
+  --color-primary-dark: var(--primary-dark);
+  --color-primary-light: var(--primary-light);
+  --color-primary-soft: var(--primary-soft);
 
-  --color-accent: var(--accent);
-  --color-accent-hover: var(--accent-hover);
-  --color-accent-light: var(--accent-light);
-  --color-accent-light-bg: var(--accent-light-bg);
+  --color-violet: var(--violet);
+  --color-cyan: var(--cyan);
+  --color-teal: var(--teal);
 
-  --color-background: var(--background);
-  --color-surface: var(--surface);
-  --color-foreground: var(--foreground);
+  --color-text-primary: var(--text-primary);
+  --color-text-secondary: var(--text-secondary);
+  --color-text-muted: var(--text-muted);
+
   --font-sans: var(--font-inter);
   --font-mono: var(--font-geist-mono);
 }
 
 @utility glass-panel {
-  background: rgba(255, 255, 255, 0.75);
-  backdrop-filter: blur(16px);
-  -webkit-backdrop-filter: blur(16px);
-  border: 1px solid rgba(255, 255, 255, 0.85);
-  box-shadow: 0 12px 32px -4px rgba(18, 97, 166, 0.10), 0 4px 12px -2px rgba(0, 0, 0, 0.05);
+  background: rgba(255, 255, 255, 0.42);
+  backdrop-filter: blur(18px) saturate(160%);
+  -webkit-backdrop-filter: blur(18px) saturate(160%);
+  border: 1px solid rgba(255, 255, 255, 0.65);
+  box-shadow: 0 20px 40px rgba(15, 23, 42, 0.10);
 }
 
 @utility glass-card {
-  background: rgba(255, 255, 255, 0.72);
-  backdrop-filter: blur(12px);
-  -webkit-backdrop-filter: blur(12px);
-  border: 1px solid rgba(255, 255, 255, 0.80);
-  box-shadow: 0 8px 24px -4px rgba(18, 97, 166, 0.08);
+  background: rgba(255, 255, 255, 0.55);
+  backdrop-filter: blur(14px) saturate(150%);
+  -webkit-backdrop-filter: blur(14px) saturate(150%);
+  border: 1px solid rgba(255, 255, 255, 0.65);
+  box-shadow: 0 12px 32px rgba(15, 23, 42, 0.08);
   transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
 @utility glass-card-hover {
   &:hover {
-    background: rgba(255, 255, 255, 0.90);
-    border-color: rgba(42, 149, 191, 0.40);
+    background: rgba(255, 255, 255, 0.72);
+    border-color: rgba(255, 255, 255, 0.85);
     transform: translateY(-2px);
-    box-shadow: 0 16px 36px -6px rgba(18, 97, 166, 0.14), 0 0 16px rgba(42, 149, 191, 0.20);
+    box-shadow: 0 20px 40px rgba(139, 92, 246, 0.15);
   }
 }
 
-@utility glass-header {
-  background: rgba(18, 97, 166, 0.90);
-  backdrop-filter: blur(20px);
-  -webkit-backdrop-filter: blur(20px);
-  border: 1px solid rgba(255, 255, 255, 0.25);
-  box-shadow: 0 10px 30px -5px rgba(18, 97, 166, 0.25);
-}
-
-@utility glass-modal-overlay {
-  background: rgba(18, 97, 166, 0.20);
-  backdrop-filter: blur(12px);
-  -webkit-backdrop-filter: blur(12px);
+@utility glass-strong {
+  background: rgba(255, 255, 255, 0.72);
+  backdrop-filter: blur(20px) saturate(180%);
+  -webkit-backdrop-filter: blur(20px) saturate(180%);
+  border: 1px solid rgba(255, 255, 255, 0.85);
+  box-shadow: 0 24px 48px rgba(15, 23, 42, 0.12);
 }
 
 body {

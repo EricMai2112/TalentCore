@@ -52,7 +52,7 @@ export default function LoginForm() {
           value={email}
           onChange={(e) => setEmail(e.target.value)}
           placeholder="admin@gmail.com"
-          icon={<Mail size={18} className="text-[#1261A6]" />}
+          icon={<Mail size={18} className="text-[#3B82F6]" />}
         />
 
         {/* Password Input using GlassInput component with Icon */}
@@ -63,12 +63,12 @@ export default function LoginForm() {
           value={password}
           onChange={(e) => setPassword(e.target.value)}
           placeholder="••••••••"
-          icon={<Lock size={18} className="text-[#1261A6]" />}
+          icon={<Lock size={18} className="text-[#3B82F6]" />}
           rightElement={
             <button
               type="button"
               onClick={() => setShowPassword(!showPassword)}
-              className="text-[#1261A6] hover:text-[#126DA6] transition-colors cursor-pointer p-1 rounded-lg hover:bg-[#1261A6]/10"
+              className="text-[#3B82F6] hover:text-[#1D4ED8] transition-colors cursor-pointer p-1 rounded-lg hover:bg-[#3B82F6]/10"
               tabIndex={-1}
             >
               {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
@@ -83,9 +83,9 @@ export default function LoginForm() {
               type="checkbox"
               checked={rememberMe}
               onChange={(e) => setRememberMe(e.target.checked)}
-              className="w-4 h-4 rounded-md text-[#1261A6] focus:ring-[#1261A6] border-slate-300 accent-[#1261A6] cursor-pointer"
+              className="w-4 h-4 rounded-md text-[#3B82F6] focus:ring-[#3B82F6] border-slate-300 accent-[#3B82F6] cursor-pointer"
             />
-            <span className="text-xs font-semibold text-slate-600">Ghi nhớ đăng nhập</span>
+            <span className="text-xs font-semibold text-[#334155]">Ghi nhớ đăng nhập</span>
           </label>
 
           <a
@@ -94,7 +94,7 @@ export default function LoginForm() {
               e.preventDefault()
               alert('Vui lòng liên hệ Admin để khôi phục mật khẩu tài khoản!')
             }}
-            className="text-xs font-bold text-[#1261A6] hover:text-[#126DA6] hover:underline"
+            className="text-xs font-bold text-[#3B82F6] hover:text-[#1D4ED8] hover:underline"
           >
             Quên mật khẩu?
           </a>
@@ -104,7 +104,7 @@ export default function LoginForm() {
         <button
           type="submit"
           disabled={isLoading}
-          className="w-full py-3.5 px-4 bg-gradient-to-r from-[#1261A6] via-[#126DA6] to-[#2A95BF] hover:shadow-lg hover:shadow-[#1261A6]/30 text-white text-sm font-bold rounded-2xl transition-all duration-200 active:scale-[0.98] disabled:opacity-60 disabled:cursor-not-allowed disabled:transform-none disabled:shadow-none cursor-pointer flex items-center justify-center gap-2 group border border-white/20 mt-3"
+          className="w-full py-3.5 px-4 bg-gradient-to-r from-[#8B5CF6] via-[#3B82F6] to-[#06B6D4] hover:opacity-95 hover:shadow-lg hover:shadow-purple-500/25 text-white text-sm font-bold rounded-2xl transition-all duration-200 active:scale-[0.98] disabled:opacity-60 disabled:cursor-not-allowed disabled:transform-none disabled:shadow-none cursor-pointer flex items-center justify-center gap-2 group border border-white/30 mt-3"
         >
           {isLoading ? (
             <>

@@ -154,7 +154,7 @@ export default function CustomDatePicker({
   return (
     <div className={`space-y-1.5 relative w-full ${className}`} ref={containerRef}>
       {label && (
-        <label className="text-xs font-bold text-slate-700 uppercase tracking-wider block">
+        <label className="text-xs font-semibold text-slate-700 uppercase tracking-wider block">
           {label} {required && <span className="text-rose-500">*</span>}
         </label>
       )}
@@ -165,23 +165,23 @@ export default function CustomDatePicker({
           type="button"
           disabled={disabled}
           onClick={() => setIsOpen((prev) => !prev)}
-          className={`w-full flex items-center justify-between px-4 py-3.5 rounded-2xl text-sm font-bold border transition-all shadow-2xs outline-none ${
+          className={`w-full flex items-center justify-between px-3.5 py-2.5 rounded-2xl text-xs sm:text-sm font-semibold border transition-all shadow-2xs outline-none ${
             disabled
-              ? "bg-slate-100/90 text-slate-400 border-slate-200 cursor-not-allowed opacity-75"
+              ? "bg-slate-100/70 text-slate-400 border-slate-200/80 cursor-not-allowed opacity-75"
               : isOpen
-              ? "bg-white text-slate-900 border-[#1261A6] ring-4 ring-[#1261A6]/15 shadow-md"
-              : "bg-white/95 backdrop-blur-md text-slate-900 border-[#1261A6]/35 hover:border-[#1261A6]/60 focus:bg-white"
+              ? "bg-white/95 text-slate-900 border-[#3B82F6] ring-4 ring-[#3B82F6]/15 shadow-sm"
+              : "bg-white/55 backdrop-blur-md text-slate-800 border-white/65 hover:bg-white/75 hover:border-slate-300 focus:bg-white/90"
           } ${error ? "border-rose-400 ring-4 ring-rose-500/10" : ""} cursor-pointer`}
         >
           <div className="flex items-center gap-2.5">
-            <CalendarIcon size={18} className="text-[#1261A6] shrink-0" />
+            <CalendarIcon size={18} className="text-[#3B82F6] shrink-0" />
             <span className={value ? "text-slate-900 font-bold" : "text-slate-400 font-normal"}>
               {value ? formatDisplayDate(value) : placeholder}
             </span>
           </div>
           <ChevronDown
             size={18}
-            className={`text-[#1261A6] transition-transform duration-200 ${
+            className={`text-[#3B82F6] transition-transform duration-200 ${
               isOpen ? "rotate-180" : ""
             }`}
           />
@@ -189,25 +189,25 @@ export default function CustomDatePicker({
 
         {/* Calendar Dropdown Panel */}
         {isOpen && !disabled && (
-          <div className="absolute left-0 top-full mt-2 w-80 z-50 bg-white/95 backdrop-blur-2xl border border-white rounded-3xl shadow-2xl shadow-[#1261A6]/15 p-4 animate-in fade-in zoom-in-95 duration-150">
+          <div className="absolute left-0 top-full mt-2 w-80 z-50 bg-white/90 backdrop-blur-2xl border border-white/70 rounded-2xl shadow-xl shadow-blue-500/10 p-4 animate-in fade-in zoom-in-95 duration-150">
             {/* Header Month Navigation */}
             <div className="flex items-center justify-between mb-3 pb-3 border-b border-slate-200/60">
               <button
                 type="button"
                 onClick={handlePrevMonth}
-                className="p-1.5 rounded-xl border border-slate-200 hover:bg-[#1261A6]/10 text-[#1261A6] transition-colors cursor-pointer"
+                className="p-1.5 rounded-xl border border-slate-200/80 hover:bg-[#3B82F6]/10 text-[#3B82F6] transition-colors cursor-pointer"
               >
                 <ChevronLeft size={16} />
               </button>
 
-              <span className="text-sm font-extrabold text-slate-900">
+              <span className="text-xs sm:text-sm font-bold text-slate-900">
                 {monthNamesVi[month]} {year}
               </span>
 
               <button
                 type="button"
                 onClick={handleNextMonth}
-                className="p-1.5 rounded-xl border border-slate-200 hover:bg-[#1261A6]/10 text-[#1261A6] transition-colors cursor-pointer"
+                className="p-1.5 rounded-xl border border-slate-200/80 hover:bg-[#3B82F6]/10 text-[#3B82F6] transition-colors cursor-pointer"
               >
                 <ChevronRight size={16} />
               </button>
@@ -238,12 +238,12 @@ export default function CustomDatePicker({
                     onClick={() => handleSelectDay(cell.dateStr)}
                     className={`h-9 w-full rounded-xl text-xs font-bold transition-all flex items-center justify-center cursor-pointer ${
                       isSelected
-                        ? "bg-[#1261A6] text-white shadow-md shadow-[#1261A6]/30"
+                        ? "bg-[#3B82F6] text-white shadow-md shadow-[#3B82F6]/30"
                         : isToday
-                        ? "bg-[#1261A6]/10 text-[#1261A6] border border-[#1261A6]/30 font-extrabold"
+                        ? "bg-[#3B82F6]/10 text-[#3B82F6] border border-[#3B82F6]/30 font-extrabold"
                         : isOtherMonth
                         ? "text-slate-300 hover:bg-slate-50"
-                        : "text-slate-800 hover:bg-[#D5E7F2]/40"
+                        : "text-slate-800 hover:bg-slate-100/80"
                     } ${isDisabled ? "opacity-30 cursor-not-allowed" : ""}`}
                   >
                     {cell.day}
@@ -257,7 +257,7 @@ export default function CustomDatePicker({
               <button
                 type="button"
                 onClick={() => handleSelectDay(todayStr)}
-                className="text-xs font-bold text-[#1261A6] hover:underline transition-colors cursor-pointer"
+                className="text-xs font-bold text-[#3B82F6] hover:underline transition-colors cursor-pointer"
               >
                 Hôm nay ({formatDisplayDate(todayStr)})
               </button>

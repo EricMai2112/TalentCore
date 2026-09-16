@@ -31,36 +31,36 @@ function getWeatherInfo(code: number): {
   switch (code) {
     case 0:
     case 1:
-      return { description: 'Trời quang', icon: Sun, color: 'text-amber-500 drop-shadow-xs' }
+      return { description: 'Trời quang', icon: Sun, color: 'text-[#F59E0B] drop-shadow-xs' }
     case 2:
-      return { description: 'Mây rải rác', icon: CloudSun, color: 'text-amber-500 drop-shadow-xs' }
+      return { description: 'Mây rải rác', icon: CloudSun, color: 'text-[#F59E0B] drop-shadow-xs' }
     case 3:
-      return { description: 'Nhiều mây', icon: Cloud, color: 'text-sky-600 drop-shadow-xs' }
+      return { description: 'Nhiều mây', icon: Cloud, color: 'text-[#3B82F6] drop-shadow-xs' }
     case 45:
     case 48:
-      return { description: 'Sương mù', icon: CloudFog, color: 'text-slate-500' }
+      return { description: 'Sương mù', icon: CloudFog, color: 'text-[#64748B]' }
     case 51:
     case 53:
     case 55:
-      return { description: 'Mưa phun nhẹ', icon: CloudDrizzle, color: 'text-cyan-600' }
+      return { description: 'Mưa phùn nhẹ', icon: CloudDrizzle, color: 'text-[#06B6D4]' }
     case 61:
     case 63:
     case 65:
-      return { description: 'Mưa rào', icon: CloudRain, color: 'text-blue-600' }
+      return { description: 'Mưa rào', icon: CloudRain, color: 'text-[#3B82F6]' }
     case 71:
     case 73:
     case 75:
-      return { description: 'Tuyết rơi', icon: Snowflake, color: 'text-sky-400' }
+      return { description: 'Tuyết rơi', icon: Snowflake, color: 'text-[#06B6D4]' }
     case 80:
     case 81:
     case 82:
-      return { description: 'Mưa rào lớn', icon: CloudRain, color: 'text-blue-700' }
+      return { description: 'Mưa rào lớn', icon: CloudRain, color: 'text-[#1D4ED8]' }
     case 95:
     case 96:
     case 99:
-      return { description: 'Có dông bão', icon: CloudLightning, color: 'text-purple-600' }
+      return { description: 'Có dông bão', icon: CloudLightning, color: 'text-[#8B5CF6]' }
     default:
-      return { description: 'Thời tiết tốt', icon: CloudSun, color: 'text-amber-500' }
+      return { description: 'Thời tiết tốt', icon: CloudSun, color: 'text-[#F59E0B]' }
   }
 }
 
@@ -135,11 +135,11 @@ export default function WeatherWidget() {
 
   if (loading) {
     return (
-      <div className="flex items-center gap-2.5 bg-white/80 backdrop-blur-xl border border-white/90 rounded-2xl px-3.5 py-2 shadow-sm shadow-[#1261A6]/5">
-        <Loader2 size={18} className="animate-spin text-[#1261A6] shrink-0" />
+      <div className="flex items-center gap-2.5 bg-white/55 backdrop-blur-xl border border-white/65 rounded-2xl px-3.5 py-2 shadow-2xs">
+        <Loader2 size={18} className="animate-spin text-[#3B82F6] shrink-0" />
         <div className="flex flex-col leading-none gap-1">
-          <span className="h-3 w-10 bg-slate-200 rounded animate-pulse" />
-          <span className="h-2.5 w-16 bg-slate-200/80 rounded animate-pulse" />
+          <span className="h-3 w-10 bg-slate-200/80 rounded animate-pulse" />
+          <span className="h-2.5 w-16 bg-slate-200/60 rounded animate-pulse" />
         </div>
       </div>
     )
@@ -151,19 +151,23 @@ export default function WeatherWidget() {
 
   return (
     <div
-      className="flex items-center gap-3 bg-white/85 backdrop-blur-xl border border-white/90 rounded-2xl px-3.5 py-2 shadow-md shadow-[#1261A6]/8 hover:shadow-lg hover:border-[#2A95BF]/40 hover:bg-white/95 transition-all duration-300 cursor-default group"
+      className="flex items-center gap-3 bg-white/55 backdrop-blur-xl border border-white/65 rounded-2xl px-3.5 py-2 shadow-2xs hover:shadow-sm hover:border-white/85 hover:bg-white/75 transition-all duration-300 cursor-default group"
       title={`Thời tiết realtime - ${weather.locationName}`}
     >
-      <div className="p-1.5 rounded-xl bg-[#1261A6]/10 border border-[#1261A6]/15 group-hover:scale-105 transition-transform duration-200">
-        <IconComponent size={20} className={`${weather.iconColor} shrink-0`} />
+      <div className="p-1.5 rounded-xl bg-[#3B82F6]/10 border border-[#3B82F6]/20 group-hover:scale-105 transition-transform duration-200">
+        <IconComponent size={19} className={`${weather.iconColor} shrink-0`} />
       </div>
       <div className="flex flex-col leading-tight">
         <div className="flex items-baseline gap-1.5">
-          <span className="text-sm font-black text-slate-900 tracking-tight">{weather.temperature}°C</span>
-          <span className="text-[11px] font-extrabold text-[#1261A6] truncate">{weather.description}</span>
+          <span className="text-sm font-black text-[#0F172A] tracking-tight">
+            {weather.temperature}°C
+          </span>
+          <span className="text-[11px] font-extrabold text-[#3B82F6] truncate">
+            {weather.description}
+          </span>
         </div>
-        <div className="flex items-center gap-1 text-[10px] font-semibold text-slate-500 mt-0.5">
-          <MapPin size={10} className="text-[#2A95BF] shrink-0" />
+        <div className="flex items-center gap-1 text-[10px] font-semibold text-[#64748B] mt-0.5">
+          <MapPin size={10} className="text-[#06B6D4] shrink-0" />
           <span className="truncate max-w-[100px]">{weather.locationName}</span>
         </div>
       </div>

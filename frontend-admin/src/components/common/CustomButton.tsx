@@ -4,7 +4,7 @@ import React from 'react';
 import { Loader2 } from 'lucide-react';
 
 export interface CustomButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElement> {
-  variant?: 'primary' | 'secondary' | 'accent' | 'outline' | 'danger' | 'ghost';
+  variant?: 'primary' | 'secondary' | 'accent' | 'gradient' | 'outline' | 'danger' | 'ghost';
   size?: 'sm' | 'md' | 'lg';
   isLoading?: boolean;
   icon?: React.ReactNode | React.ElementType;
@@ -34,17 +34,19 @@ export default function CustomButton({
 
   const variantClasses = {
     primary:
-      'bg-[#1261A6] text-white hover:bg-[#126DA6] shadow-md shadow-[#1261A6]/25 hover:shadow-lg hover:shadow-[#1261A6]/35 border border-white/20',
+      'bg-[#3B82F6] text-white hover:bg-[#1D4ED8] shadow-md shadow-blue-500/25 hover:shadow-lg hover:shadow-blue-500/35 border border-white/20',
+    gradient:
+      'bg-gradient-to-r from-[#8B5CF6] to-[#06B6D4] text-white hover:opacity-95 shadow-md shadow-purple-500/30 hover:shadow-lg hover:shadow-purple-500/40 border border-white/30',
     secondary:
-      'bg-white/80 backdrop-blur-md text-[#1261A6] border border-[#1261A6]/30 hover:bg-white hover:border-[#1261A6] hover:text-[#0e4e85] shadow-xs',
+      'bg-white/55 backdrop-blur-md text-[#3B82F6] border border-white/65 hover:bg-white/80 hover:text-[#1D4ED8] shadow-xs',
     accent:
-      'bg-[#2A95BF] text-white hover:bg-[#217a9e] shadow-md shadow-[#2A95BF]/30 border border-white/20',
+      'bg-[#06B6D4] text-white hover:bg-[#0891b2] shadow-md shadow-cyan-500/30 border border-white/20',
     outline:
-      'bg-transparent text-[#1261A6] border border-[#1261A6]/40 hover:bg-[#1261A6]/10 hover:border-[#1261A6]',
+      'bg-transparent text-[#3B82F6] border border-[#3B82F6]/40 hover:bg-[#3B82F6]/10 hover:border-[#3B82F6]',
     danger:
       'bg-rose-600 text-white hover:bg-rose-700 shadow-md shadow-rose-600/25 border border-white/20',
     ghost:
-      'bg-transparent text-slate-700 hover:bg-slate-100 hover:text-slate-900 border border-transparent',
+      'bg-slate-700/5 text-slate-700 hover:bg-slate-700/10 hover:text-slate-900 border border-transparent',
   };
 
   const renderIcon = () => {

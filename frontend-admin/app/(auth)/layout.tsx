@@ -3,10 +3,15 @@ export default function AuthLayout({ children }: { children: React.ReactNode }) 
     <div
       className="min-h-screen w-full flex items-center justify-center p-6 relative overflow-hidden"
       style={{
-        background: 'linear-gradient(135deg, #D5E7F2 0%, #C3DFEF 50%, #A6D2E8 100%)'
+        background: `
+          radial-gradient(circle at 12% 18%, rgba(139, 92, 246, 0.22), transparent 45%),
+          radial-gradient(circle at 88% 12%, rgba(6, 182, 212, 0.26), transparent 50%),
+          radial-gradient(circle at 50% 100%, rgba(16, 185, 129, 0.18), transparent 55%),
+          linear-gradient(135deg, #C4DFEF 0%, #B8D9EC 40%, #8FC1E0 100%)
+        `
       }}
     >
-      {/* ── Ambient Glow Light Spot 1: Cyan Accent Glow ── */}
+      {/* ── Ambient Glow Light Spot 1: Violet Glow ── */}
       <div
         className="absolute pointer-events-none select-none filter blur-3xl opacity-60"
         style={{
@@ -14,11 +19,11 @@ export default function AuthLayout({ children }: { children: React.ReactNode }) 
           right: '20%',
           width: '450px',
           height: '450px',
-          background: 'radial-gradient(circle, rgba(42, 149, 191, 0.35) 0%, rgba(255,255,255,0) 70%)',
+          background: 'radial-gradient(circle, rgba(139, 92, 246, 0.30) 0%, rgba(255,255,255,0) 70%)',
         }}
       />
 
-      {/* ── Ambient Glow Light Spot 2: Primary Ocean Blue Glow ── */}
+      {/* ── Ambient Glow Light Spot 2: Cyan Glow ── */}
       <div
         className="absolute pointer-events-none select-none filter blur-3xl opacity-50"
         style={{
@@ -26,7 +31,7 @@ export default function AuthLayout({ children }: { children: React.ReactNode }) 
           left: '15%',
           width: '500px',
           height: '500px',
-          background: 'radial-gradient(circle, rgba(18, 97, 166, 0.30) 0%, rgba(255,255,255,0) 70%)',
+          background: 'radial-gradient(circle, rgba(6, 182, 212, 0.30) 0%, rgba(255,255,255,0) 70%)',
         }}
       />
 
@@ -62,7 +67,7 @@ export default function AuthLayout({ children }: { children: React.ReactNode }) 
           left: '-140px',
           width: '620px',
           height: '600px',
-          background: 'rgba(18, 97, 166, 0.15)',
+          background: 'rgba(139, 92, 246, 0.12)',
           borderRadius: '40% 60% 55% 45% / 55% 45% 55% 45%'
         }}
       />

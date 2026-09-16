@@ -18,13 +18,13 @@ export default function GlassCard({
   
   const variantClasses = {
     default:
-      'bg-white/75 backdrop-blur-md border border-white/85 shadow-md shadow-[#1261A6]/5',
+      'bg-white/55 backdrop-blur-md border border-white/65 shadow-md shadow-blue-500/5',
     hover:
-      'bg-white/75 backdrop-blur-md border border-white/85 shadow-md shadow-[#1261A6]/5 hover:bg-white/90 hover:border-[#2A95BF]/40 hover:-translate-y-0.5 hover:shadow-xl hover:shadow-[#1261A6]/12 cursor-pointer',
+      'bg-white/55 backdrop-blur-md border border-white/65 shadow-md shadow-blue-500/5 hover:bg-white/80 hover:border-white/85 hover:-translate-y-0.5 hover:shadow-xl hover:shadow-purple-500/10 cursor-pointer',
     solid:
-      'bg-white/95 backdrop-blur-xl border border-slate-200/80 shadow-lg shadow-slate-900/5',
+      'bg-white/80 backdrop-blur-xl border border-white/90 shadow-lg shadow-slate-900/5',
     primary:
-      'bg-gradient-to-br from-[#1261A6] via-[#126DA6] to-[#2A95BF] text-white backdrop-blur-xl border border-white/20 shadow-xl shadow-[#1261A6]/25',
+      'bg-gradient-to-r from-[#8B5CF6] via-[#3B82F6] to-[#06B6D4] text-white backdrop-blur-xl border border-white/30 shadow-xl shadow-purple-500/25',
   };
 
   return (

@@ -24,13 +24,16 @@ export default function GlassBadge({
   };
 
   const variantClasses = {
-    primary: 'bg-[#1261A6]/15 text-[#1261A6] border-[#1261A6]/30',
-    secondary: 'bg-[#126DA6]/15 text-[#126DA6] border-[#126DA6]/30',
-    accent: 'bg-[#2A95BF]/15 text-[#1261A6] border-[#2A95BF]/35',
-    success: 'bg-emerald-500/15 text-emerald-700 border-emerald-500/30',
-    warning: 'bg-amber-500/15 text-amber-700 border-amber-500/30',
+    primary: 'bg-[#3B82F6]/15 text-[#3B82F6] border-[#3B82F6]/30',
+    secondary: 'bg-white/60 text-[#334155] border-white/80',
+    accent: 'bg-[#8B5CF6]/15 text-[#8B5CF6] border-[#8B5CF6]/30',
+    violet: 'bg-[#8B5CF6]/15 text-[#8B5CF6] border-[#8B5CF6]/30',
+    cyan: 'bg-[#06B6D4]/15 text-[#06B6D4] border-[#06B6D4]/30',
+    teal: 'bg-[#14B8A6]/15 text-[#14B8A6] border-[#14B8A6]/30',
+    success: 'bg-[#10B981]/15 text-[#10B981] border-[#10B981]/30',
+    warning: 'bg-[#F59E0B]/15 text-[#F59E0B] border-[#F59E0B]/30',
     danger: 'bg-rose-500/15 text-rose-700 border-rose-500/30',
-    info: 'bg-sky-500/15 text-sky-700 border-sky-500/30',
+    info: 'bg-[#3B82F6]/15 text-[#3B82F6] border-[#3B82F6]/30',
   };
 
   return (

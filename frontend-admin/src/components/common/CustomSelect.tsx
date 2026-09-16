@@ -1,30 +1,30 @@
-"use client";
+'use client'
 
-import React, { useState, useRef, useEffect } from "react";
-import { createPortal } from "react-dom";
-import { ChevronDown, Lock, Check } from "lucide-react";
+import React, { useState, useRef, useEffect } from 'react'
+import { createPortal } from 'react-dom'
+import { ChevronDown, Lock, Check } from 'lucide-react'
 
 export interface CustomSelectOption {
-  value: string;
-  label: string;
-  subLabel?: string;
+  value: string
+  label: string
+  subLabel?: string
 }
 
 interface CustomSelectProps {
-  label?: string;
-  required?: boolean;
-  error?: string;
-  helperText?: string;
-  value: string;
-  onChange: (value: string) => void;
-  options: CustomSelectOption[];
-  placeholder?: string;
-  disabled?: boolean;
-  isLocked?: boolean;
-  icon?: React.ReactNode;
-  size?: "sm" | "md" | "lg";
-  align?: "left" | "right";
-  className?: string;
+  label?: string
+  required?: boolean
+  error?: string
+  helperText?: string
+  value: string
+  onChange: (value: string) => void
+  options: CustomSelectOption[]
+  placeholder?: string
+  disabled?: boolean
+  isLocked?: boolean
+  icon?: React.ReactNode
+  size?: 'sm' | 'md' | 'lg'
+  align?: 'left' | 'right'
+  className?: string
 }
 
 export default function CustomSelect({
@@ -35,118 +35,118 @@ export default function CustomSelect({
   value,
   onChange,
   options,
-  placeholder = "Chọn...",
+  placeholder = 'Chọn...',
   disabled = false,
   isLocked = false,
   icon,
-  size = "lg",
-  align = "left",
-  className = "",
+  size = 'lg',
+  align = 'left',
+  className = ''
 }: CustomSelectProps) {
-  const [isOpen, setIsOpen] = useState(false);
-  const [mounted, setMounted] = useState(false);
-  const containerRef = useRef<HTMLDivElement>(null);
-  const buttonRef = useRef<HTMLButtonElement>(null);
-  const dropdownRef = useRef<HTMLDivElement>(null);
-  const [menuStyle, setMenuStyle] = useState<React.CSSProperties>({});
+  const [isOpen, setIsOpen] = useState(false)
+  const [mounted, setMounted] = useState(false)
+  const containerRef = useRef<HTMLDivElement>(null)
+  const buttonRef = useRef<HTMLButtonElement>(null)
+  const dropdownRef = useRef<HTMLDivElement>(null)
+  const [menuStyle, setMenuStyle] = useState<React.CSSProperties>({})
 
   useEffect(() => {
-    setMounted(true);
-  }, []);
+    setMounted(true)
+  }, [])
 
   const updatePosition = () => {
-    if (!buttonRef.current) return;
-    const rect = buttonRef.current.getBoundingClientRect();
-    const dropdownHeight = dropdownRef.current ? dropdownRef.current.offsetHeight : 240;
-    const spaceBelow = window.innerHeight - rect.bottom;
-    const spaceAbove = rect.top;
-    const placeAbove = spaceBelow < dropdownHeight && spaceAbove > spaceBelow;
+    if (!buttonRef.current) return
+    const rect = buttonRef.current.getBoundingClientRect()
+    const dropdownHeight = dropdownRef.current ? dropdownRef.current.offsetHeight : 240
+    const spaceBelow = window.innerHeight - rect.bottom
+    const spaceAbove = rect.top
+    const placeAbove = spaceBelow < dropdownHeight && spaceAbove > spaceBelow
 
     const style: React.CSSProperties = {
-      position: "fixed",
-      left: align === "right" ? "auto" : `${rect.left}px`,
-      right: align === "right" ? `${window.innerWidth - rect.right}px` : "auto",
+      position: 'fixed',
+      left: align === 'right' ? 'auto' : `${rect.left}px`,
+      right: align === 'right' ? `${window.innerWidth - rect.right}px` : 'auto',
       minWidth: `${rect.width}px`,
-      maxWidth: "calc(100vw - 32px)",
-      zIndex: 99999,
-    };
-
-    if (placeAbove) {
-      style.bottom = `${window.innerHeight - rect.top + 6}px`;
-      style.top = "auto";
-    } else {
-      style.top = `${rect.bottom + 6}px`;
-      style.bottom = "auto";
+      maxWidth: 'calc(100vw - 32px)',
+      zIndex: 99999
     }
 
-    setMenuStyle(style);
-  };
+    if (placeAbove) {
+      style.bottom = `${window.innerHeight - rect.top + 6}px`
+      style.top = 'auto'
+    } else {
+      style.top = `${rect.bottom + 6}px`
+      style.bottom = 'auto'
+    }
+
+    setMenuStyle(style)
+  }
 
   useEffect(() => {
-    if (!isOpen) return;
+    if (!isOpen) return
 
-    updatePosition();
-    const timer = requestAnimationFrame(updatePosition);
+    updatePosition()
+    const timer = requestAnimationFrame(updatePosition)
 
     const handleScrollOrResize = (e: Event) => {
       if (dropdownRef.current && dropdownRef.current.contains(e.target as Node)) {
-        return;
+        return
       }
-      updatePosition();
-    };
+      updatePosition()
+    }
 
-    window.addEventListener("scroll", handleScrollOrResize, true);
-    window.addEventListener("resize", handleScrollOrResize);
+    window.addEventListener('scroll', handleScrollOrResize, true)
+    window.addEventListener('resize', handleScrollOrResize)
 
     return () => {
-      cancelAnimationFrame(timer);
-      window.removeEventListener("scroll", handleScrollOrResize, true);
-      window.removeEventListener("resize", handleScrollOrResize);
-    };
-  }, [isOpen, align]);
+      cancelAnimationFrame(timer)
+      window.removeEventListener('scroll', handleScrollOrResize, true)
+      window.removeEventListener('resize', handleScrollOrResize)
+    }
+  }, [isOpen, align])
 
   // Close dropdown on click outside
   useEffect(() => {
-    if (!isOpen) return;
+    if (!isOpen) return
 
     const handleClickOutside = (event: MouseEvent) => {
-      const target = event.target as Node;
-      const isInsideButton = buttonRef.current && buttonRef.current.contains(target);
-      const isInsideDropdown = dropdownRef.current && dropdownRef.current.contains(target);
+      const target = event.target as Node
+      const isInsideButton = buttonRef.current && buttonRef.current.contains(target)
+      const isInsideDropdown = dropdownRef.current && dropdownRef.current.contains(target)
 
       if (!isInsideButton && !isInsideDropdown) {
-        setIsOpen(false);
+        setIsOpen(false)
       }
-    };
+    }
 
-    document.addEventListener("mousedown", handleClickOutside);
-    return () => document.removeEventListener("mousedown", handleClickOutside);
-  }, [isOpen]);
+    document.addEventListener('mousedown', handleClickOutside)
+    return () => document.removeEventListener('mousedown', handleClickOutside)
+  }, [isOpen])
 
   // Handle escape key
   useEffect(() => {
-    if (!isOpen) return;
+    if (!isOpen) return
     const handleKeyDown = (event: KeyboardEvent) => {
-      if (event.key === "Escape") setIsOpen(false);
-    };
-    document.addEventListener("keydown", handleKeyDown);
-    return () => document.removeEventListener("keydown", handleKeyDown);
-  }, [isOpen]);
+      if (event.key === 'Escape') setIsOpen(false)
+    }
+    document.addEventListener('keydown', handleKeyDown)
+    return () => document.removeEventListener('keydown', handleKeyDown)
+  }, [isOpen])
 
-  const selectedOption = options.find((opt) => opt.value === value);
-  const displayLabel = selectedOption ? selectedOption.label : placeholder;
+  const selectedOption = options.find((opt) => opt.value === value)
+  const displayLabel = selectedOption ? selectedOption.label : placeholder
 
   const sizeClasses = {
-    sm: "px-3 py-2 rounded-xl text-xs font-bold",
-    md: "px-3.5 py-2.5 rounded-2xl text-xs font-bold",
-    lg: "px-4 py-3.5 rounded-2xl text-sm font-bold",
-  };
+    sm: 'px-3 py-1.5 rounded-xl text-xs font-semibold',
+    md: 'px-3.5 py-2 rounded-xl text-xs font-semibold',
+    lg: 'px-4 py-2.5 rounded-xl text-xs sm:text-sm font-semibold'
+  }
 
   const dropdownMenu = isOpen && !disabled && !isLocked && (
     <div
       ref={dropdownRef}
       style={menuStyle}
-      className="bg-white/95 backdrop-blur-2xl border border-white rounded-2xl shadow-2xl shadow-[#1261A6]/15 p-1.5 space-y-1 animate-in fade-in zoom-in-95 duration-150 max-h-60 overflow-y-auto"
+      className="bg-white/90 backdrop-blur-2xl border border-white/70 rounded-2xl shadow-xl shadow-blue-500/10 p-1.5 space-y-1 animate-in fade-in zoom-in-95 duration-150 max-h-60 overflow-y-auto"
     >
       {options.length === 0 ? (
         <div className="p-3 text-center text-xs text-slate-400 font-medium">
@@ -154,18 +154,18 @@ export default function CustomSelect({
         </div>
       ) : (
         options.map((opt) => {
-          const isSelected = opt.value === value;
+          const isSelected = opt.value === value
           return (
             <div
               key={opt.value}
               onClick={() => {
-                onChange(opt.value);
-                setIsOpen(false);
+                onChange(opt.value)
+                setIsOpen(false)
               }}
-              className={`p-3 rounded-xl text-xs font-bold transition-all cursor-pointer flex items-center justify-between ${
+              className={`p-2 rounded-xl text-xs font-semibold transition-all cursor-pointer flex items-center justify-between ${
                 isSelected
-                  ? "bg-[#1261A6]/12 text-[#1261A6] font-black"
-                  : "hover:bg-[#D5E7F2]/40 text-slate-800"
+                  ? 'bg-[#3B82F6]/10 text-[#3B82F6] font-bold'
+                  : 'hover:bg-slate-100/70 text-slate-800'
               }`}
             >
               <div className="min-w-0 pr-2">
@@ -176,23 +176,23 @@ export default function CustomSelect({
                   </span>
                 )}
               </div>
-              {isSelected && <Check size={16} className="text-[#1261A6] shrink-0" />}
+              {isSelected && <Check size={16} className="text-[#3B82F6] shrink-0" />}
             </div>
-          );
+          )
         })
       )}
     </div>
-  );
+  )
 
   return (
     <div
       className={`space-y-1.5 relative ${
-        className ? className : size === "sm" ? "w-auto min-w-[160px]" : "w-full"
+        className ? className : size === 'sm' ? 'w-auto min-w-[160px]' : 'w-full'
       }`}
       ref={containerRef}
     >
       {label && (
-        <label className="text-xs font-bold text-slate-700 uppercase tracking-wider block">
+        <label className="text-xs font-semibold text-slate-700 uppercase tracking-wider block">
           {label} {required && <span className="text-rose-500">*</span>}
         </label>
       )}
@@ -206,17 +206,17 @@ export default function CustomSelect({
           onClick={() => setIsOpen((prev) => !prev)}
           className={`w-full flex items-center justify-between gap-2.5 ${sizeClasses[size]} transition-all border shadow-2xs outline-none text-left ${
             disabled || isLocked
-              ? "bg-slate-100/90 text-slate-400 border-slate-200 cursor-not-allowed opacity-75"
+              ? 'bg-slate-100/70 text-slate-400 border-slate-200/80 cursor-not-allowed opacity-75'
               : isOpen
-              ? "bg-white text-slate-900 border-[#1261A6] ring-4 ring-[#1261A6]/15 shadow-md"
-              : "bg-white/95 backdrop-blur-md text-slate-900 border-[#1261A6]/35 hover:border-[#1261A6]/60 focus:bg-white"
-          } ${error ? "border-rose-400 ring-4 ring-rose-500/10" : ""} cursor-pointer`}
+                ? 'bg-white/95 text-slate-900 border-[#3B82F6] ring-4 ring-[#3B82F6]/15 shadow-sm'
+                : 'bg-white/55 backdrop-blur-md text-slate-800 border-white/65 hover:bg-white/75 hover:border-slate-300 focus:bg-white/90'
+          } ${error ? 'border-rose-400 ring-4 ring-rose-500/10' : ''} cursor-pointer`}
         >
           <div className="flex items-center gap-2.5 min-w-0">
-            {icon && <span className="text-[#1261A6] shrink-0">{icon}</span>}
+            {icon && <span className="text-[#3B82F6] shrink-0">{icon}</span>}
             <span
               className={`whitespace-nowrap ${
-                !selectedOption && placeholder ? "text-slate-400 font-medium" : "text-slate-900"
+                !selectedOption && placeholder ? 'text-slate-400 font-medium' : 'text-slate-900'
               }`}
             >
               {displayLabel}
@@ -229,8 +229,8 @@ export default function CustomSelect({
             ) : (
               <ChevronDown
                 size={18}
-                className={`text-[#1261A6] transition-transform duration-200 ${
-                  isOpen ? "rotate-180" : ""
+                className={`text-[#3B82F6] transition-transform duration-200 ${
+                  isOpen ? 'rotate-180' : ''
                 }`}
               />
             )}
@@ -246,5 +246,5 @@ export default function CustomSelect({
 
       {mounted && dropdownMenu && createPortal(dropdownMenu, document.body)}
     </div>
-  );
+  )
 }
