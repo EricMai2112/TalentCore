@@ -1,4 +1,7 @@
+"use client";
+
 import { useState, useEffect } from "react";
+import { createPortal } from "react-dom";
 import { X, Check, AlertTriangle, Loader2 } from "lucide-react";
 import { JobDescription, JobStatus } from "../types/job-description.types";
 import { CustomTextarea } from "@/src/components/common";
@@ -21,6 +24,11 @@ export default function ReviewModal({
   const [decision, setDecision] = useState<JobStatus>(JobStatus.APPROVED);
   const [note, setNote] = useState("");
   const [error, setError] = useState<string | null>(null);
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
 
   useEffect(() => {
     if (isOpen) {
@@ -30,7 +38,7 @@ export default function ReviewModal({
     }
   }, [isOpen]);
 
-  if (!isOpen || !job) return null;
+  if (!isOpen || !job || !mounted) return null;
 
   const deptName = typeof job.departmentId === "object" ? job.departmentId?.name : "Chưa rõ";
   const postedByName = typeof job.postedById === "object" ? job.postedById?.name : "Tuyển dụng";
@@ -53,24 +61,26 @@ export default function ReviewModal({
     }
   };
 
-  return (
-    <div className="fixed inset-0 z-50 bg-black/45 backdrop-blur-xs flex items-center justify-center p-4 animate-in fade-in duration-200">
+  return createPortal(
+    <div className="fixed inset-0 z-[9999] bg-black/45 backdrop-blur-xs flex items-center justify-center p-4 animate-in fade-in duration-200">
       <form
         onSubmit={handleFormSubmit}
-        className="bg-white rounded-2xl w-full max-w-lg shadow-2xl overflow-hidden border border-gray-100 flex flex-col animate-in zoom-in-95 duration-200"
+        className="bg-white/85 backdrop-blur-2xl rounded-3xl w-full max-w-lg shadow-2xl overflow-hidden border border-white/80 flex flex-col animate-in zoom-in-95 duration-200"
         onClick={(e) => e.stopPropagation()}
       >
         {/* Header */}
-        <div className="px-6 py-5 border-b border-gray-100 flex items-center justify-between sticky top-0 bg-white z-10">
+        <div className="px-6 py-4.5 border-b border-white/60 flex items-center justify-between sticky top-0 bg-white/40 z-10">
           <div className="flex items-center gap-3">
-            <div className={`w-9 h-9 rounded-full flex items-center justify-center ${
-              decision === JobStatus.APPROVED ? "bg-emerald-50 text-emerald-600" : "bg-rose-50 text-rose-600"
+            <div className={`w-9 h-9 rounded-2xl flex items-center justify-center border shadow-2xs ${
+              decision === JobStatus.APPROVED 
+                ? "bg-emerald-500/10 text-emerald-600 border-emerald-300/40" 
+                : "bg-rose-500/10 text-rose-600 border-rose-300/40"
             }`}>
               {decision === JobStatus.APPROVED ? <Check size={18} /> : <X size={18} />}
             </div>
             <div>
-              <h3 className="text-base font-bold text-gray-900">Xét duyệt yêu cầu</h3>
-              <p className="text-xs text-gray-400 mt-0.5">
+              <h3 className="text-base font-extrabold text-slate-900">Xét duyệt yêu cầu</h3>
+              <p className="text-xs font-medium text-slate-500 mt-0.5">
                 {decision === JobStatus.APPROVED ? "Phê duyệt yêu cầu tuyển dụng này" : "Từ chối yêu cầu tuyển dụng này"}
               </p>
             </div>
@@ -78,7 +88,7 @@ export default function ReviewModal({
           <button
             type="button"
             onClick={onClose}
-            className="p-1.5 text-gray-400 hover:text-gray-700 hover:bg-gray-100 rounded-xl transition-colors cursor-pointer"
+            className="p-2 text-slate-400 hover:text-slate-800 hover:bg-white/80 rounded-xl transition-all cursor-pointer border border-transparent hover:border-white/80"
           >
             <X size={18} />
           </button>
@@ -87,43 +97,43 @@ export default function ReviewModal({
         {/* Content */}
         <div className="p-6 space-y-5 overflow-y-auto">
           {error && (
-            <div className="bg-red-50 border border-red-100 rounded-xl p-3 flex items-start gap-2 text-red-800 text-xs">
-              <AlertTriangle size={16} className="shrink-0 mt-0.5" />
-              <span className="font-medium">{error}</span>
+            <div className="bg-rose-500/10 border border-rose-300/40 rounded-xl p-3 flex items-start gap-2 text-rose-700 text-xs font-semibold">
+              <AlertTriangle size={16} className="shrink-0 mt-0.5 text-rose-500" />
+              <span>{error}</span>
             </div>
           )}
 
           {/* Info Card */}
-          <div className="bg-gray-50/75 border border-gray-100 rounded-2xl p-4 space-y-3.5">
+          <div className="bg-white/30 border border-white/60 rounded-2xl p-4 space-y-3.5 shadow-2xs">
             <div className="flex justify-between items-baseline gap-4">
-              <span className="text-xs text-gray-400 font-semibold uppercase tracking-wider shrink-0">Vị trí</span>
-              <span className="text-sm font-bold text-gray-900 truncate">{job.title}</span>
+              <span className="text-xs text-slate-500 font-bold uppercase tracking-wider shrink-0">Vị trí</span>
+              <span className="text-sm font-extrabold text-slate-900 truncate">{job.title}</span>
             </div>
-            <div className="flex justify-between items-baseline gap-4 border-t border-gray-100 pt-3">
-              <span className="text-xs text-gray-400 font-semibold uppercase tracking-wider shrink-0">Phòng ban</span>
-              <span className="text-sm font-semibold text-gray-700 truncate">{deptName}</span>
+            <div className="flex justify-between items-baseline gap-4 border-t border-white/60 pt-3">
+              <span className="text-xs text-slate-500 font-bold uppercase tracking-wider shrink-0">Phòng ban</span>
+              <span className="text-sm font-bold text-slate-700 truncate">{deptName}</span>
             </div>
-            <div className="flex justify-between items-baseline gap-4 border-t border-gray-100 pt-3">
-              <span className="text-xs text-gray-400 font-semibold uppercase tracking-wider shrink-0">Người yêu cầu</span>
-              <span className="text-sm font-semibold text-gray-700 truncate">{postedByName}</span>
+            <div className="flex justify-between items-baseline gap-4 border-t border-white/60 pt-3">
+              <span className="text-xs text-slate-500 font-bold uppercase tracking-wider shrink-0">Người yêu cầu</span>
+              <span className="text-sm font-bold text-slate-700 truncate">{postedByName}</span>
             </div>
-            <div className="flex justify-between items-baseline gap-4 border-t border-gray-100 pt-3">
-              <span className="text-xs text-gray-400 font-semibold uppercase tracking-wider shrink-0">Ngày gửi</span>
-              <span className="text-sm font-semibold text-gray-700 truncate">{createdDate}</span>
+            <div className="flex justify-between items-baseline gap-4 border-t border-white/60 pt-3">
+              <span className="text-xs text-slate-500 font-bold uppercase tracking-wider shrink-0">Ngày gửi</span>
+              <span className="text-sm font-bold text-slate-700 truncate">{createdDate}</span>
             </div>
           </div>
 
           {/* Decision Buttons */}
           <div className="space-y-1.5">
-            <span className="text-xs font-bold text-gray-600 uppercase tracking-wider block">Quyết định</span>
-            <div className="flex gap-3 bg-gray-50 p-1.5 border border-gray-100 rounded-xl">
+            <span className="text-xs font-bold text-slate-600 uppercase tracking-wider block">Quyết định</span>
+            <div className="flex gap-3 bg-white/20 p-1.5 border border-white/60 rounded-xl">
               <button
                 type="button"
                 onClick={() => setDecision(JobStatus.APPROVED)}
                 className={`flex-1 flex items-center justify-center gap-1.5 py-2 px-4 rounded-lg text-xs font-bold transition-all cursor-pointer ${
                   decision === JobStatus.APPROVED
                     ? "bg-emerald-600 text-white shadow-xs"
-                    : "bg-transparent text-gray-500 hover:bg-gray-100"
+                    : "bg-transparent text-slate-600 hover:bg-white/50"
                 }`}
               >
                 <Check size={14} />
@@ -135,7 +145,7 @@ export default function ReviewModal({
                 className={`flex-1 flex items-center justify-center gap-1.5 py-2 px-4 rounded-lg text-xs font-bold transition-all cursor-pointer ${
                   decision === JobStatus.REJECTED
                     ? "bg-rose-600 text-white shadow-xs"
-                    : "bg-transparent text-gray-500 hover:bg-gray-100"
+                    : "bg-transparent text-slate-600 hover:bg-white/50"
                 }`}
               >
                 <X size={14} />
@@ -161,18 +171,18 @@ export default function ReviewModal({
         </div>
 
         {/* Footer */}
-        <div className="px-6 py-4 border-t border-gray-100 bg-gray-50 flex items-center justify-end gap-3 sticky bottom-0 z-10">
+        <div className="px-6 py-3.5 border-t border-white/60 bg-white/40 flex items-center justify-end gap-3 sticky bottom-0 z-10">
           <button
             type="button"
             onClick={onClose}
-            className="px-4 py-2 border border-gray-200 bg-white hover:bg-gray-50 text-gray-700 font-semibold text-sm rounded-xl transition-colors cursor-pointer"
+            className="px-4.5 py-2.5 bg-white/80 hover:bg-white text-slate-700 font-bold text-xs rounded-xl border border-white/90 shadow-2xs transition-all cursor-pointer"
           >
             Hủy
           </button>
           <button
             type="submit"
             disabled={isSubmitting}
-            className={`flex items-center gap-1.5 px-5 py-2 text-white font-bold text-sm rounded-xl transition-all shadow-xs cursor-pointer ${
+            className={`flex items-center gap-1.5 px-5 py-2.5 text-white font-bold text-xs rounded-xl transition-all shadow-xs cursor-pointer ${
               decision === JobStatus.APPROVED ? "bg-emerald-600 hover:bg-emerald-700" : "bg-rose-600 hover:bg-rose-700"
             }`}
           >
@@ -185,6 +195,7 @@ export default function ReviewModal({
           </button>
         </div>
       </form>
-    </div>
+    </div>,
+    document.body
   );
 }

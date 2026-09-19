@@ -23,20 +23,20 @@ export default function CriteriaBenchmarkHint({
     : positionTitle || 'Vị trí này'
 
   return (
-    <div className="p-4 bg-indigo-50/50 border border-indigo-100 rounded-2xl flex items-start gap-3 text-xs text-indigo-900 shadow-2xs">
-      <div className="p-1.5 bg-indigo-100 text-indigo-700 rounded-xl shrink-0 mt-0.5">
+    <div className="p-3.5 bg-[#3B82F6]/10 border border-[#3B82F6]/20 rounded-2xl flex items-start gap-3 text-xs text-slate-800 shadow-2xs">
+      <div className="p-1.5 bg-[#3B82F6]/15 text-[#3B82F6] rounded-xl shrink-0 mt-0.5">
         <Info size={16} />
       </div>
-      <div className="space-y-1">
-        <span className="font-extrabold uppercase tracking-wider block text-indigo-800">
+      <div className="space-y-0.5">
+        <span className="font-extrabold uppercase tracking-wider block text-[#3B82F6] text-[11px]">
           Gợi ý chuẩn Tham chiếu
         </span>
-        <p className="text-slate-600 leading-relaxed">
-          Đối với vị trí <strong className="text-indigo-950 font-bold">{titleToShow}</strong>:
-          Thường dành <strong className="text-rose-700 font-bold">50% - 70% tổng trọng số</strong>{' '}
-          cho nhóm tiêu chí <span className="text-rose-700 font-bold">🔴 Bắt buộc</span>,{' '}
-          <strong className="text-blue-700 font-bold">20% - 35%</strong> cho nhóm{' '}
-          <span className="text-blue-700 font-bold">🔵 Ưu tiên</span> và phần còn lại cho tiêu chí.
+        <p className="text-slate-600 text-xs leading-relaxed font-medium">
+          Đối với vị trí <strong className="text-slate-900 font-bold">{titleToShow}</strong>:
+          Thường dành <strong className="text-rose-600 font-bold">50% - 70% tổng trọng số</strong>{' '}
+          cho nhóm tiêu chí <span className="text-rose-600 font-bold">🔴 Bắt buộc</span>,{' '}
+          <strong className="text-[#3B82F6] font-bold">20% - 35%</strong> cho nhóm{' '}
+          <span className="text-[#3B82F6] font-bold">🔵 Ưu tiên</span> và phần còn lại cho tiêu chí.
         </p>
       </div>
     </div>

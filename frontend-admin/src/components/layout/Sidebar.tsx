@@ -148,7 +148,7 @@ export default function Sidebar() {
         </nav>
 
         {/* Bottom: Settings + Collapse */}
-        <div className="p-2 border-t border-slate-200/60 flex flex-col gap-1">
+        <div className="p-2 border-t border-slate-200/60 flex flex-col gap-1.5">
           {(user?.role === UserRole.HR_ADMIN || user?.role === UserRole.DEPARTMENT_MANAGER) && (
             <div className="relative group">
               <Link
@@ -157,20 +157,21 @@ export default function Sidebar() {
                   isCollapsed ? 'justify-center' : ''
                 } ${
                   pathname.startsWith('/settings')
-                    ? 'text-white font-bold shadow-md shadow-[#1261A6]/20'
+                    ? 'text-white font-bold shadow-md shadow-blue-500/25'
                     : 'text-slate-700 hover:text-slate-900 hover:bg-slate-200/60 font-medium'
                 }`}
                 style={
                   pathname.startsWith('/settings')
                     ? {
-                        background: 'linear-gradient(135deg, #1261A6 0%, #126DA6 50%, #2A95BF 100%)'
+                        background:
+                          'linear-gradient(135deg, #3B82F6 0%, #8B5CF6 50%, #06B6D4 100%)'
                       }
                     : undefined
                 }
               >
                 <Settings
                   size={16}
-                  className={`shrink-0 ${pathname.startsWith('/settings') ? 'text-white' : 'text-[#1261A6]'}`}
+                  className={`shrink-0 ${pathname.startsWith('/settings') ? 'text-white' : 'text-[#3B82F6]'}`}
                 />
                 {!isCollapsed && <span className="text-xs truncate">Cấu hình</span>}
               </Link>
@@ -186,17 +187,17 @@ export default function Sidebar() {
           <button
             type="button"
             onClick={() => setIsCollapsed(!isCollapsed)}
-            className={`flex items-center gap-2.5 rounded-xl px-2.5 py-2 transition-all duration-150 text-slate-600 hover:text-slate-900 hover:bg-slate-200/60 cursor-pointer w-full ${
+            className={`flex items-center gap-2.5 rounded-xl px-2.5 py-2 transition-all duration-150 text-slate-700 hover:text-slate-900 hover:bg-slate-200/60 font-medium cursor-pointer w-full ${
               isCollapsed ? 'justify-center' : ''
             }`}
           >
             <ChevronLeft
               size={16}
-              className={`shrink-0 text-[#1261A6] transition-transform duration-300 ${
+              className={`shrink-0 text-[#3B82F6] transition-transform duration-300 ${
                 isCollapsed ? 'rotate-180' : ''
               }`}
             />
-            {!isCollapsed && <span className="text-xs font-medium">Thu gọn</span>}
+            {!isCollapsed && <span className="text-xs truncate">Thu gọn</span>}
           </button>
         </div>
       </div>

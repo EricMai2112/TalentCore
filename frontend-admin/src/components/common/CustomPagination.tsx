@@ -67,7 +67,7 @@ export function CustomPagination({
 
   return (
     <div
-      className={`flex flex-col sm:flex-row items-center justify-between gap-4 px-5 py-3.5 bg-white/40 backdrop-blur-md border-t border-white/60 rounded-b-2xl ${className}`}
+      className={`flex flex-col sm:flex-row items-center justify-between gap-4 px-5 py-3.5 bg-white/35 border-t border-white/60 rounded-b-2xl ${className}`}
     >
       {/* Page item summary info */}
       <div className="text-xs text-slate-500 font-medium">

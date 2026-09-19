@@ -91,29 +91,35 @@ body {
   font-family: var(--font-sans), Arial, Helvetica, sans-serif;
 }
 
-/* Sleek custom scrollbar applied globally across all browsers & scrollable components */
+/* Sleek primary blue custom scrollbar applied globally across all scrollable containers */
 ::-webkit-scrollbar {
   width: 6px;
   height: 6px;
 }
 
 ::-webkit-scrollbar-track {
-  background: transparent;
+  background: rgba(59, 130, 246, 0.05);
   border-radius: 9999px;
 }
 
 ::-webkit-scrollbar-thumb {
-  background: #cbd5e1;
+  background: linear-gradient(180deg, rgba(59, 130, 246, 0.55) 0%, rgba(37, 99, 235, 0.65) 100%);
   border-radius: 9999px;
-  transition: background 0.2s ease;
+  border: 1px solid rgba(255, 255, 255, 0.5);
+  transition: all 0.25s ease;
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background: #94a3b8;
+  background: linear-gradient(180deg, #3B82F6 0%, #1D4ED8 100%);
+  box-shadow: 0 0 10px rgba(59, 130, 246, 0.5);
 }
 
-/* Firefox standard scrollbar support */
+::-webkit-scrollbar-thumb:active {
+  background: #1E40AF;
+}
+
+/* Firefox standard scrollbar support with primary blue theme */
 * {
   scrollbar-width: thin;
-  scrollbar-color: #cbd5e1 transparent;
+  scrollbar-color: rgba(59, 130, 246, 0.6) transparent;
 }

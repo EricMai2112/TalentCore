@@ -36,10 +36,10 @@ const GlassInput = forwardRef<HTMLInputElement, GlassInputProps>(
             disabled={disabled}
             className={`w-full ${icon ? 'pl-11' : 'px-4'} ${
               rightElement ? 'pr-11' : 'pr-4'
-            } py-2.5 sm:py-3 bg-white/95 backdrop-blur-md border ${
+            } py-2.5 sm:py-3 bg-white/25 border ${
               error
                 ? 'border-rose-400 ring-4 ring-rose-500/10 focus:border-rose-500'
-                : 'border-slate-200/80 hover:border-[#3B82F6]/50 focus:border-[#3B82F6] focus:ring-4 focus:ring-[#3B82F6]/15 focus:bg-white'
+                : 'border-white/60 hover:bg-white/40 hover:border-[#3B82F6]/50 focus:border-[#3B82F6] focus:ring-4 focus:ring-[#3B82F6]/15 focus:bg-white/50'
             } rounded-2xl text-xs sm:text-sm text-slate-900 placeholder:text-slate-400 placeholder:font-normal outline-none transition-all shadow-2xs ${
               disabled
                 ? 'bg-slate-100/90 text-slate-400 border-slate-200 cursor-not-allowed opacity-75'

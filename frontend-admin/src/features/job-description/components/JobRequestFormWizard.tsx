@@ -805,98 +805,87 @@ export default function JobRequestFormWizard({
   }
 
   return (
-    <div className="w-full space-y-6 pb-12 px-1 md:px-3">
-      {/* Full-width Top Header Banner */}
-      <div className="flex flex-wrap items-center justify-between gap-4 bg-white border border-gray-100 rounded-2xl p-5 shadow-2xs">
-        <div className="flex items-center gap-3.5">
-          <button
-            type="button"
-            onClick={handleBackClick}
-            className="p-2.5 text-gray-500 hover:text-gray-900 hover:bg-gray-100/80 rounded-xl transition-all cursor-pointer border border-gray-100"
-            title="Quay lại danh sách"
-          >
-            <ArrowLeft size={18} />
-          </button>
-          <div>
-            <span className="text-xs font-bold text-indigo-600 uppercase tracking-wider block">
-              {mode === 'create' ? 'Khởi Tạo Yêu Cầu Tuyển Dụng' : 'Hiệu Chỉnh Công Việc'}
-            </span>
-            <h1 className="text-2xl font-extrabold text-gray-900 mt-0.5">
-              {mode === 'create' ? 'Tạo Yêu Cầu Tuyển Dụng Mới' : title || 'Chỉnh sửa yêu cầu'}
-            </h1>
-          </div>
-        </div>
-
-        {/* Wizard Step Navigation Pills */}
-        <div className="flex flex-wrap items-center gap-2">
-          {[
-            { stepNum: 1, label: '1. Thông tin & Tiêu chí AI' },
-            { stepNum: 2, label: '2. Nội dung công việc' },
-            { stepNum: 3, label: '3. Quy trình & Trạng thái' }
-          ].map((sItem) => (
-            <button
-              key={sItem.stepNum}
-              type="button"
-              onClick={() => {
-                if (sItem.stepNum < step) setStep(sItem.stepNum)
-                else if (sItem.stepNum > step) handleNextStep()
-              }}
-              className={`px-4 py-2 rounded-xl text-xs font-bold transition-all flex items-center gap-2 cursor-pointer ${
-                step === sItem.stepNum
-                  ? 'bg-indigo-600 text-white shadow-sm ring-2 ring-indigo-600/20'
-                  : step > sItem.stepNum
-                    ? 'bg-indigo-50 text-indigo-700 hover:bg-indigo-100'
-                    : 'bg-gray-100 text-gray-500 hover:bg-gray-200/70'
-              }`}
-            >
-              {step > sItem.stepNum ? (
-                <Check size={14} className="text-indigo-600" />
-              ) : (
-                <span className="w-4 h-4 rounded-full bg-white/20 text-center leading-4 text-[11px]">
-                  {sItem.stepNum}
-                </span>
-              )}
-              <span>{sItem.label}</span>
-            </button>
-          ))}
-        </div>
-      </div>
-
+    <div className="w-full flex-1 flex flex-col justify-between space-y-4">
       {/* Error alert banner */}
       {error && (
-        <div className="p-4 bg-rose-50 border border-rose-100 rounded-2xl flex items-center gap-3 text-rose-700 text-sm font-semibold shadow-xs">
-          <AlertTriangle size={20} className="shrink-0 text-rose-500" />
+        <div className="p-3.5 bg-rose-500/10 border border-rose-300/40 rounded-2xl flex items-center gap-3 text-rose-700 text-xs font-semibold shadow-2xs">
+          <AlertTriangle size={18} className="shrink-0 text-rose-500" />
           <span>{error}</span>
         </div>
       )}
 
-      {/* Main Integrated Form Card Container */}
+      {/* Main Form Container filling layout */}
       <form
         onSubmit={handleFormSubmit}
-        className="bg-white border border-gray-100 rounded-2xl shadow-xs overflow-hidden flex flex-col"
+        className="flex-1 flex flex-col justify-between w-full space-y-4"
       >
+        {/* Header Glass Card */}
+        <div className="bg-white/30 border border-white/60 px-4 py-3.5 md:px-5 flex flex-wrap items-center justify-between gap-4 rounded-2xl shadow-2xs">
+          <div className="flex items-center gap-3.5">
+            <button
+              type="button"
+              onClick={handleBackClick}
+              className="p-2 text-slate-500 hover:text-slate-900 hover:bg-white/80 rounded-xl transition-all cursor-pointer border border-white/80 shadow-2xs"
+              title="Quay lại danh sách"
+            >
+              <ArrowLeft size={18} />
+            </button>
+            <div>
+              <h1 className="text-xl font-extrabold text-slate-900 mt-0.5 leading-tight">
+                {mode === 'create' ? 'Tạo Yêu Cầu Tuyển Dụng Mới' : title || 'Chỉnh sửa yêu cầu'}
+              </h1>
+              <p className="text-[11px] font-medium text-slate-500 mt-0.5">
+                {step === 1 &&
+                  'Khai báo phòng ban, vị trí công việc, địa điểm, mức lương & cấu hình trọng số AI Matching.'}
+                {step === 2 &&
+                  'Nêu rõ trách nhiệm công việc, yêu cầu ứng viên và chính sách đãi ngộ (hỗ trợ AI tự động soạn thảo).'}
+                {step === 3 && 'Lựa chọn Mẫu Pipeline phỏng vấn và trạng thái phê duyệt khởi tạo.'}
+              </p>
+            </div>
+          </div>
+
+          {/* Right Action Area: Step Navigation Pills */}
+          <div className="flex items-center gap-1.5 bg-white/20 p-1.5 rounded-2xl border border-white/50">
+            {[
+              { stepNum: 1, label: 'Thông tin & Tiêu chí AI' },
+              { stepNum: 2, label: 'Nội dung công việc' },
+              { stepNum: 3, label: 'Quy trình & Trạng thái' }
+            ].map((sItem) => (
+              <button
+                key={sItem.stepNum}
+                type="button"
+                onClick={() => {
+                  if (sItem.stepNum < step) setStep(sItem.stepNum)
+                  else if (sItem.stepNum > step) handleNextStep()
+                }}
+                className={`px-3.5 py-1.5 rounded-xl text-xs transition-all flex items-center gap-1.5 cursor-pointer whitespace-nowrap ${
+                  step === sItem.stepNum
+                    ? 'bg-[#3B82F6] text-white shadow-xs font-bold'
+                    : step > sItem.stepNum
+                      ? 'bg-[#3B82F6]/10 text-[#3B82F6] hover:bg-[#3B82F6]/20 font-semibold'
+                      : 'text-slate-600 hover:bg-white/50 font-medium'
+                }`}
+              >
+                {step > sItem.stepNum ? (
+                  <Check size={14} className="text-[#3B82F6]" />
+                ) : (
+                  <span className="w-4 h-4 rounded-full bg-white/20 text-center leading-4 text-[11px] font-bold">
+                    {sItem.stepNum}
+                  </span>
+                )}
+                <span>{sItem.label}</span>
+              </button>
+            ))}
+          </div>
+        </div>
+
         {/* Inner Form Content */}
-        <div className="p-6 md:p-8 space-y-6">
+        <div className="flex-1 space-y-5">
           {/* Step 1: Basic Information & AI Criteria Weighting */}
           {step === 1 && (
             <div className="space-y-6 animate-in fade-in duration-200">
-              {/* Section Header */}
-              <div className="flex items-center gap-3 border-b border-gray-100 pb-4">
-                <div className="p-2 bg-indigo-50 text-indigo-600 rounded-xl">
-                  <Briefcase size={20} />
-                </div>
-                <div>
-                  <h3 className="text-base font-bold text-gray-900">
-                    Thông tin vị trí & Phòng ban
-                  </h3>
-                  <p className="text-xs text-gray-500">
-                    Khai báo phòng ban, vị trí công việc, địa điểm và hình thức làm việc.
-                  </p>
-                </div>
-              </div>
-
-              {/* Row 1: Department & Position */}
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              {/* Row 1: Department, Position & Experience Level */}
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
                 <CustomSelect
                   label="Phòng ban"
                   required
@@ -906,11 +895,11 @@ export default function JobRequestFormWizard({
                   disabled={isDeptManager}
                   placeholder="-- Chọn phòng ban --"
                   options={[
-                    { value: "", label: "-- Chọn phòng ban --" },
+                    { value: '', label: '-- Chọn phòng ban --' },
                     ...departments.map((dept) => ({
                       value: dept._id,
-                      label: dept.name,
-                    })),
+                      label: dept.name
+                    }))
                   ]}
                 />
 
@@ -922,46 +911,39 @@ export default function JobRequestFormWizard({
                   disabled={!departmentId}
                   placeholder="-- Chọn vị trí từ danh mục --"
                   options={[
-                    { value: "", label: "-- Chọn vị trí từ danh mục --" },
+                    { value: '', label: '-- Chọn vị trí từ danh mục --' },
                     ...filteredPositions.map((pos) => ({
                       value: pos._id,
-                      label: pos.name,
-                    })),
+                      label: pos.name
+                    }))
+                  ]}
+                />
+
+                <CustomSelect
+                  label="Kinh nghiệm yêu cầu"
+                  value={experienceLevel}
+                  onChange={(val) => setExperienceLevel(val)}
+                  options={[
+                    { value: 'Intern', label: 'Intern (Thực tập sinh - Dưới 6 tháng)' },
+                    { value: 'Fresher', label: 'Fresher (Mới tốt nghiệp - Dưới 1 năm)' },
+                    { value: 'Junior', label: 'Junior (1 - 3 năm)' },
+                    { value: 'Mid-level', label: 'Mid-level (3 - 5 năm)' },
+                    { value: 'Senior', label: 'Senior (5+ năm)' },
+                    { value: 'Lead / Manager', label: 'Lead / Manager (7+ năm)' }
                   ]}
                 />
               </div>
 
-              {/* Row 2: Title (Col-span 2) + Experience Level (Col-span 1) */}
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                <div className="md:col-span-2">
-                  <CustomInput
-                    label="Tiêu đề công việc"
-                    required
-                    placeholder="VD: Senior Frontend Developer (ReactJS / Next.js)"
-                    value={title}
-                    onChange={(e) => setTitle(e.target.value)}
-                  />
-                </div>
+              {/* Row 2: Title, Location, Employment Type & Headcount */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
+                <CustomInput
+                  label="Tiêu đề công việc"
+                  required
+                  placeholder="VD: Senior Frontend Developer (ReactJS / Next.js)"
+                  value={title}
+                  onChange={(e) => setTitle(e.target.value)}
+                />
 
-                <div className="md:col-span-1">
-                  <CustomSelect
-                    label="Kinh nghiệm yêu cầu"
-                    value={experienceLevel}
-                    onChange={(val) => setExperienceLevel(val)}
-                    options={[
-                      { value: "Intern", label: "Intern (Thực tập sinh - Dưới 6 tháng)" },
-                      { value: "Fresher", label: "Fresher (Mới tốt nghiệp - Dưới 1 năm)" },
-                      { value: "Junior", label: "Junior (1 - 3 năm)" },
-                      { value: "Mid-level", label: "Mid-level (3 - 5 năm)" },
-                      { value: "Senior", label: "Senior (5+ năm)" },
-                      { value: "Lead / Manager", label: "Lead / Manager (7+ năm)" },
-                    ]}
-                  />
-                </div>
-              </div>
-
-              {/* Row 3: Location, Employment Type & Headcount */}
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-6">
                 <CustomInput
                   label="Địa điểm làm việc"
                   required
@@ -975,11 +957,11 @@ export default function JobRequestFormWizard({
                   value={employmentType}
                   onChange={(val) => setEmploymentType(val as EmploymentType)}
                   options={[
-                    { value: EmploymentType.FULL_TIME, label: "Full-time" },
-                    { value: EmploymentType.PART_TIME, label: "Part-time" },
-                    { value: EmploymentType.CONTRACT, label: "Hợp đồng" },
-                    { value: EmploymentType.REMOTE, label: "Remote" },
-                    { value: EmploymentType.HYBRID, label: "Hybrid" },
+                    { value: EmploymentType.FULL_TIME, label: 'Full-time' },
+                    { value: EmploymentType.PART_TIME, label: 'Part-time' },
+                    { value: EmploymentType.CONTRACT, label: 'Hợp đồng' },
+                    { value: EmploymentType.REMOTE, label: 'Remote' },
+                    { value: EmploymentType.HYBRID, label: 'Hybrid' }
                   ]}
                 />
 
@@ -994,12 +976,14 @@ export default function JobRequestFormWizard({
               </div>
 
               {/* Row 4: Min Salary, Max Salary, Application Deadline, Priority */}
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 pt-2">
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5 pt-1">
                 <CustomInput
-                  label="Lương tối thiểu (USD)"
+                  label="Lương tối thiểu (VNĐ)"
                   required
                   type="number"
-                  placeholder="VD: 1000"
+                  min={0}
+                  placeholder="VD: 15000000"
+                  helperText="Nhập 0 ở cả 2 để hiển thị Thỏa thuận"
                   value={minimumSalary}
                   onChange={(e) =>
                     setMinimumSalary(e.target.value === '' ? '' : Number(e.target.value))
@@ -1007,10 +991,12 @@ export default function JobRequestFormWizard({
                 />
 
                 <CustomInput
-                  label="Lương tối đa (USD)"
+                  label="Lương tối đa (VNĐ)"
                   required
                   type="number"
-                  placeholder="VD: 2500"
+                  min={0}
+                  placeholder="VD: 25000000"
+                  helperText="Nhập 0 ở cả 2 để hiển thị Thỏa thuận"
                   value={maximumSalary}
                   onChange={(e) =>
                     setMaximumSalary(e.target.value === '' ? '' : Number(e.target.value))
@@ -1019,7 +1005,7 @@ export default function JobRequestFormWizard({
 
                 {/* Application Deadline */}
                 <div className="space-y-1.5">
-                  <label className="text-xs font-bold text-gray-700 uppercase tracking-wider block">
+                  <label className="text-xs font-semibold text-slate-700 uppercase tracking-wider block">
                     Hạn nộp hồ sơ
                   </label>
                   <CustomDatePicker
@@ -1034,25 +1020,25 @@ export default function JobRequestFormWizard({
                   value={priority}
                   onChange={(val) => setPriority(val as JobPriority)}
                   options={[
-                    { value: JobPriority.LOW, label: "Thấp" },
-                    { value: JobPriority.MEDIUM, label: "Bình thường" },
-                    { value: JobPriority.HIGH, label: "Gấp" },
+                    { value: JobPriority.LOW, label: 'Thấp' },
+                    { value: JobPriority.MEDIUM, label: 'Bình thường' },
+                    { value: JobPriority.HIGH, label: 'Gấp' }
                   ]}
                 />
               </div>
 
               {/* Skills Tags Bar */}
-              <div className="space-y-2 pt-2">
-                <label className="text-xs font-bold text-gray-700 uppercase tracking-wider block">
+              <div className="space-y-2 pt-1">
+                <label className="text-xs font-semibold text-slate-700 uppercase tracking-wider block">
                   Kỹ năng gợi ý theo vị trí
                 </label>
-                <div className="p-4 border border-gray-100 rounded-2xl bg-gray-50/60 space-y-3">
+                <div className="p-3.5 border border-white/60 rounded-2xl bg-white/20 space-y-2.5">
                   {!positionId ? (
-                    <p className="text-xs text-gray-400 italic text-center py-2">
+                    <p className="text-xs text-slate-400 italic text-center py-2 font-medium">
                       Chọn Vị trí tuyển dụng ở trên để hiển thị các thẻ kỹ năng gợi ý
                     </p>
                   ) : filteredSkills.length === 0 ? (
-                    <p className="text-xs text-gray-400 italic text-center py-2">
+                    <p className="text-xs text-slate-400 italic text-center py-2 font-medium">
                       Vị trí này chưa có bộ kỹ năng mẫu
                     </p>
                   ) : (
@@ -1064,10 +1050,10 @@ export default function JobRequestFormWizard({
                             key={sk._id}
                             type="button"
                             onClick={() => handleToggleSkill(sk._id)}
-                            className={`px-3.5 py-2 rounded-xl text-xs font-semibold transition-all cursor-pointer flex items-center gap-1.5 ${
+                            className={`px-3 py-1.5 rounded-xl text-xs font-semibold transition-all cursor-pointer flex items-center gap-1.5 ${
                               isSelected
-                                ? 'bg-indigo-600 text-white shadow-xs'
-                                : 'bg-white border border-gray-200 text-gray-700 hover:bg-gray-100'
+                                ? 'bg-[#3B82F6] text-white shadow-2xs font-bold'
+                                : 'bg-white/60 border border-white/80 text-slate-700 hover:bg-white shadow-2xs'
                             }`}
                           >
                             {sk.name}
@@ -1080,32 +1066,32 @@ export default function JobRequestFormWizard({
                 </div>
               </div>
 
-              {/* AI Criteria Weighting Manager (Streamlined with Gemini AI & Equal Split) */}
-              <div className="space-y-4 pt-6 border-t border-gray-100">
-                <div className="flex flex-wrap items-center justify-between gap-4">
+              {/* AI Criteria Weighting Manager */}
+              <div className="space-y-4 pt-5 border-t border-white/60">
+                <div className="flex flex-wrap items-center justify-between gap-3">
                   <div className="flex items-center gap-3">
-                    <div className="p-2.5 bg-indigo-50 text-indigo-600 rounded-xl">
-                      <SlidersHorizontal size={20} />
+                    <div className="p-2 bg-[#3B82F6]/10 text-[#3B82F6] border border-[#3B82F6]/20 rounded-xl">
+                      <SlidersHorizontal size={18} />
                     </div>
                     <div>
-                      <h3 className="text-base font-bold text-gray-900">
+                      <h3 className="text-sm font-bold text-slate-900">
                         Cấu hình Tiêu chí Đánh giá
                       </h3>
-                      <p className="text-xs text-gray-500">
+                      <p className="text-[11px] font-medium text-slate-500">
                         Thiết lập các tiêu chí chuyên môn và phân bổ trọng số (Tổng trọng số bắt
                         buộc = 100%).
                       </p>
                     </div>
                   </div>
 
-                  {/* Streamlined Weight Assistant Buttons Group */}
+                  {/* Weight Assistant Buttons Group */}
                   <div className="flex flex-wrap items-center gap-2">
                     {/* Google Gemini AI Weight Suggestion Button */}
                     <button
                       type="button"
                       onClick={handleAiSuggestWeights}
                       disabled={criteria.length === 0 || isAiSuggesting}
-                      className="px-3.5 py-2 bg-gradient-to-r from-purple-600 via-indigo-600 to-blue-600 hover:from-purple-700 hover:to-blue-700 text-white font-extrabold text-xs rounded-xl transition-all cursor-pointer flex items-center gap-1.5 shadow-sm border border-purple-400/30 disabled:opacity-40"
+                      className="px-3.5 py-1.5 bg-gradient-to-r from-[#8B5CF6] via-[#3B82F6] to-[#06B6D4] hover:opacity-90 text-white font-bold text-xs rounded-xl transition-all cursor-pointer flex items-center gap-1.5 shadow-xs border border-white/30 disabled:opacity-40"
                       title="Gemini AI phân tích vị trí và kinh nghiệm để tự động gợi ý trọng số tối ưu"
                     >
                       {isAiSuggesting ? (
@@ -1126,7 +1112,7 @@ export default function JobRequestFormWizard({
                       type="button"
                       onClick={handleEqualSplitWeights}
                       disabled={criteria.length === 0}
-                      className="px-3.5 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-xs rounded-xl transition-all cursor-pointer flex items-center gap-1.5 disabled:opacity-40"
+                      className="px-3.5 py-1.5 bg-white/80 hover:bg-white text-slate-700 font-semibold text-xs rounded-xl border border-white/90 shadow-2xs transition-all cursor-pointer flex items-center gap-1.5 disabled:opacity-40"
                       title="Chia đều phần trăm cho tất cả các tiêu chí"
                     >
                       <RefreshCw size={13} />
@@ -1135,16 +1121,16 @@ export default function JobRequestFormWizard({
 
                     {/* Weight Total Progress Indicator Badge */}
                     <div
-                      className={`px-4 py-2 rounded-xl font-extrabold text-xs flex items-center gap-2 border ${
+                      className={`px-3.5 py-1.5 rounded-xl font-bold text-xs flex items-center gap-1.5 border shadow-2xs ${
                         totalWeight === 100
-                          ? 'bg-emerald-50 text-emerald-700 border-emerald-200'
-                          : 'bg-amber-50 text-amber-700 border-amber-200'
+                          ? 'bg-emerald-500/10 text-emerald-700 border-emerald-300/40'
+                          : 'bg-amber-500/10 text-amber-700 border-amber-300/40'
                       }`}
                     >
                       {totalWeight === 100 ? (
-                        <CheckCircle2 size={16} className="text-emerald-600" />
+                        <CheckCircle2 size={15} className="text-emerald-600" />
                       ) : (
-                        <AlertTriangle size={16} className="text-amber-600" />
+                        <AlertTriangle size={15} className="text-amber-600" />
                       )}
                       <span>Tổng: {totalWeight}% / 100%</span>
                     </div>
@@ -1153,15 +1139,17 @@ export default function JobRequestFormWizard({
 
                 {/* AI Reasoning Callout Box */}
                 {aiReasoning && (
-                  <div className="p-4 bg-gradient-to-r from-purple-50 via-indigo-50 to-blue-50 border border-indigo-200/80 rounded-2xl flex items-start gap-3 text-xs text-indigo-950 shadow-2xs animate-in fade-in duration-300">
-                    <div className="p-2 bg-purple-600 text-white rounded-xl shrink-0 shadow-xs">
-                      <Sparkles size={16} />
+                  <div className="p-3.5 bg-white/35 border border-purple-200/80 rounded-2xl flex items-start gap-3 text-xs text-slate-900 shadow-2xs animate-in fade-in duration-300">
+                    <div className="p-1.5 bg-[#8B5CF6] text-white rounded-xl shrink-0 shadow-xs mt-0.5">
+                      <Sparkles size={15} />
                     </div>
-                    <div className="space-y-1">
-                      <span className="font-extrabold uppercase tracking-wider block text-purple-900 flex items-center gap-1">
+                    <div className="space-y-0.5">
+                      <span className="font-extrabold uppercase tracking-wider block text-[#8B5CF6] text-[11px]">
                         Phân tích & Lý giải từ Google Gemini AI
                       </span>
-                      <p className="text-slate-700 leading-relaxed font-medium">{aiReasoning}</p>
+                      <p className="text-slate-700 leading-relaxed font-medium text-xs">
+                        {aiReasoning}
+                      </p>
                     </div>
                   </div>
                 )}
@@ -1174,9 +1162,9 @@ export default function JobRequestFormWizard({
                 />
 
                 {/* Criteria Table */}
-                <div className="border border-gray-200/80 rounded-2xl overflow-hidden bg-white shadow-2xs">
+                <div className="border border-white/60 rounded-2xl overflow-hidden bg-white/20 shadow-2xs">
                   {criteria.length === 0 ? (
-                    <div className="p-10 text-center text-gray-400 text-xs italic space-y-3">
+                    <div className="p-8 text-center text-slate-400 text-xs italic space-y-3 font-medium">
                       <p>
                         Chưa có tiêu chí nào. Bấm nút bên dưới để tạo tiêu chí đánh giá cho AI
                         Matching.
@@ -1184,16 +1172,16 @@ export default function JobRequestFormWizard({
                       <button
                         type="button"
                         onClick={handleAddCriteriaRow}
-                        className="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white font-bold rounded-xl text-xs inline-flex items-center gap-1.5 cursor-pointer shadow-xs"
+                        className="px-3.5 py-1.5 bg-[#3B82F6] hover:bg-blue-600 text-white font-bold rounded-xl text-xs inline-flex items-center gap-1.5 cursor-pointer shadow-xs"
                       >
-                        <Plus size={15} />
+                        <Plus size={14} />
                         Thêm tiêu chí mới
                       </button>
                     </div>
                   ) : (
-                    <div className="divide-y divide-gray-100">
+                    <div className="divide-y divide-slate-100/70">
                       {/* Table Header */}
-                      <div className="grid grid-cols-12 gap-4 px-6 py-3.5 bg-gray-50/80 text-[11px] font-bold text-gray-500 uppercase tracking-wider">
+                      <div className="grid grid-cols-12 gap-4 px-5 py-3 bg-white/40 text-[11px] font-bold text-slate-500 uppercase tracking-wider border-b border-white/60">
                         <div className="col-span-5">Tên tiêu chí / Kỹ năng</div>
                         <div className="col-span-4">Loại yêu cầu đánh giá</div>
                         <div className="col-span-2 text-center">Trọng số (%)</div>
@@ -1207,56 +1195,54 @@ export default function JobRequestFormWizard({
                         return (
                           <div
                             key={idx}
-                            className="grid grid-cols-12 gap-4 px-6 py-3.5 items-center hover:bg-gray-50/50 transition-colors"
+                            className="grid grid-cols-12 gap-4 px-5 py-3 items-center hover:bg-white/40 transition-colors"
                           >
                             {/* Name & Soft Warnings */}
                             <div className="col-span-5 space-y-1">
-                              <input
-                                type="text"
+                              <CustomInput
                                 placeholder="VD: ReactJS, TypeScript, 3+ năm kinh nghiệm..."
                                 value={item.name}
                                 onChange={(e) => handleUpdateCriteria(idx, 'name', e.target.value)}
-                                className="w-full px-4 py-2 border border-gray-200 rounded-xl text-xs font-bold text-gray-900 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-600 transition-all"
+                                className="!py-1.5 !px-3.5 !rounded-xl text-xs font-semibold"
                               />
 
                               {/* Real-time Soft Warning Badge */}
                               {softWarning && (
-                                <span className="text-[11px] font-semibold text-amber-700 bg-amber-50 border border-amber-200/80 px-2.5 py-0.5 rounded-lg block">
+                                <span className="text-[11px] font-medium text-amber-700 bg-amber-500/10 border border-amber-300/40 px-2.5 py-0.5 rounded-lg block">
                                   {softWarning}
                                 </span>
                               )}
                             </div>
 
-                            {/* Requirement Type (Simplified to 2 Levels) */}
+                            {/* Requirement Type */}
                             <div className="col-span-4">
-                              <select
+                              <CustomSelect
                                 value={item.requirementType}
-                                onChange={(e) =>
+                                onChange={(val) =>
                                   handleUpdateCriteria(
                                     idx,
                                     'requirementType',
-                                    e.target.value as CriteriaRequirementType
+                                    val as CriteriaRequirementType
                                   )
                                 }
-                                className={`w-full px-3.5 py-2 border rounded-xl text-xs font-bold focus:outline-none focus:ring-2 focus:ring-indigo-500/20 transition-all ${
-                                  item.requirementType === CriteriaRequirementType.MANDATORY
-                                    ? 'bg-rose-50 border-rose-200 text-rose-700'
-                                    : 'bg-blue-50 border-blue-200 text-blue-700'
-                                }`}
-                              >
-                                <option value={CriteriaRequirementType.MANDATORY}>
-                                  🔴 Bắt buộc (Gắn cờ cảnh báo nếu thiếu)
-                                </option>
-                                <option value={CriteriaRequirementType.PREFERRED}>
-                                  🔵 Ưu tiên (Tính điểm cộng)
-                                </option>
-                              </select>
+                                size="sm"
+                                options={[
+                                  {
+                                    value: CriteriaRequirementType.MANDATORY,
+                                    label: '🔴 Bắt buộc (Gắn cờ cảnh báo nếu thiếu)'
+                                  },
+                                  {
+                                    value: CriteriaRequirementType.PREFERRED,
+                                    label: '🔵 Ưu tiên (Tính điểm cộng)'
+                                  }
+                                ]}
+                              />
                             </div>
 
                             {/* Weight & Inline Progress Bar */}
                             <div className="col-span-2 flex flex-col items-center justify-center">
                               <div className="flex items-center">
-                                <input
+                                <CustomInput
                                   type="number"
                                   min={0}
                                   max={100}
@@ -1268,20 +1254,20 @@ export default function JobRequestFormWizard({
                                       Math.max(0, Math.min(100, Number(e.target.value)))
                                     )
                                   }
-                                  className="w-20 px-2.5 py-1.5 border border-gray-200 rounded-xl text-xs font-extrabold text-center text-indigo-700 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-600 transition-all"
+                                  className="!w-16 !px-2 !py-1 !rounded-xl text-xs font-bold text-center text-[#3B82F6]"
                                 />
-                                <span className="text-xs font-bold text-gray-500 ml-1">%</span>
+                                <span className="text-xs font-bold text-slate-500 ml-1">%</span>
                               </div>
 
                               {/* Inline Visual Progress Bar */}
-                              <div className="w-20 h-1.5 bg-slate-100 rounded-full overflow-hidden mt-1.5">
+                              <div className="w-16 h-1.5 bg-slate-200/60 rounded-full overflow-hidden mt-1">
                                 <div
                                   className={`h-full rounded-full transition-all duration-300 ${
                                     item.weight > 50
                                       ? 'bg-amber-500'
                                       : item.requirementType === CriteriaRequirementType.MANDATORY
                                         ? 'bg-rose-500'
-                                        : 'bg-blue-500'
+                                        : 'bg-[#3B82F6]'
                                   }`}
                                   style={{ width: `${Math.min(100, item.weight)}%` }}
                                 />
@@ -1293,10 +1279,10 @@ export default function JobRequestFormWizard({
                               <button
                                 type="button"
                                 onClick={() => handleRemoveCriteria(idx)}
-                                className="p-2 text-gray-400 hover:text-rose-600 hover:bg-rose-50 rounded-xl transition-all cursor-pointer"
+                                className="p-1.5 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-xl transition-all cursor-pointer"
                                 title="Xóa tiêu chí"
                               >
-                                <Trash2 size={16} />
+                                <Trash2 size={15} />
                               </button>
                             </div>
                           </div>
@@ -1307,19 +1293,19 @@ export default function JobRequestFormWizard({
 
                   {/* Table Footer Controls */}
                   {criteria.length > 0 && (
-                    <div className="px-6 py-3 bg-gray-50/70 border-t border-gray-100 flex items-center justify-between">
+                    <div className="px-5 py-2.5 bg-white/40 border-t border-white/60 flex items-center justify-between">
                       <button
                         type="button"
                         onClick={handleAddCriteriaRow}
-                        className="px-4 py-2 bg-white border border-gray-200 hover:bg-gray-100 text-gray-700 font-bold rounded-xl text-xs transition-all cursor-pointer flex items-center gap-1.5"
+                        className="px-3.5 py-1.5 bg-white/80 border border-white/90 hover:bg-white text-slate-700 font-bold rounded-xl text-xs transition-all cursor-pointer flex items-center gap-1.5 shadow-2xs"
                       >
-                        <Plus size={15} />
+                        <Plus size={14} />
                         Thêm tiêu chí khác
                       </button>
 
-                      <div className="text-xs font-semibold text-gray-500">
+                      <div className="text-xs font-semibold text-slate-500">
                         Tổng số tiêu chí:{' '}
-                        <span className="font-bold text-gray-900">{criteria.length}</span>
+                        <span className="font-bold text-slate-900">{criteria.length}</span>
                       </div>
                     </div>
                   )}
@@ -1328,42 +1314,42 @@ export default function JobRequestFormWizard({
             </div>
           )}
 
-          {/* Step 2: Job Description Content (Upgraded with AI Content Generation) */}
+          {/* Step 2: Job Description Content */}
           {step === 2 && (
             <div className="space-y-6 animate-in fade-in duration-200">
-              {/* Section Top Header & AI Auto Generate Button */}
-              <div className="flex flex-wrap items-center justify-between gap-4 border-b border-gray-100 pb-4">
+              {/* Dedicated Gemini AI Assistant Glass Banner */}
+              <div className="p-4 bg-gradient-to-r from-purple-500/10 via-blue-500/10 to-cyan-500/10 border border-purple-300/30 rounded-2xl flex flex-wrap items-center justify-between gap-4 shadow-2xs">
                 <div className="flex items-center gap-3">
-                  <div className="p-2 bg-indigo-50 text-indigo-600 rounded-xl">
-                    <FileText size={20} />
+                  <div className="p-2.5 bg-gradient-to-tr from-[#8B5CF6] to-[#3B82F6] text-white rounded-xl shadow-xs shrink-0">
+                    <Sparkles size={18} className="text-amber-300 animate-pulse" />
                   </div>
                   <div>
-                    <h3 className="text-base font-bold text-gray-900">
-                      Chi tiết nội dung Mô tả công việc
-                    </h3>
-                    <p className="text-xs text-gray-500">
-                      Nêu rõ trách nhiệm công việc, yêu cầu ứng viên và chính sách đãi ngộ.
+                    <h4 className="text-xs font-bold text-slate-900 uppercase tracking-wider">
+                      Gemini AI Trợ Lý Soạn Thảo Nội Dung JD
+                    </h4>
+                    <p className="text-[11px] font-medium text-slate-600 mt-0.5">
+                      Tự động phân tích tên vị trí, phòng ban & kỹ năng từ Bước 1 để soạn thảo Mô
+                      tả, Yêu cầu & Quyền lợi.
                     </p>
                   </div>
                 </div>
 
-                {/* AI Auto-Generate All JD Content Button */}
                 <button
                   type="button"
                   onClick={() => handleAiGenerateJdContent('all')}
                   disabled={isAiGeneratingContent}
-                  className="px-4 py-2.5 bg-gradient-to-r from-purple-600 via-indigo-600 to-blue-600 hover:from-purple-700 hover:to-blue-700 text-white font-extrabold text-xs rounded-xl transition-all cursor-pointer flex items-center gap-2 shadow-sm border border-purple-400/30 disabled:opacity-40"
-                  title="Gemini AI tự động phân tích thông tin Bước 1 để soạn thảo Mô tả, Yêu cầu & Quyền lợi chuẩn mực"
+                  className="px-4 py-2 bg-gradient-to-r from-[#8B5CF6] via-[#3B82F6] to-[#06B6D4] hover:opacity-95 text-white font-bold text-xs rounded-xl transition-all cursor-pointer flex items-center gap-2 shadow-xs border border-white/30 disabled:opacity-40 shrink-0"
+                  title="Gemini AI tự động soạn thảo toàn bộ nội dung công việc"
                 >
                   {isAiGeneratingContent && aiGeneratingSection === 'all' ? (
                     <>
-                      <Loader2 size={16} className="animate-spin" />
-                      Gemini AI đang viết nội dung...
+                      <Loader2 size={15} className="animate-spin" />
+                      Gemini AI đang soạn thảo...
                     </>
                   ) : (
                     <>
-                      <Sparkles size={16} className="text-amber-300 animate-pulse" />
-                      AI Tự Động Soạn Thảo Toàn Bộ JD
+                      <Sparkles size={15} className="text-amber-300 animate-pulse" />
+                      AI Tự Động Soạn Thảo JD
                     </>
                   )}
                 </button>
@@ -1404,22 +1390,8 @@ export default function JobRequestFormWizard({
           {/* Step 3: Pipeline & Final Settings */}
           {step === 3 && (
             <div className="space-y-6 animate-in fade-in duration-200">
-              <div className="flex items-center gap-3 border-b border-gray-100 pb-4">
-                <div className="p-2 bg-indigo-50 text-indigo-600 rounded-xl">
-                  <Layers size={20} />
-                </div>
-                <div>
-                  <h3 className="text-base font-bold text-gray-900">
-                    Quy trình Tuyển dụng & Trạng thái Khởi tạo
-                  </h3>
-                  <p className="text-xs text-gray-500">
-                    Lựa chọn Mẫu Pipeline phỏng vấn và trạng thái phê duyệt khởi tạo.
-                  </p>
-                </div>
-              </div>
-
               {/* Pipeline template select & Status */}
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
                 <CustomSelect
                   label="Mẫu Quy trình phỏng vấn"
                   required
@@ -1427,11 +1399,11 @@ export default function JobRequestFormWizard({
                   onChange={(val) => handlePipelineTemplateChange(val)}
                   placeholder="-- Chọn Mẫu Pipeline --"
                   options={[
-                    { value: "", label: "-- Chọn Mẫu Pipeline --" },
+                    { value: '', label: '-- Chọn Mẫu Pipeline --' },
                     ...pipelineTemplates.map((t) => ({
                       value: t._id,
-                      label: `${t.name} (${t.stages.length} giai đoạn)`,
-                    })),
+                      label: `${t.name} (${t.stages.length} giai đoạn)`
+                    }))
                   ]}
                 />
 
@@ -1442,68 +1414,70 @@ export default function JobRequestFormWizard({
                   isLocked={isDeptManager}
                   disabled={isDeptManager}
                   options={[
-                    { value: JobStatus.PENDING, label: "Chờ duyệt" },
-                    ...(!isDeptManager ? [
-                      { value: JobStatus.APPROVED, label: "Đã duyệt" },
-                      { value: JobStatus.REJECTED, label: "Từ chối" },
-                      { value: JobStatus.JD_CREATED, label: "Đã tạo JD" },
-                      { value: JobStatus.COMPLETED, label: "Hoàn thành" },
-                    ] : []),
+                    { value: JobStatus.PENDING, label: 'Chờ duyệt' },
+                    ...(!isDeptManager
+                      ? [
+                          { value: JobStatus.APPROVED, label: 'Đã duyệt' },
+                          { value: JobStatus.REJECTED, label: 'Từ chối' },
+                          { value: JobStatus.JD_CREATED, label: 'Đã tạo JD' },
+                          { value: JobStatus.COMPLETED, label: 'Hoàn thành' }
+                        ]
+                      : [])
                   ]}
                 />
               </div>
 
               {/* Pipeline Stage Preview */}
-              <div className="space-y-3 pt-2">
-                <span className="text-xs font-bold text-gray-600 uppercase tracking-wider block">
+              <div className="space-y-2.5 pt-1">
+                <span className="text-xs font-semibold text-slate-700 uppercase tracking-wider block">
                   Các bước trong Quy trình Tuyển dụng đã chọn
                 </span>
 
                 {pipelineStages.length === 0 ? (
-                  <div className="p-10 border border-dashed border-gray-200 rounded-2xl text-center text-gray-400 text-xs italic">
+                  <div className="p-8 border border-dashed border-slate-200/80 rounded-2xl text-center text-slate-400 text-xs italic font-medium bg-white/40">
                     Vui lòng chọn mẫu pipeline ở trên để hiển thị danh sách các bước phỏng vấn
                   </div>
                 ) : (
-                  <div className="space-y-2.5">
+                  <div className="space-y-2">
                     {pipelineStages.map((stg, idx) => (
                       <div
                         key={idx}
-                        className="p-4 bg-gray-50/80 border border-gray-100 rounded-2xl flex items-center justify-between"
+                        className="p-3 bg-white/70 border border-white/90 rounded-xl flex items-center justify-between shadow-2xs"
                       >
-                        <div className="flex items-center gap-3.5">
-                          <span className="w-7 h-7 rounded-full bg-indigo-50 border border-indigo-100 text-indigo-600 font-bold text-xs flex items-center justify-center">
+                        <div className="flex items-center gap-3">
+                          <span className="w-6 h-6 rounded-full bg-[#3B82F6]/10 border border-[#3B82F6]/20 text-[#3B82F6] font-bold text-xs flex items-center justify-center">
                             {idx + 1}
                           </span>
-                          <span className="text-sm font-bold text-gray-800">{stg.name}</span>
+                          <span className="text-xs font-bold text-slate-800">{stg.name}</span>
                           <span
-                            className="w-3.5 h-3.5 rounded-full border border-black/5"
+                            className="w-3 h-3 rounded-full border border-black/5"
                             style={{ backgroundColor: stg.color }}
                           />
                         </div>
 
-                        <div className="flex items-center gap-1.5">
+                        <div className="flex items-center gap-1">
                           <button
                             type="button"
                             onClick={() => handleMoveStage(idx, 'up')}
                             disabled={idx === 0}
-                            className="p-1.5 text-gray-400 hover:text-gray-800 disabled:opacity-30 cursor-pointer rounded-lg hover:bg-white"
+                            className="p-1 text-slate-400 hover:text-slate-800 disabled:opacity-30 cursor-pointer rounded-lg hover:bg-white"
                           >
-                            <ChevronUp size={16} />
+                            <ChevronUp size={15} />
                           </button>
                           <button
                             type="button"
                             onClick={() => handleMoveStage(idx, 'down')}
                             disabled={idx === pipelineStages.length - 1}
-                            className="p-1.5 text-gray-400 hover:text-gray-800 disabled:opacity-30 cursor-pointer rounded-lg hover:bg-white"
+                            className="p-1 text-slate-400 hover:text-slate-800 disabled:opacity-30 cursor-pointer rounded-lg hover:bg-white"
                           >
-                            <ChevronDown size={16} />
+                            <ChevronDown size={15} />
                           </button>
                           <button
                             type="button"
                             onClick={() => handleRemoveStage(idx)}
-                            className="p-1.5 text-rose-400 hover:text-rose-600 cursor-pointer rounded-lg hover:bg-rose-50 ml-1"
+                            className="p-1 text-rose-400 hover:text-rose-600 cursor-pointer rounded-lg hover:bg-rose-50 ml-1"
                           >
-                            <Trash2 size={16} />
+                            <Trash2 size={15} />
                           </button>
                         </div>
                       </div>
@@ -1515,22 +1489,22 @@ export default function JobRequestFormWizard({
           )}
         </div>
 
-        {/* Integrated Sticky Action Footer Bar (Directly Attached to Form Card Bottom) */}
-        <div className="sticky bottom-0 bg-white border-t border-gray-100 px-6 py-4 md:px-8 flex items-center justify-between shadow-md z-30">
+        {/* Floating Glass Sticky Action Footer Bar */}
+        <div className=" bg-white/30 border border-white/80 px-4 py-3 md:px-5 flex items-center justify-between shadow-lg rounded-2xl mt-4">
           {step > 1 ? (
             <button
               type="button"
               onClick={handlePrevStep}
-              className="flex items-center gap-2 px-5 py-2.5 bg-gray-100 hover:bg-gray-200 text-gray-700 font-bold text-sm rounded-xl transition-all cursor-pointer"
+              className="flex items-center gap-2 px-4 py-2 bg-white/80 hover:bg-white text-slate-700 font-semibold text-xs rounded-xl border border-white/90 shadow-2xs transition-all cursor-pointer"
             >
-              <ArrowLeft size={16} />
+              <ArrowLeft size={15} />
               Quay lại (Bước {step - 1})
             </button>
           ) : (
             <button
               type="button"
               onClick={handleBackClick}
-              className="flex items-center gap-2 px-4 py-2.5 bg-gray-50 hover:bg-gray-100 text-gray-600 font-semibold text-sm rounded-xl transition-all cursor-pointer border border-gray-200"
+              className="flex items-center gap-2 px-4 py-2 bg-white/80 hover:bg-white text-slate-600 font-semibold text-xs rounded-xl border border-white/90 shadow-2xs transition-all cursor-pointer"
             >
               Hủy thay đổi
             </button>
@@ -1540,25 +1514,25 @@ export default function JobRequestFormWizard({
             <button
               type="button"
               onClick={handleNextStep}
-              className="flex items-center gap-2 px-6 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-sm rounded-xl transition-all shadow-xs cursor-pointer"
+              className="flex items-center gap-2 px-5 py-2 bg-[#3B82F6] hover:bg-blue-600 text-white font-bold text-xs rounded-xl transition-all shadow-xs cursor-pointer"
             >
               Tiếp theo (Bước {step + 1})
-              <ArrowRight size={16} />
+              <ArrowRight size={15} />
             </button>
           ) : (
             <button
               type="submit"
               disabled={isSubmitting}
-              className="flex items-center gap-2.5 px-7 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-sm rounded-xl transition-all shadow-xs cursor-pointer disabled:opacity-50"
+              className="flex items-center gap-2 px-6 py-2 bg-[#3B82F6] hover:bg-blue-600 text-white font-bold text-xs rounded-xl transition-all shadow-xs cursor-pointer disabled:opacity-50"
             >
               {isSubmitting ? (
                 <>
-                  <Loader2 size={18} className="animate-spin" />
+                  <Loader2 size={16} className="animate-spin" />
                   Đang lưu yêu cầu...
                 </>
               ) : (
                 <>
-                  <Save size={18} />
+                  <Save size={16} />
                   {mode === 'create' ? 'Tạo Yêu Cầu Tuyển Dụng' : 'Cập Nhật Yêu Cầu Tuyển Dụng'}
                 </>
               )}

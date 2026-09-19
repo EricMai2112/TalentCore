@@ -146,7 +146,7 @@ export default function CustomSelect({
     <div
       ref={dropdownRef}
       style={menuStyle}
-      className="bg-white/90 backdrop-blur-2xl border border-white/70 rounded-2xl shadow-xl shadow-blue-500/10 p-1.5 space-y-1 animate-in fade-in zoom-in-95 duration-150 max-h-60 overflow-y-auto"
+      className="bg-white/95 border border-white/80 rounded-2xl shadow-xl shadow-blue-500/10 p-1.5 space-y-1 animate-in fade-in zoom-in-95 duration-150 max-h-60 overflow-y-auto"
     >
       {options.length === 0 ? (
         <div className="p-3 text-center text-xs text-slate-400 font-medium">
@@ -208,8 +208,8 @@ export default function CustomSelect({
             disabled || isLocked
               ? 'bg-slate-100/70 text-slate-400 border-slate-200/80 cursor-not-allowed opacity-75'
               : isOpen
-                ? 'bg-white/95 text-slate-900 border-[#3B82F6] ring-4 ring-[#3B82F6]/15 shadow-sm'
-                : 'bg-white/55 backdrop-blur-md text-slate-800 border-white/65 hover:bg-white/75 hover:border-slate-300 focus:bg-white/90'
+                ? 'bg-white/80 text-slate-900 border-[#3B82F6] ring-4 ring-[#3B82F6]/15 shadow-sm'
+                : 'bg-white/25 text-slate-800 border-white/60 hover:bg-white/40 hover:border-slate-300 focus:bg-white/50'
           } ${error ? 'border-rose-400 ring-4 ring-rose-500/10' : ''} cursor-pointer`}
         >
           <div className="flex items-center gap-2.5 min-w-0">
