@@ -66,7 +66,7 @@ export default function CustomSelect({
       position: 'fixed',
       left: align === 'right' ? 'auto' : `${rect.left}px`,
       right: align === 'right' ? `${window.innerWidth - rect.right}px` : 'auto',
-      minWidth: `${rect.width}px`,
+      minWidth: `${Math.max(rect.width, 180)}px`,
       maxWidth: 'calc(100vw - 32px)',
       zIndex: 99999
     }
@@ -187,8 +187,8 @@ export default function CustomSelect({
   return (
     <div
       className={`space-y-1.5 relative ${
-        className ? className : size === 'sm' ? 'w-auto min-w-[160px]' : 'w-full'
-      }`}
+        className ? className : size === 'sm' ? 'w-full sm:w-44 min-w-[160px]' : 'w-full'
+      } ${size === 'sm' && className.includes('w-auto') ? 'min-w-[170px]' : ''}`}
       ref={containerRef}
     >
       {label && (
@@ -204,7 +204,7 @@ export default function CustomSelect({
           type="button"
           disabled={disabled || isLocked}
           onClick={() => setIsOpen((prev) => !prev)}
-          className={`w-full flex items-center justify-between gap-2.5 ${sizeClasses[size]} transition-all border shadow-2xs outline-none text-left ${
+          className={`w-full flex items-center justify-between gap-2 ${sizeClasses[size]} transition-all border shadow-2xs outline-none text-left ${
             disabled || isLocked
               ? 'bg-slate-100/70 text-slate-400 border-slate-200/80 cursor-not-allowed opacity-75'
               : isOpen
@@ -212,10 +212,10 @@ export default function CustomSelect({
                 : 'bg-white/25 text-slate-800 border-white/60 hover:bg-white/40 hover:border-slate-300 focus:bg-white/50'
           } ${error ? 'border-rose-400 ring-4 ring-rose-500/10' : ''} cursor-pointer`}
         >
-          <div className="flex items-center gap-2.5 min-w-0">
+          <div className="flex items-center gap-2 min-w-0 flex-1 overflow-hidden">
             {icon && <span className="text-[#3B82F6] shrink-0">{icon}</span>}
             <span
-              className={`whitespace-nowrap ${
+              className={`block truncate ${
                 !selectedOption && placeholder ? 'text-slate-400 font-medium' : 'text-slate-900'
               }`}
             >

@@ -12,7 +12,8 @@ import {
   Loader2,
   Users,
   CheckCircle,
-  AlertTriangle
+  AlertTriangle,
+  RotateCcw
 } from 'lucide-react'
 import { CandidateApplication } from '../types/candidate.types'
 import { candidateApi } from '../services/candidate.api'
@@ -23,8 +24,9 @@ import { UserRole } from '@/src/features/users/types/user.types'
 import CandidateDetailModal from './CandidateDetailModal'
 import CandidateNotesModal from './CandidateNotesModal'
 import RejectConfirmModal from './RejectConfirmModal'
-import CustomSelect, { CustomSelectOption } from '@/src/components/common/CustomSelect'
-import CustomPagination from '@/src/components/common/CustomPagination'
+import CandidateStatCards from './CandidateStatCards'
+import { CustomSelect, CustomInput, CustomPagination } from '@/src/components/common'
+import { CustomSelectOption } from '@/src/components/common/CustomSelect'
 
 export default function CandidatesManager() {
   const { user } = useAuth()
@@ -93,8 +95,9 @@ export default function CandidatesManager() {
   const fetchApplications = async () => {
     setIsLoading(true)
     try {
+      const activeDeptId = isRestrictedDept && userDeptId ? userDeptId : (selectedDepartmentId || undefined)
       const data = await candidateApi.getCandidates({
-        departmentId: selectedDepartmentId || undefined,
+        departmentId: activeDeptId,
         search: searchQuery || undefined
       })
       setApplications(data || [])
@@ -108,24 +111,55 @@ export default function CandidatesManager() {
 
   useEffect(() => {
     fetchApplications()
-  }, [selectedDepartmentId])
+  }, [selectedDepartmentId, isRestrictedDept, userDeptId])
+
+  // Scope applications strictly for restricted department roles (e.g. Department Manager)
+  const scopedApplications = useMemo(() => {
+    if (isRestrictedDept && userDeptId) {
+      return applications.filter((app) => {
+        const job = app.jobDescriptionId
+        const deptId = typeof job?.departmentId === 'object' ? job?.departmentId?._id : job?.departmentId
+        if (deptId) {
+          return deptId === userDeptId
+        }
+        return true
+      })
+    }
+    return applications
+  }, [applications, isRestrictedDept, userDeptId])
+
+  // Reset all filters
+  const handleResetFilters = () => {
+    setSearchQuery('')
+    if (!isRestrictedDept) {
+      setSelectedDepartmentId('')
+    }
+    setSelectedPosition('')
+    setSelectedStage('')
+  }
 
   // Department options for CustomSelect
   const departmentSelectOptions: CustomSelectOption[] = useMemo(() => {
     const opts: CustomSelectOption[] = []
     if (!isRestrictedDept) {
       opts.push({ value: '', label: 'Tất cả phòng ban' })
+      departments.forEach((dept) => {
+        opts.push({ value: dept._id, label: dept.name })
+      })
+    } else {
+      const myDept = departments.find((d) => d._id === userDeptId)
+      opts.push({
+        value: userDeptId,
+        label: myDept ? myDept.name : 'Phòng ban của tôi'
+      })
     }
-    departments.forEach((dept) => {
-      opts.push({ value: dept._id, label: dept.name })
-    })
     return opts
-  }, [departments, isRestrictedDept])
+  }, [departments, isRestrictedDept, userDeptId])
 
   // Extract position options from loaded applications & job descriptions
   const positionSelectOptions: CustomSelectOption[] = useMemo(() => {
     const titles = new Set<string>()
-    applications.forEach((app) => {
+    scopedApplications.forEach((app) => {
       if (app.jobDescriptionId?.title) {
         titles.add(app.jobDescriptionId.title)
       }
@@ -135,12 +169,12 @@ export default function CandidatesManager() {
       opts.push({ value: t, label: t })
     })
     return opts
-  }, [applications])
+  }, [scopedApplications])
 
   // Extract stage options
   const stageSelectOptions: CustomSelectOption[] = useMemo(() => {
     const stages = new Set<string>()
-    applications.forEach((app) => {
+    scopedApplications.forEach((app) => {
       const sName = app.stageName || (app as any).currentStage?.name
       if (sName) {
         stages.add(sName)
@@ -157,11 +191,11 @@ export default function CandidatesManager() {
       })
     }
     return opts
-  }, [applications])
+  }, [scopedApplications])
 
   // Client-side filtering for search, position, stage
   const filteredApplications = useMemo(() => {
-    return applications.filter((app) => {
+    return scopedApplications.filter((app) => {
       const candidate = app.candidateId
       const u = candidate?.userId
       const name = u?.name || candidate?.fullName || candidate?.profileName || ''
@@ -190,32 +224,32 @@ export default function CandidatesManager() {
 
       return true
     })
-  }, [applications, searchQuery, selectedPosition, selectedStage])
+  }, [scopedApplications, searchQuery, selectedPosition, selectedStage])
 
   const getAiScoreBadge = (score?: number | null) => {
     if (score === null || score === undefined) {
       return (
-        <span className="px-3 py-1 text-xs font-bold rounded-full bg-slate-100 text-slate-500">
+        <span className="px-2.5 py-0.5 text-[11px] font-bold rounded-full bg-slate-100 text-slate-500 border border-slate-200">
           N/A
         </span>
       )
     }
     if (score >= 80) {
       return (
-        <span className="px-3 py-1 text-xs font-extrabold rounded-full bg-emerald-100 text-emerald-700">
+        <span className="px-2.5 py-0.5 text-[11px] font-extrabold rounded-full bg-emerald-500/15 text-emerald-700 border border-emerald-300/50">
           {score}/100
         </span>
       )
     }
     if (score >= 50) {
       return (
-        <span className="px-3 py-1 text-xs font-extrabold rounded-full bg-amber-100 text-amber-700">
+        <span className="px-2.5 py-0.5 text-[11px] font-extrabold rounded-full bg-amber-500/15 text-amber-700 border border-amber-300/50">
           {score}/100
         </span>
       )
     }
     return (
-      <span className="px-3 py-1 text-xs font-extrabold rounded-full bg-rose-100 text-rose-700">
+      <span className="px-2.5 py-0.5 text-[11px] font-extrabold rounded-full bg-rose-500/15 text-rose-700 border border-rose-300/50">
         {score}/100
       </span>
     )
@@ -225,40 +259,40 @@ export default function CandidatesManager() {
     const s = app.stageName || (app as any).currentStage?.name || 'Mới'
     const customColor = app.stageColor || (app as any).currentStage?.color
 
-    let style = 'bg-slate-100 text-slate-700 border-slate-200'
+    let style = 'bg-slate-500/10 text-slate-700 border-slate-300/50'
     let dotColor = 'bg-slate-500'
 
     const sLower = s.toLowerCase()
     if (sLower.includes('tech')) {
-      style = 'bg-blue-50 text-blue-600 border-blue-200'
-      dotColor = 'bg-blue-500'
+      style = 'bg-blue-500/15 text-[#3B82F6] border-blue-300/50'
+      dotColor = 'bg-[#3B82F6]'
     } else if (sLower.includes('phone')) {
-      style = 'bg-purple-50 text-purple-600 border-purple-200'
+      style = 'bg-purple-500/15 text-purple-700 border-purple-300/50'
       dotColor = 'bg-purple-500'
     } else if (sLower.includes('culture') || sLower.includes('văn hóa')) {
-      style = 'bg-cyan-50 text-cyan-600 border-cyan-200'
+      style = 'bg-cyan-500/15 text-cyan-700 border-cyan-300/50'
       dotColor = 'bg-cyan-500'
     } else if (sLower.includes('offer')) {
-      style = 'bg-emerald-50 text-emerald-600 border-emerald-200'
+      style = 'bg-emerald-500/15 text-emerald-700 border-emerald-300/50'
       dotColor = 'bg-emerald-500'
     } else if (sLower.includes('từ chối') || sLower.includes('reject')) {
-      style = 'bg-rose-50 text-rose-600 border-rose-200'
+      style = 'bg-rose-500/15 text-rose-700 border-rose-300/50'
       dotColor = 'bg-rose-500'
     } else if (sLower.includes('sàng lọc') || sLower.includes('filter')) {
-      style = 'bg-amber-50 text-amber-600 border-amber-200'
+      style = 'bg-amber-500/15 text-amber-700 border-amber-300/50'
       dotColor = 'bg-amber-500'
     } else if (sLower.includes('mới') || sLower.includes('new')) {
-      style = 'bg-slate-100 text-slate-700 border-slate-200'
+      style = 'bg-slate-500/10 text-slate-700 border-slate-300/50'
       dotColor = 'bg-slate-500'
     } else if (customColor) {
       return (
         <span
           style={{
-            backgroundColor: `${customColor}15`,
-            borderColor: `${customColor}40`,
+            backgroundColor: `${customColor}20`,
+            borderColor: `${customColor}50`,
             color: customColor
           }}
-          className="px-3 py-1 rounded-full text-xs font-bold border inline-flex items-center gap-1.5"
+          className="px-2.5 py-0.5 rounded-full text-[11px] font-bold border inline-flex items-center gap-1.5"
         >
           <span style={{ backgroundColor: customColor }} className="w-1.5 h-1.5 rounded-full" />
           <span>{s}</span>
@@ -268,7 +302,7 @@ export default function CandidatesManager() {
 
     return (
       <span
-        className={`px-3 py-1 rounded-full text-xs font-bold border inline-flex items-center gap-1.5 ${style}`}
+        className={`px-2.5 py-0.5 rounded-full text-[11px] font-bold border inline-flex items-center gap-1.5 ${style}`}
       >
         <span className={`w-1.5 h-1.5 rounded-full ${dotColor}`} />
         <span>{s}</span>
@@ -299,7 +333,7 @@ export default function CandidatesManager() {
   }
 
   return (
-    <div className="p-2 mx-auto space-y-4 overflow-x-hidden md:p-2 max-w-7xl text-slate-900">
+    <div className="space-y-4">
       {/* Floating Notification Toast */}
       {toast && (
         <div
@@ -318,29 +352,26 @@ export default function CandidatesManager() {
         </div>
       )}
 
+      {/* Top Stat Cards Section */}
+      <CandidateStatCards applications={scopedApplications} />
 
       {/* Filter Toolbar */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-white/75 backdrop-blur-md p-4 rounded-3xl border border-white/85 shadow-md shadow-[#1261A6]/5">
-        {/* Left: Candidate Search */}
-        <div className="relative flex-1 min-w-[200px] max-w-md">
-          <input
-            type="text"
-            placeholder="Tìm kiếm ứng viên..."
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            className="w-full pl-10 pr-4 py-2.5 bg-white/60 border border-slate-200/80 rounded-2xl text-xs font-bold text-slate-800 focus:outline-none focus:ring-4 focus:ring-[#1261A6]/10 focus:border-[#1261A6] focus:bg-white transition-all placeholder:text-slate-400"
-          />
-          <Search
-            size={16}
-            className="absolute left-3.5 top-3 text-slate-400 pointer-events-none"
-          />
-        </div>
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <div className="flex flex-wrap items-center gap-2.5 flex-1 min-w-0">
+          {/* Search Input for Candidate Name & Email & Position */}
+          <div className="w-full sm:w-64 lg:w-72">
+            <CustomInput
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              placeholder="Tìm kiếm ứng viên..."
+              icon={<Search size={15} />}
+              className="!py-1.5 !rounded-xl text-xs"
+            />
+          </div>
 
-        {/* Right Controls: CustomSelect for Department, Position, Stage */}
-        <div className="flex flex-wrap items-center gap-3">
           {/* Department Select */}
           <CustomSelect
-            value={selectedDepartmentId}
+            value={isRestrictedDept && userDeptId ? userDeptId : selectedDepartmentId}
             onChange={setSelectedDepartmentId}
             options={departmentSelectOptions}
             placeholder="Tất cả phòng ban"
@@ -362,50 +393,60 @@ export default function CandidatesManager() {
             className="w-full sm:w-auto"
           />
 
-          {/* Stage Select with right alignment to prevent horizontal scroll */}
+          {/* Stage Select */}
           <CustomSelect
             value={selectedStage}
             onChange={setSelectedStage}
             options={stageSelectOptions}
             placeholder="Tất cả giai đoạn"
-            align="right"
             icon={<Layers size={14} />}
             size="sm"
             className="w-full sm:w-auto"
           />
+
+          {/* Reset Filters Button */}
+          <button
+            type="button"
+            onClick={handleResetFilters}
+            className="px-3 py-1.5 rounded-xl border border-white/80 bg-white/60 hover:bg-white text-slate-600 hover:text-rose-600 text-xs font-semibold flex items-center gap-1.5 shadow-2xs transition-all cursor-pointer shrink-0"
+            title="Đặt lại tất cả bộ lọc"
+          >
+            <RotateCcw size={14} />
+            <span>Đặt lại</span>
+          </button>
         </div>
       </div>
 
-      {/* Table Section */}
-      <div className="overflow-hidden bg-white/75 backdrop-blur-md border border-white/85 shadow-md shadow-[#1261A6]/5 rounded-3xl">
+      {/* Glassmorphism Table Section */}
+      <div className="overflow-hidden bg-white/20 border border-white/60 shadow-xl shadow-blue-500/5 rounded-2xl transition-all duration-300">
         {isLoading ? (
           <div className="flex flex-col items-center justify-center py-20 text-slate-400">
-            <Loader2 size={32} className="mb-2 text-[#1261A6] animate-spin" />
+            <Loader2 size={32} className="mb-2 text-[#3B82F6] animate-spin" />
             <p className="text-xs font-medium">Đang tải dữ liệu ứng viên...</p>
           </div>
         ) : filteredApplications.length === 0 ? (
-          <div className="flex flex-col items-center justify-center py-20 text-slate-400">
-            <Users size={40} className="mb-3 text-slate-300" />
+          <div className="flex flex-col items-center justify-center py-16 text-slate-400 bg-white/40">
+            <Users size={38} className="mb-2.5 text-slate-300 stroke-[1.5]" />
             <p className="text-sm font-bold text-slate-700">Không tìm thấy ứng viên nào</p>
             <p className="mt-1 text-xs text-slate-400">
-              Thử thay đổi bộ lọc tìm kiếm hoặc phòng ban
+              Thử điều chỉnh bộ lọc tìm kiếm hoặc vị trí phía trên
             </p>
           </div>
         ) : (
           <div className="overflow-x-auto">
-            <table className="w-full text-left border-collapse">
+            <table className="w-full text-left border-collapse text-xs">
               <thead>
-                <tr className="border-b border-slate-200/60 bg-slate-100/70 backdrop-blur-md text-[11px] font-bold text-slate-600 uppercase tracking-wider">
-                  <th className="px-6 py-4">Ứng viên</th>
-                  <th className="px-4 py-4">Vị trí</th>
-                  <th className="px-4 py-4 text-center">AI Score</th>
-                  <th className="px-4 py-4 text-center">Giai đoạn</th>
-                  <th className="px-4 py-4">Người phụ trách</th>
-                  <th className="px-4 py-4">Ngày ứng tuyển</th>
-                  <th className="px-6 py-4 text-center">Thao tác</th>
+                <tr className="border-b border-white/60 bg-white/30 text-[11px] font-bold text-slate-500 uppercase tracking-wider">
+                  <th className="px-5 py-3.5">Ứng viên</th>
+                  <th className="px-4 py-3.5">Vị trí</th>
+                  <th className="px-4 py-3.5 text-center">AI Score</th>
+                  <th className="px-4 py-3.5 text-center">Giai đoạn</th>
+                  <th className="px-4 py-3.5">Người phụ trách</th>
+                  <th className="px-4 py-3.5">Ngày ứng tuyển</th>
+                  <th className="px-5 py-3.5 text-center">Thao tác</th>
                 </tr>
               </thead>
-              <tbody className="text-xs divide-y divide-slate-200/50">
+              <tbody className="divide-y divide-slate-100/70">
                 {filteredApplications
                   .slice((currentPage - 1) * pageSize, currentPage * pageSize)
                   .map((app) => {
@@ -421,77 +462,77 @@ export default function CandidatesManager() {
                     const initials = getInitials(name)
 
                     return (
-                      <tr key={app._id} className="transition-colors hover:bg-[#D5E7F2]/40 group">
+                      <tr key={app._id} className="hover:bg-white/50 transition-colors group">
                         {/* Candidate Name & Avatar */}
-                        <td className="px-6 py-4">
+                        <td className="px-5 py-3.5">
                           <div className="flex items-center gap-3">
-                            <div className="flex items-center justify-center w-10 h-10 text-xs font-extrabold text-[#1261A6] bg-[#1261A6]/12 border border-[#1261A6]/20 rounded-full shrink-0">
+                            <div className="w-9 h-9 rounded-xl font-black bg-blue-500/10 text-[#3B82F6] border border-blue-200/60 flex items-center justify-center shrink-0 text-xs shadow-2xs">
                               {initials}
                             </div>
-                            <div>
-                              <p className="text-sm font-bold transition-colors text-slate-900 group-hover:text-[#1261A6]">
+                            <div className="min-w-0">
+                              <p className="text-sm font-bold text-slate-900 group-hover:text-[#3B82F6] transition-colors truncate">
                                 {name}
                               </p>
-                              <p className="text-slate-400 font-medium text-[11px] mt-0.5">{email}</p>
+                              <p className="text-slate-400 font-medium text-[11px] truncate">{email}</p>
                             </div>
                           </div>
                         </td>
 
                         {/* Position */}
-                        <td className="px-4 py-4 font-medium text-slate-700">{position}</td>
+                        <td className="px-4 py-3.5 font-medium text-slate-700">{position}</td>
 
                         {/* AI Score */}
-                        <td className="px-4 py-4 text-center">{getAiScoreBadge(aiScore)}</td>
+                        <td className="px-4 py-3.5 text-center">{getAiScoreBadge(aiScore)}</td>
 
                         {/* Stage Badge */}
-                        <td className="px-4 py-4 text-center">{getStageBadge(app)}</td>
+                        <td className="px-4 py-3.5 text-center">{getStageBadge(app)}</td>
 
                         {/* Person in charge */}
-                        <td className="px-4 py-4 italic font-medium text-slate-600">
+                        <td className="px-4 py-3.5 font-medium text-slate-600">
                           {interviewer === 'Chưa phân công' ? (
-                            <span className="text-slate-400">{interviewer}</span>
+                            <span className="text-slate-400 italic">{interviewer}</span>
                           ) : (
                             <span className="font-semibold text-slate-800">{interviewer}</span>
                           )}
                         </td>
 
                         {/* Applied Date */}
-                        <td className="px-4 py-4 font-medium text-slate-500">{appliedDate}</td>
+                        <td className="px-4 py-3.5 font-medium text-slate-500">{appliedDate}</td>
 
                         {/* Actions */}
-                        <td className="px-6 py-4 text-center">
-                          <div className="flex items-center justify-center gap-1.5">
+                        <td className="px-5 py-3.5 text-center">
+                          <div className="flex items-center justify-center gap-1">
                             {/* View Detail Modal */}
                             <button
                               type="button"
                               onClick={() => setDetailApp(app)}
-                              className="p-1.5 text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-xl transition-all cursor-pointer"
+                              className="p-1.5 rounded-xl border border-white/80 bg-white/60 hover:bg-white text-slate-500 hover:text-[#3B82F6] shadow-2xs transition-all cursor-pointer"
                               title="Xem chi tiết"
                             >
-                              <Eye size={16} />
+                              <Eye size={15} />
                             </button>
 
                             {/* Notes Modal */}
                             <button
                               type="button"
                               onClick={() => setNotesApp(app)}
-                              className="p-1.5 text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-xl transition-all cursor-pointer relative"
+                              className="p-1.5 rounded-xl border border-white/80 bg-white/60 hover:bg-white text-slate-500 hover:text-[#3B82F6] shadow-2xs transition-all cursor-pointer relative"
                               title="Ghi chú ứng viên"
                             >
-                              <FileText size={16} />
+                              <FileText size={15} />
                               {app.notes && app.notes.length > 0 && (
-                                <span className="absolute w-2 h-2 bg-indigo-500 rounded-full top-1 right-1" />
+                                <span className="absolute w-2 h-2 bg-[#3B82F6] rounded-full top-1 right-1" />
                               )}
                             </button>
 
-                            {/* Reject / Delete Modal Trigger */}
+                            {/* Reject Modal Trigger */}
                             <button
                               type="button"
                               onClick={() => setRejectApp(app)}
-                              className="p-1.5 text-rose-400 hover:text-rose-600 hover:bg-rose-50 rounded-xl transition-all cursor-pointer"
+                              className="p-1.5 rounded-xl border border-white/80 bg-white/60 hover:bg-white text-rose-500 hover:text-rose-600 shadow-2xs transition-all cursor-pointer"
                               title="Từ chối ứng viên"
                             >
-                              <XCircle size={16} />
+                              <XCircle size={15} />
                             </button>
                           </div>
                         </td>
@@ -546,3 +587,4 @@ export default function CandidatesManager() {
     </div>
   )
 }
+
