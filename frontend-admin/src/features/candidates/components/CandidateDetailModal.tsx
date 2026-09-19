@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
+import { createPortal } from 'react-dom'
 import {
   X,
   Mail,
@@ -40,6 +41,11 @@ export default function CandidateDetailModal({ application, onClose }: Candidate
   const [activeTab, setActiveTab] = useState<'overview' | 'evaluation' | 'profile'>('overview')
   const [renderApp, setRenderApp] = useState<CandidateApplication | null>(application)
   const [isOpen, setIsOpen] = useState(false)
+  const [isMounted, setIsMounted] = useState(false)
+
+  useEffect(() => {
+    setIsMounted(true)
+  }, [])
 
   useEffect(() => {
     if (application) {
@@ -77,7 +83,7 @@ export default function CandidateDetailModal({ application, onClose }: Candidate
     return () => window.removeEventListener('keydown', handleKeyDown)
   }, [renderApp, isOpen])
 
-  if (!renderApp) return null
+  if (!renderApp || !isMounted) return null
 
   const candidate = renderApp.candidateId
   const job = renderApp.jobDescriptionId
@@ -102,11 +108,11 @@ export default function CandidateDetailModal({ application, onClose }: Candidate
 
   const initial = (name.trim().charAt(0) || 'U').toUpperCase()
 
-  return (
+  const modalContent = (
     <div className="fixed inset-0 z-50 overflow-hidden flex justify-end">
       {/* Backdrop with Fade In / Fade Out animation */}
       <div
-        className={`fixed inset-0 bg-[#1261A6]/20 backdrop-blur-md transition-opacity duration-300 ease-in-out ${
+        className={`fixed inset-0 bg-slate-950/40 backdrop-blur-md transition-opacity duration-300 ease-in-out ${
           isOpen ? 'opacity-100' : 'opacity-0'
         }`}
         onClick={handleClose}
@@ -114,21 +120,21 @@ export default function CandidateDetailModal({ application, onClose }: Candidate
 
       {/* Slide-over Right Drawer with Slide-In (Right to Left) and Slide-Out (Left to Right) Animation */}
       <div
-        className={`relative w-full max-w-2xl lg:max-w-3xl xl:max-w-4xl h-full bg-white/92 backdrop-blur-2xl shadow-2xl shadow-[#1261A6]/15 flex flex-col z-10 text-slate-900 border-l border-white transition-transform duration-300 ease-out ${
+        className={`relative w-full max-w-2xl lg:max-w-3xl xl:max-w-4xl h-full bg-white/95 backdrop-blur-2xl shadow-2xl shadow-blue-500/10 flex flex-col z-10 text-slate-900 border-l border-white/60 transition-transform duration-300 ease-out ${
           isOpen ? 'translate-x-0' : 'translate-x-full'
         }`}
         onClick={(e) => e.stopPropagation()}
       >
         {/* Top Header */}
-        <div className="px-6 py-5 border-b border-slate-200/60 bg-[#1261A6]/5 flex items-start justify-between gap-4 shrink-0">
+        <div className="px-6 py-5 border-b border-white/60 bg-blue-500/5 flex items-start justify-between gap-4 shrink-0">
           <div className="flex items-start gap-4">
-            <div className="w-13 h-13 rounded-2xl bg-[#1261A6] text-white font-extrabold text-xl flex items-center justify-center shadow-md shadow-[#1261A6]/20 shrink-0">
+            <div className="w-13 h-13 rounded-2xl bg-[#3B82F6] text-white font-extrabold text-xl flex items-center justify-center shadow-md shadow-blue-500/20 shrink-0">
               {initial}
             </div>
             <div className="space-y-1">
               <div className="flex items-center gap-2.5 flex-wrap">
                 <h3 className="text-xl font-bold text-slate-900 leading-tight">{name}</h3>
-                <span className="px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-[#2A95BF]/15 text-[#1261A6] border border-[#2A95BF]/30">
+                <span className="px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-blue-500/15 text-[#3B82F6] border border-blue-300/40">
                   {deptName}
                 </span>
                 {candidate?.currentLevel && (
@@ -958,4 +964,7 @@ export default function CandidateDetailModal({ application, onClose }: Candidate
       </div>
     </div>
   )
+
+  return createPortal(modalContent, document.body)
 }
+

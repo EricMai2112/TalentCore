@@ -1,6 +1,7 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { createPortal } from "react-dom";
 import { AlertTriangle, XCircle, Loader2 } from "lucide-react";
 import { CandidateApplication } from "../types/candidate.types";
 import { candidateApi } from "../services/candidate.api";
@@ -22,8 +23,13 @@ export default function RejectConfirmModal({
   const { user } = useAuth();
   const [rejectReason, setRejectReason] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isMounted, setIsMounted] = useState(false);
 
-  if (!application) return null;
+  useEffect(() => {
+    setIsMounted(true);
+  }, []);
+
+  if (!application || !isMounted) return null;
 
   const candidate = application.candidateId;
   const job = application.jobDescriptionId;
@@ -61,16 +67,16 @@ export default function RejectConfirmModal({
     }
   };
 
-  return (
+  const modalContent = (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
       {/* Backdrop */}
       <div
-        className="fixed inset-0 bg-slate-950/40 backdrop-blur-xs transition-opacity animate-in fade-in duration-200"
+        className="fixed inset-0 bg-slate-950/40 backdrop-blur-md transition-opacity animate-in fade-in duration-200"
         onClick={onClose}
       />
 
       {/* Dialog */}
-      <div className="relative w-full max-w-md bg-white rounded-3xl shadow-2xl z-10 overflow-hidden p-6 space-y-5 animate-in zoom-in-95 duration-200 text-slate-900 border border-slate-100">
+      <div className="relative w-full max-w-md bg-white/95 backdrop-blur-2xl rounded-3xl shadow-2xl shadow-rose-500/10 z-10 overflow-hidden p-6 space-y-5 animate-in zoom-in-95 duration-200 text-slate-900 border border-white/80">
         {/* Header with Warning Icon */}
         <div className="flex items-start gap-3.5">
           <div className="w-10 h-10 rounded-2xl bg-rose-50 border border-rose-100 text-rose-500 flex items-center justify-center shrink-0">
@@ -132,4 +138,7 @@ export default function RejectConfirmModal({
       </div>
     </div>
   );
+
+  return createPortal(modalContent, document.body);
 }
+

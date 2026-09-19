@@ -1,6 +1,7 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { createPortal } from "react-dom";
 import { X, FileText, Plus, Loader2, CheckCircle, AlertTriangle } from "lucide-react";
 import { CandidateApplication, CandidateNote } from "../types/candidate.types";
 import { useAuth } from "@/src/providers/AuthProvider";
@@ -24,8 +25,13 @@ export default function CandidateNotesModal({
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [errorMsg, setErrorMsg] = useState("");
   const [successMsg, setSuccessMsg] = useState("");
+  const [isMounted, setIsMounted] = useState(false);
 
-  if (!application) return null;
+  useEffect(() => {
+    setIsMounted(true);
+  }, []);
+
+  if (!application || !isMounted) return null;
 
   const candidate = application.candidateId;
   const job = application.jobDescriptionId;
@@ -79,22 +85,22 @@ export default function CandidateNotesModal({
     }
   };
 
-  return (
+  const modalContent = (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
       {/* Backdrop */}
       <div
-        className="fixed inset-0 bg-slate-950/40 backdrop-blur-xs transition-opacity animate-in fade-in duration-200"
+        className="fixed inset-0 bg-slate-950/40 backdrop-blur-md transition-opacity animate-in fade-in duration-200"
         onClick={onClose}
       />
 
       {/* Modal Dialog */}
-      <div className="relative w-full max-w-lg bg-white rounded-3xl shadow-2xl z-10 overflow-hidden flex flex-col max-h-[90vh] animate-in zoom-in-95 duration-200 text-slate-900 border border-slate-200/80">
+      <div className="relative w-full max-w-lg bg-white/95 backdrop-blur-2xl rounded-3xl shadow-2xl shadow-blue-500/10 z-10 overflow-hidden flex flex-col max-h-[90vh] animate-in zoom-in-95 duration-200 text-slate-900 border border-white/80">
         {/* Header */}
-        <div className="px-6 pt-6 pb-4 flex items-start justify-between border-b border-slate-100">
+        <div className="px-6 pt-6 pb-4 flex items-start justify-between border-b border-slate-100/80 bg-blue-500/5">
           <div>
             <h2 className="text-xl font-bold text-slate-900 tracking-tight">Ghi chú ứng viên</h2>
             <p className="text-xs font-semibold text-slate-400 mt-0.5">
-              {candidateName} — <span className="text-slate-600">{jobTitle}</span>
+              {candidateName} — <span className="text-[#3B82F6] font-bold">{jobTitle}</span>
             </p>
           </div>
 
@@ -126,7 +132,7 @@ export default function CandidateNotesModal({
           {/* List of existing notes */}
           {notesList.length === 0 ? (
             <div className="py-8 flex flex-col items-center justify-center text-center border-b border-slate-100">
-              <div className="w-12 h-12 rounded-2xl bg-slate-100 text-slate-400 flex items-center justify-center mb-3">
+              <div className="w-12 h-12 rounded-2xl bg-blue-50 text-[#3B82F6] flex items-center justify-center mb-3">
                 <FileText size={24} />
               </div>
               <p className="text-sm font-bold text-slate-700">Chưa có ghi chú nào</p>
@@ -180,7 +186,7 @@ export default function CandidateNotesModal({
         </div>
 
         {/* Modal Footer */}
-        <div className="px-6 py-4 bg-slate-50/50 border-t border-slate-100 flex items-center justify-end gap-3">
+        <div className="px-6 py-4 bg-slate-50/60 border-t border-slate-100 flex items-center justify-end gap-3">
           <CustomButton
             variant="secondary"
             size="sm"
@@ -202,4 +208,7 @@ export default function CandidateNotesModal({
       </div>
     </div>
   );
+
+  return createPortal(modalContent, document.body);
 }
+
