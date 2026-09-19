@@ -282,11 +282,11 @@ export default function JobRequestTable({
       </div>
 
       {/* Table grid */}
-      <div className="overflow-hidden bg-white/60 backdrop-blur-xl border border-white/80 shadow-xl shadow-blue-500/5 rounded-2xl transition-all duration-300">
+      <div className="overflow-hidden bg-white/20 border border-white/60 shadow-xl shadow-blue-500/5 rounded-2xl transition-all duration-300">
         <div className="overflow-x-auto">
           <table className="w-full text-left border-collapse text-xs">
             <thead>
-              <tr className="border-b border-white/70 bg-white/40 backdrop-blur-md text-[11px] font-bold text-slate-500 uppercase tracking-wider">
+              <tr className="border-b border-white/60 bg-white/30 text-[11px] font-bold text-slate-500 uppercase tracking-wider">
                 <th className="px-5 py-3.5">Vị trí tuyển dụng</th>
                 <th className="px-4 py-3.5">Phòng ban</th>
                 <th className="px-4 py-3.5 text-center">Số lượng</th>
@@ -330,7 +330,7 @@ export default function JobRequestTable({
                     return (
                       <tr
                         key={job._id}
-                        className="hover:bg-white/50 transition-all duration-150 group border-b border-slate-100/70"
+                        className="hover:bg-white/40 transition-all duration-150 group border-b border-slate-100/70"
                       >
                         {/* Job Title & Details */}
                         <td className="px-5 py-3.5">
@@ -343,8 +343,10 @@ export default function JobRequestTable({
                                 {job.title}
                               </span>
                               <span className="text-[11px] text-slate-400 font-medium block truncate mt-0.5">
-                                ${(job.minimumSalary ?? 0).toLocaleString('en-US')} - $
-                                {(job.maximumSalary ?? 0).toLocaleString('en-US')} · {job.location}
+                                {(job.minimumSalary === 0 && job.maximumSalary === 0) || (!job.minimumSalary && !job.maximumSalary)
+                                  ? 'Thỏa thuận'
+                                  : `${(job.minimumSalary ?? 0).toLocaleString('vi-VN')} - ${(job.maximumSalary ?? 0).toLocaleString('vi-VN')} VNĐ`
+                                } · {job.location}
                               </span>
                             </div>
                           </div>
@@ -356,11 +358,7 @@ export default function JobRequestTable({
                         </td>
 
                         {/* Headcount */}
-                        <td className="px-4 py-3.5 text-center">
-                          <span className="inline-flex items-center justify-center min-w-[28px] h-6 px-2.5 rounded-full bg-white/80 border border-white/90 font-bold text-slate-800 text-xs shadow-2xs backdrop-blur-sm">
-                            {job.headcount}
-                          </span>
-                        </td>
+                        <td className="px-4 py-3.5 text-center">{job.headcount}</td>
 
                         {/* Priority */}
                         <td className="px-4 py-3.5">
@@ -445,7 +443,7 @@ export default function JobRequestTable({
                   ? { bottom: `${window.innerHeight - activeMenu.rect.top + 6}px` }
                   : { top: `${activeMenu.rect.bottom + 6}px` })
               }}
-              className="min-w-[195px] bg-white/90 backdrop-blur-2xl border border-white/80 rounded-2xl shadow-xl shadow-blue-500/10 p-1.5 text-left animate-in fade-in zoom-in-95 duration-150"
+              className="min-w-[195px] bg-white/60 backdrop-blur-sm border border-white/80 rounded-2xl shadow-xl shadow-blue-500/10 p-1.5 text-left animate-in fade-in zoom-in-95 duration-150"
             >
               {/* Xem chi tiết */}
               <button

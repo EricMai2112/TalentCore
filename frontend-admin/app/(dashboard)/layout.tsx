@@ -18,7 +18,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
       <Sidebar />
       <div className="flex flex-col flex-1 overflow-hidden pr-2 pb-2">
         <Topbar />
-        <main className="flex-1 overflow-y-auto p-4 bg-white/70 backdrop-blur-xl border border-white/90 rounded-3xl shadow-xl shadow-[#1261A6]/8 transition-all">
+        <main className="flex-1 overflow-y-auto p-4 bg-white/70 backdrop-blur-xl border border-white/90 rounded-3xl shadow-xl shadow-[#1261A6]/8 transition-all [scrollbar-width:thin] [scrollbar-color:rgba(59,130,246,0.6)_transparent] [&::-webkit-scrollbar]:w-1.5 [&::-webkit-scrollbar-track]:bg-transparent [&::-webkit-scrollbar-thumb]:bg-[#3B82F6]/50 [&::-webkit-scrollbar-thumb]:rounded-full hover:[&::-webkit-scrollbar-thumb]:bg-[#2563EB]">
           {children}
         </main>
       </div>

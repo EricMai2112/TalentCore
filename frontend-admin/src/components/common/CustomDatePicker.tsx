@@ -169,8 +169,8 @@ export default function CustomDatePicker({
             disabled
               ? "bg-slate-100/70 text-slate-400 border-slate-200/80 cursor-not-allowed opacity-75"
               : isOpen
-              ? "bg-white/95 text-slate-900 border-[#3B82F6] ring-4 ring-[#3B82F6]/15 shadow-sm"
-              : "bg-white/55 backdrop-blur-md text-slate-800 border-white/65 hover:bg-white/75 hover:border-slate-300 focus:bg-white/90"
+              ? "bg-white/80 text-slate-900 border-[#3B82F6] ring-4 ring-[#3B82F6]/15 shadow-sm"
+              : "bg-white/25 text-slate-800 border-white/60 hover:bg-white/40 hover:border-slate-300 focus:bg-white/50"
           } ${error ? "border-rose-400 ring-4 ring-rose-500/10" : ""} cursor-pointer`}
         >
           <div className="flex items-center gap-2.5">
@@ -189,7 +189,7 @@ export default function CustomDatePicker({
 
         {/* Calendar Dropdown Panel */}
         {isOpen && !disabled && (
-          <div className="absolute left-0 top-full mt-2 w-80 z-50 bg-white/90 backdrop-blur-2xl border border-white/70 rounded-2xl shadow-xl shadow-blue-500/10 p-4 animate-in fade-in zoom-in-95 duration-150">
+          <div className="absolute left-0 top-full mt-2 w-80 z-50 bg-white/95 border border-white/80 rounded-2xl shadow-xl shadow-blue-500/10 p-4 animate-in fade-in zoom-in-95 duration-150">
             {/* Header Month Navigation */}
             <div className="flex items-center justify-between mb-3 pb-3 border-b border-slate-200/60">
               <button

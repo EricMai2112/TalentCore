@@ -86,7 +86,7 @@ export function JobRequestStatCards({ jobs, className = '' }: JobRequestStatCard
         return (
           <div
             key={card.id}
-            className="relative bg-white/85 backdrop-blur-md border border-slate-200/80 rounded-2xl p-3 px-3.5 shadow-2xs hover:shadow-xs transition-all duration-200 overflow-hidden flex items-center gap-3"
+            className="relative bg-white/25 border border-white/60 rounded-2xl p-3 px-3.5 shadow-md shadow-blue-500/5 hover:bg-white/35 transition-all duration-200 overflow-hidden flex items-center gap-3"
           >
             {/* Ambient Accent background */}
             <div
