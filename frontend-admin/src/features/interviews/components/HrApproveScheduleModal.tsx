@@ -1,6 +1,7 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { createPortal } from "react-dom";
 import { X, Calendar, Clock, Video, MapPin, UserCheck, CheckCircle2, Loader2, Info } from "lucide-react";
 import { InterviewItem, LocationType } from "../types/interview.types";
 import { interviewsApi } from "../services/interviews.api";
@@ -18,10 +19,15 @@ export function HrApproveScheduleModal({
   interview,
   onSuccess,
 }: HrApproveScheduleModalProps) {
+  const [mounted, setMounted] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [errorMsg, setErrorMsg] = useState("");
 
-  if (!isOpen || !interview) return null;
+  useEffect(() => {
+    setMounted(true);
+  }, []);
+
+  if (!isOpen || !interview || !mounted) return null;
 
   const cand = interview.candidateId;
   const candName = typeof cand === "object" ? cand?.fullName || cand?.name : "Ứng viên";
@@ -58,16 +64,16 @@ export function HrApproveScheduleModal({
     }
   };
 
-  return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-xs animate-in fade-in duration-200">
-      <div className="bg-white rounded-3xl max-w-xl w-full shadow-2xl border border-slate-100 overflow-hidden flex flex-col max-h-[90vh]">
+  const modalContent = (
+    <div className="fixed inset-0 z-[9999] flex items-center justify-center p-4 bg-slate-950/40 backdrop-blur-xs animate-in fade-in duration-200">
+      <div className="bg-white/95 backdrop-blur-xl rounded-3xl max-w-xl w-full shadow-2xl border border-white/60 overflow-hidden flex flex-col max-h-[90vh] animate-in zoom-in-95 duration-200 text-slate-900">
         {/* Header */}
-        <div className="px-6 py-5 border-b border-slate-100 flex items-start justify-between bg-slate-50/50">
+        <div className="px-6 py-5 border-b border-slate-100 flex items-start justify-between bg-gradient-to-r from-emerald-50/60 via-white to-blue-50/50">
           <div>
-            <h3 className="font-bold text-lg text-slate-900 leading-snug">
+            <h3 className="font-extrabold text-lg text-slate-900 leading-snug">
               Xem trước & Phê duyệt Lịch phỏng vấn
             </h3>
-            <p className="text-xs font-semibold text-slate-800 mt-1">
+            <p className="text-xs font-semibold text-slate-600 mt-1">
               Ứng viên: <strong className="text-slate-800 font-bold">{candName} - {jobTitle}</strong>
             </p>
           </div>
@@ -98,7 +104,7 @@ export function HrApproveScheduleModal({
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1 text-xs">
             {/* Ngày phỏng vấn */}
             <div className="p-3.5 bg-slate-50 border border-slate-200/80 rounded-2xl space-y-1">
-              <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider block flex items-center gap-1.5">
+              <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider flex items-center gap-1.5">
                 <Calendar size={13} className="text-indigo-600" /> Ngày & Khung giờ
               </span>
               <p className="font-bold text-slate-900 text-sm">
@@ -112,7 +118,7 @@ export function HrApproveScheduleModal({
 
             {/* Hình thức */}
             <div className="p-3.5 bg-slate-50 border border-slate-200/80 rounded-2xl space-y-1">
-              <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider block flex items-center gap-1.5">
+              <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider flex items-center gap-1.5">
                 {interview.locationType === LocationType.ONLINE ? (
                   <Video size={13} className="text-cyan-600" />
                 ) : (
@@ -130,7 +136,7 @@ export function HrApproveScheduleModal({
 
             {/* Người phỏng vấn */}
             <div className="p-3.5 bg-slate-50 border border-slate-200/80 rounded-2xl space-y-1 sm:col-span-2">
-              <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider block flex items-center gap-1.5">
+              <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider flex items-center gap-1.5">
                 <UserCheck size={13} className="text-purple-600" /> Người phỏng vấn (Interviewer)
               </span>
               <p className="font-bold text-slate-900 text-sm">
@@ -166,4 +172,7 @@ export function HrApproveScheduleModal({
       </div>
     </div>
   );
+
+  return createPortal(modalContent, document.body);
 }
+
