@@ -36,7 +36,12 @@ const navItems: NavItem[] = [
     icon: Briefcase,
     roles: [UserRole.DEPARTMENT_MANAGER, UserRole.HR_ADMIN]
   },
-  { label: 'Kanban Tuyển dụng', href: '/kanban', icon: LayoutGrid, roles: [UserRole.HR_ADMIN] },
+  {
+    label: 'Kanban Tuyển dụng',
+    href: '/kanban',
+    icon: LayoutGrid,
+    roles: [UserRole.HR_ADMIN, UserRole.DEPARTMENT_MANAGER]
+  },
   {
     label: 'Ứng viên',
     href: '/candidates',

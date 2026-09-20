@@ -21,16 +21,20 @@ export default function CandidateKanbanCard({
   const job = application.jobDescriptionId
   const user = candidate?.userId
 
-  // dnd-kit sortable hook
+  // dnd-kit sortable hook (disabled when in DragOverlay to avoid double transform and node rect recalculation shifts)
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
-    id: application._id
+    id: application._id,
+    disabled: isOverlay
   })
 
-  const style = {
-    transform: CSS.Translate.toString(transform),
-    transition,
-    opacity: isDragging ? 0.35 : 1
-  }
+  // Apply sortable transform ONLY to original card in column, NOT in DragOverlay
+  const style = isOverlay
+    ? undefined
+    : {
+        transform: CSS.Translate.toString(transform),
+        transition,
+        opacity: isDragging ? 0.35 : 1
+      }
 
   // Extract display name & initials
   const name = user?.name || candidate?.fullName || candidate?.profileName || 'Ứng viên'
@@ -45,11 +49,11 @@ export default function CandidateKanbanCard({
   // Deterministic pastel color palette for avatars
   const avatarBg = useMemo(() => {
     const colors = [
-      'bg-purple-100 text-purple-700 border-purple-200',
-      'bg-indigo-100 text-indigo-700 border-indigo-200',
-      'bg-blue-100 text-blue-700 border-blue-200',
-      'bg-pink-100 text-pink-700 border-pink-200',
-      'bg-teal-100 text-teal-700 border-teal-200'
+      'bg-purple-500/10 text-purple-700 border-purple-200/60',
+      'bg-indigo-500/10 text-indigo-700 border-indigo-200/60',
+      'bg-blue-500/10 text-[#3B82F6] border-blue-200/60',
+      'bg-pink-500/10 text-pink-700 border-pink-200/60',
+      'bg-teal-500/10 text-teal-700 border-teal-200/60'
     ]
     let hash = 0
     for (let i = 0; i < name.length; i++) hash += name.charCodeAt(i)
@@ -73,40 +77,41 @@ export default function CandidateKanbanCard({
 
   // Format applied date
   const formattedDate = useMemo(() => {
-    if (!application.appliedAt) return '2026-07-20'
+    if (!application.appliedAt) return 'N/A'
     try {
-      return new Date(application.appliedAt).toISOString().split('T')[0]
+      const d = new Date(application.appliedAt)
+      return `${d.getDate().toString().padStart(2, '0')}/${(d.getMonth() + 1).toString().padStart(2, '0')}/${d.getFullYear()}`
     } catch {
-      return '2026-07-20'
+      return 'N/A'
     }
   }, [application.appliedAt])
 
   return (
     <div
-      ref={setNodeRef}
+      ref={isOverlay ? undefined : setNodeRef}
       style={style}
-      {...attributes}
-      {...listeners}
-      onClick={() => onSelect && onSelect(application)}
-      className={`bg-white/78 backdrop-blur-md border rounded-2xl p-3.5 transition-all cursor-grab active:cursor-grabbing flex flex-col justify-between h-[158px] group select-none relative ${
+      {...(isOverlay ? {} : attributes)}
+      {...(isOverlay ? {} : listeners)}
+      onClick={() => !isOverlay && onSelect && onSelect(application)}
+      className={`backdrop-blur-md rounded-2xl p-3.5 transition-all flex flex-col justify-between h-[162px] group select-none relative border ${
         isOverlay
-          ? 'border-[#2A95BF] bg-white/95 shadow-2xl ring-4 ring-[#2A95BF]/30 scale-105'
-          : 'border-white/85 hover:border-[#2A95BF]/50 shadow-md shadow-[#1261A6]/5 hover:shadow-xl hover:shadow-[#1261A6]/12 hover:-translate-y-0.5'
+          ? 'border-[#3B82F6] bg-white/95 shadow-2xl ring-4 ring-[#3B82F6]/30 cursor-grabbing pointer-events-none w-[320px] z-50'
+          : 'bg-white/60 border-white/80 hover:bg-white/80 hover:border-[#3B82F6]/60 shadow-md shadow-blue-500/5 hover:shadow-xl hover:shadow-blue-500/10 hover:-translate-y-0.5 cursor-grab active:cursor-grabbing w-full'
       }`}
     >
-      {/* Upper section */}
+      {/* Upper Section */}
       <div className="space-y-2">
-        {/* Row 1: Avatar, Name & AI Scores */}
+        {/* Row 1: Avatar, Candidate Name & AI Match Score Gauge */}
         <div className="flex items-center justify-between gap-2.5">
           <div className="flex items-center gap-2.5 min-w-0 flex-1">
             <div
-              className={`w-9 h-9 rounded-2xl flex items-center justify-center font-bold text-xs shrink-0 border ${avatarBg}`}
+              className={`w-9 h-9 rounded-full flex items-center justify-center font-black text-xs shrink-0 border shadow-2xs ${avatarBg}`}
             >
               {initials}
             </div>
 
             <h4
-              className="text-sm font-extrabold text-gray-900 truncate group-hover:text-indigo-600 transition-colors"
+              className="text-xs font-extrabold text-slate-900 truncate group-hover:text-[#3B82F6] transition-colors"
               title={name}
             >
               {name}
@@ -119,7 +124,6 @@ export default function CandidateKanbanCard({
               title={`Điểm AI Match: ${aiScore}%`}
             >
               <svg className="w-10 h-10 -rotate-90 transform" viewBox="0 0 40 40">
-                {/* Background Ring Track (Màu nhạt đồng điệu, không để màu trắng) */}
                 <circle
                   cx="20"
                   cy="20"
@@ -135,7 +139,6 @@ export default function CandidateKanbanCard({
                   stroke="currentColor"
                   strokeWidth="3.5"
                 />
-                {/* Quantitative Progress Ring */}
                 <circle
                   cx="20"
                   cy="20"
@@ -156,7 +159,7 @@ export default function CandidateKanbanCard({
                 />
               </svg>
               <span
-                className={`absolute text-xs font-black tracking-tight ${
+                className={`absolute text-[11px] font-black tracking-tight ${
                   aiScore >= 70
                     ? 'text-emerald-700'
                     : aiScore >= 50
@@ -168,17 +171,17 @@ export default function CandidateKanbanCard({
               </span>
             </div>
           ) : (
-            <span className="text-[10px] text-gray-400 font-bold italic bg-gray-50 border border-gray-100 px-2 py-0.5 rounded-lg shrink-0">
+            <span className="text-[10px] text-slate-400 font-bold italic bg-white/50 border border-white/80 px-2 py-0.5 rounded-lg shrink-0">
               Chờ chấm...
             </span>
           )}
         </div>
 
-        {/* Row 2: Vị trí tuyển dụng nằm dưới Avatar, trải dài toàn thẻ */}
+        {/* Row 2: Job Position Title */}
         <div className="flex items-center gap-1.5 text-xs text-slate-600 w-full pt-0.5">
-          <Briefcase size={12} className="text-indigo-500 shrink-0" />
+          <Briefcase size={13} className="text-[#3B82F6] shrink-0" />
           <span
-            className="truncate flex-1 font-semibold text-slate-700 text-xs"
+            className="truncate flex-1 font-bold text-slate-800 text-xs"
             title={job?.title || 'Vị trí tuyển dụng'}
           >
             {job?.title || 'Vị trí tuyển dụng'}
@@ -186,15 +189,15 @@ export default function CandidateKanbanCard({
         </div>
       </div>
 
-      {/* Middle status section (reserved height for equal card heights) */}
+      {/* Middle status section */}
       <div className="h-6 flex items-center">
         {application.isMissingMandatory ? (
-          <div className="px-2 py-0.5 bg-rose-50 border border-rose-200 rounded-lg flex items-center gap-1 text-rose-700 text-[10.5px] font-bold shadow-2xs w-full">
+          <div className="px-2 py-0.5 bg-rose-500/10 border border-rose-300/60 rounded-xl flex items-center gap-1 text-rose-700 text-[10.5px] font-bold shadow-2xs w-full">
             <AlertTriangle size={12} className="shrink-0 text-rose-600" />
             <span className="truncate">Thiếu tiêu chí Bắt buộc</span>
           </div>
         ) : application.ratingScore ? (
-          <div className="px-2 py-0.5 bg-amber-50/70 border border-amber-100 rounded-lg flex items-center justify-between text-[10.5px] w-full">
+          <div className="px-2 py-0.5 bg-amber-500/10 border border-amber-300/60 rounded-xl flex items-center justify-between text-[10.5px] w-full">
             <div className="flex items-center gap-1 text-amber-800 font-semibold">
               <Clock size={11} className="text-amber-600" />
               <span>Chờ duyệt</span>
@@ -210,17 +213,17 @@ export default function CandidateKanbanCard({
       </div>
 
       {/* Footer Info: Interviewer & Applied Date */}
-      <div className="pt-2 border-t border-gray-100/80 flex items-center justify-between text-[11px] text-gray-400 font-medium">
+      <div className="pt-2 border-t border-slate-200/60 flex items-center justify-between text-[11px] text-slate-500 font-medium">
         <div
           className="flex items-center gap-1 truncate max-w-[130px]"
           title={interviewerName || 'Tuyển dụng'}
         >
-          <UserIcon size={12} className="shrink-0 text-gray-400" />
-          <span className="truncate">{interviewerName || 'Tuyển dụng'}</span>
+          <UserIcon size={12} className="shrink-0 text-slate-400" />
+          <span className="truncate font-semibold text-slate-600">{interviewerName || 'Tuyển dụng'}</span>
         </div>
 
-        <div className="flex items-center gap-1 shrink-0">
-          <Calendar size={12} className="text-gray-400" />
+        <div className="flex items-center gap-1 shrink-0 font-semibold text-slate-500">
+          <Calendar size={12} className="text-slate-400" />
           <span>{formattedDate}</span>
         </div>
       </div>
