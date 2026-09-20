@@ -1,6 +1,7 @@
 'use client';
 
-import React from 'react';
+import React, { useEffect, useState } from 'react';
+import { createPortal } from 'react-dom';
 import { Clock, User as UserIcon, Building2, Video } from 'lucide-react';
 import {
   InterviewItem,
@@ -27,6 +28,11 @@ export default function InterviewPopoverTooltip({
   getResultBadge,
 }: InterviewPopoverTooltipProps) {
   const { item, x, y } = hoveredInterview;
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
 
   const candidateName =
     typeof item.candidateId === 'object'
@@ -43,15 +49,34 @@ export default function InterviewPopoverTooltip({
       ? item.interviewerId?.name || item.interviewerId?.email
       : 'Interviewer';
 
-  return (
+  // Screen boundary clamping to prevent horizontal scrollbars
+  const TOOLTIP_WIDTH = 288; // w-72
+  const margin = 16;
+  const screenWidth = typeof window !== 'undefined' ? window.innerWidth : 1200;
+
+  let safeLeft = x;
+  if (safeLeft - TOOLTIP_WIDTH / 2 < margin) {
+    safeLeft = TOOLTIP_WIDTH / 2 + margin;
+  } else if (safeLeft + TOOLTIP_WIDTH / 2 > screenWidth - margin) {
+    safeLeft = screenWidth - margin - TOOLTIP_WIDTH / 2;
+  }
+
+  let safeTop = y;
+  let translateY = '-100%';
+  if (safeTop - 220 < margin) {
+    safeTop = y + 24;
+    translateY = '0%';
+  }
+
+  const tooltipContent = (
     <div
       style={{
         position: 'fixed',
-        left: `${x}px`,
-        top: `${y}px`,
-        transform: 'translate(-50%, -100%)',
+        left: `${safeLeft}px`,
+        top: `${safeTop}px`,
+        transform: `translate(-50%, ${translateY})`,
       }}
-      className="z-[9999] w-72 bg-white rounded-2xl shadow-2xl border border-slate-200/90 overflow-hidden animate-in fade-in zoom-in-95 duration-150 pointer-events-none"
+      className="z-[9999] w-72 bg-white/90 backdrop-blur-xl rounded-2xl shadow-2xl shadow-blue-900/15 border border-white/90 overflow-hidden animate-in fade-in zoom-in-95 duration-150 pointer-events-none"
     >
       {/* Top Colored Accent Bar */}
       <div
@@ -117,11 +142,14 @@ export default function InterviewPopoverTooltip({
 
       {/* Quote feedback if available */}
       {item.feedback && (
-        <div className="p-2.5 bg-slate-50 border border-slate-100 rounded-xl text-[11px] italic text-slate-600">
+        <div className="p-2.5 bg-white/60 border border-white/80 rounded-xl text-[11px] italic text-slate-700 backdrop-blur-sm">
           &ldquo;{item.feedback}&rdquo;
         </div>
       )}
       </div>
     </div>
   );
+
+  if (!mounted) return null;
+  return createPortal(tooltipContent, document.body);
 }

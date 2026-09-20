@@ -1,14 +1,16 @@
 'use client';
 
 import React from 'react';
-import { List, Calendar as CalendarIcon, Building2, Briefcase, Filter } from 'lucide-react';
-import { CustomSelect } from '@/src/components/common';
+import { List, Calendar as CalendarIcon, Building2, Briefcase, Filter, Search, RotateCcw } from 'lucide-react';
+import { CustomSelect, CustomInput } from '@/src/components/common';
 import { Department } from '@/src/features/departments/types/department.types';
 import { InterviewStatus } from '../types/interview.types';
 
 interface InterviewsFilterToolbarProps {
   viewMode: 'list' | 'calendar';
   setViewMode: (mode: 'list' | 'calendar') => void;
+  searchQuery: string;
+  setSearchQuery: (query: string) => void;
   departmentFilter: string;
   setDepartmentFilter: (val: string) => void;
   positionFilter: string;
@@ -19,11 +21,14 @@ interface InterviewsFilterToolbarProps {
   availablePositions: string[];
   isDeptManager: boolean;
   isEmployee: boolean;
+  onResetFilters: () => void;
 }
 
 export default function InterviewsFilterToolbar({
   viewMode,
   setViewMode,
+  searchQuery,
+  setSearchQuery,
   departmentFilter,
   setDepartmentFilter,
   positionFilter,
@@ -34,39 +39,51 @@ export default function InterviewsFilterToolbar({
   availablePositions,
   isDeptManager,
   isEmployee,
+  onResetFilters,
 }: InterviewsFilterToolbarProps) {
   return (
-    <div className="flex flex-wrap items-center justify-between gap-4 bg-white p-3.5 rounded-2xl border border-slate-200/80 shadow-2xs">
-      {/* Left: View Mode Toggle */}
-      <div className="flex items-center gap-1.5 bg-slate-100/80 p-1 rounded-xl">
-        <button
-          type="button"
-          onClick={() => setViewMode('list')}
-          className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
-            viewMode === 'list'
-              ? 'bg-white text-slate-900 shadow-2xs'
-              : 'text-slate-500 hover:text-slate-900'
-          }`}
-        >
-          <List size={14} />
-          <span>Danh sách</span>
-        </button>
-        <button
-          type="button"
-          onClick={() => setViewMode('calendar')}
-          className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
-            viewMode === 'calendar'
-              ? 'bg-white text-slate-900 shadow-2xs'
-              : 'text-slate-500 hover:text-slate-900'
-          }`}
-        >
-          <CalendarIcon size={14} />
-          <span>Lịch</span>
-        </button>
-      </div>
+    <div className="flex flex-wrap items-center justify-between gap-3">
+      {/* Left: View Mode Toggle & Search */}
+      <div className="flex flex-wrap items-center gap-2.5 flex-1 min-w-0">
+        {/* View Mode Toggle Pill */}
+        <div className="flex items-center gap-1 bg-white/40 border border-white/60 p-1 rounded-xl shadow-2xs backdrop-blur-md">
+          <button
+            type="button"
+            onClick={() => setViewMode('list')}
+            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+              viewMode === 'list'
+                ? 'bg-[#3B82F6] text-white shadow-md shadow-blue-500/20'
+                : 'text-slate-600 hover:text-slate-900 hover:bg-white/40'
+            }`}
+          >
+            <List size={14} />
+            <span>Danh sách</span>
+          </button>
+          <button
+            type="button"
+            onClick={() => setViewMode('calendar')}
+            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+              viewMode === 'calendar'
+                ? 'bg-[#3B82F6] text-white shadow-md shadow-blue-500/20'
+                : 'text-slate-600 hover:text-slate-900 hover:bg-white/40'
+            }`}
+          >
+            <CalendarIcon size={14} />
+            <span>Lịch</span>
+          </button>
+        </div>
 
-      {/* Right: 3 Filters (Department, Position, Status) */}
-      <div className="flex flex-wrap items-center gap-3">
+        {/* Search Input for Candidate & Position & Interviewer */}
+        <div className="w-full sm:w-60 lg:w-64">
+          <CustomInput
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            placeholder="Tìm theo ứng viên, người phỏng vấn..."
+            icon={<Search size={15} />}
+            className="!py-1.5 !rounded-xl text-xs"
+          />
+        </div>
+
         {/* 1. Department Filter */}
         <CustomSelect
           value={departmentFilter}
@@ -121,7 +138,19 @@ export default function InterviewsFilterToolbar({
             { value: InterviewStatus.CANCELLED, label: 'Đã hủy' },
           ]}
         />
+
+        {/* Reset Filters Button */}
+        <button
+          type="button"
+          onClick={onResetFilters}
+          className="px-3 py-1.5 rounded-xl border border-white/80 bg-white/60 hover:bg-white text-slate-600 hover:text-rose-600 text-xs font-semibold flex items-center gap-1.5 shadow-2xs transition-all cursor-pointer shrink-0"
+          title="Đặt lại tất cả bộ lọc"
+        >
+          <RotateCcw size={14} />
+          <span>Đặt lại</span>
+        </button>
       </div>
     </div>
   );
 }
+

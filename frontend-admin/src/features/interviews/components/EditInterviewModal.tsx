@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import {
   X,
   Calendar,
@@ -45,6 +46,11 @@ export default function EditInterviewModal({
 }: EditInterviewModalProps) {
   const [staffOptions, setStaffOptions] = useState<User[]>([]);
   const [isLoadingStaff, setIsLoadingStaff] = useState<boolean>(false);
+  const [isMounted, setIsMounted] = useState<boolean>(false);
+
+  useEffect(() => {
+    setIsMounted(true);
+  }, []);
 
   // Form states
   const [interviewerIdVal, setInterviewerIdVal] = useState<string>('');
@@ -110,7 +116,7 @@ export default function EditInterviewModal({
     }
   }, [selectedInterview, isOpen]);
 
-  if (!isOpen || !selectedInterview) return null;
+  if (!isOpen || !selectedInterview || !isMounted) return null;
 
   const candidateName =
     typeof selectedInterview.candidateId === 'object'
@@ -182,13 +188,22 @@ export default function EditInterviewModal({
     { value: InterviewStatus.CANCELLED, label: 'Đã hủy' }
   ];
 
-  return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-xs animate-in fade-in duration-200">
-      <div className="bg-white rounded-3xl border border-slate-200 shadow-2xl w-full max-w-2xl overflow-hidden max-h-[90vh] flex flex-col animate-in zoom-in-95 duration-200">
+  const modalContent = (
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+      {/* Backdrop */}
+      <div
+        className="fixed inset-0 bg-slate-950/40 backdrop-blur-md transition-opacity animate-in fade-in duration-200"
+        onClick={onClose}
+      />
+
+      <div
+        className="relative bg-white/95 backdrop-blur-2xl rounded-3xl border border-white/80 shadow-2xl shadow-blue-500/10 w-full max-w-2xl overflow-hidden max-h-[90vh] flex flex-col z-10 animate-in zoom-in-95 duration-200 text-slate-900"
+        onClick={(e) => e.stopPropagation()}
+      >
         {/* Header */}
-        <div className="px-6 py-5 border-b border-slate-100 bg-gradient-to-r from-slate-50 via-white to-indigo-50/40 flex items-center justify-between shrink-0">
+        <div className="px-6 py-5 border-b border-slate-100 bg-blue-500/5 flex items-center justify-between shrink-0">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-2xl bg-indigo-50 text-indigo-600 flex items-center justify-center shrink-0">
+            <div className="w-10 h-10 rounded-2xl bg-blue-50 text-[#3B82F6] flex items-center justify-center shrink-0">
               <Edit3 size={20} />
             </div>
             <div>
@@ -220,13 +235,13 @@ export default function EditInterviewModal({
           )}
 
           {/* Candidate Summary Info Box */}
-          <div className="p-4 bg-gradient-to-r from-slate-50 to-indigo-50/30 border border-slate-200/80 rounded-2xl space-y-1">
+          <div className="p-4 bg-slate-50/80 border border-slate-100 rounded-2xl space-y-1">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2 text-sm font-bold text-slate-900">
-                <UserIcon size={16} className="text-indigo-600" />
+                <UserIcon size={16} className="text-[#3B82F6]" />
                 <span>{candidateName}</span>
               </div>
-              <span className="px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-indigo-50 text-indigo-700 border border-indigo-100">
+              <span className="px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-blue-500/15 text-[#3B82F6] border border-blue-300/40">
                 {deptName}
               </span>
             </div>
@@ -242,7 +257,7 @@ export default function EditInterviewModal({
             </label>
             {isLoadingStaff ? (
               <div className="p-3 bg-slate-50 border border-slate-200 rounded-2xl text-xs text-slate-400 flex items-center gap-2">
-                <Loader2 size={15} className="animate-spin text-indigo-600" />
+                <Loader2 size={15} className="animate-spin text-[#3B82F6]" />
                 <span>Đang tải danh sách nhân viên...</span>
               </div>
             ) : (
@@ -306,7 +321,7 @@ export default function EditInterviewModal({
                   onClick={() => setLocationTypeVal(LocationType.ONLINE)}
                   className={`py-2.5 px-3 rounded-2xl font-bold text-xs flex items-center justify-center gap-1.5 border transition-all cursor-pointer ${
                     locationTypeVal === LocationType.ONLINE
-                      ? 'bg-indigo-50 border-indigo-200 text-indigo-700 shadow-2xs'
+                      ? 'bg-blue-50 border-blue-200 text-[#3B82F6] shadow-2xs'
                       : 'bg-slate-50 border-slate-200 text-slate-600 hover:bg-slate-100'
                   }`}
                 >
@@ -319,7 +334,7 @@ export default function EditInterviewModal({
                   onClick={() => setLocationTypeVal(LocationType.OFFSITE)}
                   className={`py-2.5 px-3 rounded-2xl font-bold text-xs flex items-center justify-center gap-1.5 border transition-all cursor-pointer ${
                     locationTypeVal === LocationType.OFFSITE
-                      ? 'bg-indigo-50 border-indigo-200 text-indigo-700 shadow-2xs'
+                      ? 'bg-blue-50 border-blue-200 text-[#3B82F6] shadow-2xs'
                       : 'bg-slate-50 border-slate-200 text-slate-600 hover:bg-slate-100'
                   }`}
                 >
@@ -344,13 +359,13 @@ export default function EditInterviewModal({
 
           {/* Location details */}
           {locationTypeVal === LocationType.ONLINE ? (
-            <div className="p-3.5 bg-indigo-50/60 border border-indigo-100 rounded-2xl flex items-start gap-2.5">
+            <div className="p-3.5 bg-blue-50/60 border border-blue-100 rounded-2xl flex items-start gap-2.5">
               <input
                 type="checkbox"
                 id="editAutoMeet"
                 checked={autoCreateMeet}
                 onChange={(e) => setAutoCreateMeet(e.target.checked)}
-                className="mt-0.5 w-4 h-4 text-indigo-600 border-slate-300 rounded focus:ring-indigo-500 cursor-pointer"
+                className="mt-0.5 w-4 h-4 text-[#3B82F6] border-slate-300 rounded focus:ring-[#3B82F6] cursor-pointer"
               />
               <label htmlFor="editAutoMeet" className="cursor-pointer select-none text-xs">
                 <span className="font-bold text-slate-900 block">
@@ -392,7 +407,7 @@ export default function EditInterviewModal({
             <button
               type="submit"
               disabled={isSubmitting}
-              className="inline-flex items-center justify-center gap-2 px-6 py-2.5 rounded-2xl bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-xs shadow-md shadow-indigo-500/20 active:scale-95 transition-all cursor-pointer disabled:opacity-50"
+              className="inline-flex items-center justify-center gap-2 px-6 py-2.5 rounded-2xl bg-[#3B82F6] hover:bg-blue-600 text-white font-bold text-xs shadow-md shadow-blue-500/20 active:scale-95 transition-all cursor-pointer disabled:opacity-50"
             >
               {isSubmitting ? (
                 <>
@@ -411,4 +426,7 @@ export default function EditInterviewModal({
       </div>
     </div>
   );
+
+  return createPortal(modalContent, document.body);
 }
+

@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, useMemo } from "react";
+import { createPortal } from "react-dom";
 import { X, Calendar, Clock, Video, MapPin, UserCheck, Loader2 } from "lucide-react";
 import { InterviewItem, LocationType } from "../types/interview.types";
 import { interviewsApi } from "../services/interviews.api";
@@ -38,6 +39,11 @@ export function DeptScheduleFormModal({
   const [staffList, setStaffList] = useState<User[]>([]);
   const [isLoadingStaff, setIsLoadingStaff] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isMounted, setIsMounted] = useState(false);
+
+  useEffect(() => {
+    setIsMounted(true);
+  }, []);
 
   // Errors state for validation
   const [errors, setErrors] = useState<Record<string, string>>({});
@@ -167,7 +173,7 @@ export function DeptScheduleFormModal({
     }));
   }, [staffList, deptId]);
 
-  if (!isOpen || !interview) return null;
+  if (!isOpen || !interview || !isMounted) return null;
 
   // Validation function
   const validateForm = () => {
@@ -238,11 +244,17 @@ export function DeptScheduleFormModal({
     }
   };
 
-  return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-xs animate-in fade-in duration-200">
-      <div className="bg-white rounded-3xl max-w-2xl w-full shadow-2xl border border-slate-100 overflow-hidden flex flex-col max-h-[92vh]">
+  const modalContent = (
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+      {/* Backdrop */}
+      <div
+        className="fixed inset-0 bg-slate-950/40 backdrop-blur-md transition-opacity animate-in fade-in duration-200"
+        onClick={onClose}
+      />
+
+      <div className="relative bg-white/95 backdrop-blur-2xl rounded-3xl max-w-2xl w-full shadow-2xl shadow-amber-500/10 border border-white/80 overflow-hidden flex flex-col max-h-[92vh] z-10 text-slate-900 animate-in zoom-in-95 duration-200">
         {/* Modal Header */}
-        <div className="px-6 py-5 border-b border-slate-100 flex items-start justify-between bg-slate-50/50">
+        <div className="px-6 py-5 border-b border-slate-100/80 flex items-start justify-between bg-amber-500/5">
           <div>
             <h3 className="font-bold text-lg text-slate-900 leading-snug">
               Xếp lịch Phỏng vấn & Chọn Người phỏng vấn
@@ -316,7 +328,7 @@ export function DeptScheduleFormModal({
                 onClick={() => handleLocationTypeChange(LocationType.ONLINE)}
                 className={`flex items-center justify-center gap-2 p-3 rounded-2xl border text-xs font-bold transition-all cursor-pointer ${
                   locationType === LocationType.ONLINE
-                    ? "bg-cyan-50 border-cyan-300 text-cyan-700 shadow-xs ring-2 ring-cyan-500/10"
+                    ? "bg-blue-50 border-blue-200 text-[#3B82F6] shadow-2xs"
                     : "bg-slate-50/80 border-slate-200 text-slate-600 hover:bg-slate-100"
                 }`}
               >
@@ -328,7 +340,7 @@ export function DeptScheduleFormModal({
                 onClick={() => handleLocationTypeChange(LocationType.OFFSITE)}
                 className={`flex items-center justify-center gap-2 p-3 rounded-2xl border text-xs font-bold transition-all cursor-pointer ${
                   locationType === LocationType.OFFSITE
-                    ? "bg-amber-50 border-amber-300 text-amber-700 shadow-xs ring-2 ring-amber-500/10"
+                    ? "bg-amber-50 border-amber-300 text-amber-700 shadow-2xs"
                     : "bg-slate-50/80 border-slate-200 text-slate-600 hover:bg-slate-100"
                 }`}
               >
@@ -399,7 +411,7 @@ export function DeptScheduleFormModal({
             <button
               type="submit"
               disabled={isSubmitting}
-              className="px-6 py-2.5 rounded-2xl bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-xs transition-all shadow-md shadow-indigo-500/20 inline-flex items-center gap-2 cursor-pointer active:scale-95 disabled:opacity-75"
+              className="px-6 py-2.5 rounded-2xl bg-amber-500 hover:bg-amber-600 active:scale-95 text-white font-bold text-xs transition-all shadow-md shadow-amber-500/20 inline-flex items-center gap-2 cursor-pointer disabled:opacity-75"
             >
               {isSubmitting && <Loader2 size={15} className="animate-spin" />}
               <span>Gửi HR duyệt lịch</span>
@@ -409,4 +421,7 @@ export function DeptScheduleFormModal({
       </div>
     </div>
   );
+
+  return createPortal(modalContent, document.body);
 }
+

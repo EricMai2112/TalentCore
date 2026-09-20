@@ -1,6 +1,7 @@
 'use client';
 
-import React from 'react';
+import React, { useState, useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import { X, Send, Loader2 } from 'lucide-react';
 import { CustomSelect, CustomTextarea } from '@/src/components/common';
 import {
@@ -36,24 +37,34 @@ export default function InterviewStatusModal({
   isUpdating,
   onSaveStatus,
 }: InterviewStatusModalProps) {
-  if (!isOpen || !selectedInterview) return null;
+  const [isMounted, setIsMounted] = useState(false);
+
+  useEffect(() => {
+    setIsMounted(true);
+  }, []);
+
+  if (!isOpen || !selectedInterview || !isMounted) return null;
 
   const candidateName =
     typeof selectedInterview.candidateId === 'object'
       ? selectedInterview.candidateId?.fullName || selectedInterview.candidateId?.name
       : 'Ứng viên';
 
-  return (
-    <div className="fixed inset-0 z-50 bg-slate-950/60 backdrop-blur-xs flex items-center justify-center p-4 animate-in fade-in duration-150">
-      <div className="fixed inset-0" onClick={onClose} />
+  const modalContent = (
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+      {/* Backdrop */}
+      <div
+        className="fixed inset-0 bg-slate-950/40 backdrop-blur-md transition-opacity animate-in fade-in duration-200"
+        onClick={onClose}
+      />
 
       <div
-        className="relative bg-white rounded-3xl w-full max-w-lg shadow-2xl overflow-hidden text-slate-900 z-10 animate-in zoom-in-95 duration-150"
+        className="relative bg-white/95 backdrop-blur-2xl rounded-3xl w-full max-w-lg shadow-2xl shadow-blue-500/10 overflow-hidden text-slate-900 z-10 animate-in zoom-in-95 duration-200 border border-white/80"
         onClick={(e) => e.stopPropagation()}
       >
-        <div className="px-6 py-5 border-b border-slate-100 flex items-center justify-between bg-white">
+        <div className="px-6 py-5 border-b border-slate-100/80 flex items-center justify-between bg-blue-500/5">
           <div>
-            <span className="text-[10px] font-bold uppercase tracking-wider text-indigo-600 block mb-0.5">
+            <span className="text-[10px] font-extrabold uppercase tracking-wider text-[#3B82F6] block mb-0.5">
               Cập nhật trạng thái phỏng vấn
             </span>
             <h3 className="text-base font-bold text-slate-900">{candidateName}</h3>
@@ -96,7 +107,7 @@ export default function InterviewStatusModal({
 
           {/* Textarea Feedback */}
           <CustomTextarea
-            label="GHỊ CHÚ / NHẬN XÉT CHI TIẾT"
+            label="GHI CHÚ / NHẬN XÉT CHI TIẾT"
             rows={4}
             value={feedbackText}
             onChange={(e) => setFeedbackText(e.target.value)}
@@ -115,7 +126,7 @@ export default function InterviewStatusModal({
             <button
               type="submit"
               disabled={isUpdating}
-              className="inline-flex items-center gap-1.5 px-5 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-xs shadow-md shadow-indigo-500/20 transition-all cursor-pointer disabled:opacity-50"
+              className="inline-flex items-center gap-1.5 px-5 py-2 rounded-xl bg-[#3B82F6] hover:bg-blue-600 active:scale-95 text-white font-bold text-xs shadow-md shadow-blue-500/20 transition-all cursor-pointer disabled:opacity-50"
             >
               {isUpdating ? (
                 <Loader2 size={14} className="animate-spin" />
@@ -129,4 +140,7 @@ export default function InterviewStatusModal({
       </div>
     </div>
   );
+
+  return createPortal(modalContent, document.body);
 }
+
