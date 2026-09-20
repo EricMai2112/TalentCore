@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, useMemo } from "react";
+import { createPortal } from "react-dom";
 import { Briefcase } from "lucide-react";
 import {
   DndContext,
@@ -76,7 +77,7 @@ export default function KanbanContainer({
   const [selectedCandidateApp, setSelectedCandidateApp] = useState<KanbanApplication | null>(null);
   const [activeApplication, setActiveApplication] = useState<KanbanApplication | null>(null);
 
-  // dnd-kit sensors setup
+  // dnd-kit sensors setup with pointer distance activation constraint
   const sensors = useSensors(
     useSensor(PointerSensor, {
       activationConstraint: {
@@ -202,10 +203,7 @@ export default function KanbanContainer({
       }
     });
 
-    // Sắp xếp ứng viên trong từng cột theo quy tắc:
-    // 1. Điểm chính aiFitScore từ cao xuống thấp (chưa chấm xếp sau cùng)
-    // 2. Nếu điểm bằng nhau -> xét tới điểm độ mạnh bằng chứng (evidenceStrengthScore từ cao xuống thấp)
-    // 3. Nếu bằng nhau tiếp -> ngày nộp đơn (appliedAt) mới nhất lên trước
+    // Sort apps in each column
     const sortApps = (a: KanbanApplication, b: KanbanApplication) => {
       const scoreA = a.aiFitScore !== null && a.aiFitScore !== undefined ? a.aiFitScore : -1;
       const scoreB = b.aiFitScore !== null && b.aiFitScore !== undefined ? b.aiFitScore : -1;
@@ -279,9 +277,28 @@ export default function KanbanContainer({
     }
   };
 
+  // Handle Reset Filters
+  const handleResetFilters = () => {
+    setSearchQuery("");
+    setScoreFilter("all");
+    if (!isDeptManager) {
+      const defaultDeptId = initialDepartments.length > 0 ? initialDepartments[0]._id : "";
+      setSelectedDepartmentId(defaultDeptId);
+      if (defaultDeptId) {
+        const deptJobs = initialJobs.filter((j) => {
+          const dId = typeof j.departmentId === "object" ? j.departmentId?._id : j.departmentId;
+          return dId === defaultDeptId && j.status === JobStatus.JD_CREATED;
+        });
+        setSelectedJobId(deptJobs.length > 0 ? deptJobs[0]._id : "");
+      } else {
+        setSelectedJobId("");
+      }
+    }
+  };
+
   return (
     <div className="w-full space-y-6 pb-12">
-      {/* Header Filters Bar */}
+      {/* Header Filters Bar with CustomInput and CustomSelect */}
       <KanbanHeaderFilters
         totalCount={filteredApplications.length}
         departments={initialDepartments}
@@ -294,17 +311,18 @@ export default function KanbanContainer({
         onJobChange={setSelectedJobId}
         onSearchChange={setSearchQuery}
         onScoreFilterChange={setScoreFilter}
+        onResetFilters={handleResetFilters}
       />
 
       {!selectedJobId ? (
         /* Empty State Placeholder when No Position Selected */
-        <div className="w-full bg-white border border-gray-100 rounded-3xl p-16 flex flex-col items-center justify-center text-center space-y-4 shadow-2xs">
-          <div className="w-16 h-16 rounded-3xl bg-indigo-50 border border-indigo-100 flex items-center justify-center text-indigo-600">
-            <Briefcase size={30} />
+        <div className="w-full bg-white/20 border-2 border-slate-300/80 shadow-xl rounded-3xl p-16 flex flex-col items-center justify-center text-center space-y-4 backdrop-blur-md">
+          <div className="w-16 h-16 rounded-3xl bg-blue-500/10 border border-blue-200/60 flex items-center justify-center text-[#3B82F6] shadow-2xs">
+            <Briefcase size={32} />
           </div>
           <div className="max-w-md space-y-1.5">
-            <h3 className="text-lg font-extrabold text-gray-900">Vui lòng chọn Vị trí tuyển dụng</h3>
-            <p className="text-xs font-medium text-gray-500 leading-relaxed">
+            <h3 className="text-lg font-black text-slate-900">Vui lòng chọn Vị trí tuyển dụng</h3>
+            <p className="text-xs font-semibold text-slate-500 leading-relaxed">
               Bảng Kanban hiển thị ứng viên và quy trình phỏng vấn theo từng vị trí cụ thể của phòng ban. Vui lòng chọn vị trí ở bộ lọc trên.
             </p>
           </div>
@@ -319,7 +337,7 @@ export default function KanbanContainer({
           onDragEnd={handleDragEnd}
         >
           {/* Horizontal Scrollable Kanban Board Columns Container */}
-          <div className="w-full overflow-x-auto pb-6 scrollbar-thin scrollbar-thumb-gray-200">
+          <div className="w-full overflow-x-auto pb-6 scrollbar-thin scrollbar-thumb-slate-300/60">
             <div className="flex items-stretch gap-4 min-w-max">
               {activeStages.map((stage) => (
                 <KanbanColumn
@@ -332,19 +350,22 @@ export default function KanbanContainer({
             </div>
           </div>
 
-          {/* DragOverlay for Smooth Floating Preview */}
-          <DragOverlay>
-            {activeApplication ? (
-              <CandidateKanbanCard
-                application={activeApplication}
-                isOverlay
-              />
-            ) : null}
-          </DragOverlay>
+          {/* DragOverlay for Smooth Floating Preview (Portaled directly to document.body to bypass layout backdrop-blur containing block) */}
+          {isMounted && typeof window !== "undefined" && createPortal(
+            <DragOverlay dropAnimation={null}>
+              {activeApplication ? (
+                <CandidateKanbanCard
+                  application={activeApplication}
+                  isOverlay
+                />
+              ) : null}
+            </DragOverlay>,
+            document.body
+          )}
         </DndContext>
       ) : (
         /* Fallback SSR render before client hydration */
-        <div className="w-full overflow-x-auto pb-6 scrollbar-thin scrollbar-thumb-gray-200">
+        <div className="w-full overflow-x-auto pb-6 scrollbar-thin scrollbar-thumb-slate-300/60">
           <div className="flex items-stretch gap-4 min-w-max">
             {activeStages.map((stage) => (
               <KanbanColumn

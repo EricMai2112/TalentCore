@@ -1,6 +1,8 @@
 'use client'
 
-import { Search, Lock, Filter, Building2, Briefcase } from 'lucide-react'
+import React from 'react'
+import { Search, Building2, Briefcase, Filter, RotateCcw } from 'lucide-react'
+import { CustomInput, CustomSelect } from '@/src/components/common'
 import {
   Department,
   JobDescription,
@@ -21,6 +23,7 @@ interface KanbanHeaderFiltersProps {
   onJobChange: (jobId: string) => void
   onSearchChange: (query: string) => void
   onScoreFilterChange: (score: string) => void
+  onResetFilters?: () => void
 }
 
 export default function KanbanHeaderFilters({
@@ -34,7 +37,8 @@ export default function KanbanHeaderFilters({
   onDepartmentChange,
   onJobChange,
   onSearchChange,
-  onScoreFilterChange
+  onScoreFilterChange,
+  onResetFilters
 }: KanbanHeaderFiltersProps) {
   const { user } = useAuth()
   const isDeptManager = user?.role === UserRole.DEPARTMENT_MANAGER
@@ -48,97 +52,76 @@ export default function KanbanHeaderFilters({
     : []
 
   return (
-    <div className="flex flex-wrap items-center justify-between gap-4 bg-white border border-gray-100 rounded-3xl p-5 shadow-2xs">
-      {/* Candidate Search Input */}
-      <div className="relative">
-        <input
-          type="text"
-          placeholder="Tìm kiếm..."
-          value={searchQuery}
-          onChange={(e) => onSearchChange(e.target.value)}
-          className="pl-9 py-2.5 border border-gray-200 rounded-2xl text-xs font-semibold text-gray-900 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-600 transition-all bg-gray-50/70 hover:bg-gray-50 w-44 sm:w-52"
+    <div className="flex flex-wrap items-center justify-between gap-3">
+      <div className="flex flex-wrap items-center gap-2.5 flex-1 min-w-0">
+        {/* 1. Department Filter */}
+        <CustomSelect
+          value={selectedDepartmentId}
+          onChange={(val) => onDepartmentChange(val)}
+          isLocked={isDeptManager}
+          disabled={isDeptManager}
+          icon={<Building2 size={14} />}
+          size="sm"
+          className="w-full sm:w-auto"
+          placeholder="Tất cả phòng ban"
+          options={[
+            ...(!isDeptManager ? [{ value: '', label: 'Tất cả phòng ban' }] : []),
+            ...departments.map((dept) => ({
+              value: dept._id,
+              label: dept.name
+            }))
+          ]}
         />
-        <Search size={14} className="absolute left-3 top-3 text-gray-400 pointer-events-none" />
-      </div>
 
-      {/* Right Controls Bar */}
-      <div className="flex flex-wrap items-center gap-3">
-        {/* Department Filter (Locked for Department Manager) */}
-        <div className="relative">
-          <select
-            value={selectedDepartmentId}
-            onChange={(e) => onDepartmentChange(e.target.value)}
-            disabled={isDeptManager}
-            className={`pl-9 pr-8 py-2.5 border border-gray-200 rounded-2xl text-xs font-bold focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-600 transition-all appearance-none cursor-pointer ${
-              isDeptManager
-                ? 'bg-gray-100 text-gray-600 cursor-not-allowed'
-                : 'bg-gray-50/70 hover:bg-gray-50 text-gray-800'
-            }`}
-          >
-            {!isDeptManager && <option value="">-- Chọn phòng ban --</option>}
-            {departments.map((dept) => (
-              <option key={dept._id} value={dept._id}>
-                {dept.name}
-              </option>
-            ))}
-          </select>
-          <Building2
-            size={14}
-            className="absolute left-3 top-3 text-gray-400 pointer-events-none"
-          />
-          {isDeptManager && (
-            <Lock
-              size={12}
-              className="absolute right-3 top-3.5 text-gray-400 pointer-events-none"
-            />
-          )}
-        </div>
+        {/* 2. Job Position Dropdown */}
+        <CustomSelect
+          value={selectedJobId}
+          onChange={(val) => onJobChange(val)}
+          disabled={!selectedDepartmentId || filteredJobs.length === 0}
+          icon={<Briefcase size={14} />}
+          size="sm"
+          className="w-full sm:w-auto"
+          placeholder={
+            !selectedDepartmentId
+              ? 'Chọn phòng ban trước'
+              : filteredJobs.length === 0
+                ? 'Không có vị trí tuyển dụng'
+                : 'Tất cả vị trí'
+          }
+          options={filteredJobs.map((job) => ({
+            value: job._id,
+            label: job.title
+          }))}
+        />
 
-        {/* Job Position Dropdown (Depends on Department) */}
-        <div className="relative">
-          <select
-            value={selectedJobId}
-            onChange={(e) => onJobChange(e.target.value)}
-            disabled={!selectedDepartmentId || filteredJobs.length === 0}
-            className={`pl-9 pr-8 py-2.5 border border-gray-200 rounded-2xl text-xs font-bold focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-600 transition-all appearance-none cursor-pointer ${
-              !selectedDepartmentId || filteredJobs.length === 0
-                ? 'bg-gray-100 text-gray-400 cursor-not-allowed'
-                : 'bg-gray-50/70 hover:bg-gray-50 text-gray-800'
-            }`}
-          >
-            {!selectedDepartmentId ? (
-              <option value="">-- Chọn phòng ban trước --</option>
-            ) : filteredJobs.length === 0 ? (
-              <option value="">-- Không có vị trí tuyển dụng --</option>
-            ) : (
-              <option value="">-- Chọn vị trí tuyển dụng --</option>
-            )}
-            {filteredJobs.map((job) => (
-              <option key={job._id} value={job._id}>
-                {job.title}
-              </option>
-            ))}
-          </select>
-          <Briefcase
-            size={14}
-            className="absolute left-3 top-3 text-gray-400 pointer-events-none"
-          />
-        </div>
+        {/* 3. AI Score Threshold Filter */}
+        <CustomSelect
+          value={scoreFilter}
+          onChange={(val) => onScoreFilterChange(val)}
+          icon={<Filter size={14} />}
+          size="sm"
+          className="w-full sm:w-auto"
+          placeholder="Tất cả điểm AI"
+          options={[
+            { value: 'all', label: 'Tất cả điểm AI' },
+            { value: '80', label: '≥ 80% (Xuất sắc)' },
+            { value: '70', label: '≥ 70% (Tốt)' },
+            { value: '50', label: '≥ 50% (Đạt)' }
+          ]}
+        />
 
-        {/* AI Score Threshold Filter */}
-        <div className="relative">
-          <select
-            value={scoreFilter}
-            onChange={(e) => onScoreFilterChange(e.target.value)}
-            className="pl-8 pr-8 py-2.5 border border-gray-200 rounded-2xl text-xs font-bold text-gray-800 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-600 transition-all bg-gray-50/70 hover:bg-gray-50 cursor-pointer appearance-none"
+        {/* Reset Filters Button */}
+        {onResetFilters && (
+          <button
+            type="button"
+            onClick={onResetFilters}
+            className="px-3 py-1.5 rounded-xl border border-white/80 bg-white/60 hover:bg-white text-slate-600 hover:text-rose-600 text-xs font-semibold flex items-center gap-1.5 shadow-2xs transition-all cursor-pointer shrink-0"
+            title="Đặt lại tất cả bộ lọc"
           >
-            <option value="all">Tất cả điểm AI</option>
-            <option value="80">≥ 80% (Xuất sắc)</option>
-            <option value="70">≥ 70% (Tốt)</option>
-            <option value="50">≥ 50% (Đạt)</option>
-          </select>
-          <Filter size={13} className="absolute left-3 top-3.5 text-gray-400 pointer-events-none" />
-        </div>
+            <RotateCcw size={14} />
+            <span>Đặt lại</span>
+          </button>
+        )}
       </div>
     </div>
   )
