@@ -91,8 +91,8 @@ export default function Sidebar() {
         </div>
 
         {/* Nav items */}
-        <nav className="flex-1 px-2 py-3 overflow-y-auto overflow-x-hidden">
-          <ul className="flex flex-col gap-1.5">
+        <nav className="flex-1 px-2.5 py-4 overflow-y-auto overflow-x-hidden">
+          <ul className="flex flex-col gap-2">
             {filteredNavItems.map((item) => {
               const isActive = pathname === item.href || pathname.startsWith(item.href + '/')
               const Icon = item.icon

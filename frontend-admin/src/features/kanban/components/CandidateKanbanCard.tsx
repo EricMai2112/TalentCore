@@ -1,232 +1,333 @@
-'use client'
+"use client";
 
-import { useMemo } from 'react'
-import { User as UserIcon, Calendar, Clock, Star, AlertTriangle, Briefcase } from 'lucide-react'
-import { useSortable } from '@dnd-kit/sortable'
-import { CSS } from '@dnd-kit/utilities'
-import { KanbanApplication } from '../types/kanban.types'
+import { useMemo } from "react";
+
+import { Calendar, AlertTriangle, Briefcase, ChevronLeft, ChevronRight, ChevronDown, CheckCircle2 } from "lucide-react";
+import { useSortable } from "@dnd-kit/sortable";
+import { CSS } from "@dnd-kit/utilities";
+import { KanbanApplication } from "../types/kanban.types";
+import { PipelineStage } from "@/src/features/job-description/types/job-description.types";
 
 interface CandidateKanbanCardProps {
-  application: KanbanApplication
-  onSelect?: (app: KanbanApplication) => void
-  isOverlay?: boolean
+  application: KanbanApplication;
+  stages?: PipelineStage[];
+  stageColor?: string;
+  onSelect?: (app: KanbanApplication) => void;
+  onMoveStage?: (appId: string, targetStageId: string) => void;
+  isOverlay?: boolean;
 }
 
 export default function CandidateKanbanCard({
   application,
+  stages = [],
+  stageColor,
   onSelect,
-  isOverlay = false
+  onMoveStage,
+  isOverlay = false,
 }: CandidateKanbanCardProps) {
-  const candidate = application.candidateId
-  const job = application.jobDescriptionId
-  const user = candidate?.userId
+  const candidate = application.candidateId;
+  const job = application.jobDescriptionId;
+  const user = candidate?.userId;
 
-  // dnd-kit sortable hook (disabled when in DragOverlay to avoid double transform and node rect recalculation shifts)
-  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
-    id: application._id,
-    disabled: isOverlay
-  })
+  // dnd-kit sortable hook
+  const {
+    attributes,
+    listeners,
+    setNodeRef,
+    transform,
+    transition,
+    isDragging,
+  } = useSortable({ id: application._id });
 
-  // Apply sortable transform ONLY to original card in column, NOT in DragOverlay
-  const style = isOverlay
-    ? undefined
-    : {
-        transform: CSS.Translate.toString(transform),
-        transition,
-        opacity: isDragging ? 0.35 : 1
-      }
+  const style = {
+    transform: CSS.Translate.toString(transform),
+    transition,
+    opacity: isDragging ? 0.35 : 1,
+  };
 
   // Extract display name & initials
-  const name = user?.name || candidate?.fullName || candidate?.profileName || 'Ứng viên'
+  const name = user?.name || candidate?.fullName || candidate?.profileName || "Ứng viên";
   const initials = useMemo(() => {
-    const parts = name.trim().split(' ')
+    const parts = name.trim().split(" ");
     if (parts.length >= 2) {
-      return `${parts[parts.length - 2][0]}${parts[parts.length - 1][0]}`.toUpperCase()
+      return `${parts[parts.length - 2][0]}${parts[parts.length - 1][0]}`.toUpperCase();
     }
-    return name.slice(0, 2).toUpperCase()
-  }, [name])
+    return name.slice(0, 2).toUpperCase();
+  }, [name]);
 
   // Deterministic pastel color palette for avatars
   const avatarBg = useMemo(() => {
     const colors = [
-      'bg-purple-500/10 text-purple-700 border-purple-200/60',
-      'bg-indigo-500/10 text-indigo-700 border-indigo-200/60',
-      'bg-blue-500/10 text-[#3B82F6] border-blue-200/60',
-      'bg-pink-500/10 text-pink-700 border-pink-200/60',
-      'bg-teal-500/10 text-teal-700 border-teal-200/60'
-    ]
-    let hash = 0
-    for (let i = 0; i < name.length; i++) hash += name.charCodeAt(i)
-    return colors[hash % colors.length]
-  }, [name])
+      "bg-purple-100 text-purple-700 border-purple-200",
+      "bg-indigo-100 text-indigo-700 border-indigo-200",
+      "bg-blue-100 text-blue-700 border-blue-200",
+      "bg-pink-100 text-pink-700 border-pink-200",
+      "bg-teal-100 text-teal-700 border-teal-200",
+    ];
+    let hash = 0;
+    for (let i = 0; i < name.length; i++) hash += name.charCodeAt(i);
+    return colors[hash % colors.length];
+  }, [name]);
 
-  const hasScore = application.aiFitScore !== null && application.aiFitScore !== undefined
-  const aiScore = application.aiFitScore ?? 0
+  const hasScore = application.aiFitScore !== null && application.aiFitScore !== undefined;
+  const aiScore = application.aiFitScore ?? 0;
 
-  // Primary interviewer name
-  const interviewerName = useMemo(() => {
-    if (job?.interviewerIds && job.interviewerIds.length > 0) {
-      const first = job.interviewerIds[0]
-      return typeof first === 'object' ? first.name : 'Nhà tuyển dụng'
-    }
-    if (job?.interviewerId) {
-      return typeof job.interviewerId === 'object' ? job.interviewerId.name : 'Nhà tuyển dụng'
-    }
-    return null
-  }, [job])
+  // Card accent color matching Kanban Stage Color
+  const cardColor = useMemo(() => {
+    if (stageColor) return stageColor;
+    const found = stages.find((s) => s._id === application.currentStageId);
+    return found?.color || "#6366f1";
+  }, [stageColor, stages, application.currentStageId]);
+
+  // Current, previous, and next stage calculation for Left/Right mover buttons
+  const currentStageIndex = useMemo(() => {
+    if (!stages || stages.length === 0) return -1;
+    return stages.findIndex((s) => s._id === application.currentStageId);
+  }, [stages, application.currentStageId]);
+
+  const prevStage = useMemo(() => {
+    if (!stages || currentStageIndex <= 0) return null;
+    return stages[currentStageIndex - 1];
+  }, [stages, currentStageIndex]);
+
+  const nextStage = useMemo(() => {
+    if (!stages || currentStageIndex === -1 || currentStageIndex >= stages.length - 1) return null;
+    return stages[currentStageIndex + 1];
+  }, [stages, currentStageIndex]);
 
   // Format applied date
   const formattedDate = useMemo(() => {
-    if (!application.appliedAt) return 'N/A'
+    if (!application.appliedAt) return "Mới";
     try {
-      const d = new Date(application.appliedAt)
-      return `${d.getDate().toString().padStart(2, '0')}/${(d.getMonth() + 1).toString().padStart(2, '0')}/${d.getFullYear()}`
+      const d = new Date(application.appliedAt);
+      return `${d.getDate().toString().padStart(2, '0')}/${(d.getMonth() + 1).toString().padStart(2, '0')}`;
     } catch {
-      return 'N/A'
+      return "Mới";
     }
-  }, [application.appliedAt])
+  }, [application.appliedAt]);
+
+  // Evaluated criteria calculation
+  const evaluatedCriteria = useMemo(() => {
+    return application.aiEvaluation?.evaluatedCriteria || [];
+  }, [application.aiEvaluation]);
+
+  const totalCriteria = evaluatedCriteria.length;
+  const passedCriteria = useMemo(() => {
+    return evaluatedCriteria.filter((c) => c.isPassed).length;
+  }, [evaluatedCriteria]);
 
   return (
     <div
-      ref={isOverlay ? undefined : setNodeRef}
+      ref={setNodeRef}
       style={style}
-      {...(isOverlay ? {} : attributes)}
-      {...(isOverlay ? {} : listeners)}
-      onClick={() => !isOverlay && onSelect && onSelect(application)}
-      className={`backdrop-blur-md rounded-2xl p-3.5 transition-all flex flex-col justify-between h-[162px] group select-none relative border ${
+      {...attributes}
+      {...listeners}
+      onClick={() => onSelect && onSelect(application)}
+      className={`bg-white border rounded-2xl overflow-hidden transition-all cursor-grab active:cursor-grabbing flex flex-col justify-between group select-none relative min-h-[168px] ${
         isOverlay
-          ? 'border-[#3B82F6] bg-white/95 shadow-2xl ring-4 ring-[#3B82F6]/30 cursor-grabbing pointer-events-none w-[320px] z-50'
-          : 'bg-white/60 border-white/80 hover:bg-white/80 hover:border-[#3B82F6]/60 shadow-md shadow-blue-500/5 hover:shadow-xl hover:shadow-blue-500/10 hover:-translate-y-0.5 cursor-grab active:cursor-grabbing w-full'
+          ? "border-indigo-400 shadow-2xl ring-2 ring-indigo-500/30 scale-105"
+          : "border-slate-200/80 hover:border-slate-300 shadow-2xs hover:shadow-md"
       }`}
     >
-      {/* Upper Section */}
-      <div className="space-y-2">
-        {/* Row 1: Avatar, Candidate Name & AI Match Score Gauge */}
-        <div className="flex items-center justify-between gap-2.5">
-          <div className="flex items-center gap-2.5 min-w-0 flex-1">
+      {/* Top Accent Strip matching Kanban Stage Color */}
+      <div
+        className="h-2 w-full shrink-0 transition-colors"
+        style={{ backgroundColor: cardColor }}
+      />
+
+      {/* Card Content Body */}
+      <div className="p-4 flex flex-col justify-between flex-1 gap-3">
+        {/* Top Row: Avatar (Left) + Candidate Name & Job Title (Center) + Score (Top Right - Compact) */}
+        <div className="flex items-start justify-between gap-2 min-w-0">
+          <div className="flex items-start gap-2.5 min-w-0 flex-1">
             <div
-              className={`w-9 h-9 rounded-full flex items-center justify-center font-black text-xs shrink-0 border shadow-2xs ${avatarBg}`}
+              className={`w-9 h-9 rounded-xl flex items-center justify-center font-black text-xs shrink-0 border ${avatarBg} shadow-2xs mt-0.5`}
             >
               {initials}
             </div>
 
-            <h4
-              className="text-xs font-extrabold text-slate-900 truncate group-hover:text-[#3B82F6] transition-colors"
-              title={name}
-            >
-              {name}
-            </h4>
+            <div className="flex-1 min-w-0 pr-1">
+              <h4
+                className="text-[14px] font-black text-gray-900 truncate group-hover:text-indigo-600 transition-colors leading-snug"
+                title={name}
+              >
+                {name}
+              </h4>
+              <div className="flex items-center gap-1.5 text-xs text-gray-500 pt-0.5 min-w-0">
+                <Briefcase size={12} className="text-indigo-500 shrink-0" />
+                <span
+                  className="truncate font-semibold text-slate-600 text-[11.5px]"
+                  title={job?.title || "Vị trí tuyển dụng"}
+                >
+                  {job?.title || "Vị trí tuyển dụng"}
+                </span>
+              </div>
+            </div>
           </div>
 
+          {/* Score Circle placed at Top Right (Compact w-9 h-9 to maximize room for candidate name) */}
           {hasScore ? (
             <div
-              className="relative w-10 h-10 shrink-0 flex items-center justify-center"
-              title={`Điểm AI Match: ${aiScore}%`}
+              className="relative w-9 h-9 shrink-0 flex items-center justify-center"
+              title={`Điểm AI Matching: ${aiScore}`}
             >
-              <svg className="w-10 h-10 -rotate-90 transform" viewBox="0 0 40 40">
+              <svg className="w-9 h-9 -rotate-90 transform" viewBox="0 0 36 36">
                 <circle
-                  cx="20"
-                  cy="20"
-                  r="16"
+                  cx="18"
+                  cy="18"
+                  r="14"
                   fill="none"
                   className={
                     aiScore >= 70
-                      ? 'text-emerald-100'
+                      ? "text-emerald-100"
                       : aiScore >= 50
-                        ? 'text-amber-100'
-                        : 'text-rose-100'
+                      ? "text-amber-100"
+                      : "text-rose-100"
                   }
                   stroke="currentColor"
-                  strokeWidth="3.5"
+                  strokeWidth="3.2"
                 />
                 <circle
-                  cx="20"
-                  cy="20"
-                  r="16"
+                  cx="18"
+                  cy="18"
+                  r="14"
                   fill="none"
                   className={
                     aiScore >= 70
-                      ? 'text-emerald-500'
+                      ? "text-emerald-500"
                       : aiScore >= 50
-                        ? 'text-amber-500'
-                        : 'text-rose-500'
+                      ? "text-amber-500"
+                      : "text-rose-500"
                   }
                   stroke="currentColor"
-                  strokeWidth="3.5"
-                  strokeDasharray={100.5}
-                  strokeDashoffset={100.5 - (Math.min(100, Math.max(0, aiScore)) / 100) * 100.5}
+                  strokeWidth="3.2"
+                  strokeDasharray={88}
+                  strokeDashoffset={88 - (Math.min(100, Math.max(0, aiScore)) / 100) * 88}
                   strokeLinecap="round"
                 />
               </svg>
               <span
-                className={`absolute text-[11px] font-black tracking-tight ${
+                className={`absolute text-[12px] font-black tracking-tight ${
                   aiScore >= 70
-                    ? 'text-emerald-700'
+                    ? "text-emerald-700"
                     : aiScore >= 50
-                      ? 'text-amber-700'
-                      : 'text-rose-600'
+                    ? "text-amber-700"
+                    : "text-rose-600"
                 }`}
               >
                 {aiScore}
               </span>
             </div>
           ) : (
-            <span className="text-[10px] text-slate-400 font-bold italic bg-white/50 border border-white/80 px-2 py-0.5 rounded-lg shrink-0">
-              Chờ chấm...
+            <span className="text-[10px] text-gray-400 font-bold italic bg-gray-50 border border-gray-100 px-2 py-0.5 rounded-lg shrink-0">
+              --
             </span>
           )}
         </div>
 
-        {/* Row 2: Job Position Title */}
-        <div className="flex items-center gap-1.5 text-xs text-slate-600 w-full pt-0.5">
-          <Briefcase size={13} className="text-[#3B82F6] shrink-0" />
-          <span
-            className="truncate flex-1 font-bold text-slate-800 text-xs"
-            title={job?.title || 'Vị trí tuyển dụng'}
-          >
-            {job?.title || 'Vị trí tuyển dụng'}
-          </span>
+                {/* Middle Row: Applied Date & Total Criteria Passed on the SAME ROW */}
+        <div className="flex items-center justify-between gap-1.5 text-[11.5px] font-medium pt-0.5">
+          <div className="flex items-center gap-1.5 font-semibold text-slate-500 shrink-0">
+            <Calendar size={12} className="text-gray-400 shrink-0" />
+            <span>{formattedDate}</span>
+          </div>
+
+          <div className="flex items-center gap-1.5 shrink-0">
+            {totalCriteria > 0 && (
+              <div
+                className="flex items-center gap-1 px-2.5 py-0.5 rounded-lg text-[11px] font-bold bg-emerald-50 text-emerald-700 border border-emerald-200/90 shadow-2xs transition-colors shrink-0"
+                title={`${passedCriteria}/${totalCriteria} tiêu chí đạt yêu cầu`}
+              >
+                <CheckCircle2
+                  size={12}
+                  className="text-emerald-600 shrink-0"
+                  strokeWidth={2.2}
+                />
+                <span>{passedCriteria}/{totalCriteria} tiêu chí đạt</span>
+              </div>
+            )}
+
+            {application.isMissingMandatory && (
+              <div
+                className="p-1 bg-rose-50 border border-rose-200/90 rounded-lg text-rose-600 flex items-center justify-center shadow-2xs shrink-0"
+                title="Thiếu tiêu chí Bắt buộc"
+              >
+                <AlertTriangle size={12} />
+              </div>
+            )}
+          </div>
         </div>
-      </div>
 
-      {/* Middle status section */}
-      <div className="h-6 flex items-center">
-        {application.isMissingMandatory ? (
-          <div className="px-2 py-0.5 bg-rose-500/10 border border-rose-300/60 rounded-xl flex items-center gap-1 text-rose-700 text-[10.5px] font-bold shadow-2xs w-full">
-            <AlertTriangle size={12} className="shrink-0 text-rose-600" />
-            <span className="truncate">Thiếu tiêu chí Bắt buộc</span>
-          </div>
-        ) : application.ratingScore ? (
-          <div className="px-2 py-0.5 bg-amber-500/10 border border-amber-300/60 rounded-xl flex items-center justify-between text-[10.5px] w-full">
-            <div className="flex items-center gap-1 text-amber-800 font-semibold">
-              <Clock size={11} className="text-amber-600" />
-              <span>Chờ duyệt</span>
-            </div>
-            <div className="flex items-center gap-1 font-extrabold text-amber-900">
-              <Star size={11} className="fill-amber-400 text-amber-400" />
-              <span>{application.ratingScore}</span>
-            </div>
-          </div>
-        ) : (
-          <div className="h-6" />
-        )}
-      </div>
-
-      {/* Footer Info: Interviewer & Applied Date */}
-      <div className="pt-2 border-t border-slate-200/60 flex items-center justify-between text-[11px] text-slate-500 font-medium">
+        {/* Bottom Footer: Left button (<) + Stage Dropdown in Center + Right button (>) */}
         <div
-          className="flex items-center gap-1 truncate max-w-[130px]"
-          title={interviewerName || 'Tuyển dụng'}
+          className="pt-2.5 border-t border-slate-100 flex items-center gap-2 justify-between w-full"
+          onClick={(e) => e.stopPropagation()}
         >
-          <UserIcon size={12} className="shrink-0 text-slate-400" />
-          <span className="truncate font-semibold text-slate-600">{interviewerName || 'Tuyển dụng'}</span>
-        </div>
+          {/* Nút lùi về stage trước (Qua trái) */}
+          <button
+            type="button"
+            disabled={!prevStage}
+            onClick={(e) => {
+              e.stopPropagation();
+              if (prevStage) onMoveStage && onMoveStage(application._id, prevStage._id!);
+            }}
+            className={`w-8 h-8 rounded-xl border flex items-center justify-center transition-all duration-150 shrink-0 ${
+              !prevStage
+                ? "bg-slate-50 text-slate-300 border-slate-200/60 cursor-not-allowed opacity-35"
+                : "bg-indigo-50/80 hover:bg-indigo-600 text-indigo-600 hover:text-white border-indigo-200/70 hover:border-indigo-600 shadow-2xs hover:shadow-xs active:scale-90 cursor-pointer"
+            }`}
+            title={prevStage ? `Lùi về: ${prevStage.name}` : "Đang ở giai đoạn đầu tiên"}
+          >
+            <ChevronLeft size={16} strokeWidth={2.4} />
+          </button>
 
-        <div className="flex items-center gap-1 shrink-0 font-semibold text-slate-500">
-          <Calendar size={12} className="text-slate-400" />
-          <span>{formattedDate}</span>
+          {/* Dropdown chọn giai đoạn cao cấp & tinh tế */}
+          <div className="relative flex-1 min-w-0 group/select">
+            <select
+              value={application.currentStageId || ""}
+              onChange={(e) => {
+                e.stopPropagation();
+                if (e.target.value && e.target.value !== application.currentStageId) {
+                  onMoveStage && onMoveStage(application._id, e.target.value);
+                }
+              }}
+              className="w-full text-[11.5px] font-bold py-1.5 pl-3 pr-6 bg-slate-50 hover:bg-white border border-slate-200/90 hover:border-indigo-300 rounded-xl text-slate-700 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 cursor-pointer appearance-none truncate transition-all text-center shadow-2xs"
+              title="Chọn chuyển sang giai đoạn bất kỳ"
+            >
+              {stages && stages.length > 0 ? (
+                stages.map((stg) => (
+                  <option key={stg._id || stg.name} value={stg._id}>
+                    {stg.name}
+                  </option>
+                ))
+              ) : (
+                <option value={application.currentStageId || ""}>Đổi giai đoạn</option>
+              )}
+            </select>
+            <div className="absolute right-2.5 top-1/2 -translate-y-1/2 pointer-events-none text-slate-400 group-hover/select:text-indigo-600 transition-colors">
+              <ChevronDown size={12} strokeWidth={2.2} />
+            </div>
+          </div>
+
+          {/* Nút tiến lên stage sau (Qua phải) */}
+          <button
+            type="button"
+            disabled={!nextStage}
+            onClick={(e) => {
+              e.stopPropagation();
+              if (nextStage) onMoveStage && onMoveStage(application._id, nextStage._id!);
+            }}
+            className={`w-8 h-8 rounded-xl border flex items-center justify-center transition-all duration-150 shrink-0 ${
+              !nextStage
+                ? "bg-slate-50 text-slate-300 border-slate-200/60 cursor-not-allowed opacity-35"
+                : "bg-indigo-50/80 hover:bg-indigo-600 text-indigo-600 hover:text-white border-indigo-200/70 hover:border-indigo-600 shadow-2xs hover:shadow-xs active:scale-90 cursor-pointer"
+            }`}
+            title={nextStage ? `Chuyển tiếp: ${nextStage.name}` : "Đang ở giai đoạn cuối cùng"}
+          >
+            <ChevronRight size={16} strokeWidth={2.4} />
+          </button>
         </div>
       </div>
     </div>
-  )
+  );
 }
