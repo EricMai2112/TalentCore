@@ -1,8 +1,8 @@
 "use client";
 
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo, useRef } from "react";
 import { createPortal } from "react-dom";
-import { Briefcase } from "lucide-react";
+import { Briefcase, ChevronLeft, ChevronRight } from "lucide-react";
 import {
   DndContext,
   DragOverlay,
@@ -76,6 +76,14 @@ export default function KanbanContainer({
   const [applications, setApplications] = useState<KanbanApplication[]>(initialApplications);
   const [selectedCandidateApp, setSelectedCandidateApp] = useState<KanbanApplication | null>(null);
   const [activeApplication, setActiveApplication] = useState<KanbanApplication | null>(null);
+
+  // Carousel 4-stages-per-page state
+  const [carouselIndex, setCarouselIndex] = useState<number>(0);
+  const containerRef = useRef<HTMLDivElement>(null);
+  const dragHoverEdgeRef = useRef<"left" | "right" | null>(null);
+  const slideTimerRef = useRef<NodeJS.Timeout | null>(null);
+  const slideIntervalRef = useRef<NodeJS.Timeout | null>(null);
+  const [edgeActive, setEdgeActive] = useState<"left" | "right" | null>(null);
 
   // dnd-kit sensors setup with pointer distance activation constraint
   const sensors = useSensors(
@@ -171,6 +179,123 @@ export default function KanbanContainer({
     return DEFAULT_STAGES;
   }, [selectedJobId, initialJobs]);
 
+  // Max carousel index (ensures 4 stages fit without screen scroll)
+  const maxCarouselIndex = useMemo(
+    () => Math.max(0, activeStages.length - 4),
+    [activeStages.length]
+  );
+
+  // Reset carousel index when switching positions/jobs
+  useEffect(() => {
+    setCarouselIndex(0);
+  }, [selectedJobId]);
+
+  // Keep carousel index in valid range
+  useEffect(() => {
+    if (carouselIndex > maxCarouselIndex) {
+      setCarouselIndex(maxCarouselIndex);
+    }
+  }, [maxCarouselIndex, carouselIndex]);
+
+  const handlePrev = () => {
+    setCarouselIndex((prev) => Math.max(0, prev - 1));
+  };
+
+  const handleNext = () => {
+    setCarouselIndex((prev) => Math.min(maxCarouselIndex, prev + 1));
+  };
+
+  // Calculated width for exactly 4 columns per view without horizontal scrolling
+  const columnWidthStyle = useMemo(() => {
+    if (activeStages.length < 4) {
+      return `calc((100% - ${(activeStages.length - 1) * 16}px) / ${activeStages.length})`;
+    }
+    return "calc((100% - 48px) / 4)";
+  }, [activeStages.length]);
+
+  // Global window pointer listener: Automatically slide carousel when dragging candidate near board edges
+  useEffect(() => {
+    if (!activeApplication || maxCarouselIndex <= 0) {
+      dragHoverEdgeRef.current = null;
+      setEdgeActive(null);
+      if (slideTimerRef.current) clearTimeout(slideTimerRef.current);
+      if (slideIntervalRef.current) clearInterval(slideIntervalRef.current);
+      return;
+    }
+
+    const clearTimers = () => {
+      if (slideTimerRef.current) {
+        clearTimeout(slideTimerRef.current);
+        slideTimerRef.current = null;
+      }
+      if (slideIntervalRef.current) {
+        clearInterval(slideIntervalRef.current);
+        slideIntervalRef.current = null;
+      }
+      dragHoverEdgeRef.current = null;
+      setEdgeActive(null);
+    };
+
+    const handlePointerMove = (e: PointerEvent | MouseEvent) => {
+      const container = containerRef.current;
+      if (!container) return;
+
+      const rect = container.getBoundingClientRect();
+      const x = e.clientX;
+      const y = e.clientY;
+
+      // Check vertical tolerance within board container
+      if (y < rect.top - 80 || y > rect.bottom + 80) {
+        clearTimers();
+        return;
+      }
+
+      const edgeZone = 120; // 120px zone near container borders
+
+      // Right edge detection
+      if (x >= rect.right - edgeZone) {
+        if (dragHoverEdgeRef.current !== "right") {
+          clearTimers();
+          dragHoverEdgeRef.current = "right";
+          setEdgeActive("right");
+          slideTimerRef.current = setTimeout(() => {
+            setCarouselIndex((prev) => Math.min(maxCarouselIndex, prev + 1));
+            slideIntervalRef.current = setInterval(() => {
+              setCarouselIndex((prev) => Math.min(maxCarouselIndex, prev + 1));
+            }, 600);
+          }, 250);
+        }
+      }
+      // Left edge detection
+      else if (x <= rect.left + edgeZone) {
+        if (dragHoverEdgeRef.current !== "left") {
+          clearTimers();
+          dragHoverEdgeRef.current = "left";
+          setEdgeActive("left");
+          slideTimerRef.current = setTimeout(() => {
+            setCarouselIndex((prev) => Math.max(0, prev - 1));
+            slideIntervalRef.current = setInterval(() => {
+              setCarouselIndex((prev) => Math.max(0, prev - 1));
+            }, 600);
+          }, 250);
+        }
+      } else {
+        if (dragHoverEdgeRef.current !== null) {
+          clearTimers();
+        }
+      }
+    };
+
+    window.addEventListener("pointermove", handlePointerMove);
+    window.addEventListener("mousemove", handlePointerMove);
+
+    return () => {
+      window.removeEventListener("pointermove", handlePointerMove);
+      window.removeEventListener("mousemove", handlePointerMove);
+      clearTimers();
+    };
+  }, [activeApplication, maxCarouselIndex]);
+
   // Filter applications by score threshold
   const filteredApplications = useMemo(() => {
     return applications.filter((app) => {
@@ -238,22 +363,8 @@ export default function KanbanContainer({
     if (found) setActiveApplication(found);
   };
 
-  // Handle Drag End
-  const handleDragEnd = async (event: DragEndEvent) => {
-    const { active, over } = event;
-    setActiveApplication(null);
-    if (!over) return;
-
-    const appId = String(active.id);
-    const overId = String(over.id);
-
-    // Over item can be a stage ID or an application ID inside a column
-    let targetStageId = overId;
-    const overApp = applications.find((a) => a._id === overId);
-    if (overApp) {
-      targetStageId = overApp.currentStageId;
-    }
-
+  // Shared handler for moving application to another stage (via drag or quick action buttons)
+  const handleMoveStage = async (appId: string, targetStageId: string) => {
     const currentApp = applications.find((a) => a._id === appId);
     if (!currentApp || currentApp.currentStageId === targetStageId) return;
 
@@ -275,6 +386,36 @@ export default function KanbanContainer({
         )
       );
     }
+  };
+
+  // Handle Drag End
+  const handleDragEnd = async (event: DragEndEvent) => {
+    if (slideTimerRef.current) {
+      clearTimeout(slideTimerRef.current);
+      slideTimerRef.current = null;
+    }
+    if (slideIntervalRef.current) {
+      clearInterval(slideIntervalRef.current);
+      slideIntervalRef.current = null;
+    }
+    dragHoverEdgeRef.current = null;
+    setEdgeActive(null);
+
+    const { active, over } = event;
+    setActiveApplication(null);
+    if (!over) return;
+
+    const appId = String(active.id);
+    const overId = String(over.id);
+
+    // Over item can be a stage ID or an application ID inside a column
+    let targetStageId = overId;
+    const overApp = applications.find((a) => a._id === overId);
+    if (overApp) {
+      targetStageId = overApp.currentStageId;
+    }
+
+    await handleMoveStage(appId, targetStageId);
   };
 
   // Handle Reset Filters
@@ -336,15 +477,114 @@ export default function KanbanContainer({
           onDragStart={handleDragStart}
           onDragEnd={handleDragEnd}
         >
-          {/* Horizontal Scrollable Kanban Board Columns Container */}
-          <div className="w-full overflow-x-auto pb-6 scrollbar-thin scrollbar-thumb-slate-300/60">
-            <div className="flex items-stretch gap-4 min-w-max">
+          {/* Carousel Navigation Toolbar (when stages > 4) */}
+          {maxCarouselIndex > 0 && (
+            <div className="flex items-center justify-end gap-3 px-1 py-0.5">
+              {/* Dot Page Indicator */}
+              <div className="flex items-center gap-1.5">
+                {Array.from({ length: maxCarouselIndex + 1 }).map((_, idx) => (
+                  <button
+                    key={idx}
+                    type="button"
+                    onClick={() => setCarouselIndex(idx)}
+                    className={`h-2 rounded-full transition-all cursor-pointer ${
+                      carouselIndex === idx
+                        ? "w-6 bg-indigo-600"
+                        : "w-2 bg-gray-300 hover:bg-gray-400"
+                    }`}
+                    title={`Trang ${idx + 1}`}
+                  />
+                ))}
+              </div>
+
+              {/* Prev / Next Action Buttons */}
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  disabled={carouselIndex === 0}
+                  onClick={handlePrev}
+                  className={`px-3 py-1.5 rounded-xl border text-xs font-bold flex items-center gap-1.5 transition-all cursor-pointer ${
+                    carouselIndex === 0
+                      ? "bg-gray-50 text-gray-300 border-gray-100 cursor-not-allowed"
+                      : "bg-white text-gray-700 border-gray-200 hover:bg-gray-50 hover:border-gray-300 shadow-2xs hover:text-indigo-600 active:scale-95"
+                  }`}
+                  title="Xem các giai đoạn trước"
+                >
+                  <ChevronLeft size={15} />
+                  <span>Trước</span>
+                </button>
+
+                <button
+                  type="button"
+                  disabled={carouselIndex >= maxCarouselIndex}
+                  onClick={handleNext}
+                  className={`px-3 py-1.5 rounded-xl border text-xs font-bold flex items-center gap-1.5 transition-all cursor-pointer ${
+                    carouselIndex >= maxCarouselIndex
+                      ? "bg-gray-50 text-gray-300 border-gray-100 cursor-not-allowed"
+                      : "bg-white text-gray-700 border-gray-200 hover:bg-gray-50 hover:border-gray-300 shadow-2xs hover:text-indigo-600 active:scale-95"
+                  }`}
+                  title="Xem các giai đoạn tiếp theo"
+                >
+                  <span>Tiếp</span>
+                  <ChevronRight size={15} />
+                </button>
+              </div>
+            </div>
+          )}
+
+          {/* Carousel Viewport Container (No Horizontal Scrollbar, 4 Stages Fitted) */}
+          <div ref={containerRef} className="relative w-full overflow-hidden rounded-3xl pb-2">
+            {/* Floating Prev Button (Left) */}
+            {maxCarouselIndex > 0 && carouselIndex > 0 && (
+              <button
+                type="button"
+                onClick={handlePrev}
+                className={`absolute left-2.5 top-1/2 -translate-y-1/2 z-20 w-11 h-11 rounded-full backdrop-blur-md shadow-lg border flex items-center justify-center transition-all cursor-pointer group ${
+                  edgeActive === "left"
+                    ? "bg-indigo-600 text-white border-indigo-400 scale-125 shadow-xl shadow-indigo-500/50 ring-4 ring-indigo-200"
+                    : "bg-white/95 text-gray-700 border-gray-200 hover:text-indigo-600 hover:scale-110 active:scale-95"
+                }`}
+                title="Giai đoạn trước"
+              >
+                <ChevronLeft size={22} className={`transition-transform ${edgeActive === "left" ? "animate-pulse" : "group-hover:-translate-x-0.5"}`} />
+              </button>
+            )}
+
+            {/* Floating Next Button (Right) */}
+            {maxCarouselIndex > 0 && carouselIndex < maxCarouselIndex && (
+              <button
+                type="button"
+                onClick={handleNext}
+                className={`absolute right-2.5 top-1/2 -translate-y-1/2 z-20 w-11 h-11 rounded-full backdrop-blur-md shadow-lg border flex items-center justify-center transition-all cursor-pointer group ${
+                  edgeActive === "right"
+                    ? "bg-indigo-600 text-white border-indigo-400 scale-125 shadow-xl shadow-indigo-500/50 ring-4 ring-indigo-200"
+                    : "bg-white/95 text-gray-700 border-gray-200 hover:text-indigo-600 hover:scale-110 active:scale-95"
+                }`}
+                title="Giai đoạn sau"
+              >
+                <ChevronRight size={22} className={`transition-transform ${edgeActive === "right" ? "animate-pulse" : "group-hover:translate-x-0.5"}`} />
+              </button>
+            )}
+
+            {/* Sliding Flex Track */}
+            <div
+              className="flex items-stretch gap-4 transition-transform duration-300 ease-in-out w-full"
+              style={{
+                transform:
+                  maxCarouselIndex > 0
+                    ? `translateX(calc(-${carouselIndex * 25}% - ${carouselIndex * 4}px))`
+                    : "none",
+              }}
+            >
               {activeStages.map((stage) => (
                 <KanbanColumn
                   key={stage._id || stage.name}
                   stage={stage}
+                  stages={activeStages}
                   applications={applicationsByStage.get(stage._id || "") || []}
                   onSelectCandidate={setSelectedCandidateApp}
+                  onMoveStage={handleMoveStage}
+                  style={{ width: columnWidthStyle }}
                 />
               ))}
             </div>
@@ -354,10 +594,13 @@ export default function KanbanContainer({
           {isMounted && typeof window !== "undefined" && createPortal(
             <DragOverlay dropAnimation={null}>
               {activeApplication ? (
-                <CandidateKanbanCard
-                  application={activeApplication}
-                  isOverlay
-                />
+                <div className="w-[335px]">
+                  <CandidateKanbanCard
+                    application={activeApplication}
+                    stages={activeStages}
+                    isOverlay
+                  />
+                </div>
               ) : null}
             </DragOverlay>,
             document.body
@@ -365,14 +608,17 @@ export default function KanbanContainer({
         </DndContext>
       ) : (
         /* Fallback SSR render before client hydration */
-        <div className="w-full overflow-x-auto pb-6 scrollbar-thin scrollbar-thumb-slate-300/60">
-          <div className="flex items-stretch gap-4 min-w-max">
-            {activeStages.map((stage) => (
+        <div className="relative w-full overflow-hidden rounded-3xl pb-2">
+          <div className="flex items-stretch gap-4 w-full">
+            {activeStages.slice(0, 4).map((stage) => (
               <KanbanColumn
                 key={stage._id || stage.name}
                 stage={stage}
+                stages={activeStages}
                 applications={applicationsByStage.get(stage._id || "") || []}
                 onSelectCandidate={setSelectedCandidateApp}
+                onMoveStage={handleMoveStage}
+                style={{ width: columnWidthStyle }}
               />
             ))}
           </div>

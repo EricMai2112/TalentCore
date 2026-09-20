@@ -354,14 +354,7 @@ export class AiMatchingService {
     );
   }
 
-  /**
-   * Tính toán độ tương đồng chuỗi (Fuzzy Match / Similarity) giữa đoạn trích dẫn Evidence và toàn văn CV gốc.
-   * Thuật toán kết hợp so khớp chuỗi con hoàn hảo (Substring Match) và tỷ lệ trùng lặp từ khóa (Token Overlap).
-   * 
-   * @param evidence Đoạn văn bản trích dẫn do AI trích xuất
-   * @param cvText Toàn văn hồ sơ ứng viên
-   * @returns Tỷ lệ tương đồng trong khoảng [0, 1]
-   */
+
   calculateEvidenceSimilarity(evidence: string, cvText: string): number {
     if (!evidence || !cvText) return 0;
 
@@ -397,27 +390,22 @@ export class AiMatchingService {
 
     const trimmedEvidence = evidence.trim();
 
-    // 1. Thành phần 1: Độ tương đồng với CV gốc (Trọng số 50%)
     const similarity =
       precomputedSimilarity !== undefined
         ? precomputedSimilarity
         : this.calculateEvidenceSimilarity(trimmedEvidence, cvText);
     const similarityScore = similarity * 50;
 
-    // 2. Thành phần 2: Số liệu định lượng (Trọng số 30%)
     const hasQuantifiableMetrics = this.detectQuantifiableMetrics(trimmedEvidence);
     const metricsScore = hasQuantifiableMetrics ? 30 : 0;
 
-    // 3. Thành phần 3: Độ dài và chiều sâu chi tiết (Trọng số 20%)
     const lengthRatio = Math.min(trimmedEvidence.length / 200, 1);
     const lengthScore = lengthRatio * 20;
 
-    // Tổng hợp điểm số theo công thức
     const rawTotal = similarityScore + metricsScore + lengthScore;
     return Math.min(100, Math.max(0, Math.round(rawTotal)));
   }
 
-  // 3. Giai đoạn 5 — Validate Bằng Chứng & Tính Điểm Tất Định
   processDeterministicScoring(cvText: string, jobCriteria: JobCriteria[], aiResult: any) {
     const warnings: string[] = [];
     let isMissingMandatory = false;
@@ -428,17 +416,14 @@ export class AiMatchingService {
         r.name?.toLowerCase().trim() === criterion.name.toLowerCase().trim()
       ) || { score: 0, evidence: '', isPassed: false };
 
-      // Validate bằng chứng dựa trên độ tương đồng (Fuzzy-match) làm nguồn chân lý duy nhất
       const evidence = (matched.evidence || '').trim();
       const similarity = evidence.length > 0 ? this.calculateEvidenceSimilarity(evidence, cvText) : 0;
       const similarityPct = Math.round(similarity * 100);
 
-      // Đánh giá 3 mức độ xác thực bằng chứng & cảnh báo
       let isEvidenceVerified = false;
       if (evidence.length > 0) {
         if (similarity >= 0.7) {
           isEvidenceVerified = true;
-          // similarity >= 0.7: Đạt chuẩn xác thực cao, không tạo cảnh báo
         } else if (similarity >= 0.5) {
           isEvidenceVerified = false;
           warnings.push(`Bằng chứng cho tiêu chí "${criterion.name}" khớp một phần (${similarityPct}%), nên xem lại.`);
@@ -448,14 +433,12 @@ export class AiMatchingService {
         }
       }
 
-      // Xử lý tiêu chí Bắt buộc (MANDATORY)
       const isMandatory = criterion.requirementType === 'MANDATORY';
       if (isMandatory && (!matched.isPassed || matched.score < 60)) {
         isMissingMandatory = true;
         warnings.push(`Không đáp ứng yêu cầu Bắt buộc: "${criterion.name}" (Điểm: ${matched.score}/100)`);
       }
 
-      // Công thức tính điểm tất định: Điểm đóng góp = (score / 100) * weight
       const score = [0, 20, 40, 60, 80, 100].includes(matched.score) ? matched.score : 0;
       const scoreContribution = Number(((score / 100) * criterion.weight).toFixed(2));
       totalScore += scoreContribution;

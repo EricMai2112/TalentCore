@@ -1,149 +1,99 @@
-'use client'
+"use client";
 
-import { useMemo } from 'react'
-import { Inbox, FileText, Filter, Users, Send, CheckCircle2, Briefcase, Search } from 'lucide-react'
-import { useDroppable } from '@dnd-kit/core'
-import { SortableContext, verticalListSortingStrategy } from '@dnd-kit/sortable'
-import { PipelineStage } from '@/src/features/job-description/types/job-description.types'
-import { KanbanApplication } from '../types/kanban.types'
-import CandidateKanbanCard from './CandidateKanbanCard'
+import { useMemo } from "react";
+import { Inbox } from "lucide-react";
+import { useDroppable } from "@dnd-kit/core";
+import { SortableContext, verticalListSortingStrategy } from "@dnd-kit/sortable";
+import { PipelineStage } from "@/src/features/job-description/types/job-description.types";
+import { KanbanApplication } from "../types/kanban.types";
+import CandidateKanbanCard from "./CandidateKanbanCard";
 
 interface KanbanColumnProps {
-  stage: PipelineStage
-  applications: KanbanApplication[]
-  onSelectCandidate: (app: KanbanApplication) => void
+  stage: PipelineStage;
+  stages?: PipelineStage[];
+  applications: KanbanApplication[];
+  onSelectCandidate: (app: KanbanApplication) => void;
+  onMoveStage?: (appId: string, targetStageId: string) => void;
+  style?: React.CSSProperties;
+  className?: string;
 }
 
 export default function KanbanColumn({
   stage,
+  stages = [],
   applications,
-  onSelectCandidate
+  onSelectCandidate,
+  onMoveStage,
+  style,
+  className = "w-[335px]",
 }: KanbanColumnProps) {
-  const stageId = stage._id || stage.name
+  const stageId = stage._id || stage.name;
   const { setNodeRef, isOver } = useDroppable({
-    id: stageId
-  })
+    id: stageId,
+  });
 
-  const itemIds = useMemo(() => applications.map((app) => app._id), [applications])
-  const stageColorHex = stage.color || '#3B82F6'
+  const itemIds = useMemo(
+    () => applications.map((app) => app._id),
+    [applications]
+  );
 
-  // Stage Icon & Subtitle Meta (Supports Vietnamese & English stage names)
-  const stageMeta = useMemo(() => {
-    const n = (stage.name || '').toLowerCase()
-    if (n.includes('mới') || n.includes('nộp') || n.includes('applied')) {
-      return {
-        icon: <FileText size={14} />,
-        subtitle: 'Ứng viên vừa nộp hồ sơ'
-      }
-    }
-    if (n.includes('sàng lọc') || n.includes('cv') || n.includes('screening')) {
-      return {
-        icon: <Filter size={14} />,
-        subtitle: 'Đang xem xét hồ sơ'
-      }
-    }
-    if (n.includes('review') || n.includes('đánh giá')) {
-      return {
-        icon: <Search size={14} />,
-        subtitle: 'Đánh giá hồ sơ & chuyên môn'
-      }
-    }
-    if (n.includes('phỏng vấn') || n.includes('interview')) {
-      return {
-        icon: <Users size={14} />,
-        subtitle: 'Đang tham gia phỏng vấn'
-      }
-    }
-    if (n.includes('đề nghị') || n.includes('offer')) {
-      return {
-        icon: <Send size={14} />,
-        subtitle: 'Đang gửi đề nghị nhận việc'
-      }
-    }
-    if (n.includes('nhận việc') || n.includes('hired') || n.includes('hoàn thành')) {
-      return {
-        icon: <CheckCircle2 size={14} />,
-        subtitle: 'Hoàn thành tuyển dụng'
-      }
-    }
-    return {
-      icon: <Briefcase size={14} />,
-      subtitle: 'Giai đoạn quy trình'
-    }
-  }, [stage.name])
+  const stageColorHex = stage.color || "#6366f1";
 
   return (
     <div
       ref={setNodeRef}
-      className={`bg-white/30 backdrop-blur-md border rounded-3xl min-w-[300px] max-w-[360px] flex-1 flex flex-col shadow-xl shadow-blue-500/5 transition-all duration-200 overflow-hidden ${
+      style={style}
+      className={`bg-slate-50/75 border rounded-3xl overflow-hidden shrink-0 self-stretch flex flex-col transition-all duration-200 ${
         isOver
-          ? 'border-[#3B82F6] bg-[#3B82F6]/10 ring-4 ring-[#3B82F6]/20 shadow-2xl scale-[1.01]'
-          : 'border-white/70'
-      }`}
+          ? "border-indigo-400 bg-indigo-50/40 ring-2 ring-indigo-500/20"
+          : "border-slate-200/80 shadow-2xs"
+      } ${className}`}
     >
-      {/* Flush Edge-to-Edge Column Header */}
+      {/* Full-width Stage Header spanning across the entire column top */}
       <div
-        className="p-4 border-b flex items-center justify-between gap-2.5 transition-all shadow-2xs backdrop-blur-md"
+        className="w-full py-2.5 px-4 flex items-center justify-between shadow-xs transition-colors shrink-0"
         style={{
-          backgroundColor: `${stageColorHex}18`,
-          borderColor: `${stageColorHex}30`
+          backgroundColor: stageColorHex,
         }}
       >
-        <div className="flex items-center gap-2.5 min-w-0 flex-1">
-          <div
-            className="w-8 h-8 rounded-full flex items-center justify-center shrink-0 shadow-2xs"
-            style={{
-              backgroundColor: `${stageColorHex}25`,
-              color: stageColorHex
-            }}
-          >
-            {stageMeta.icon}
-          </div>
-
-          <div className="min-w-0 flex-1">
-            <h3
-              className="text-xs font-black truncate tracking-tight"
-              style={{ color: stageColorHex }}
-              title={stage.name}
-            >
-              {stage.name}
-            </h3>
-            <p className="text-[10.5px] font-semibold text-slate-500 truncate mt-0.5">
-              {stageMeta.subtitle}
-            </p>
-          </div>
-        </div>
-
-        <div
-          className="w-6 h-6 rounded-full flex items-center justify-center text-xs font-black shrink-0 shadow-2xs"
-          style={{
-            backgroundColor: `${stageColorHex}25`,
-            color: stageColorHex
-          }}
+        <span
+          className="text-white text-xs font-black tracking-wider uppercase truncate flex-1"
+          title={stage.name}
         >
+          {stage.name}
+        </span>
+
+        <span className="bg-white/20 backdrop-blur-xs text-white font-black text-xs px-2.5 py-0.5 rounded-full border border-white/30 ml-2 shrink-0">
           {applications.length}
-        </div>
+        </span>
       </div>
 
-      {/* Column Body Container with Inner Padding */}
-      <div className="p-3.5 flex-1 flex flex-col">
+      {/* Column Body with SortableContext */}
+      <div className="p-3 sm:p-3.5 flex-1 flex flex-col">
         <SortableContext items={itemIds} strategy={verticalListSortingStrategy}>
           <div className="flex-1 space-y-3.5 min-h-[420px] flex flex-col">
             {applications.length === 0 ? (
-              <div className="h-full flex-1 flex flex-col items-center justify-center py-16 text-slate-300 space-y-2 select-none border-2 border-dashed border-slate-300/40 rounded-2xl bg-white/10">
-                <div className="w-12 h-12 rounded-2xl bg-white/40 border border-white/60 flex items-center justify-center text-slate-400 shadow-2xs">
+              <div className="h-full flex-1 flex flex-col items-center justify-center py-16 text-gray-300 space-y-2 select-none">
+                <div className="w-12 h-12 rounded-full bg-gray-100 border border-gray-200/60 flex items-center justify-center text-gray-400">
                   <Inbox size={22} />
                 </div>
-                <span className="text-xs font-bold text-slate-400">Trống</span>
+                <span className="text-xs font-semibold text-gray-400">Trống</span>
               </div>
             ) : (
               applications.map((app) => (
-                <CandidateKanbanCard key={app._id} application={app} onSelect={onSelectCandidate} />
+                <CandidateKanbanCard
+                  key={app._id}
+                  application={app}
+                  stages={stages}
+                  stageColor={stageColorHex}
+                  onSelect={onSelectCandidate}
+                  onMoveStage={onMoveStage}
+                />
               ))
             )}
           </div>
         </SortableContext>
       </div>
     </div>
-  )
+  );
 }
