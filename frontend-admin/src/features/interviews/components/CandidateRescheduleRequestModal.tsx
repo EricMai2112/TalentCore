@@ -113,14 +113,14 @@ export default function CandidateRescheduleRequestModal({
                 </span>
                 <span className="text-xs font-extrabold text-amber-950 flex items-center gap-1.5">
                   <CalendarIcon size={14} className="text-amber-600" />
-                  {interview.proposedCustomDate
-                    ? formatDate(interview.proposedCustomDate)
+                  {(interview as any).proposedCustomDate
+                    ? formatDate((interview as any).proposedCustomDate)
                     : formatDate(interview.date)}
                 </span>
                 <span className="text-xs font-extrabold text-amber-900 flex items-center gap-1.5">
                   <Clock size={14} className="text-amber-600" />
-                  {interview.proposedCustomStartTime
-                    ? `${interview.proposedCustomStartTime} - ${interview.proposedCustomEndTime}`
+                  {(interview as any).proposedCustomStartTime
+                    ? `${(interview as any).proposedCustomStartTime} - ${(interview as any).proposedCustomEndTime}`
                     : `${interview.startTime} - ${interview.endTime}`}
                 </span>
               </div>
@@ -128,14 +128,14 @@ export default function CandidateRescheduleRequestModal({
           </div>
 
           {/* Reschedule Reason */}
-          {interview.rescheduleReason && (
+          {(interview as any).rescheduleReason && (
             <div className="space-y-1.5 p-3.5 bg-slate-50 border border-slate-200/80 rounded-2xl">
               <span className="text-xs font-bold text-slate-700 uppercase tracking-wider block flex items-center gap-1.5">
                 <MessageSquare size={14} className="text-amber-600" />
                 <span>Lý do xin đổi lịch từ ứng viên:</span>
               </span>
               <p className="text-xs font-medium italic text-slate-800 leading-relaxed bg-white p-2.5 rounded-xl border border-slate-200/60">
-                &ldquo;{interview.rescheduleReason}&rdquo;
+                &ldquo;{(interview as any).rescheduleReason}&rdquo;
               </p>
             </div>
           )}

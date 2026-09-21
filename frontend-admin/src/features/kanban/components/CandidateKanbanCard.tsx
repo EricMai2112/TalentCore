@@ -7,6 +7,7 @@ import { useSortable } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 import { KanbanApplication } from "../types/kanban.types";
 import { PipelineStage } from "@/src/features/job-description/types/job-description.types";
+import { CustomSelect } from "@/src/components/common";
 
 interface CandidateKanbanCardProps {
   application: KanbanApplication;
@@ -123,10 +124,10 @@ export default function CandidateKanbanCard({
       {...attributes}
       {...listeners}
       onClick={() => onSelect && onSelect(application)}
-      className={`bg-white border rounded-2xl overflow-hidden transition-all cursor-grab active:cursor-grabbing flex flex-col justify-between group select-none relative min-h-[168px] ${
+      className={`bg-white/75 hover:bg-white/95 backdrop-blur-sm border rounded-2xl overflow-hidden transition-all cursor-grab active:cursor-grabbing flex flex-col justify-between group select-none relative min-h-[168px] ${
         isOverlay
-          ? "border-indigo-400 shadow-2xl ring-2 ring-indigo-500/30 scale-105"
-          : "border-slate-200/80 hover:border-slate-300 shadow-2xs hover:shadow-md"
+          ? "border-indigo-400/80 bg-white/95 backdrop-blur-md shadow-2xl ring-2 ring-indigo-500/30 scale-[1.02] rotate-1"
+          : "border-slate-200/60 hover:border-slate-300 shadow-2xs hover:shadow-md"
       }`}
     >
       {/* Top Accent Strip matching Kanban Stage Color */}
@@ -282,31 +283,26 @@ export default function CandidateKanbanCard({
           </button>
 
           {/* Dropdown chọn giai đoạn cao cấp & tinh tế */}
-          <div className="relative flex-1 min-w-0 group/select">
-            <select
+          <div className="flex-1 min-w-0" onClick={(e) => e.stopPropagation()}>
+            <CustomSelect
+              size="sm"
               value={application.currentStageId || ""}
-              onChange={(e) => {
-                e.stopPropagation();
-                if (e.target.value && e.target.value !== application.currentStageId) {
-                  onMoveStage && onMoveStage(application._id, e.target.value);
+              onChange={(val) => {
+                if (val && val !== application.currentStageId) {
+                  onMoveStage && onMoveStage(application._id, val);
                 }
               }}
-              className="w-full text-[11.5px] font-bold py-1.5 pl-3 pr-6 bg-slate-50 hover:bg-white border border-slate-200/90 hover:border-indigo-300 rounded-xl text-slate-700 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 cursor-pointer appearance-none truncate transition-all text-center shadow-2xs"
-              title="Chọn chuyển sang giai đoạn bất kỳ"
-            >
-              {stages && stages.length > 0 ? (
-                stages.map((stg) => (
-                  <option key={stg._id || stg.name} value={stg._id}>
-                    {stg.name}
-                  </option>
-                ))
-              ) : (
-                <option value={application.currentStageId || ""}>Đổi giai đoạn</option>
-              )}
-            </select>
-            <div className="absolute right-2.5 top-1/2 -translate-y-1/2 pointer-events-none text-slate-400 group-hover/select:text-indigo-600 transition-colors">
-              <ChevronDown size={12} strokeWidth={2.2} />
-            </div>
+              options={
+                stages && stages.length > 0
+                  ? stages.map((stg) => ({
+                      value: stg._id || stg.name,
+                      label: stg.name,
+                    }))
+                  : [{ value: application.currentStageId || "", label: "Đổi giai đoạn" }]
+              }
+              placeholder="Đổi giai đoạn"
+              className="w-full text-center"
+            />
           </div>
 
           {/* Nút tiến lên stage sau (Qua phải) */}

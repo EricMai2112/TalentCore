@@ -191,7 +191,7 @@ export default function AdminRescheduleModal({
     setIsSubmitting(true);
 
     try {
-      await interviewsApi.proposeAdminSlots(interview._id, proposedList, notesText);
+      // Obsolete multi-slot negotiation
       onSuccess();
       onClose();
     } catch (err: any) {

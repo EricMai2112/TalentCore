@@ -25,7 +25,7 @@ import CandidateDetailModal from './CandidateDetailModal'
 import CandidateNotesModal from './CandidateNotesModal'
 import RejectConfirmModal from './RejectConfirmModal'
 import CandidateStatCards from './CandidateStatCards'
-import { CustomSelect, CustomInput, CustomPagination } from '@/src/components/common'
+import { CustomSelect, CustomInput, CustomPagination, CustomTableContainer } from '@/src/components/common'
 import { CustomSelectOption } from '@/src/components/common/CustomSelect'
 
 export default function CandidatesManager() {
@@ -417,142 +417,135 @@ export default function CandidatesManager() {
         </div>
       </div>
 
-      {/* Glassmorphism Table Section */}
-      <div className="overflow-hidden bg-white/20 border border-white/60 shadow-xl shadow-blue-500/5 rounded-2xl transition-all duration-300">
-        {isLoading ? (
-          <div className="flex flex-col items-center justify-center py-20 text-slate-400">
-            <Loader2 size={32} className="mb-2 text-[#3B82F6] animate-spin" />
-            <p className="text-xs font-medium">Đang tải dữ liệu ứng viên...</p>
-          </div>
-        ) : filteredApplications.length === 0 ? (
-          <div className="flex flex-col items-center justify-center py-16 text-slate-400 bg-white/40">
-            <Users size={38} className="mb-2.5 text-slate-300 stroke-[1.5]" />
-            <p className="text-sm font-bold text-slate-700">Không tìm thấy ứng viên nào</p>
-            <p className="mt-1 text-xs text-slate-400">
-              Thử điều chỉnh bộ lọc tìm kiếm hoặc vị trí phía trên
-            </p>
-          </div>
-        ) : (
-          <div className="overflow-x-auto">
-            <table className="w-full text-left border-collapse text-xs">
-              <thead>
-                <tr className="border-b border-white/60 bg-white/30 text-[11px] font-bold text-slate-500 uppercase tracking-wider">
-                  <th className="px-5 py-3.5">Ứng viên</th>
-                  <th className="px-4 py-3.5">Vị trí</th>
-                  <th className="px-4 py-3.5 text-center">AI Score</th>
-                  <th className="px-4 py-3.5 text-center">Giai đoạn</th>
-                  <th className="px-4 py-3.5">Người phụ trách</th>
-                  <th className="px-4 py-3.5">Ngày ứng tuyển</th>
-                  <th className="px-5 py-3.5 text-center">Thao tác</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-slate-100/70">
-                {filteredApplications
-                  .slice((currentPage - 1) * pageSize, currentPage * pageSize)
-                  .map((app) => {
-                    const candidate = app.candidateId
-                    const u = candidate?.userId
-                    const name =
-                      u?.name || candidate?.fullName || candidate?.profileName || 'Ứng viên'
-                    const email = u?.email || candidate?.email || 'Chưa có email'
-                    const position = app.jobDescriptionId?.title || 'Vị trí tuyển dụng'
-                    const aiScore = app.aiFitScore ?? app.aiEvaluation?.aiFitScore
-                    const interviewer = getInterviewerName(app)
-                    const appliedDate = formatDate(app.appliedAt)
-                    const initials = getInitials(name)
+      {/* Reusable Glassmorphism Table Section */}
+      <CustomTableContainer
+        pagination={{
+          currentPage,
+          totalPages: Math.ceil(filteredApplications.length / pageSize),
+          totalItems: filteredApplications.length,
+          pageSize,
+          onPageChange: setCurrentPage
+        }}
+        isLoading={isLoading}
+        loadingMessage="Đang tải dữ liệu ứng viên..."
+        isEmpty={filteredApplications.length === 0}
+        emptyTitle="Không tìm thấy ứng viên nào"
+        emptyDescription="Thử điều chỉnh bộ lọc tìm kiếm hoặc vị trí phía trên"
+        emptyIcon={<Users className="w-8 h-8 stroke-[1.5]" />}
+      >
+        <table className="w-full text-left border-collapse text-xs">
+          <thead className="sticky top-0 z-10 bg-white/80 backdrop-blur-lg border-b border-slate-200/60 shadow-sm">
+            <tr className="text-[11px] font-semibold text-slate-600 uppercase tracking-wider">
+              <th className="px-5 py-3.5">Ứng viên</th>
+              <th className="px-4 py-3.5">Vị trí</th>
+              <th className="px-4 py-3.5 text-center">AI Score</th>
+              <th className="px-4 py-3.5 text-center">Giai đoạn</th>
+              <th className="px-4 py-3.5">Người phụ trách</th>
+              <th className="px-4 py-3.5">Ngày ứng tuyển</th>
+              <th className="px-5 py-3.5 text-center">Thao tác</th>
+            </tr>
+          </thead>
+          <tbody className="divide-y divide-slate-200/40">
+            {filteredApplications
+              .slice((currentPage - 1) * pageSize, currentPage * pageSize)
+              .map((app, idx) => {
+                const candidate = app.candidateId
+                const u = candidate?.userId
+                const name =
+                  u?.name || candidate?.fullName || candidate?.profileName || 'Ứng viên'
+                const email = u?.email || candidate?.email || 'Chưa có email'
+                const position = app.jobDescriptionId?.title || 'Vị trí tuyển dụng'
+                const aiScore = app.aiFitScore ?? app.aiEvaluation?.aiFitScore
+                const interviewer = getInterviewerName(app)
+                const appliedDate = formatDate(app.appliedAt)
+                const initials = getInitials(name)
 
-                    return (
-                      <tr key={app._id} className="hover:bg-white/50 transition-colors group">
-                        {/* Candidate Name & Avatar */}
-                        <td className="px-5 py-3.5">
-                          <div className="flex items-center gap-3">
-                            <div className="w-9 h-9 rounded-xl font-black bg-blue-500/10 text-[#3B82F6] border border-blue-200/60 flex items-center justify-center shrink-0 text-xs shadow-2xs">
-                              {initials}
-                            </div>
-                            <div className="min-w-0">
-                              <p className="text-sm font-bold text-slate-900 group-hover:text-[#3B82F6] transition-colors truncate">
-                                {name}
-                              </p>
-                              <p className="text-slate-400 font-medium text-[11px] truncate">{email}</p>
-                            </div>
-                          </div>
-                        </td>
+                return (
+                  <tr
+                    key={app._id}
+                    className={`hover:bg-white/50 transition-all duration-150 group border-b border-slate-200/40 ${
+                      idx % 2 === 0 ? '' : 'bg-white/15'
+                    }`}
+                  >
+                    {/* Candidate Name & Avatar */}
+                    <td className="px-5 py-4">
+                      <div className="flex items-center gap-3">
+                        <div className="w-9 h-9 rounded-xl font-black bg-blue-500/10 text-[#3B82F6] border border-blue-200/60 flex items-center justify-center shrink-0 text-xs shadow-2xs">
+                          {initials}
+                        </div>
+                        <div className="min-w-0">
+                          <p className="text-[13px] font-bold text-slate-900 group-hover:text-[#3B82F6] transition-colors truncate">
+                            {name}
+                          </p>
+                          <p className="text-slate-400 font-medium text-[11px] truncate">{email}</p>
+                        </div>
+                      </div>
+                    </td>
 
-                        {/* Position */}
-                        <td className="px-4 py-3.5 font-medium text-slate-700">{position}</td>
+                    {/* Position */}
+                    <td className="px-4 py-4 font-semibold text-slate-700 text-[13px]">{position}</td>
 
-                        {/* AI Score */}
-                        <td className="px-4 py-3.5 text-center">{getAiScoreBadge(aiScore)}</td>
+                    {/* AI Score */}
+                    <td className="px-4 py-4 text-center">{getAiScoreBadge(aiScore)}</td>
 
-                        {/* Stage Badge */}
-                        <td className="px-4 py-3.5 text-center">{getStageBadge(app)}</td>
+                    {/* Stage Badge */}
+                    <td className="px-4 py-4 text-center">{getStageBadge(app)}</td>
 
-                        {/* Person in charge */}
-                        <td className="px-4 py-3.5 font-medium text-slate-600">
-                          {interviewer === 'Chưa phân công' ? (
-                            <span className="text-slate-400 italic">{interviewer}</span>
-                          ) : (
-                            <span className="font-semibold text-slate-800">{interviewer}</span>
+                    {/* Person in charge */}
+                    <td className="px-4 py-4 font-medium text-slate-600 text-[13px]">
+                      {interviewer === 'Chưa phân công' ? (
+                        <span className="text-slate-400 italic">{interviewer}</span>
+                      ) : (
+                        <span className="font-semibold text-slate-800">{interviewer}</span>
+                      )}
+                    </td>
+
+                    {/* Applied Date */}
+                    <td className="px-4 py-4 font-medium text-slate-500 text-xs">{appliedDate}</td>
+
+                    {/* Actions */}
+                    <td className="px-5 py-4 text-center">
+                      <div className="flex items-center justify-center gap-1">
+                        {/* View Detail Modal */}
+                        <button
+                          type="button"
+                          onClick={() => setDetailApp(app)}
+                          className="p-1.5 rounded-xl border border-white/80 bg-white/60 hover:bg-white text-slate-500 hover:text-[#3B82F6] shadow-2xs transition-all cursor-pointer"
+                          title="Xem chi tiết"
+                        >
+                          <Eye size={15} />
+                        </button>
+
+                        {/* Notes Modal */}
+                        <button
+                          type="button"
+                          onClick={() => setNotesApp(app)}
+                          className="p-1.5 rounded-xl border border-white/80 bg-white/60 hover:bg-white text-slate-500 hover:text-[#3B82F6] shadow-2xs transition-all cursor-pointer relative"
+                          title="Ghi chú ứng viên"
+                        >
+                          <FileText size={15} />
+                          {app.notes && app.notes.length > 0 && (
+                            <span className="absolute w-2 h-2 bg-[#3B82F6] rounded-full top-1 right-1" />
                           )}
-                        </td>
+                        </button>
 
-                        {/* Applied Date */}
-                        <td className="px-4 py-3.5 font-medium text-slate-500">{appliedDate}</td>
-
-                        {/* Actions */}
-                        <td className="px-5 py-3.5 text-center">
-                          <div className="flex items-center justify-center gap-1">
-                            {/* View Detail Modal */}
-                            <button
-                              type="button"
-                              onClick={() => setDetailApp(app)}
-                              className="p-1.5 rounded-xl border border-white/80 bg-white/60 hover:bg-white text-slate-500 hover:text-[#3B82F6] shadow-2xs transition-all cursor-pointer"
-                              title="Xem chi tiết"
-                            >
-                              <Eye size={15} />
-                            </button>
-
-                            {/* Notes Modal */}
-                            <button
-                              type="button"
-                              onClick={() => setNotesApp(app)}
-                              className="p-1.5 rounded-xl border border-white/80 bg-white/60 hover:bg-white text-slate-500 hover:text-[#3B82F6] shadow-2xs transition-all cursor-pointer relative"
-                              title="Ghi chú ứng viên"
-                            >
-                              <FileText size={15} />
-                              {app.notes && app.notes.length > 0 && (
-                                <span className="absolute w-2 h-2 bg-[#3B82F6] rounded-full top-1 right-1" />
-                              )}
-                            </button>
-
-                            {/* Reject Modal Trigger */}
-                            <button
-                              type="button"
-                              onClick={() => setRejectApp(app)}
-                              className="p-1.5 rounded-xl border border-white/80 bg-white/60 hover:bg-white text-rose-500 hover:text-rose-600 shadow-2xs transition-all cursor-pointer"
-                              title="Từ chối ứng viên"
-                            >
-                              <XCircle size={15} />
-                            </button>
-                          </div>
-                        </td>
-                      </tr>
-                    )
-                  })}
-              </tbody>
-            </table>
-          </div>
-        )}
-
-        {/* Custom Pagination Component */}
-        <CustomPagination
-          currentPage={currentPage}
-          totalPages={Math.ceil(filteredApplications.length / pageSize)}
-          totalItems={filteredApplications.length}
-          pageSize={pageSize}
-          onPageChange={setCurrentPage}
-        />
-      </div>
+                        {/* Reject Modal Trigger */}
+                        <button
+                          type="button"
+                          onClick={() => setRejectApp(app)}
+                          className="p-1.5 rounded-xl border border-white/80 bg-white/60 hover:bg-white text-rose-500 hover:text-rose-600 shadow-2xs transition-all cursor-pointer"
+                          title="Từ chối ứng viên"
+                        >
+                          <XCircle size={15} />
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                )
+              })}
+          </tbody>
+        </table>
+      </CustomTableContainer>
 
       {/* Candidate Detail Side Drawer Modal */}
       {detailApp && (

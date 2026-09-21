@@ -17,6 +17,7 @@ import {
 import { Department, JobDescription, PipelineStage, JobStatus } from "@/src/features/job-description/types/job-description.types";
 import { KanbanApplication } from "../types/kanban.types";
 import { kanbanApi } from "../services/kanban.api";
+import { interviewsApi } from "@/src/features/interviews/services/interviews.api";
 import { useAuth } from "@/src/providers/AuthProvider";
 import { UserRole } from "@/src/features/users/types/user.types";
 import KanbanHeaderFilters from "./KanbanHeaderFilters";
@@ -377,6 +378,19 @@ export default function KanbanContainer({
 
     try {
       await kanbanApi.updateApplicationStage(appId, targetStageId);
+
+      // Check if targetStage is Department Review / Phỏng vấn chuyên môn / Đánh giá phòng ban
+      const targetStage = activeStages.find((s) => s._id === targetStageId);
+      const stageLower = (targetStage?.name || targetStageId).toLowerCase();
+      if (
+        stageLower.includes("department") ||
+        stageLower.includes("phòng ban") ||
+        stageLower.includes("chuyên môn") ||
+        stageLower.includes("đánh giá")
+      ) {
+        // Automatically request department schedule so interview document is created and visible to Dept Manager
+        await interviewsApi.requestDeptSchedule(appId);
+      }
     } catch (err) {
       console.error("Lỗi cập nhật giai đoạn phỏng vấn:", err);
       // Revert if API fails
@@ -439,7 +453,7 @@ export default function KanbanContainer({
 
   return (
     <div className="w-full space-y-6 pb-12">
-      {/* Header Filters Bar with CustomInput and CustomSelect */}
+      {/* Header Filters Bar with CustomInput, CustomSelect and Right-Aligned Carousel Controls */}
       <KanbanHeaderFilters
         totalCount={filteredApplications.length}
         departments={initialDepartments}
@@ -453,6 +467,61 @@ export default function KanbanContainer({
         onSearchChange={setSearchQuery}
         onScoreFilterChange={setScoreFilter}
         onResetFilters={handleResetFilters}
+        rightSection={
+          maxCarouselIndex > 0 ? (
+            <div className="flex items-center gap-3">
+              {/* Dot Page Indicator */}
+              <div className="flex items-center gap-1.5">
+                {Array.from({ length: maxCarouselIndex + 1 }).map((_, idx) => (
+                  <button
+                    key={idx}
+                    type="button"
+                    onClick={() => setCarouselIndex(idx)}
+                    className={`h-2 rounded-full transition-all cursor-pointer ${
+                      carouselIndex === idx
+                        ? "w-6 bg-indigo-600"
+                        : "w-2 bg-slate-300 hover:bg-slate-400"
+                    }`}
+                    title={`Trang ${idx + 1}`}
+                  />
+                ))}
+              </div>
+
+              {/* Prev / Next Action Buttons */}
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  disabled={carouselIndex === 0}
+                  onClick={handlePrev}
+                  className={`px-3 py-1.5 rounded-xl border text-xs font-bold flex items-center gap-1.5 transition-all cursor-pointer ${
+                    carouselIndex === 0
+                      ? "bg-white/40 text-slate-300 border-white/60 cursor-not-allowed"
+                      : "bg-white text-slate-700 border-white/80 hover:bg-white hover:text-indigo-600 shadow-2xs active:scale-95"
+                  }`}
+                  title="Xem các giai đoạn trước"
+                >
+                  <ChevronLeft size={15} />
+                  <span>Trước</span>
+                </button>
+
+                <button
+                  type="button"
+                  disabled={carouselIndex >= maxCarouselIndex}
+                  onClick={handleNext}
+                  className={`px-3 py-1.5 rounded-xl border text-xs font-bold flex items-center gap-1.5 transition-all cursor-pointer ${
+                    carouselIndex >= maxCarouselIndex
+                      ? "bg-white/40 text-slate-300 border-white/60 cursor-not-allowed"
+                      : "bg-white text-slate-700 border-white/80 hover:bg-white hover:text-indigo-600 shadow-2xs active:scale-95"
+                  }`}
+                  title="Xem các giai đoạn tiếp theo"
+                >
+                  <span>Tiếp</span>
+                  <ChevronRight size={15} />
+                </button>
+              </div>
+            </div>
+          ) : null
+        }
       />
 
       {!selectedJobId ? (
@@ -477,60 +546,6 @@ export default function KanbanContainer({
           onDragStart={handleDragStart}
           onDragEnd={handleDragEnd}
         >
-          {/* Carousel Navigation Toolbar (when stages > 4) */}
-          {maxCarouselIndex > 0 && (
-            <div className="flex items-center justify-end gap-3 px-1 py-0.5">
-              {/* Dot Page Indicator */}
-              <div className="flex items-center gap-1.5">
-                {Array.from({ length: maxCarouselIndex + 1 }).map((_, idx) => (
-                  <button
-                    key={idx}
-                    type="button"
-                    onClick={() => setCarouselIndex(idx)}
-                    className={`h-2 rounded-full transition-all cursor-pointer ${
-                      carouselIndex === idx
-                        ? "w-6 bg-indigo-600"
-                        : "w-2 bg-gray-300 hover:bg-gray-400"
-                    }`}
-                    title={`Trang ${idx + 1}`}
-                  />
-                ))}
-              </div>
-
-              {/* Prev / Next Action Buttons */}
-              <div className="flex items-center gap-2">
-                <button
-                  type="button"
-                  disabled={carouselIndex === 0}
-                  onClick={handlePrev}
-                  className={`px-3 py-1.5 rounded-xl border text-xs font-bold flex items-center gap-1.5 transition-all cursor-pointer ${
-                    carouselIndex === 0
-                      ? "bg-gray-50 text-gray-300 border-gray-100 cursor-not-allowed"
-                      : "bg-white text-gray-700 border-gray-200 hover:bg-gray-50 hover:border-gray-300 shadow-2xs hover:text-indigo-600 active:scale-95"
-                  }`}
-                  title="Xem các giai đoạn trước"
-                >
-                  <ChevronLeft size={15} />
-                  <span>Trước</span>
-                </button>
-
-                <button
-                  type="button"
-                  disabled={carouselIndex >= maxCarouselIndex}
-                  onClick={handleNext}
-                  className={`px-3 py-1.5 rounded-xl border text-xs font-bold flex items-center gap-1.5 transition-all cursor-pointer ${
-                    carouselIndex >= maxCarouselIndex
-                      ? "bg-gray-50 text-gray-300 border-gray-100 cursor-not-allowed"
-                      : "bg-white text-gray-700 border-gray-200 hover:bg-gray-50 hover:border-gray-300 shadow-2xs hover:text-indigo-600 active:scale-95"
-                  }`}
-                  title="Xem các giai đoạn tiếp theo"
-                >
-                  <span>Tiếp</span>
-                  <ChevronRight size={15} />
-                </button>
-              </div>
-            </div>
-          )}
 
           {/* Carousel Viewport Container (No Horizontal Scrollbar, 4 Stages Fitted) */}
           <div ref={containerRef} className="relative w-full overflow-hidden rounded-3xl pb-2">

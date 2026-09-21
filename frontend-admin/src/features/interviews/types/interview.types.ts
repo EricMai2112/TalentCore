@@ -4,9 +4,11 @@ export enum LocationType {
 }
 
 export enum InterviewStatus {
-  SCHEDULED = 'SCHEDULED', // Đã lên lịch
-  COMPLETED = 'COMPLETED', // Hoàn thành
-  CANCELLED = 'CANCELLED', // Đã hủy
+  SCHEDULED = 'SCHEDULED',   // Đã lên lịch (Chờ ứng viên xác nhận)
+  UPCOMING = 'UPCOMING',     // Sắp diễn ra
+  IN_PROGRESS = 'IN_PROGRESS', // Đang diễn ra
+  COMPLETED = 'COMPLETED',   // Hoàn thành / Đã kết thúc
+  CANCELLED = 'CANCELLED',   // Đã hủy
 }
 
 export enum InterviewResult {
@@ -80,16 +82,8 @@ export interface InterviewItem {
   result: InterviewResult;
   notes?: string;
   feedback?: string;
-  confirmationStatus?: 'PENDING' | 'CONFIRMED' | 'WAITING_DEPT_SCHEDULE' | 'WAITING_HR_APPROVAL' | 'RESCHEDULE_REQUESTED' | 'RESCHEDULE_REJECTED' | 'ADMIN_PROPOSED' | 'CANCEL_REQUESTED' | 'CANCELLED' | string;
-  rescheduleCount?: number;
-  rescheduleReason?: string;
-  rescheduleRejectReason?: string;
+  confirmationStatus?: 'PENDING' | 'CONFIRMED' | 'WAITING_DEPT_SCHEDULE' | 'WAITING_HR_APPROVAL' | 'SCHEDULED' | 'CANCEL_REQUESTED' | 'CANCELLED' | 'REJECTED' | string;
   cancelReason?: string;
-  proposedCustomDate?: string;
-  proposedCustomStartTime?: string;
-  proposedCustomEndTime?: string;
-  proposedSlots?: { date: string; startTime: string; endTime: string }[];
-  proposedBy?: string;
   isEscalated?: boolean;
   createdAt?: string;
 }

@@ -24,9 +24,11 @@ import {
 import { InterviewWorkflowStatusBadge } from './InterviewWorkflowStatusBadge'
 import { useAuth } from '@/src/providers/AuthProvider'
 import { UserRole } from '@/src/features/users/types/user.types'
+import { CustomActionMenu } from '@/src/components/common'
 
 interface InterviewCardProps {
   item: InterviewItem
+  index?: number
   onOpenStatusModal: (interview: InterviewItem) => void
   onOpenEditModal: (interview: InterviewItem) => void
   onOpenRescheduleModal?: (interview: InterviewItem) => void
@@ -35,6 +37,7 @@ interface InterviewCardProps {
   onRejectReschedule?: (interview: InterviewItem) => void
   onApproveCandidateCancellation?: (interview: InterviewItem) => void
   onOpenDeptScheduleModal?: (interview: InterviewItem) => void
+  onRejectDeptCv?: (interview: InterviewItem) => void
   onApproveHrSchedule?: (interview: InterviewItem) => void
   activeMenuId: string | null
   setActiveMenuId: (id: string | null) => void
@@ -45,6 +48,7 @@ interface InterviewCardProps {
 
 export default function InterviewCard({
   item,
+  index = 0,
   onOpenStatusModal,
   onOpenEditModal,
   onOpenRescheduleModal,
@@ -53,6 +57,7 @@ export default function InterviewCard({
   onRejectReschedule,
   onApproveCandidateCancellation,
   onOpenDeptScheduleModal,
+  onRejectDeptCv,
   onApproveHrSchedule,
   activeMenuId,
   setActiveMenuId,
@@ -85,35 +90,26 @@ export default function InterviewCard({
 
   const initials = getInitials(candName || '')
   const isCancelRequested = item.confirmationStatus === 'CANCEL_REQUESTED'
-  const isRescheduleRequested = item.confirmationStatus === 'RESCHEDULE_REQUESTED'
 
   const candEmail = typeof cand === 'object' ? cand?.email || 'N/A' : 'N/A'
   const deptObj =
     typeof item.jobDescriptionId === 'object' ? item.jobDescriptionId?.departmentId : null
   const deptName = typeof deptObj === 'object' ? deptObj?.name : 'Phòng ban'
 
-  const interviewerObj = typeof item.interviewerId === 'object' ? item.interviewerId : null
-  const interviewerEmail = interviewerObj?.email || ''
-  const interviewerInitials = getInitials(interviewerName || '')
-
   return (
     <tr
-      className={`hover:bg-white/60 transition-colors group border-b border-slate-300/80 last:border-b-0 ${
-        isRescheduleRequested
-          ? 'bg-amber-500/10'
-          : item.isEscalated
-            ? 'bg-rose-500/5'
-            : ''
-      }`}
+      className={`transition-colors group hover:bg-white/50 border-b border-slate-200/40 last:border-b-0 ${
+        index % 2 === 0 ? '' : 'bg-white/15'
+      } ${item.isEscalated ? 'bg-rose-500/5' : ''}`}
     >
       {/* 1. Candidate Name & Email */}
-      <td className="px-4 py-3.5 align-middle">
+      <td className="px-4 py-4 align-middle">
         <div className="flex items-center gap-3">
           <div className="w-9 h-9 rounded-full font-black bg-blue-500/10 text-[#3B82F6] border border-blue-200/60 flex items-center justify-center shrink-0 text-xs shadow-2xs">
             {initials}
           </div>
           <div className="min-w-0">
-            <p className="text-xs font-bold text-slate-900 group-hover:text-[#3B82F6] transition-colors truncate">
+            <p className="text-[13px] font-bold text-slate-900 group-hover:text-[#3B82F6] transition-colors truncate">
               {candName}
             </p>
             <p className="text-slate-400 font-medium text-[11px] truncate">{candEmail}</p>
@@ -122,21 +118,21 @@ export default function InterviewCard({
       </td>
 
       {/* 2. Position Title */}
-      <td className="px-4 py-3.5 align-middle">
-        <p className="text-xs font-bold text-slate-900 truncate">{jobTitle}</p>
+      <td className="px-4 py-4 align-middle">
+        <p className="text-[13px] font-bold text-slate-900 truncate">{jobTitle}</p>
       </td>
 
       {/* 3. Department Name */}
-      <td className="px-4 py-3.5 align-middle font-medium text-slate-700 text-xs">
+      <td className="px-4 py-4 align-middle font-medium text-slate-700 text-[13px]">
         <span className="truncate block max-w-[130px] font-semibold text-slate-800">
           {deptName}
         </span>
       </td>
 
       {/* 4. Date, Time & Location */}
-      <td className="px-4 py-3.5 align-middle">
+      <td className="px-4 py-4 align-middle">
         <div className="space-y-1 text-slate-600 text-[11px] font-medium">
-          <div className="flex items-center gap-1.5 font-bold text-slate-900 text-xs">
+          <div className="flex items-center gap-1.5 font-bold text-slate-900 text-[13px]">
             <Clock size={12} className="text-[#3B82F6]" />
             <span>
               {item.startTime} - {item.endTime}
@@ -162,13 +158,13 @@ export default function InterviewCard({
         </div>
       </td>
 
-      {/* 5. Interviewer Name (Cleaned without avatar & subtext) */}
-      <td className="px-4 py-3.5 align-middle font-semibold text-slate-800 text-xs">
+      {/* 5. Interviewer Name */}
+      <td className="px-4 py-4 align-middle font-semibold text-slate-800 text-[13px]">
         <span className="truncate block max-w-[150px]">{interviewerName}</span>
       </td>
 
       {/* 6. Status & Badges & Alerts (Left aligned) */}
-      <td className="px-4 py-3.5 align-middle text-left">
+      <td className="px-4 py-4 align-middle text-left">
         <div className="flex flex-col items-start justify-start gap-1.5">
           <div className="inline-flex items-center gap-1.5 flex-wrap justify-start">
             <InterviewWorkflowStatusBadge
@@ -178,168 +174,95 @@ export default function InterviewCard({
             {item.result && item.result !== InterviewResult.PENDING && getResultBadge(item.result)}
           </div>
 
-          {/* Reschedule Requested Status Indicator */}
-          {isRescheduleRequested && (
-            <span className="px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-amber-500/15 text-amber-800 border border-amber-300/60 inline-flex items-center gap-1">
-              <Bell size={11} className="text-amber-600 animate-bounce" />
-              <span>Ứng viên xin đổi lịch</span>
-            </span>
-          )}
-
           {/* Escalated Status Indicator */}
-          {item.isEscalated && !isCancelRequested && !isRescheduleRequested && (
-            <span className="px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-purple-500/15 text-purple-800 border border-purple-300/60">
+          {item.isEscalated && !isCancelRequested && (
+            <span className="px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-purple-500/15 text-purple-800 border border-purple-300/60">
               Cần HR xử lý
             </span>
           )}
         </div>
       </td>
 
-      {/* 6. Actions */}
-      <td className="px-5 py-3.5 align-middle text-center">
-        <div className="relative inline-block text-left">
-          <button
-            type="button"
-            onClick={() => setActiveMenuId(activeMenuId === item._id ? null : item._id)}
-            className={`p-2 rounded-xl border transition-all cursor-pointer shadow-2xs ${
-              activeMenuId === item._id
-                ? 'bg-[#3B82F6] text-white border-[#3B82F6]'
-                : 'bg-white/80 hover:bg-white text-slate-600 hover:text-slate-900 border-white/80 hover:border-slate-300/80'
-            }`}
-            title="Thao tác"
-          >
-            <MoreVertical size={16} />
-          </button>
-
-          {activeMenuId === item._id && (
-            <div className="absolute right-0 mt-1.5 w-56 bg-white/95 backdrop-blur-xl border border-white/80 rounded-2xl shadow-2xl py-1.5 z-50 animate-in fade-in zoom-in-95 duration-150 divide-y divide-slate-100 text-left">
-              {/* Quick Actions at Top */}
-              {isDeptManager &&
-                item.confirmationStatus === 'WAITING_DEPT_SCHEDULE' &&
-                onOpenDeptScheduleModal && (
-                  <div className="py-1">
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setActiveMenuId(null)
-                        onOpenDeptScheduleModal(item)
-                      }}
-                      className="w-full text-left px-3.5 py-2 text-xs font-bold text-amber-700 hover:bg-amber-50 flex items-center gap-2.5 transition-colors cursor-pointer"
-                    >
-                      <CalendarIcon size={14} className="text-amber-500 shrink-0" />
-                      <span>Xếp lịch phỏng vấn</span>
-                    </button>
-                  </div>
-                )}
-
-              {isHrAdmin &&
-                item.confirmationStatus === 'WAITING_HR_APPROVAL' &&
-                onApproveHrSchedule && (
-                  <div className="py-1">
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setActiveMenuId(null)
-                        onApproveHrSchedule(item)
-                      }}
-                      className="w-full text-left px-3.5 py-2 text-xs font-bold text-emerald-700 hover:bg-emerald-50 flex items-center gap-2.5 transition-colors cursor-pointer"
-                    >
-                      <Check size={14} className="text-emerald-600 shrink-0" />
-                      <span>Duyệt lịch phỏng vấn</span>
-                    </button>
-                  </div>
-                )}
-
-              {isApproved && item.locationType === LocationType.ONLINE && item.meetingLink && (
-                <div className="py-1">
-                  <a
-                    href={item.meetingLink}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    onClick={() => setActiveMenuId(null)}
-                    className="w-full text-left px-3.5 py-2 text-xs font-bold text-blue-600 hover:bg-blue-50 flex items-center gap-2.5 transition-colors cursor-pointer"
-                  >
-                    <Video size={14} className="text-[#3B82F6] shrink-0" />
-                    <span className="flex-1">Vào Google Meet</span>
-                    <ExternalLink size={12} className="text-blue-400" />
-                  </a>
-                </div>
-              )}
-
-              {isRescheduleRequested && onOpenRescheduleRequestModal && (
-                <div className="py-1">
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setActiveMenuId(null)
-                      onOpenRescheduleRequestModal(item)
-                    }}
-                    className="w-full text-left px-3.5 py-2 text-xs font-bold text-amber-700 hover:bg-amber-50 flex items-center gap-2.5 transition-colors cursor-pointer"
-                  >
-                    <Bell size={14} className="text-amber-500 shrink-0" />
-                    <span>Xem yêu cầu đổi lịch</span>
-                  </button>
-                </div>
-              )}
-
-              {isCancelRequested && onApproveCandidateCancellation && (
-                <div className="py-1">
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setActiveMenuId(null)
-                      onApproveCandidateCancellation(item)
-                    }}
-                    className="w-full text-left px-3.5 py-2 text-xs font-bold text-rose-700 hover:bg-rose-50 flex items-center gap-2.5 transition-colors cursor-pointer"
-                  >
-                    <AlertTriangle size={14} className="text-rose-500 shrink-0" />
-                    <span>Duyệt hủy lịch phỏng vấn</span>
-                  </button>
-                </div>
-              )}
-
-              {/* Standard Actions */}
-              <div className="py-1">
-                <button
-                  type="button"
-                  onClick={() => {
-                    setActiveMenuId(null)
-                    onOpenStatusModal(item)
-                  }}
-                  className="w-full text-left px-3.5 py-2 text-xs font-semibold text-slate-700 hover:bg-slate-100/80 flex items-center gap-2.5 transition-colors cursor-pointer"
-                >
-                  <MessageSquare size={14} className="text-[#3B82F6] shrink-0" />
-                  <span>Cập nhật & Đánh giá</span>
-                </button>
-
-                <button
-                  type="button"
-                  onClick={() => {
-                    setActiveMenuId(null)
-                    onOpenEditModal(item)
-                  }}
-                  className="w-full text-left px-3.5 py-2 text-xs font-semibold text-slate-700 hover:bg-slate-100/80 flex items-center gap-2.5 transition-colors cursor-pointer"
-                >
-                  <Edit3 size={14} className="text-indigo-600 shrink-0" />
-                  <span>Chỉnh sửa lịch phỏng vấn</span>
-                </button>
-
-                {onOpenRescheduleModal && (
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setActiveMenuId(null)
-                      onOpenRescheduleModal(item)
-                    }}
-                    className="w-full text-left px-3.5 py-2 text-xs font-semibold text-slate-700 hover:bg-slate-100/80 flex items-center gap-2.5 transition-colors cursor-pointer"
-                  >
-                    <Clock size={14} className="text-purple-600 shrink-0" />
-                    <span>Đề xuất khung giờ khác</span>
-                  </button>
-                )}
-              </div>
-            </div>
-          )}
+      {/* 7. Actions */}
+      <td className="px-5 py-4 align-middle text-center">
+        <div className="flex items-center justify-center">
+          <CustomActionMenu
+            menuWidthClass="min-w-[210px]"
+            items={[
+              {
+                id: 'dept_schedule',
+                label: 'Xếp lịch phỏng vấn',
+                icon: <CalendarIcon size={14} />,
+                variant: 'warning',
+                hidden:
+                  !isDeptManager ||
+                  item.confirmationStatus !== 'WAITING_DEPT_SCHEDULE' ||
+                  !onOpenDeptScheduleModal,
+                onClick: () => onOpenDeptScheduleModal?.(item)
+              },
+              {
+                id: 'dept_reject',
+                label: 'Từ chối CV',
+                icon: <AlertTriangle size={14} />,
+                variant: 'danger',
+                hidden:
+                  !isDeptManager ||
+                  item.confirmationStatus !== 'WAITING_DEPT_SCHEDULE' ||
+                  !onRejectDeptCv,
+                onClick: () => onRejectDeptCv?.(item)
+              },
+              {
+                id: 'hr_approve',
+                label: 'Duyệt lịch phỏng vấn',
+                icon: <Check size={14} />,
+                variant: 'success',
+                hidden:
+                  !isHrAdmin ||
+                  item.confirmationStatus !== 'WAITING_HR_APPROVAL' ||
+                  !onApproveHrSchedule,
+                onClick: () => onApproveHrSchedule?.(item)
+              },
+              {
+                id: 'google_meet',
+                label: 'Vào Google Meet',
+                icon: <Video size={14} />,
+                variant: 'primary',
+                href: item.meetingLink,
+                target: '_blank',
+                hidden: !isApproved || item.locationType !== LocationType.ONLINE || !item.meetingLink
+              },
+              {
+                id: 'cancel_approve',
+                label: 'Duyệt hủy lịch phỏng vấn',
+                icon: <AlertTriangle size={14} />,
+                variant: 'danger',
+                hidden: !isCancelRequested || !onApproveCandidateCancellation,
+                onClick: () => onApproveCandidateCancellation?.(item)
+              },
+              {
+                id: 'status_update',
+                label: 'Cập nhật & Đánh giá',
+                icon: <MessageSquare size={14} />,
+                variant: 'primary',
+                onClick: () => onOpenStatusModal(item)
+              },
+              {
+                id: 'edit_schedule',
+                label: 'Chỉnh sửa lịch phỏng vấn',
+                icon: <Edit3 size={14} />,
+                variant: 'indigo',
+                onClick: () => onOpenEditModal(item)
+              },
+              {
+                id: 'reschedule_propose',
+                label: 'Đề xuất khung giờ khác',
+                icon: <Clock size={14} />,
+                variant: 'purple',
+                hidden: !onOpenRescheduleModal,
+                onClick: () => onOpenRescheduleModal?.(item)
+              }
+            ]}
+          />
         </div>
       </td>
     </tr>

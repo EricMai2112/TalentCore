@@ -43,10 +43,10 @@ export default function KanbanColumn({
     <div
       ref={setNodeRef}
       style={style}
-      className={`bg-slate-50/75 border rounded-3xl overflow-hidden shrink-0 self-stretch flex flex-col transition-all duration-200 ${
+      className={`bg-white/40 backdrop-blur-md border rounded-3xl overflow-hidden shrink-0 self-stretch flex flex-col transition-all duration-200 ${
         isOver
-          ? "border-indigo-400 bg-indigo-50/40 ring-2 ring-indigo-500/20"
-          : "border-slate-200/80 shadow-2xs"
+          ? "border-indigo-400 bg-indigo-50/50 ring-2 ring-indigo-500/20 shadow-md"
+          : "border-white/60 shadow-xs hover:border-slate-300/80"
       } ${className}`}
     >
       {/* Full-width Stage Header spanning across the entire column top */}
@@ -63,7 +63,7 @@ export default function KanbanColumn({
           {stage.name}
         </span>
 
-        <span className="bg-white/20 backdrop-blur-xs text-white font-black text-xs px-2.5 py-0.5 rounded-full border border-white/30 ml-2 shrink-0">
+        <span className="bg-white/25 backdrop-blur-md text-white font-extrabold text-xs px-2.5 py-0.5 rounded-full border border-white/40 ml-2 shrink-0 shadow-2xs">
           {applications.length}
         </span>
       </div>
