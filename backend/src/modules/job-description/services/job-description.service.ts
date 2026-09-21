@@ -7,6 +7,7 @@ import { CreateJobDescriptionDto, UpdateJobDescriptionDto } from '../dtos/job-de
 import { SuggestCriteriaWeightsDto } from '../dtos/suggest-criteria-weights.dto';
 import { GenerateJdContentDto } from '../dtos/generate-jd-content.dto';
 import { EventsGateway } from '../gateways/events.gateway';
+import { NotificationsService } from '../../notifications/services/notifications.service';
 
 @Injectable()
 export class JobDescriptionService {
@@ -16,6 +17,7 @@ export class JobDescriptionService {
     @InjectModel(JobDescription.name)
     private readonly jobDescriptionModel: Model<JobDescriptionDocument>,
     private readonly eventsGateway: EventsGateway,
+    private readonly notificationsService: NotificationsService,
   ) {
     const apiKey = process.env.GEMINI_API_KEY;
     if (!apiKey) {
@@ -249,6 +251,18 @@ export class JobDescriptionService {
     if (populated.status === JobStatus.JD_CREATED) {
       this.eventsGateway.emitJobPublished(populated);
     }
+
+    // Thông báo cho HR khi JD được tạo (đặc biệt khi chờ duyệt hoặc do Trưởng phòng tạo)
+    try {
+      const dept = populated.departmentId as any;
+      const deptName = typeof dept === 'object' ? dept?.name : '';
+      const creator = populated.postedById as any;
+      const creatorName = typeof creator === 'object' ? creator?.name : '';
+      await this.notificationsService.notifyHrJdCreatedPending(populated, deptName, creatorName);
+    } catch (notifErr) {
+      console.error('Lỗi khi gửi thông báo JD mới cho HR:', notifErr);
+    }
+
     return populated;
   }
 

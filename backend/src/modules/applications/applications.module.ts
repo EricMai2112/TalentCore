@@ -12,6 +12,7 @@ import { AiEvaluation, AiEvaluationSchema } from './schemas/ai-evaluation.schema
 import { AiMatchingService } from './services/ai-matching.service';
 import { AiMatchingProcessor } from './processors/ai-matching.processor';
 import { AiMatchingCronService } from './services/ai-matching-cron.service';
+import { NotificationsModule } from '../notifications/notifications.module';
 
 @Module({
     imports: [MongooseModule.forFeature([{name: Application.name, schema: ApplicationSchema},
@@ -27,6 +28,7 @@ import { AiMatchingCronService } from './services/ai-matching-cron.service';
       }),
       inject: [ConfigService],
     }),
+    NotificationsModule,
 ],
     controllers: [ApplicationController],
     providers: [ApplicationService, AiMatchingService, AiMatchingProcessor, AiMatchingCronService],
