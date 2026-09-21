@@ -43,36 +43,8 @@ export default function InterviewsFilterToolbar({
 }: InterviewsFilterToolbarProps) {
   return (
     <div className="flex flex-wrap items-center justify-between gap-3">
-      {/* Left: View Mode Toggle & Search */}
+      {/* Left: Filter Controls Group */}
       <div className="flex flex-wrap items-center gap-2.5 flex-1 min-w-0">
-        {/* View Mode Toggle Pill */}
-        <div className="flex items-center gap-1 bg-white/40 border border-white/60 p-1 rounded-xl shadow-2xs backdrop-blur-md">
-          <button
-            type="button"
-            onClick={() => setViewMode('list')}
-            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
-              viewMode === 'list'
-                ? 'bg-[#3B82F6] text-white shadow-md shadow-blue-500/20'
-                : 'text-slate-600 hover:text-slate-900 hover:bg-white/40'
-            }`}
-          >
-            <List size={14} />
-            <span>Danh sách</span>
-          </button>
-          <button
-            type="button"
-            onClick={() => setViewMode('calendar')}
-            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
-              viewMode === 'calendar'
-                ? 'bg-[#3B82F6] text-white shadow-md shadow-blue-500/20'
-                : 'text-slate-600 hover:text-slate-900 hover:bg-white/40'
-            }`}
-          >
-            <CalendarIcon size={14} />
-            <span>Lịch</span>
-          </button>
-        </div>
-
         {/* Search Input for Candidate & Position & Interviewer */}
         <div className="w-full sm:w-60 lg:w-64">
           <CustomInput
@@ -148,6 +120,34 @@ export default function InterviewsFilterToolbar({
         >
           <RotateCcw size={14} />
           <span>Đặt lại</span>
+        </button>
+      </div>
+
+      {/* Right: View Mode Toggle Pill (Aligned Far Right) */}
+      <div className="flex items-center gap-1 bg-white/40 border border-white/60 p-1 rounded-xl shadow-2xs backdrop-blur-md shrink-0 ml-auto">
+        <button
+          type="button"
+          onClick={() => setViewMode('list')}
+          className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+            viewMode === 'list'
+              ? 'bg-[#3B82F6] text-white shadow-md shadow-blue-500/20'
+              : 'text-slate-600 hover:text-slate-900 hover:bg-white/40'
+          }`}
+        >
+          <List size={14} />
+          <span>Danh sách</span>
+        </button>
+        <button
+          type="button"
+          onClick={() => setViewMode('calendar')}
+          className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+            viewMode === 'calendar'
+              ? 'bg-[#3B82F6] text-white shadow-md shadow-blue-500/20'
+              : 'text-slate-600 hover:text-slate-900 hover:bg-white/40'
+          }`}
+        >
+          <CalendarIcon size={14} />
+          <span>Lịch</span>
         </button>
       </div>
     </div>

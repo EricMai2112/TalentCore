@@ -327,27 +327,11 @@ export default function InterviewsManager() {
   }
 
   const handleApproveReschedule = async (interview: InterviewItem) => {
-    try {
-      await interviewsApi.approveReschedule(interview._id)
-      fetchInterviews()
-    } catch (err: any) {
-      alert(err?.response?.data?.message || err?.message || 'Lỗi khi chấp nhận đổi lịch phỏng vấn')
-    }
+    // Obsolete: replaced by simple candidate cancel & dept schedule workflow
   }
 
   const handleRejectReschedule = async (interview: InterviewItem) => {
-    const reason = window.prompt(
-      'Nhập lý do từ chối yêu cầu đổi lịch (tùy chọn):',
-      'Hội đồng phỏng vấn bận/không thể thu xếp khung giờ này.'
-    )
-    if (reason === null) return
-
-    try {
-      await interviewsApi.rejectReschedule(interview._id, reason)
-      fetchInterviews()
-    } catch (err: any) {
-      alert(err?.response?.data?.message || err?.message || 'Lỗi khi từ chối đổi lịch phỏng vấn')
-    }
+    // Obsolete: replaced by simple candidate cancel & dept schedule workflow
   }
 
   const handleApproveCandidateCancellation = async (interview: InterviewItem) => {
@@ -364,6 +348,21 @@ export default function InterviewsManager() {
       fetchInterviews()
     } catch (err: any) {
       alert(err?.response?.data?.message || err?.message || 'Lỗi khi xác nhận hủy lịch phỏng vấn')
+    }
+  }
+
+  const handleRejectDeptCv = async (interview: InterviewItem) => {
+    const reason = window.prompt(
+      'Nhập lý do từ chối CV (tùy chọn):',
+      'Ứng viên chưa đủ điều kiện chuyên môn phù hợp với vị trí.'
+    )
+    if (reason === null) return
+
+    try {
+      await interviewsApi.rejectDeptCv(interview._id, reason)
+      fetchInterviews()
+    } catch (err: any) {
+      alert(err?.response?.data?.message || err?.message || 'Lỗi khi từ chối CV')
     }
   }
 
@@ -511,6 +510,7 @@ export default function InterviewsManager() {
           onRejectReschedule={handleRejectReschedule}
           onApproveCandidateCancellation={handleApproveCandidateCancellation}
           onOpenDeptScheduleModal={handleOpenDeptScheduleModal}
+          onRejectDeptCv={handleRejectDeptCv}
           onApproveHrSchedule={handleApproveHrSchedule}
           formatDate={formatDate}
           getStatusBadge={getStatusBadge}

@@ -9,8 +9,10 @@ export enum LocationType {
 }
 
 export enum InterviewStatus {
-  SCHEDULED = 'SCHEDULED', // Đã lên lịch
-  COMPLETED = 'COMPLETED', // Hoàn thành
+  SCHEDULED = 'SCHEDULED', // Đã lên lịch (Chờ duyệt / Chờ xác nhận)
+  UPCOMING = 'UPCOMING',   // Sắp diễn ra (Ứng viên đã xác nhận)
+  IN_PROGRESS = 'IN_PROGRESS', // Đang diễn ra (Đang trong thời gian phỏng vấn)
+  COMPLETED = 'COMPLETED', // Hoàn thành / Đã kết thúc
   CANCELLED = 'CANCELLED', // Đã hủy
 }
 
@@ -22,15 +24,13 @@ export enum InterviewResult {
 
 export enum InterviewConfirmationStatus {
   PENDING = 'PENDING',                             // Chờ xác nhận
-  WAITING_DEPT_SCHEDULE = 'WAITING_DEPT_SCHEDULE', // Chờ Trưởng phòng xếp lịch
-  WAITING_HR_APPROVAL = 'WAITING_HR_APPROVAL',     // Chờ HR phê duyệt lịch
-  SCHEDULED = 'SCHEDULED',                         // Đã duyệt lịch (chờ ứng viên)
-  CONFIRMED = 'CONFIRMED',                         // Ứng viên đã xác nhận tham gia
-  RESCHEDULE_REQUESTED = 'RESCHEDULE_REQUESTED',   // Ứng viên yêu cầu đổi lịch
-  RESCHEDULE_REJECTED = 'RESCHEDULE_REJECTED',     // Nhà tuyển dụng từ chối đổi lịch
-  ADMIN_PROPOSED = 'ADMIN_PROPOSED',               // Nhà tuyển dụng đề xuất khung giờ mới
+  WAITING_DEPT_SCHEDULE = 'WAITING_DEPT_SCHEDULE', // Chờ Trưởng phòng xếp lịch / Xem CV ở Department Review
+  WAITING_HR_APPROVAL = 'WAITING_HR_APPROVAL',     // Trưởng phòng đã xếp lịch -> Chờ HR phê duyệt
+  SCHEDULED = 'SCHEDULED',                         // HR đã duyệt -> Chờ Ứng viên xác nhận
+  CONFIRMED = 'CONFIRMED',                         // Ứng viên đã xác nhận tham gia (Sắp diễn ra)
   CANCEL_REQUESTED = 'CANCEL_REQUESTED',           // Ứng viên yêu cầu hủy lịch
-  CANCELLED = 'CANCELLED',                         // Đã hủy lịch
+  CANCELLED = 'CANCELLED',                         // HR đã duyệt hủy lịch
+  REJECTED = 'REJECTED',                           // Trưởng phòng từ chối CV ở Department Review
 }
 
 @Schema({ timestamps: true })
@@ -80,44 +80,11 @@ export class Interview {
   @Prop({ required: false, trim: true })
   feedback?: string;
 
-  @Prop({ required: false, enum: InterviewConfirmationStatus, default: InterviewConfirmationStatus.CONFIRMED })
+  @Prop({ required: false, enum: InterviewConfirmationStatus, default: InterviewConfirmationStatus.SCHEDULED })
   confirmationStatus?: InterviewConfirmationStatus;
-
-  @Prop({ default: 0 })
-  rescheduleCount?: number;
-
-  @Prop({ required: false, trim: true })
-  rescheduleReason?: string;
-
-  @Prop({ required: false, trim: true })
-  rescheduleRejectReason?: string;
 
   @Prop({ required: false, trim: true })
   cancelReason?: string;
-
-  @Prop({ required: false, type: Date })
-  proposedCustomDate?: Date;
-
-  @Prop({ required: false, trim: true })
-  proposedCustomStartTime?: string;
-
-  @Prop({ required: false, trim: true })
-  proposedCustomEndTime?: string;
-
-  @Prop({
-    type: [
-      {
-        date: { type: Date },
-        startTime: { type: String },
-        endTime: { type: String },
-      },
-    ],
-    default: [],
-  })
-  proposedSlots?: { date: Date; startTime: string; endTime: string }[];
-
-  @Prop({ required: false, trim: true })
-  proposedBy?: string;
 
   @Prop({ default: false })
   isEscalated?: boolean;

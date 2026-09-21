@@ -48,9 +48,9 @@ export default function SettingsLayout({ children }: { children: React.ReactNode
       </div>
 
       {/* Tab Navigation */}
-      <div className="bg-white rounded-xl shadow-sm border border-gray-100">
+      <div className="bg-white/40 backdrop-blur-xl rounded-3xl shadow-xs border border-white/70 overflow-hidden">
         {/* Tabs */}
-        <div className="border-b border-gray-100 px-4 overflow-x-auto">
+        <div className="border-b border-slate-200/60 bg-white/50 backdrop-blur-md px-4 overflow-x-auto">
           <nav className="flex gap-1 min-w-max sm:min-w-0" aria-label="Settings tabs">
             {visibleTabs.map((tab) => {
               const isActive = pathname === tab.href || pathname.startsWith(tab.href + '/')
@@ -61,12 +61,12 @@ export default function SettingsLayout({ children }: { children: React.ReactNode
                   key={tab.href}
                   href={tab.href}
                   className={`
-                    flex items-center gap-2 px-4 py-3.5 text-sm font-medium
-                    border-b-2 transition-colors duration-150 whitespace-nowrap
+                    flex items-center gap-2 px-4 py-3.5 text-sm font-bold
+                    border-b-2 transition-all duration-150 whitespace-nowrap
                     ${
                       isActive
-                        ? 'border-indigo-600 text-indigo-600'
-                        : 'border-transparent text-gray-500 hover:text-gray-800 hover:border-gray-300'
+                        ? 'border-[#3B82F6] text-[#3B82F6]'
+                        : 'border-transparent text-slate-500 hover:text-slate-900 hover:border-slate-300'
                     }
                   `}
                 >

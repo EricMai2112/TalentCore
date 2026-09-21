@@ -5,12 +5,10 @@ import {
   CreateInterviewDto,
   UpdateInterviewDto,
   SubmitDeptScheduleDto,
-  CandidateRescheduleDto,
-  ProposeAdminSlotsDto,
   CandidateCancelDto,
   UpdateInterviewStatusDto,
 } from '../dtos/interview.dto';
-import { InterviewStatus, InterviewResult, InterviewConfirmationStatus } from '../schemas/interview.schema';
+import { InterviewConfirmationStatus } from '../schemas/interview.schema';
 
 @Controller('interviews')
 export class InterviewController {
@@ -54,18 +52,6 @@ export class InterviewController {
   @Get('candidates-select')
   async getCandidatesForSelect() {
     return await this.interviewService.getCandidatesForSelect();
-  }
-
-  @Get('available-slots')
-  async getAvailableSlots(
-    @Query('interviewerId') interviewerId?: string,
-    @Query('durationMinutes') durationMinutes?: string,
-    @Query('daysAhead') daysAhead?: string,
-    @Query('date') date?: string,
-  ) {
-    const duration = durationMinutes ? parseInt(durationMinutes, 10) : 60;
-    const days = daysAhead ? parseInt(daysAhead, 10) : 14;
-    return await this.interviewService.getAvailableTimeSlots(interviewerId, duration, days, date);
   }
 
   @Get('check-conflict')
@@ -114,6 +100,14 @@ export class InterviewController {
     return await this.interviewService.requestDeptSchedule(applicationId);
   }
 
+  @Patch(':id/dept-reject')
+  async rejectDeptCv(
+    @Param('id') id: string,
+    @Body('reason') reason?: string,
+  ) {
+    return await this.interviewService.rejectDeptCv(id, reason);
+  }
+
   @Patch(':id/submit-dept-schedule')
   async submitDeptSchedule(@Param('id') id: string, @Body() dto: SubmitDeptScheduleDto) {
     return await this.interviewService.submitDeptSchedule(id, dto);
@@ -122,27 +116,6 @@ export class InterviewController {
   @Patch(':id/hr-approve-schedule')
   async approveInterviewSchedule(@Param('id') id: string) {
     return await this.interviewService.approveInterviewSchedule(id);
-  }
-
-  @Post(':id/reschedule-request')
-  async requestCandidateReschedule(
-    @Param('id') id: string,
-    @Body() dto: CandidateRescheduleDto,
-  ) {
-    return await this.interviewService.requestCandidateReschedule(id, dto);
-  }
-
-  @Patch(':id/approve-reschedule')
-  async approveCandidateReschedule(@Param('id') id: string) {
-    return await this.interviewService.approveCandidateReschedule(id);
-  }
-
-  @Patch(':id/reject-reschedule')
-  async rejectCandidateReschedule(
-    @Param('id') id: string,
-    @Body('reason') reason?: string,
-  ) {
-    return await this.interviewService.rejectCandidateReschedule(id, reason);
   }
 
   @Put(':id')
@@ -161,25 +134,9 @@ export class InterviewController {
   @Patch(':id/candidate-confirm')
   async updateCandidateConfirmation(
     @Param('id') id: string,
-    @Body('confirmationStatus') confirmationStatus: InterviewConfirmationStatus,
+    @Body('confirmationStatus') confirmationStatus: InterviewConfirmationStatus = InterviewConfirmationStatus.CONFIRMED,
   ) {
     return await this.interviewService.updateCandidateConfirmation(id, confirmationStatus);
-  }
-
-  @Patch(':id/propose-admin-slots')
-  async proposeAdminSlots(
-    @Param('id') id: string,
-    @Body() dto: ProposeAdminSlotsDto,
-  ) {
-    return await this.interviewService.proposeAdminSlots(id, dto.proposedSlots, dto.notes);
-  }
-
-  @Patch(':id/accept-proposed-slot')
-  async acceptProposedSlot(
-    @Param('id') id: string,
-    @Body('selectedSlot') selectedSlot: { date: string; startTime: string; endTime: string },
-  ) {
-    return await this.interviewService.acceptProposedSlot(id, selectedSlot);
   }
 
   @Patch(':id/request-cancel')

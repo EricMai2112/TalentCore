@@ -24,6 +24,7 @@ interface KanbanHeaderFiltersProps {
   onSearchChange: (query: string) => void
   onScoreFilterChange: (score: string) => void
   onResetFilters?: () => void
+  rightSection?: React.ReactNode
 }
 
 export default function KanbanHeaderFilters({
@@ -38,7 +39,8 @@ export default function KanbanHeaderFilters({
   onJobChange,
   onSearchChange,
   onScoreFilterChange,
-  onResetFilters
+  onResetFilters,
+  rightSection
 }: KanbanHeaderFiltersProps) {
   const { user } = useAuth()
   const isDeptManager = user?.role === UserRole.DEPARTMENT_MANAGER
@@ -123,6 +125,12 @@ export default function KanbanHeaderFilters({
           </button>
         )}
       </div>
+
+      {rightSection && (
+        <div className="flex items-center shrink-0 ml-auto pl-2">
+          {rightSection}
+        </div>
+      )}
     </div>
   )
 }

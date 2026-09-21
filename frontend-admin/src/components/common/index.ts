@@ -18,3 +18,9 @@ export type { CustomButtonProps } from './CustomButton';
 
 export { default as CustomPagination } from './CustomPagination';
 export { CustomPagination as CustomPaginationComponent } from './CustomPagination';
+
+export { default as CustomTableContainer } from './CustomTableContainer';
+export type { CustomTableContainerProps } from './CustomTableContainer';
+
+export { default as CustomActionMenu } from './CustomActionMenu';
+export type { CustomActionMenuProps, CustomActionMenuItem, ActionItemVariant } from './CustomActionMenu';

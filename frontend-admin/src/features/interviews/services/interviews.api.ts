@@ -70,30 +70,6 @@ export const interviewsApi = {
     return res;
   },
 
-  approveReschedule: async (id: string): Promise<InterviewItem> => {
-    const res = await apiClient.patch<InterviewItem>(`/interviews/${id}/approve-reschedule`, {});
-    return res;
-  },
-
-  rejectReschedule: async (id: string, reason?: string): Promise<InterviewItem> => {
-    const res = await apiClient.patch<InterviewItem>(`/interviews/${id}/reject-reschedule`, {
-      reason,
-    });
-    return res;
-  },
-
-  proposeAdminSlots: async (
-    id: string,
-    proposedSlots: { date: string; startTime: string; endTime: string }[],
-    notes?: string
-  ): Promise<InterviewItem> => {
-    const res = await apiClient.patch<InterviewItem>(`/interviews/${id}/propose-admin-slots`, {
-      proposedSlots,
-      notes,
-    });
-    return res;
-  },
-
   checkConflict: async (params: {
     interviewerId: string;
     date: string;
@@ -128,6 +104,11 @@ export const interviewsApi = {
 
   requestDeptSchedule: async (applicationId: string): Promise<InterviewItem> => {
     const res = await apiClient.post<InterviewItem>("/interviews/request-dept-schedule", { applicationId });
+    return res;
+  },
+
+  rejectDeptCv: async (id: string, reason?: string): Promise<InterviewItem> => {
+    const res = await apiClient.patch<InterviewItem>(`/interviews/${id}/dept-reject`, { reason });
     return res;
   },
 
