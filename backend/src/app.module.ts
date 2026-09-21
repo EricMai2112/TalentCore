@@ -12,6 +12,7 @@ import { JobDescriptionModule } from './modules/job-description/job-description.
 import { CandidatesModule } from './modules/candidates/candidates.module';
 import { ApplicationsModule } from './modules/applications/applications.module';
 import { InterviewsModule } from './modules/interviews/interviews.module';
+import { NotificationsModule } from './modules/notifications/notifications.module';
 
 @Module({
   imports: [
@@ -34,6 +35,7 @@ import { InterviewsModule } from './modules/interviews/interviews.module';
     CandidatesModule,
     ApplicationsModule,
     InterviewsModule,
+    NotificationsModule,
   ],
   controllers: [],
   providers: [],

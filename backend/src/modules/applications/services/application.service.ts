@@ -7,6 +7,12 @@ import { JobDescription, JobDescriptionDocument, JobStatus } from 'src/modules/j
 import { PipelineTemplate, PipelineTemplateDocument } from 'src/modules/pipeline-template/schemas/pipeline-template.schema';
 import { AiMatchingProcessor } from '../processors/ai-matching.processor';
 import { AiEvaluation, AiEvaluationDocument } from '../schemas/ai-evaluation.schema';
+import { NotificationsService } from '../../notifications/services/notifications.service';
+import {
+  NotificationType,
+  NotificationCategory,
+  NotificationPriority,
+} from '../../notifications/schemas/notification.schema';
 
 @Injectable()
 export class ApplicationService {
@@ -28,7 +34,8 @@ export class ApplicationService {
     @InjectModel(AiEvaluation.name)
     private readonly aiEvaluationModel: Model<AiEvaluationDocument>,
 
-    private readonly aiMatchingProcessor: AiMatchingProcessor
+    private readonly aiMatchingProcessor: AiMatchingProcessor,
+    private readonly notificationsService: NotificationsService,
   ) {}
 
   async applyJob(userId: string, jobDescriptionId: string, candidateId: string) {
@@ -85,6 +92,50 @@ export class ApplicationService {
           );
         });
     });
+
+    // Bắn thông báo khi có ứng viên mới nộp hồ sơ
+    try {
+      const candidateDoc = await this.candidateModel.findById(candidate._id).populate('userId');
+      const candidateUser = candidateDoc?.userId as any;
+      const candName = candidateUser?.name || (candidateDoc as any)?.profileName || 'Ứng viên mới';
+      const deptId = (job.departmentId as any)?._id
+        ? (job.departmentId as any)._id.toString()
+        : (job.departmentId as any)?.toString();
+
+      // Thông báo HR Admin
+      await this.notificationsService.notifyHrAdmins({
+        title: 'Ứng viên mới nộp hồ sơ',
+        message: `Ứng viên ${candName} vừa nộp hồ sơ ứng tuyển vị trí "${job.title}".`,
+        type: NotificationType.APPLICATION_SUBMITTED,
+        category: NotificationCategory.CANDIDATE,
+        priority: NotificationPriority.MEDIUM,
+        actionUrl: '/kanban',
+        metadata: {
+          applicationId: newApplication._id.toString(),
+          jobId: job._id.toString(),
+          candidateId: candidate._id.toString(),
+        },
+      });
+
+      // Thông báo Trưởng phòng ban
+      if (deptId) {
+        await this.notificationsService.notifyDepartmentManagers(deptId, {
+          title: 'Ứng viên mới nộp hồ sơ',
+          message: `Ứng viên ${candName} vừa nộp hồ sơ ứng tuyển vị trí "${job.title}" thuộc phòng ban của bạn.`,
+          type: NotificationType.APPLICATION_SUBMITTED,
+          category: NotificationCategory.CANDIDATE,
+          priority: NotificationPriority.MEDIUM,
+          actionUrl: '/kanban',
+          metadata: {
+            applicationId: newApplication._id.toString(),
+            jobId: job._id.toString(),
+            candidateId: candidate._id.toString(),
+          },
+        });
+      }
+    } catch (notifErr) {
+      this.logger.error('Lỗi khi gửi thông báo nộp hồ sơ:', notifErr);
+    }
 
     return {
       message: 'Ứng tuyển thành công!',
@@ -230,7 +281,49 @@ export class ApplicationService {
     application.currentStageId = stageId as any;
     const updated = await application.save();
 
-    return this.getApplicationById(updated._id.toString());
+    const populated = await this.getApplicationById(updated._id.toString());
+
+    // [YÊU CẦU 2]: Kiểm tra nếu chuyển sang vòng department_review / Đánh giá phòng ban -> Thông báo cho Trưởng phòng
+    try {
+      const job = populated.jobDescriptionId as any;
+      const pipeline = job?.pipelineTemplateId as any;
+      let stageName = '';
+      if (pipeline && Array.isArray(pipeline.stages)) {
+        const foundStage = pipeline.stages.find(
+          (s: any) => s._id?.toString() === stageId || s.name === stageId,
+        );
+        if (foundStage) stageName = foundStage.name;
+      }
+
+      const stageLower = (stageName || stageId).toLowerCase();
+      // Nhận diện vòng Đánh giá phòng ban (department_review hoặc tên chứa phòng ban/chuyên môn)
+      if (
+        stageLower.includes('department') ||
+        stageLower.includes('phòng ban') ||
+        stageLower.includes('chuyên môn') ||
+        stageLower.includes('đánh giá')
+      ) {
+        const candidate = populated.candidateId as any;
+        const user = candidate?.userId as any;
+        const candidateName = user?.name || candidate?.fullName || candidate?.profileName || 'Ứng viên';
+        const jobTitle = job?.title || 'Vị trí tuyển dụng';
+        const departmentId = typeof job?.departmentId === 'object' ? job?.departmentId?._id?.toString() : job?.departmentId?.toString();
+
+        if (departmentId) {
+          await this.notificationsService.notifyDepartmentReview({
+            applicationId: populated._id.toString(),
+            candidateName,
+            jobTitle,
+            departmentId,
+            stageName: stageName || 'Đánh giá phòng ban',
+          });
+        }
+      }
+    } catch (notifErr) {
+      this.logger.error('Lỗi khi gửi thông báo Department Review:', notifErr);
+    }
+
+    return populated;
   }
 
   async getApplicationById(applicationId: string) {
