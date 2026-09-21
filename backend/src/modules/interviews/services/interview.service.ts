@@ -7,6 +7,7 @@ import { JobDescription, JobDescriptionDocument } from '../../job-description/sc
 import { Candidate, CandidateDocument } from '../../candidates/schema/candidate.schema';
 import { User, UserDocument, UserRole } from '../../users/schemas/user.schema';
 import { CreateInterviewDto, UpdateInterviewDto } from '../dtos/interview.dto';
+import { NotificationsService } from '../../notifications/services/notifications.service';
 
 @Injectable()
 export class InterviewService {
@@ -16,6 +17,7 @@ export class InterviewService {
     @InjectModel(JobDescription.name) private jobDescriptionModel: Model<JobDescriptionDocument>,
     @InjectModel(Candidate.name) private candidateModel: Model<CandidateDocument>,
     @InjectModel(User.name) private userModel: Model<UserDocument>,
+    private readonly notificationsService: NotificationsService,
   ) {}
 
   /**
@@ -409,7 +411,27 @@ export class InterviewService {
       notes: dto.notes,
     });
 
-    return await interview.save();
+    const savedInterview = await interview.save();
+
+    // Thông báo cho Người phỏng vấn (Interviewer)
+    try {
+      const candUser = (application.candidateId as any)?.userId;
+      const candName = candUser?.name || (application.candidateId as any)?.profileName || 'Ứng viên';
+      const dateFormatted = new Date(dto.date).toLocaleDateString('vi-VN');
+      const timeRange = `${dto.startTime} - ${dto.endTime}`;
+
+      await this.notificationsService.notifyInterviewScheduled(dto.interviewerId, {
+        candidateName: candName,
+        jobTitle: jobTitle || 'Vị trí tuyển dụng',
+        dateFormatted,
+        timeRange,
+        interviewId: savedInterview._id.toString(),
+      });
+    } catch (notifErr) {
+      console.error('Lỗi gửi thông báo createInterview:', notifErr);
+    }
+
+    return savedInterview;
   }
 
   /**
@@ -613,7 +635,30 @@ export class InterviewService {
       interview.confirmationStatus = InterviewConfirmationStatus.WAITING_DEPT_SCHEDULE;
     }
 
-    return await interview.save();
+    const saved = await interview.save();
+
+    // Thông báo cho Trưởng phòng ban lên lịch phỏng vấn
+    try {
+      const cand = await this.candidateModel.findById(application.candidateId).populate('userId').exec();
+      const candUser = (cand?.userId as any);
+      const candName = candUser?.name || cand?.profileName || 'Ứng viên';
+      const job: any = application.jobDescriptionId;
+      const jobTitle = job?.title || 'Vị trí tuyển dụng';
+      const deptId = typeof job?.departmentId === 'object' ? job?.departmentId?._id?.toString() : job?.departmentId?.toString();
+
+      if (deptId) {
+        await this.notificationsService.notifyDeptScheduleRequested(deptId, {
+          candidateName: candName,
+          jobTitle,
+          applicationId: application._id.toString(),
+          interviewId: saved._id.toString(),
+        });
+      }
+    } catch (notifErr) {
+      console.error('Lỗi gửi thông báo requestDeptSchedule:', notifErr);
+    }
+
+    return saved;
   }
 
   /**
@@ -678,7 +723,34 @@ export class InterviewService {
     if (dto.notes) interview.notes = dto.notes;
 
     interview.confirmationStatus = InterviewConfirmationStatus.WAITING_HR_APPROVAL;
-    return await interview.save();
+    const saved = await interview.save();
+
+    // Thông báo cho HR Admin kiểm tra và duyệt lịch
+    try {
+      const application = await this.applicationModel
+        .findById(interview.applicationId)
+        .populate({ path: 'candidateId', populate: { path: 'userId' } })
+        .populate('jobDescriptionId')
+        .exec();
+      const candUser = (application?.candidateId as any)?.userId;
+      const candName = candUser?.name || (application?.candidateId as any)?.profileName || 'Ứng viên';
+      const job: any = application?.jobDescriptionId;
+      const jobTitle = job?.title || 'Vị trí tuyển dụng';
+      const dateFormatted = new Date(dto.date).toLocaleDateString('vi-VN');
+      const timeRange = `${dto.startTime} - ${dto.endTime}`;
+
+      await this.notificationsService.notifyInterviewSubmittedForApproval({
+        candidateName: candName,
+        jobTitle,
+        dateFormatted,
+        timeRange,
+        interviewId: saved._id.toString(),
+      });
+    } catch (notifErr) {
+      console.error('Lỗi gửi thông báo submitDeptSchedule:', notifErr);
+    }
+
+    return saved;
   }
 
   /**
@@ -691,7 +763,38 @@ export class InterviewService {
       throw new NotFoundException('Không tìm thấy lịch phỏng vấn');
     }
     interview.confirmationStatus = InterviewConfirmationStatus.SCHEDULED;
-    return await interview.save();
+    const saved = await interview.save();
+
+    // Thông báo cho Interviewer và Trưởng phòng ban
+    try {
+      const application = await this.applicationModel
+        .findById(interview.applicationId)
+        .populate({ path: 'candidateId', populate: { path: 'userId' } })
+        .populate('jobDescriptionId')
+        .exec();
+      const candUser = (application?.candidateId as any)?.userId;
+      const candName = candUser?.name || (application?.candidateId as any)?.profileName || 'Ứng viên';
+      const job: any = application?.jobDescriptionId;
+      const jobTitle = job?.title || 'Vị trí tuyển dụng';
+      const dateFormatted = new Date(interview.date).toLocaleDateString('vi-VN');
+      const timeRange = `${interview.startTime} - ${interview.endTime}`;
+      const deptId = typeof job?.departmentId === 'object' ? job?.departmentId?._id?.toString() : job?.departmentId?.toString();
+      const interviewerId = interview.interviewerId?.toString();
+
+      await this.notificationsService.notifyInterviewApproved({
+        candidateName: candName,
+        jobTitle,
+        dateFormatted,
+        timeRange,
+        interviewId: saved._id.toString(),
+        interviewerId,
+        departmentId: deptId,
+      });
+    } catch (notifErr) {
+      console.error('Lỗi gửi thông báo approveInterviewSchedule:', notifErr);
+    }
+
+    return saved;
   }
 
   /**
@@ -703,7 +806,46 @@ export class InterviewService {
       throw new NotFoundException('Không tìm thấy lịch phỏng vấn.');
     }
     interview.confirmationStatus = confirmationStatus;
-    return await interview.save();
+    const saved = await interview.save();
+
+    // Thông báo cho HR và Interviewer khi ứng viên phản hồi
+    try {
+      let statusText = '';
+      if (confirmationStatus === InterviewConfirmationStatus.CONFIRMED) {
+        statusText = 'xác nhận ĐỒNG Ý tham gia';
+      } else if (
+        confirmationStatus === InterviewConfirmationStatus.CANCEL_REQUESTED ||
+        confirmationStatus === InterviewConfirmationStatus.CANCELLED
+      ) {
+        statusText = 'yêu cầu HỦY';
+      } else if (confirmationStatus === InterviewConfirmationStatus.RESCHEDULE_REQUESTED) {
+        statusText = 'đề xuất ĐỔI THỜI GIAN';
+      }
+
+      if (statusText) {
+        const application = await this.applicationModel
+          .findById(interview.applicationId)
+          .populate({ path: 'candidateId', populate: { path: 'userId' } })
+          .populate('jobDescriptionId')
+          .exec();
+        const candUser = (application?.candidateId as any)?.userId;
+        const candName = candUser?.name || (application?.candidateId as any)?.profileName || 'Ứng viên';
+        const job: any = application?.jobDescriptionId;
+        const jobTitle = job?.title || 'Vị trí tuyển dụng';
+
+        await this.notificationsService.notifyInterviewCandidateResponse({
+          candidateName: candName,
+          jobTitle,
+          statusText,
+          interviewId: saved._id.toString(),
+          interviewerId: interview.interviewerId?.toString(),
+        });
+      }
+    } catch (notifErr) {
+      console.error('Lỗi gửi thông báo updateCandidateConfirmation:', notifErr);
+    }
+
+    return saved;
   }
 
   /**

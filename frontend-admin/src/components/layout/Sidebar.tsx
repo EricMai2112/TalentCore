@@ -19,6 +19,7 @@ import logomini from '@/public/favicon-talentcore.png'
 import Image from 'next/image'
 import { UserRole } from '@/src/features/users/types/user.types'
 import { useAuth } from '@/src/providers/AuthProvider'
+import { useNotifications } from '@/src/providers/NotificationProvider'
 
 interface NavItem {
   label: string
@@ -55,19 +56,35 @@ const navItems: NavItem[] = [
     roles: [UserRole.HR_ADMIN, UserRole.DEPARTMENT_MANAGER, UserRole.EMPLOYEE]
   },
   { label: 'Offer', href: '/offers', icon: FileText, roles: [UserRole.HR_ADMIN] },
-  { label: 'Thông báo', href: '/notifications', icon: Bell, roles: [UserRole.HR_ADMIN] }
+  {
+    label: 'Thông báo',
+    href: '/notifications',
+    icon: Bell,
+    roles: [UserRole.HR_ADMIN, UserRole.DEPARTMENT_MANAGER],
+  },
 ]
 
 export default function Sidebar() {
   const [isCollapsed, setIsCollapsed] = useState(false)
   const pathname = usePathname()
   const { user } = useAuth()
+  const { unreadCount } = useNotifications()
 
-  const filteredNavItems = navItems.filter((item) => {
-    if (!item.roles || item.roles.length === 0) return true
-    if (!user?.role) return false
-    return item.roles.includes(user.role)
-  })
+  const filteredNavItems = navItems
+    .filter((item) => {
+      if (!item.roles || item.roles.length === 0) return true
+      if (!user?.role) return false
+      return item.roles.includes(user.role)
+    })
+    .map((item) => {
+      if (item.href === '/notifications') {
+        return {
+          ...item,
+          badge: unreadCount > 0 ? unreadCount : undefined,
+        }
+      }
+      return item
+    })
 
   return (
     <aside className="p-2 shrink-0 h-screen sticky top-0 flex flex-col z-20">
