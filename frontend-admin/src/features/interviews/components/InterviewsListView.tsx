@@ -13,11 +13,7 @@ interface InterviewsListViewProps {
   activeMenuId: string | null
   setActiveMenuId: (id: string | null) => void
   onOpenStatusModal: (interview: InterviewItem) => void
-  onOpenEditModal: (interview: InterviewItem) => void
-  onOpenRescheduleModal?: (interview: InterviewItem) => void
-  onOpenRescheduleRequestModal?: (interview: InterviewItem) => void
-  onApproveReschedule?: (interview: InterviewItem) => void
-  onRejectReschedule?: (interview: InterviewItem) => void
+  onOpenCandidateDetailModal?: (interview: InterviewItem) => void
   onApproveCandidateCancellation?: (interview: InterviewItem) => void
   onOpenDeptScheduleModal?: (interview: InterviewItem) => void
   onRejectDeptCv?: (interview: InterviewItem) => void
@@ -38,11 +34,7 @@ export default function InterviewsListView({
   activeMenuId,
   setActiveMenuId,
   onOpenStatusModal,
-  onOpenEditModal,
-  onOpenRescheduleModal,
-  onOpenRescheduleRequestModal,
-  onApproveReschedule,
-  onRejectReschedule,
+  onOpenCandidateDetailModal,
   onApproveCandidateCancellation,
   onOpenDeptScheduleModal,
   onRejectDeptCv,
@@ -98,11 +90,7 @@ export default function InterviewsListView({
                 item={item}
                 index={idx}
                 onOpenStatusModal={onOpenStatusModal}
-                onOpenEditModal={onOpenEditModal}
-                onOpenRescheduleModal={onOpenRescheduleModal}
-                onOpenRescheduleRequestModal={onOpenRescheduleRequestModal}
-                onApproveReschedule={onApproveReschedule}
-                onRejectReschedule={onRejectReschedule}
+                onOpenCandidateDetailModal={onOpenCandidateDetailModal}
                 onApproveCandidateCancellation={onApproveCandidateCancellation}
                 onOpenDeptScheduleModal={onOpenDeptScheduleModal}
                 onRejectDeptCv={onRejectDeptCv}

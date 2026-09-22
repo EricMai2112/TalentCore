@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import {
   Calendar,
   Video,
@@ -27,7 +27,7 @@ export function UpcomingInterviewBanner({
   onStatusUpdated
 }: UpcomingInterviewBannerProps) {
   const [confirmationStatus, setConfirmationStatus] = useState<string>(
-    interview.confirmationStatus || 'CONFIRMED'
+    interview.confirmationStatus || 'PENDING'
   )
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [isCancelModalOpen, setIsCancelModalOpen] = useState(false)
@@ -35,6 +35,12 @@ export function UpcomingInterviewBanner({
   const [cancelReasonText, setCancelReasonText] = useState<string>(
     interview.cancelReason || ''
   )
+
+  useEffect(() => {
+    if (interview.confirmationStatus) {
+      setConfirmationStatus(interview.confirmationStatus)
+    }
+  }, [interview.confirmationStatus])
 
   const job = interview.jobDescriptionId
   const deptName =
@@ -131,8 +137,8 @@ export function UpcomingInterviewBanner({
 
           {/* Right Column Action Buttons */}
           <div className="flex flex-col sm:flex-row lg:flex-col gap-3 justify-end shrink-0 pt-2 lg:pt-0">
-            {/* Action 1: Join Meeting */}
-            {interview.meetingLink && (
+            {/* Action 1: Join Meeting (Only if candidate has confirmed & online interview) */}
+            {confirmationStatus === 'CONFIRMED' && (interview.locationType === 'ONLINE' || !interview.locationType) && interview.meetingLink && (
               <a
                 href={interview.meetingLink}
                 target="_blank"

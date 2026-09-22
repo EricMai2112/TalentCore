@@ -4,7 +4,7 @@ import React from 'react';
 import { Loader2 } from 'lucide-react';
 
 export interface CustomButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElement> {
-  variant?: 'primary' | 'secondary' | 'accent' | 'gradient' | 'outline' | 'danger' | 'ghost';
+  variant?: 'primary' | 'secondary' | 'accent' | 'gradient' | 'outline' | 'danger' | 'ghost' | 'warning';
   size?: 'sm' | 'md' | 'lg';
   isLoading?: boolean;
   icon?: React.ReactNode | React.ElementType;
@@ -45,6 +45,8 @@ export default function CustomButton({
       'bg-transparent text-[#3B82F6] border border-[#3B82F6]/40 hover:bg-[#3B82F6]/10 hover:border-[#3B82F6]',
     danger:
       'bg-rose-600 text-white hover:bg-rose-700 shadow-md shadow-rose-600/25 border border-white/20',
+    warning:
+      'bg-amber-500 text-white hover:bg-amber-600 shadow-md shadow-amber-500/25 border border-white/20',
     ghost:
       'bg-slate-700/5 text-slate-700 hover:bg-slate-700/10 hover:text-slate-900 border border-transparent',
   };

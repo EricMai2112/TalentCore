@@ -3,6 +3,12 @@ import { Document, Types } from 'mongoose';
 
 export type ApplicationDocument = Application & Document;
 
+export enum ApplicationStatus {
+  ACTIVE = 'ACTIVE',
+  REJECTED = 'REJECTED',
+  HIRED = 'HIRED',
+}
+
 export class ApplicationNote {
   _id?: Types.ObjectId;
   authorName: string;
@@ -21,6 +27,18 @@ export class Application {
 
   @Prop({ type: Types.ObjectId, required: true })
   currentStageId: Types.ObjectId;
+
+  @Prop({ type: String, enum: ApplicationStatus, default: ApplicationStatus.ACTIVE, index: true })
+  status: ApplicationStatus;
+
+  @Prop({ type: String, required: false })
+  reviewStatus?: string;
+
+  @Prop({ type: String, required: false })
+  rejectReason?: string;
+
+  @Prop({ type: Date, required: false })
+  rejectedAt?: Date;
 
   @Prop({ type: Date, default: Date.now })
   appliedAt: Date;

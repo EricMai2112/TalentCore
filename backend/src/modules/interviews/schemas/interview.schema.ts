@@ -50,14 +50,14 @@ export class Interview {
   @Prop({ type: [{ type: Types.ObjectId, ref: 'User' }], default: [] })
   interviewerIds: Types.ObjectId[];
 
-  @Prop({ required: true, type: Date })
-  date: Date;
+  @Prop({ required: false, type: Date })
+  date?: Date;
 
-  @Prop({ required: true, trim: true })
-  startTime: string; // e.g. "14:00"
+  @Prop({ required: false, trim: true })
+  startTime?: string; // e.g. "14:00"
 
-  @Prop({ required: true, trim: true })
-  endTime: string; // e.g. "15:30"
+  @Prop({ required: false, trim: true })
+  endTime?: string; // e.g. "15:30"
 
   @Prop({ required: true, enum: LocationType, default: LocationType.ONLINE })
   locationType: LocationType;

@@ -1,7 +1,7 @@
 'use client'
 
 import React from 'react'
-import { Search, Building2, Briefcase, Filter, RotateCcw } from 'lucide-react'
+import { Search, Building2, Briefcase, Filter, RotateCcw, UserX } from 'lucide-react'
 import { CustomInput, CustomSelect } from '@/src/components/common'
 import {
   Department,
@@ -19,10 +19,12 @@ interface KanbanHeaderFiltersProps {
   selectedJobId: string
   searchQuery: string
   scoreFilter: string
+  showRejected?: boolean
   onDepartmentChange: (deptId: string) => void
   onJobChange: (jobId: string) => void
   onSearchChange: (query: string) => void
   onScoreFilterChange: (score: string) => void
+  onShowRejectedChange?: (show: boolean) => void
   onResetFilters?: () => void
   rightSection?: React.ReactNode
 }
@@ -35,10 +37,12 @@ export default function KanbanHeaderFilters({
   selectedJobId,
   searchQuery,
   scoreFilter,
+  showRejected = false,
   onDepartmentChange,
   onJobChange,
   onSearchChange,
   onScoreFilterChange,
+  onShowRejectedChange,
   onResetFilters,
   rightSection
 }: KanbanHeaderFiltersProps) {
@@ -111,6 +115,23 @@ export default function KanbanHeaderFilters({
             { value: '50', label: '≥ 50% (Đạt)' }
           ]}
         />
+
+        {/* 4. Show Rejected Filter Toggle */}
+        {onShowRejectedChange && (
+          <button
+            type="button"
+            onClick={() => onShowRejectedChange(!showRejected)}
+            className={`px-3 py-1.5 rounded-xl border text-xs font-bold flex items-center gap-1.5 transition-all cursor-pointer shrink-0 ${
+              showRejected
+                ? 'bg-rose-50 border-rose-200 text-rose-600 shadow-xs'
+                : 'bg-white/60 border-white/80 hover:bg-white text-slate-600 shadow-2xs'
+            }`}
+            title="Bật/Tắt hiển thị hồ sơ đã từ chối"
+          >
+            <UserX size={14} className={showRejected ? 'text-rose-500' : 'text-slate-400'} />
+            <span>{showRejected ? 'Đang hiện đơn từ chối' : 'Hiện đơn từ chối'}</span>
+          </button>
+        )}
 
         {/* Reset Filters Button */}
         {onResetFilters && (

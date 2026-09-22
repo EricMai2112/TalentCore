@@ -28,6 +28,15 @@ export function CancelInterviewModal({
     setMounted(true)
   }, [])
 
+  useEffect(() => {
+    if (isOpen) {
+      document.body.style.overflow = 'hidden'
+      return () => {
+        document.body.style.overflow = 'unset'
+      }
+    }
+  }, [isOpen])
+
   if (!isOpen || !mounted) return null
 
   const handleSubmit = async (e: React.FormEvent) => {

@@ -245,22 +245,22 @@ export function DeptScheduleFormModal({
   };
 
   const modalContent = (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+    <div className="fixed inset-0 z-[9999] flex items-center justify-center p-4">
       {/* Backdrop */}
       <div
-        className="fixed inset-0 bg-slate-950/40 backdrop-blur-md transition-opacity animate-in fade-in duration-200"
+        className="fixed inset-0 bg-slate-900/40 backdrop-blur-md transition-opacity animate-in fade-in duration-200"
         onClick={onClose}
       />
 
-      <div className="relative bg-white/95 backdrop-blur-2xl rounded-3xl max-w-2xl w-full shadow-2xl shadow-amber-500/10 border border-white/80 overflow-hidden flex flex-col max-h-[92vh] z-10 text-slate-900 animate-in zoom-in-95 duration-200">
+      <div className="relative bg-white/95 backdrop-blur-2xl rounded-3xl max-w-2xl w-full shadow-2xl shadow-blue-500/10 border border-white/90 overflow-hidden flex flex-col max-h-[92vh] z-10 text-slate-900 animate-in zoom-in-95 duration-200">
         {/* Modal Header */}
-        <div className="px-6 py-5 border-b border-slate-100/80 flex items-start justify-between bg-amber-500/5">
+        <div className="px-6 py-5 border-b border-slate-200/60 flex items-start justify-between bg-blue-500/5">
           <div>
             <h3 className="font-bold text-lg text-slate-900 leading-snug">
               Xếp lịch Phỏng vấn & Chọn Người phỏng vấn
             </h3>
-            <p className="text-xs font-semibold text-slate-800 mt-1">
-              Ứng viên: <strong className="text-slate-800 font-bold">{candName} - {jobTitle}</strong>
+            <p className="text-xs font-semibold text-slate-700 mt-1">
+              Ứng viên: <strong className="text-slate-900 font-bold">{candName} - {jobTitle}</strong>
             </p>
           </div>
           <button
@@ -328,8 +328,8 @@ export function DeptScheduleFormModal({
                 onClick={() => handleLocationTypeChange(LocationType.ONLINE)}
                 className={`flex items-center justify-center gap-2 p-3 rounded-2xl border text-xs font-bold transition-all cursor-pointer ${
                   locationType === LocationType.ONLINE
-                    ? "bg-blue-50 border-blue-200 text-[#3B82F6] shadow-2xs"
-                    : "bg-slate-50/80 border-slate-200 text-slate-600 hover:bg-slate-100"
+                    ? "bg-blue-50 border-[#3B82F6] text-[#3B82F6] ring-2 ring-blue-500/15 shadow-2xs"
+                    : "bg-slate-50/80 border-slate-200/80 text-slate-600 hover:bg-slate-100"
                 }`}
               >
                 <Video size={15} />
@@ -340,8 +340,8 @@ export function DeptScheduleFormModal({
                 onClick={() => handleLocationTypeChange(LocationType.OFFSITE)}
                 className={`flex items-center justify-center gap-2 p-3 rounded-2xl border text-xs font-bold transition-all cursor-pointer ${
                   locationType === LocationType.OFFSITE
-                    ? "bg-amber-50 border-amber-300 text-amber-700 shadow-2xs"
-                    : "bg-slate-50/80 border-slate-200 text-slate-600 hover:bg-slate-100"
+                    ? "bg-blue-50 border-[#3B82F6] text-[#3B82F6] ring-2 ring-blue-500/15 shadow-2xs"
+                    : "bg-slate-50/80 border-slate-200/80 text-slate-600 hover:bg-slate-100"
                 }`}
               >
                 <MapPin size={15} />
@@ -411,7 +411,7 @@ export function DeptScheduleFormModal({
             <button
               type="submit"
               disabled={isSubmitting}
-              className="px-6 py-2.5 rounded-2xl bg-amber-500 hover:bg-amber-600 active:scale-95 text-white font-bold text-xs transition-all shadow-md shadow-amber-500/20 inline-flex items-center gap-2 cursor-pointer disabled:opacity-75"
+              className="px-6 py-2.5 rounded-2xl bg-gradient-to-r from-[#3B82F6] to-[#2563EB] hover:from-[#2563EB] hover:to-[#1D4ED8] active:scale-95 text-white font-bold text-xs transition-all shadow-md shadow-blue-500/25 hover:shadow-lg hover:shadow-blue-500/35 inline-flex items-center gap-2 cursor-pointer disabled:opacity-75"
             >
               {isSubmitting && <Loader2 size={15} className="animate-spin" />}
               <span>Gửi HR duyệt lịch</span>

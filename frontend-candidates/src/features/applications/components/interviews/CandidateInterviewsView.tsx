@@ -29,9 +29,12 @@ export function CandidateInterviewsView() {
     fetchInterviews()
   }, [])
 
-  // Find the next upcoming scheduled interview
+  // Find the next upcoming scheduled/confirmed interview
   const upcomingInterview = interviews.find(
-    (item) => item.status === 'SCHEDULED'
+    (item) =>
+      (item.status === 'SCHEDULED' || item.status === 'UPCOMING' || item.status === 'IN_PROGRESS') &&
+      item.confirmationStatus !== 'CANCELLED' &&
+      item.confirmationStatus !== 'REJECTED'
   )
 
   // Filter interviews by status and search query

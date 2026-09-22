@@ -1,17 +1,22 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { CalendarPlus, Loader2, CheckCircle, AlertCircle, X } from "lucide-react";
+import { CalendarPlus, CheckCircle, AlertCircle, X, AlertTriangle, Edit3 } from "lucide-react";
 import { UserRole } from "@/src/features/users/types/user.types";
 import { interviewsApi } from "@/src/features/interviews/services/interviews.api";
-
+import { InterviewItem } from "@/src/features/interviews/types/interview.types";
 import { CustomButton } from "@/src/components/common";
 
 interface CandidateDetailFooterActionsProps {
   applicationId: string;
   candidateName: string;
   userRole?: string;
+  interview?: InterviewItem | null;
+  isCandidateRejected?: boolean;
   onClose: () => void;
+  onOpenDeptScheduleModal?: (interview: InterviewItem) => void;
+  onRejectDeptCv?: (interview: InterviewItem) => void;
+  onRejectCandidate?: () => void;
   onRequestSuccess?: () => void;
 }
 
@@ -19,32 +24,44 @@ export function CandidateDetailFooterActions({
   applicationId,
   candidateName,
   userRole,
+  interview: initialInterview,
+  isCandidateRejected = false,
   onClose,
+  onOpenDeptScheduleModal,
+  onRejectDeptCv,
+  onRejectCandidate,
   onRequestSuccess,
 }: CandidateDetailFooterActionsProps) {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isDone, setIsDone] = useState(false);
+  const [interview, setInterview] = useState<InterviewItem | null>(initialInterview || null);
   const [toast, setToast] = useState<{ message: string; type: "success" | "error" } | null>(null);
 
   // Check if interview schedule request was already created for this application
   useEffect(() => {
+    if (initialInterview) {
+      setInterview(initialInterview);
+      return;
+    }
     if (!applicationId) return;
     const checkInterviewState = async () => {
       try {
-        const interview = await interviewsApi.getInterviewByApplicationId(applicationId);
-        if (
-          interview &&
-          interview.confirmationStatus &&
-          ["WAITING_DEPT_SCHEDULE", "WAITING_HR_APPROVAL", "SCHEDULED", "CONFIRMED"].includes(interview.confirmationStatus)
-        ) {
-          setIsDone(true);
+        const inv = await interviewsApi.getInterviewByApplicationId(applicationId);
+        if (inv) {
+          setInterview(inv);
+          if (
+            inv.confirmationStatus &&
+            ["WAITING_DEPT_SCHEDULE", "WAITING_HR_APPROVAL", "SCHEDULED", "CONFIRMED"].includes(inv.confirmationStatus)
+          ) {
+            setIsDone(true);
+          }
         }
       } catch (err) {
         console.error("Lỗi khi kiểm tra lịch phỏng vấn:", err);
       }
     };
     checkInterviewState();
-  }, [applicationId]);
+  }, [applicationId, initialInterview]);
 
   useEffect(() => {
     if (!toast) return;
@@ -53,30 +70,14 @@ export function CandidateDetailFooterActions({
   }, [toast]);
 
   const isHrAdmin = userRole === UserRole.HR_ADMIN || userRole === "HR_ADMIN" || userRole === "ADMIN";
+  const isDeptManager = userRole === UserRole.DEPARTMENT_MANAGER || userRole === "DEPARTMENT_MANAGER";
 
-  const handleRequestSchedule = async () => {
-    if (!applicationId || isSubmitting) return;
-    try {
-      setIsSubmitting(true);
-      await interviewsApi.requestDeptSchedule(applicationId);
-      setIsDone(true);
-      setToast({
-        message: "Đã gửi yêu cầu lên lịch phỏng vấn cho Trưởng phòng thành công!",
-        type: "success",
-      });
-      if (onRequestSuccess) {
-        onRequestSuccess();
-      }
-    } catch (error: any) {
-      console.error("Lỗi khi gửi yêu cầu lên lịch phỏng vấn:", error);
-      setToast({
-        message: error?.message || "Gửi yêu cầu phỏng vấn thất bại. Vui lòng thử lại!",
-        type: "error",
-      });
-    } finally {
-      setIsSubmitting(false);
-    }
-  };
+  const isEffectiveRejected =
+    isCandidateRejected ||
+    interview?.confirmationStatus === "REJECTED" ||
+    interview?.confirmationStatus === "CANCELLED" ||
+    (interview as any)?.status === "CANCELLED" ||
+    (interview as any)?.status === "REJECTED";
 
   return (
     <>
@@ -106,17 +107,67 @@ export function CandidateDetailFooterActions({
           Ứng viên: <strong className="text-slate-800">{candidateName}</strong>
         </div>
 
-        <div className="flex items-center gap-3">
-          {isHrAdmin && (
+        <div className="flex items-center gap-2.5">
+          {/* TRƯỞNG PHÒNG FOOTER ACTIONS (Hidden if Candidate Rejected) */}
+          {isDeptManager && !isEffectiveRejected && interview && (
+            <>
+              {(!interview.confirmationStatus || interview.confirmationStatus === "WAITING_DEPT_SCHEDULE") && (
+                <>
+                  {onRejectDeptCv && (
+                    <CustomButton
+                      variant="danger"
+                      size="sm"
+                      onClick={() => {
+                        onRejectDeptCv(interview);
+                      }}
+                      icon={AlertTriangle}
+                    >
+                      Từ chối ứng viên
+                    </CustomButton>
+                  )}
+                  {onOpenDeptScheduleModal && (
+                    <CustomButton
+                      variant="warning"
+                      size="sm"
+                      onClick={() => {
+                        onOpenDeptScheduleModal(interview);
+                      }}
+                      icon={CalendarPlus}
+                    >
+                      Xếp lịch phỏng vấn
+                    </CustomButton>
+                  )}
+                </>
+              )}
+
+              {interview.confirmationStatus === "WAITING_HR_APPROVAL" && (
+                <>
+                  {onOpenDeptScheduleModal && (
+                    <CustomButton
+                      variant="primary"
+                      size="sm"
+                      onClick={() => {
+                        onOpenDeptScheduleModal(interview);
+                      }}
+                      icon={Edit3}
+                    >
+                      Cập nhật lịch phỏng vấn
+                    </CustomButton>
+                  )}
+                </>
+              )}
+            </>
+          )}
+
+          {/* HR / ADMIN FOOTER ACTIONS (Hidden if Candidate Rejected) */}
+          {isHrAdmin && !isEffectiveRejected && onRejectCandidate && (
             <CustomButton
-              variant={isDone ? "secondary" : "primary"}
+              variant="danger"
               size="sm"
-              disabled={isSubmitting || isDone}
-              isLoading={isSubmitting}
-              onClick={handleRequestSchedule}
-              icon={isDone ? CheckCircle : CalendarPlus}
+              onClick={onRejectCandidate}
+              icon={AlertTriangle}
             >
-              {isDone ? "Đã gửi yêu cầu lên lịch" : "Yêu cầu lên lịch Phỏng vấn"}
+              Từ chối ứng viên
             </CustomButton>
           )}
         </div>

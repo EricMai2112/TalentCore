@@ -75,6 +75,10 @@ export interface CandidateApplication {
   jobDescriptionId: JobDescriptionData;
   currentStageId: string;
   appliedAt: string;
+  status?: "ACTIVE" | "REJECTED" | "HIRED" | string;
+  reviewStatus?: string;
+  rejectReason?: string;
+  rejectedAt?: string;
   aiFitScore?: number | null;
   isMissingMandatory?: boolean;
   notes?: CandidateNote[];

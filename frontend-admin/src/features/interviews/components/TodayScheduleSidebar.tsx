@@ -22,17 +22,29 @@ export function TodayScheduleSidebar({
   const formattedToday = `${String(now.getDate()).padStart(2, '0')}/${String(now.getMonth() + 1).padStart(2, '0')}/${now.getFullYear()}`;
   const todayISO = now.toISOString().split('T')[0];
 
-  // Filter today's interviews or sort upcoming ones
-  const todayInterviews = interviews.filter((item) => {
-    if (!item.date) return false;
-    const itemDate = new Date(item.date).toISOString().split('T')[0];
+  // Filter official approved interviews only
+  const officialInterviews = interviews.filter((item) => {
+    if (!item.date || !item.startTime) return false;
+    if (
+      item.confirmationStatus === 'WAITING_DEPT_SCHEDULE' ||
+      item.confirmationStatus === 'WAITING_HR_APPROVAL' ||
+      item.confirmationStatus === 'REJECTED' ||
+      item.status === InterviewStatus.CANCELLED
+    ) {
+      return false;
+    }
+    return true;
+  });
+
+  const todayInterviews = officialInterviews.filter((item) => {
+    const itemDate = new Date(item.date!).toISOString().split('T')[0];
     return itemDate === todayISO;
   });
 
-  // Display list: if no interviews today, display next upcoming 3-4 interviews
+  // Display list: if no interviews today, display next upcoming 3-4 official interviews
   const displayList = todayInterviews.length > 0
     ? todayInterviews
-    : interviews.slice(0, 4);
+    : officialInterviews.slice(0, 4);
 
   const getTimelineStatusBadge = (status: InterviewStatus, startTime?: string) => {
     if (status === InterviewStatus.COMPLETED) {

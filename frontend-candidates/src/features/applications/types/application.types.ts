@@ -72,7 +72,7 @@ export interface CandidateInterviewItem {
   locationType: 'ONLINE' | 'OFFSITE';
   meetingLink?: string;
   offsiteLocation?: string;
-  status: 'SCHEDULED' | 'COMPLETED' | 'CANCELLED';
+  status: 'SCHEDULED' | 'UPCOMING' | 'IN_PROGRESS' | 'COMPLETED' | 'CANCELLED';
   result: 'PENDING' | 'PASS' | 'FAIL';
   confirmationStatus?: 'CONFIRMED' | 'PENDING' | 'WAITING_DEPT_SCHEDULE' | 'WAITING_HR_APPROVAL' | 'RESCHEDULE_REQUESTED' | 'RESCHEDULE_REJECTED' | 'ADMIN_PROPOSED' | 'CANCEL_REQUESTED' | 'CANCELLED' | string;
   rescheduleCount?: number;

@@ -1,17 +1,8 @@
 'use client'
 
 import Link from 'next/link'
-import { Briefcase, Building2, MapPin, DollarSign, Check, ArrowRight } from 'lucide-react'
+import { Briefcase, Building2, MapPin, DollarSign, Check, Clock, X, ArrowRight } from 'lucide-react'
 import { CandidateApplicationItem } from '../../types/application.types'
-
-const DEFAULT_PIPELINE_STAGES = [
-  { name: 'Mới ứng tuyển' },
-  { name: 'Sàng lọc CV' },
-  { name: 'Phỏng vấn sơ loại' },
-  { name: 'Phỏng vấn chuyên môn' },
-  { name: 'Phỏng vấn Culture Fit' },
-  { name: 'Offer' }
-]
 
 interface ApplicationCardItemProps {
   app: CandidateApplicationItem
@@ -24,20 +15,19 @@ export function ApplicationCardItem({ app }: ApplicationCardItemProps) {
   const location = job?.location || 'Hồ Chí Minh'
   const salary = job?.salaryRange || '$2500-$4000'
 
-  const stagesList =
-    app.stages && app.stages.length >= 2 ? app.stages : DEFAULT_PIPELINE_STAGES
-
   const activeIdx =
     app.currentStageIndex !== undefined && app.currentStageIndex >= 0
       ? app.currentStageIndex
       : 0
 
-  const getScoreColor = (score?: number | null) => {
-    if (score === null || score === undefined) return 'text-slate-500 font-bold'
-    if (score >= 70) return 'text-emerald-600 font-extrabold'
-    if (score >= 50) return 'text-amber-600 font-extrabold'
-    return 'text-rose-600 font-extrabold'
-  }
+  const statusLower = ((app as any).status || '').toLowerCase()
+  const reviewStatusLower = ((app as any).reviewStatus || '').toLowerCase()
+  const stageNameLower = (app.stageName || '').toLowerCase()
+  const isRejected =
+    statusLower === 'rejected' ||
+    reviewStatusLower === 'rejected' ||
+    stageNameLower.includes('từ chối') ||
+    stageNameLower.includes('reject')
 
   const getStageBadge = (stageName?: string, stageColor?: string) => {
     const s = stageName || 'Mới ứng tuyển'
@@ -90,13 +80,34 @@ export function ApplicationCardItem({ app }: ApplicationCardItemProps) {
   }
 
   const formatDate = (dateStr?: string) => {
-    if (!dateStr) return '2026-07-05'
-    const d = new Date(dateStr)
-    const year = d.getFullYear()
-    const month = String(d.getMonth() + 1).padStart(2, '0')
-    const day = String(d.getDate()).padStart(2, '0')
-    return `${year}-${month}-${day}`
+    if (!dateStr) return ''
+    try {
+      const d = new Date(dateStr)
+      if (isNaN(d.getTime())) return dateStr
+      const day = String(d.getDate()).padStart(2, '0')
+      const month = String(d.getMonth() + 1).padStart(2, '0')
+      const year = d.getFullYear()
+      return `${day}/${month}/${year}`
+    } catch {
+      return dateStr
+    }
   }
+
+  const step1Date = formatDate(app.appliedAt)
+  const rejectedDate = formatDate((app as any).rejectedAt || (app as any).updatedAt || app.appliedAt)
+
+  // Step 2 ("NTD đã xem"): reached if activeIdx >= 1 or if moved past initial stage
+  const isStep2Active =
+    activeIdx >= 1 ||
+    (stageNameLower !== 'applied' && stageNameLower !== 'mới' && stageNameLower !== 'mới ứng tuyển')
+
+  // Step 3 ("Phỏng vấn" / "Đã xác nhận"): reached if activeIdx >= 3 or interview/offer stage
+  const isStep3Confirmed =
+    !isRejected &&
+    (activeIdx >= 3 ||
+      stageNameLower.includes('interview') ||
+      stageNameLower.includes('phỏng vấn') ||
+      stageNameLower.includes('offer'))
 
   return (
     <div className="p-6 space-y-6 transition-all bg-white border shadow-xs border-slate-200/90 rounded-3xl hover:border-indigo-200">
@@ -133,63 +144,75 @@ export function ApplicationCardItem({ app }: ApplicationCardItemProps) {
         <div>{getStageBadge(app.stageName, app.stageColor)}</div>
       </div>
 
-      {/* Horizontal Pipeline Stepper Progress Bar */}
-      <div className="pt-2 pb-1 overflow-x-auto">
-        <div className="min-w-[550px] relative px-4">
-          <div className="relative z-10 flex items-start justify-between">
-            {stagesList.map((stg, idx) => {
-              const isPassed = idx < activeIdx
-              const isActive = idx === activeIdx
-
-              return (
-                <div
-                  key={idx}
-                  className="flex flex-col items-center text-center flex-1 max-w-[120px]"
-                >
-                  <div className="relative mb-2">
-                    {isPassed ? (
-                      <div className="flex items-center justify-center w-6 h-6 text-white rounded-full shadow-xs bg-emerald-500">
-                        <Check size={14} className="stroke-[3]" />
-                      </div>
-                    ) : isActive ? (
-                      <div className="w-6.5 h-6.5 rounded-full bg-indigo-600 text-white font-extrabold text-xs flex items-center justify-center shadow-md shadow-indigo-500/30 ring-4 ring-indigo-100">
-                        {idx + 1}
-                      </div>
-                    ) : (
-                      <div className="flex items-center justify-center w-6 h-6 text-xs font-bold rounded-full bg-slate-100 text-slate-400">
-                        {idx + 1}
-                      </div>
-                    )}
-                  </div>
-
-                  <span
-                    className={`text-[11px] leading-tight font-bold ${
-                      isPassed
-                        ? 'text-emerald-600'
-                        : isActive
-                          ? 'text-indigo-700 font-extrabold'
-                          : 'text-slate-400 font-medium'
-                    }`}
-                  >
-                    {stg.name}
-                  </span>
-                </div>
-              )
-            })}
+      {/* 3-Step CV Stepper Progress Bar */}
+      <div className="py-4 px-4 sm:px-8 bg-slate-50/50 border border-slate-100 rounded-2xl">
+        <div className="flex items-start justify-between relative">
+          {/* Step 1: Đã ứng tuyển */}
+          <div className="flex flex-col items-center text-center z-10 min-w-[90px]">
+            <div className="w-8 h-8 rounded-full bg-blue-600 text-white flex items-center justify-center shadow-xs mb-2">
+              <Check size={16} className="stroke-[3]" />
+            </div>
+            <span className="text-xs font-bold text-slate-800">Đã ứng tuyển</span>
+            <span className="text-[11px] font-medium text-slate-400 mt-1">{step1Date}</span>
           </div>
 
-          {/* Connecting Line */}
-          <div className="absolute h-1 overflow-hidden rounded-full top-3 left-10 right-10 bg-slate-100 -z-0">
-            <div
-              className="h-full transition-all duration-500 bg-gradient-to-r from-emerald-500 via-emerald-500 to-indigo-600"
-              style={{
-                width: `${
-                  stagesList.length > 1
-                    ? (activeIdx / (stagesList.length - 1)) * 100
-                    : 0
-                }%`
-              }}
-            />
+          {/* Line 1 -> 2 */}
+          <div className="flex-1 mx-2 relative top-4">
+            <div className={`h-0.5 ${isStep2Active ? 'bg-blue-600' : 'bg-slate-200'}`} />
+          </div>
+
+          {/* Step 2: NTD đã xem */}
+          <div className="flex flex-col items-center text-center z-10 min-w-[90px]">
+            {isStep2Active ? (
+              <div className="w-8 h-8 rounded-full bg-blue-600 text-white flex items-center justify-center shadow-xs mb-2">
+                <Check size={16} className="stroke-[3]" />
+              </div>
+            ) : (
+              <div className="w-8 h-8 rounded-full bg-slate-100 text-slate-400 border border-slate-200 flex items-center justify-center mb-2">
+                <Clock size={15} />
+              </div>
+            )}
+            <span className={`text-xs font-bold ${isStep2Active ? 'text-slate-800' : 'text-slate-400'}`}>
+              NTD đã xem
+            </span>
+          </div>
+
+          {/* Line 2 -> 3 */}
+          <div className="flex-1 mx-2 relative top-4">
+            {isRejected ? (
+              <div className="w-full border-b-2 border-dashed border-rose-300 h-0" />
+            ) : (
+              <div className={`h-0.5 ${isStep3Confirmed ? 'bg-blue-600' : 'bg-slate-200'}`} />
+            )}
+          </div>
+
+          {/* Step 3: Chờ phản hồi / Đã xác nhận / Đã từ chối */}
+          <div className="flex flex-col items-center text-center z-10 min-w-[90px]">
+            {isRejected ? (
+              <>
+                <div className="w-8 h-8 rounded-full bg-rose-100 text-rose-500 border border-rose-200 flex items-center justify-center mb-2">
+                  <X size={16} className="stroke-[3]" />
+                </div>
+                <span className="text-xs font-bold text-rose-500">Đã từ chối</span>
+                <span className="text-[11px] font-medium text-rose-400 mt-1">{rejectedDate}</span>
+              </>
+            ) : isStep3Confirmed ? (
+              <>
+                <div className="w-8 h-8 rounded-full bg-blue-600 text-white flex items-center justify-center shadow-xs mb-2">
+                  <Check size={16} className="stroke-[3]" />
+                </div>
+                <span className="text-xs font-bold text-slate-800">Đã xác nhận</span>
+                <span className="text-[11px] font-medium text-slate-400 mt-1">{rejectedDate}</span>
+              </>
+            ) : (
+              <>
+                <div className="w-8 h-8 rounded-full bg-slate-100 text-slate-400 border border-slate-200 flex items-center justify-center mb-2">
+                  <Clock size={15} />
+                </div>
+                <span className="text-xs font-bold text-slate-400">Chờ phản hồi</span>
+                <span className="text-[11px] font-medium text-slate-400 mt-1">Đang chờ</span>
+              </>
+            )}
           </div>
         </div>
       </div>
@@ -198,17 +221,8 @@ export function ApplicationCardItem({ app }: ApplicationCardItemProps) {
       <div className="flex flex-wrap items-center justify-between gap-3 pt-4 text-xs border-t border-slate-100">
         <div className="flex items-center gap-4 font-medium text-slate-500">
           <span>
-            AI Score:{' '}
-            <strong className={getScoreColor(app.aiFitScore)}>
-              {app.aiFitScore !== null && app.aiFitScore !== undefined
-                ? `${app.aiFitScore}/100`
-                : 'N/A'}
-            </strong>
-          </span>
-          <span>•</span>
-          <span>
             Ngày ứng tuyển:{' '}
-            <strong className="text-slate-700">{formatDate(app.appliedAt)}</strong>
+            <strong className="text-slate-700">{step1Date}</strong>
           </span>
         </div>
 

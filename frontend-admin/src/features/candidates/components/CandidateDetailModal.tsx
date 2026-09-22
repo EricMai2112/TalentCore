@@ -30,17 +30,29 @@ import {
 import { CandidateApplication } from '../types/candidate.types'
 import { useAuth } from '@/src/providers/AuthProvider'
 import { CandidateDetailFooterActions } from './CandidateDetailFooterActions'
+import { RejectCandidateModal } from '@/src/components/common'
+import { InterviewItem } from '@/src/features/interviews/types/interview.types'
 
 interface CandidateDetailModalProps {
   application: CandidateApplication | any
+  interview?: InterviewItem | null
   onClose: () => void
+  onOpenDeptScheduleModal?: (interview: InterviewItem) => void
+  onRejectDeptCv?: (interview: InterviewItem) => void
 }
 
-export default function CandidateDetailModal({ application, onClose }: CandidateDetailModalProps) {
+export default function CandidateDetailModal({
+  application,
+  interview,
+  onClose,
+  onOpenDeptScheduleModal,
+  onRejectDeptCv,
+}: CandidateDetailModalProps) {
   const { user: currentUser } = useAuth()
   const [activeTab, setActiveTab] = useState<'overview' | 'evaluation' | 'profile'>('overview')
   const [renderApp, setRenderApp] = useState<CandidateApplication | null>(application)
   const [isOpen, setIsOpen] = useState(false)
+  const [isRejectModalOpen, setIsRejectModalOpen] = useState(false)
   const [isMounted, setIsMounted] = useState(false)
 
   useEffect(() => {
@@ -959,9 +971,32 @@ export default function CandidateDetailModal({ application, onClose }: Candidate
           applicationId={renderApp._id}
           candidateName={name}
           userRole={currentUser?.role}
+          interview={interview}
+          isCandidateRejected={
+            renderApp?.status === 'REJECTED' ||
+            renderApp?.reviewStatus === 'Rejected' ||
+            interview?.confirmationStatus === 'REJECTED' ||
+            interview?.confirmationStatus === 'CANCELLED' ||
+            interview?.status === 'CANCELLED'
+          }
           onClose={handleClose}
+          onOpenDeptScheduleModal={onOpenDeptScheduleModal}
+          onRejectDeptCv={onRejectDeptCv || (interview ? () => setIsRejectModalOpen(true) : undefined)}
+          onRejectCandidate={() => setIsRejectModalOpen(true)}
         />
       </div>
+
+      <RejectCandidateModal
+        isOpen={isRejectModalOpen}
+        onClose={() => setIsRejectModalOpen(false)}
+        applicationId={renderApp._id}
+        interviewId={interview?._id}
+        candidateName={name}
+        jobTitle={typeof renderApp.jobDescriptionId === 'object' ? renderApp.jobDescriptionId?.title : 'Vị trí tuyển dụng'}
+        onSuccess={() => {
+          handleClose()
+        }}
+      />
     </div>
   )
 

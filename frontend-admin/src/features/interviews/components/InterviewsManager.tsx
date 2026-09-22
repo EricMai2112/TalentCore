@@ -1,12 +1,13 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { useRouter } from 'next/navigation'
 import { Loader2, Calendar as CalendarIcon } from 'lucide-react'
 import { InterviewItem, InterviewStatus, InterviewResult } from '../types/interview.types'
 import { interviewsApi } from '../services/interviews.api'
 import { departmentApi } from '@/src/features/departments/services/department.api'
 import { Department } from '@/src/features/departments/types/department.types'
+import { candidateApi } from '@/src/features/candidates/services/candidate.api'
+import CandidateDetailModal from '@/src/features/candidates/components/CandidateDetailModal'
 import { useAuth } from '@/src/providers/AuthProvider'
 import { UserRole } from '@/src/features/users/types/user.types'
 import {
@@ -14,11 +15,9 @@ import {
   InterviewsFilterToolbar,
   InterviewsListView,
   InterviewsCalendarView,
-  InterviewStatusModal,
-  EditInterviewModal,
-  AdminRescheduleModal,
-  CandidateRescheduleRequestModal
+  InterviewStatusModal
 } from './'
+import { RejectCandidateModal } from '@/src/components/common'
 import { InterviewStatCards } from './InterviewStatCards'
 import { TodayScheduleSidebar } from './TodayScheduleSidebar'
 import { DeptScheduleFormModal } from './DeptScheduleFormModal'
@@ -62,6 +61,7 @@ export default function InterviewsManager() {
 
   const [departments, setDepartments] = useState<Department[]>([])
   const [interviews, setInterviews] = useState<InterviewItem[]>([])
+  const [candidateApplications, setCandidateApplications] = useState<any[]>([])
   const [isLoading, setIsLoading] = useState<boolean>(true)
 
   // Calendar Month Navigation
@@ -82,20 +82,29 @@ export default function InterviewsManager() {
   const [feedbackText, setFeedbackText] = useState<string>('')
   const [isUpdating, setIsUpdating] = useState<boolean>(false)
 
-  // State cho Modal Chỉnh sửa Lịch phỏng vấn
-  const [selectedEditInterview, setSelectedEditInterview] = useState<InterviewItem | null>(null)
-  const [isEditModalOpen, setIsEditModalOpen] = useState<boolean>(false)
+  // State cho Modal Xem chi tiết ứng viên
+  const [selectedDetailInterview, setSelectedDetailInterview] = useState<InterviewItem | null>(null)
+  const [selectedCandidateApp, setSelectedCandidateApp] = useState<any | null>(null)
+  const [isDetailModalOpen, setIsDetailModalOpen] = useState<boolean>(false)
 
-  // State cho Modal Đề xuất Lịch khác từ HR
-  const [selectedRescheduleInterview, setSelectedRescheduleInterview] =
-    useState<InterviewItem | null>(null)
-  const [isAdminRescheduleModalOpen, setIsAdminRescheduleModalOpen] = useState<boolean>(false)
-
-  // State cho Modal Xem chi tiết yêu cầu đổi lịch của Ứng viên
-  const [selectedRequestInterview, setSelectedRequestInterview] = useState<InterviewItem | null>(
-    null
-  )
-  const [isRequestModalOpen, setIsRequestModalOpen] = useState<boolean>(false)
+  const handleOpenCandidateDetailModal = (interview: InterviewItem) => {
+    const appId =
+      typeof interview.applicationId === 'object'
+        ? (interview.applicationId as any)._id
+        : interview.applicationId
+    const foundApp = candidateApplications.find((app) => app._id === appId)
+    setSelectedDetailInterview(interview)
+    setSelectedCandidateApp(
+      foundApp || {
+        _id: appId,
+        candidateId: interview.candidateId,
+        jobDescriptionId: interview.jobDescriptionId
+      }
+    )
+    setIsDetailModalOpen(true)
+    setActiveMenuId(null)
+    setHoveredInterview(null)
+  }
 
   // State cho Modal Xếp lịch của Trưởng phòng
   const [selectedDeptScheduleInterview, setSelectedDeptScheduleInterview] =
@@ -117,10 +126,20 @@ export default function InterviewsManager() {
     setIsHrApproveModalOpen(true)
   }
 
+  // State cho Modal Từ chối CV của Trưởng phòng
+  const [selectedRejectDeptCvInterview, setSelectedRejectDeptCvInterview] =
+    useState<InterviewItem | null>(null)
+  const [isRejectDeptCvModalOpen, setIsRejectDeptCvModalOpen] = useState<boolean>(false)
+
+  const handleRejectDeptCv = (interview: InterviewItem) => {
+    setSelectedRejectDeptCvInterview(interview)
+    setIsRejectDeptCvModalOpen(true)
+  }
+
   // Active dropdown action ID
   const [activeMenuId, setActiveMenuId] = useState<string | null>(null)
 
-  // Load department list
+  // Load department list and candidate applications
   useEffect(() => {
     const loadDepartments = async () => {
       try {
@@ -130,7 +149,16 @@ export default function InterviewsManager() {
         console.error('Lỗi khi lấy danh sách phòng ban:', err)
       }
     }
+    const loadApplications = async () => {
+      try {
+        const apps = await candidateApi.getCandidates()
+        setCandidateApplications(apps || [])
+      } catch (err) {
+        console.error('Lỗi khi lấy danh sách ứng viên:', err)
+      }
+    }
     loadDepartments()
+    loadApplications()
   }, [])
 
   // Lock department filter if user is Department Manager or Employee
@@ -145,6 +173,12 @@ export default function InterviewsManager() {
     try {
       const data = await interviewsApi.getInterviews()
       setInterviews(data)
+      if (selectedDetailInterview) {
+        const updated = data.find((i) => i._id === selectedDetailInterview._id)
+        if (updated) {
+          setSelectedDetailInterview(updated)
+        }
+      }
     } catch (err) {
       console.error('Lỗi khi lấy danh sách phỏng vấn:', err)
     } finally {
@@ -255,7 +289,51 @@ export default function InterviewsManager() {
 
     // 4. Status Dropdown Filter
     if (statusFilter && statusFilter !== 'ALL') {
-      if (item.status !== statusFilter) return false
+      const confirmationStatus = item.confirmationStatus
+      const status = item.status
+
+      switch (statusFilter) {
+        case 'WAITING_DEPT_SCHEDULE':
+          if (confirmationStatus !== 'WAITING_DEPT_SCHEDULE') return false
+          break
+        case 'WAITING_HR_APPROVAL':
+          if (confirmationStatus !== 'WAITING_HR_APPROVAL') return false
+          break
+        case 'SCHEDULED':
+          if (
+            confirmationStatus !== 'SCHEDULED' &&
+            !(status === InterviewStatus.SCHEDULED && !confirmationStatus)
+          )
+            return false
+          break
+        case 'CONFIRMED':
+        case 'UPCOMING':
+          if (
+            confirmationStatus !== 'CONFIRMED' &&
+            status !== InterviewStatus.UPCOMING
+          )
+            return false
+          break
+        case 'IN_PROGRESS':
+          if (status !== InterviewStatus.IN_PROGRESS) return false
+          break
+        case 'COMPLETED':
+          if (status !== InterviewStatus.COMPLETED) return false
+          break
+        case 'CANCELLED':
+        case 'REJECTED':
+          if (
+            status !== InterviewStatus.CANCELLED &&
+            confirmationStatus !== 'CANCELLED' &&
+            confirmationStatus !== 'REJECTED' &&
+            confirmationStatus !== 'CANCEL_REQUESTED'
+          )
+            return false
+          break
+        default:
+          if (status !== statusFilter && confirmationStatus !== statusFilter) return false
+          break
+      }
     }
 
     // 5. Search Query Filter
@@ -304,36 +382,6 @@ export default function InterviewsManager() {
     setHoveredInterview(null)
   }
 
-  const router = useRouter()
-
-  const handleOpenEditModal = (interview: InterviewItem) => {
-    setActiveMenuId(null)
-    setHoveredInterview(null)
-    router.push(`/interviews/edit/${interview._id}`)
-  }
-
-  const handleOpenRescheduleModal = (interview: InterviewItem) => {
-    setSelectedRescheduleInterview(interview)
-    setIsAdminRescheduleModalOpen(true)
-    setActiveMenuId(null)
-    setHoveredInterview(null)
-  }
-
-  const handleOpenRescheduleRequestModal = (interview: InterviewItem) => {
-    setSelectedRequestInterview(interview)
-    setIsRequestModalOpen(true)
-    setActiveMenuId(null)
-    setHoveredInterview(null)
-  }
-
-  const handleApproveReschedule = async (interview: InterviewItem) => {
-    // Obsolete: replaced by simple candidate cancel & dept schedule workflow
-  }
-
-  const handleRejectReschedule = async (interview: InterviewItem) => {
-    // Obsolete: replaced by simple candidate cancel & dept schedule workflow
-  }
-
   const handleApproveCandidateCancellation = async (interview: InterviewItem) => {
     const candName =
       typeof interview.candidateId === 'object'
@@ -348,21 +396,6 @@ export default function InterviewsManager() {
       fetchInterviews()
     } catch (err: any) {
       alert(err?.response?.data?.message || err?.message || 'Lỗi khi xác nhận hủy lịch phỏng vấn')
-    }
-  }
-
-  const handleRejectDeptCv = async (interview: InterviewItem) => {
-    const reason = window.prompt(
-      'Nhập lý do từ chối CV (tùy chọn):',
-      'Ứng viên chưa đủ điều kiện chuyên môn phù hợp với vị trí.'
-    )
-    if (reason === null) return
-
-    try {
-      await interviewsApi.rejectDeptCv(interview._id, reason)
-      fetchInterviews()
-    } catch (err: any) {
-      alert(err?.response?.data?.message || err?.message || 'Lỗi khi từ chối CV')
     }
   }
 
@@ -503,11 +536,7 @@ export default function InterviewsManager() {
           activeMenuId={activeMenuId}
           setActiveMenuId={setActiveMenuId}
           onOpenStatusModal={handleOpenStatusModal}
-          onOpenEditModal={handleOpenEditModal}
-          onOpenRescheduleModal={handleOpenRescheduleModal}
-          onOpenRescheduleRequestModal={handleOpenRescheduleRequestModal}
-          onApproveReschedule={handleApproveReschedule}
-          onRejectReschedule={handleRejectReschedule}
+          onOpenCandidateDetailModal={handleOpenCandidateDetailModal}
           onApproveCandidateCancellation={handleApproveCandidateCancellation}
           onOpenDeptScheduleModal={handleOpenDeptScheduleModal}
           onRejectDeptCv={handleRejectDeptCv}
@@ -568,37 +597,34 @@ export default function InterviewsManager() {
         onSaveStatus={handleSaveStatus}
       />
 
-      {/* Edit Interview Schedule Modal */}
-      <EditInterviewModal
-        isOpen={isEditModalOpen}
-        onClose={() => setIsEditModalOpen(false)}
-        selectedInterview={selectedEditInterview}
-        onSaveSuccess={fetchInterviews}
+      {/* Modal Từ chối CV của Trưởng phòng */}
+      <RejectCandidateModal
+        isOpen={isRejectDeptCvModalOpen}
+        onClose={() => setIsRejectDeptCvModalOpen(false)}
+        interviewId={selectedRejectDeptCvInterview?._id}
+        candidateName={
+          selectedRejectDeptCvInterview?.candidateId?.fullName ||
+          selectedRejectDeptCvInterview?.candidateId?.name ||
+          'Ứng viên'
+        }
+        jobTitle={selectedRejectDeptCvInterview?.jobDescriptionId?.title || 'Vị trí tuyển dụng'}
+        onSuccess={fetchInterviews}
       />
 
-      {/* Admin Reschedule / Propose Alternate Slot Modal */}
-      <AdminRescheduleModal
-        isOpen={isAdminRescheduleModalOpen}
-        onClose={() => setIsAdminRescheduleModalOpen(false)}
-        interview={selectedRescheduleInterview}
-        onSuccess={() => {
-          setIsAdminRescheduleModalOpen(false)
-          setIsRequestModalOpen(false)
-          fetchInterviews()
-        }}
-      />
-
-      {/* Candidate Reschedule Request Details Modal */}
-      <CandidateRescheduleRequestModal
-        isOpen={isRequestModalOpen}
-        onClose={() => setIsRequestModalOpen(false)}
-        interview={selectedRequestInterview}
-        onApprove={handleApproveReschedule}
-        onProposeOther={(interviewItem) => {
-          handleOpenRescheduleModal(interviewItem)
-        }}
-        formatDate={formatDate}
-      />
+      {/* Candidate Detail Modal */}
+      {isDetailModalOpen && selectedCandidateApp && (
+        <CandidateDetailModal
+          application={selectedCandidateApp}
+          interview={selectedDetailInterview}
+          onClose={() => {
+            setIsDetailModalOpen(false)
+            setSelectedDetailInterview(null)
+            setSelectedCandidateApp(null)
+          }}
+          onOpenDeptScheduleModal={handleOpenDeptScheduleModal}
+          onRejectDeptCv={handleRejectDeptCv}
+        />
+      )}
     </div>
   )
 }

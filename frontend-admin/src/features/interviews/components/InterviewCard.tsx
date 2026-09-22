@@ -13,7 +13,8 @@ import {
   Edit3,
   AlertTriangle,
   Check,
-  Bell
+  Bell,
+  Eye
 } from 'lucide-react'
 import {
   InterviewItem,
@@ -30,11 +31,7 @@ interface InterviewCardProps {
   item: InterviewItem
   index?: number
   onOpenStatusModal: (interview: InterviewItem) => void
-  onOpenEditModal: (interview: InterviewItem) => void
-  onOpenRescheduleModal?: (interview: InterviewItem) => void
-  onOpenRescheduleRequestModal?: (interview: InterviewItem) => void
-  onApproveReschedule?: (interview: InterviewItem) => void
-  onRejectReschedule?: (interview: InterviewItem) => void
+  onOpenCandidateDetailModal?: (interview: InterviewItem) => void
   onApproveCandidateCancellation?: (interview: InterviewItem) => void
   onOpenDeptScheduleModal?: (interview: InterviewItem) => void
   onRejectDeptCv?: (interview: InterviewItem) => void
@@ -50,11 +47,7 @@ export default function InterviewCard({
   item,
   index = 0,
   onOpenStatusModal,
-  onOpenEditModal,
-  onOpenRescheduleModal,
-  onOpenRescheduleRequestModal,
-  onApproveReschedule,
-  onRejectReschedule,
+  onOpenCandidateDetailModal,
   onApproveCandidateCancellation,
   onOpenDeptScheduleModal,
   onRejectDeptCv,
@@ -96,6 +89,14 @@ export default function InterviewCard({
     typeof item.jobDescriptionId === 'object' ? item.jobDescriptionId?.departmentId : null
   const deptName = typeof deptObj === 'object' ? deptObj?.name : 'Phòng ban'
 
+  const isCandidateRejected =
+    item.confirmationStatus === 'REJECTED' ||
+    item.confirmationStatus === 'CANCELLED' ||
+    item.status === InterviewStatus.CANCELLED ||
+    (typeof item.applicationId === 'object' &&
+      ((item.applicationId as any)?.status === 'REJECTED' ||
+       (item.applicationId as any)?.reviewStatus === 'Rejected'))
+
   return (
     <tr
       className={`transition-colors group hover:bg-white/50 border-b border-slate-200/40 last:border-b-0 ${
@@ -131,31 +132,52 @@ export default function InterviewCard({
 
       {/* 4. Date, Time & Location */}
       <td className="px-4 py-4 align-middle">
-        <div className="space-y-1 text-slate-600 text-[11px] font-medium">
-          <div className="flex items-center gap-1.5 font-bold text-slate-900 text-[13px]">
-            <Clock size={12} className="text-[#3B82F6]" />
-            <span>
-              {item.startTime} - {item.endTime}
+        {item.confirmationStatus === 'WAITING_DEPT_SCHEDULE' || !item.date || !item.startTime ? (
+          <div className="inline-flex items-center gap-1.5 font-bold text-amber-700 bg-amber-50 px-2.5 py-1 rounded-xl border border-amber-200 text-[11.5px] shadow-2xs">
+            <Clock size={13} className="text-amber-500 shrink-0" />
+            <span>Chưa xếp lịch</span>
+          </div>
+        ) : item.confirmationStatus === 'WAITING_HR_APPROVAL' ? (
+          <div className="space-y-1 text-slate-600 text-[11px] font-medium">
+            <div className="flex items-center gap-1.5 font-bold text-sky-800 text-[13px]">
+              <Clock size={12} className="text-sky-500" />
+              <span>{item.startTime} - {item.endTime}</span>
+            </div>
+            <div className="flex items-center gap-1.5 text-slate-500">
+              <CalendarIcon size={12} className="text-slate-400" />
+              <span>{formatDate(item.date)}</span>
+            </div>
+            <span className="inline-block text-[10px] font-extrabold text-sky-700 bg-sky-50 px-2 py-0.5 rounded-full border border-sky-200">
+              Dự kiến (Chờ HR duyệt)
             </span>
           </div>
-          <div className="flex items-center gap-1.5 text-slate-500">
-            <CalendarIcon size={12} className="text-slate-400" />
-            <span>{formatDate(item.date)}</span>
+        ) : (
+          <div className="space-y-1 text-slate-600 text-[11px] font-medium">
+            <div className="flex items-center gap-1.5 font-bold text-slate-900 text-[13px]">
+              <Clock size={12} className="text-[#3B82F6]" />
+              <span>
+                {item.startTime} - {item.endTime}
+              </span>
+            </div>
+            <div className="flex items-center gap-1.5 text-slate-500">
+              <CalendarIcon size={12} className="text-slate-400" />
+              <span>{formatDate(item.date)}</span>
+            </div>
+            <div className="flex items-center gap-1.5 text-slate-600">
+              {item.locationType === LocationType.OFFSITE ? (
+                <>
+                  <Building2 size={12} className="text-amber-500 shrink-0" />
+                  <span className="truncate max-w-[130px]">{item.offsiteLocation || 'Offsite'}</span>
+                </>
+              ) : (
+                <>
+                  <Video size={12} className="text-indigo-500 shrink-0" />
+                  <span>Online</span>
+                </>
+              )}
+            </div>
           </div>
-          <div className="flex items-center gap-1.5 text-slate-600">
-            {item.locationType === LocationType.OFFSITE ? (
-              <>
-                <Building2 size={12} className="text-amber-500 shrink-0" />
-                <span className="truncate max-w-[130px]">{item.offsiteLocation || 'Offsite'}</span>
-              </>
-            ) : (
-              <>
-                <Video size={12} className="text-indigo-500 shrink-0" />
-                <span>Online</span>
-              </>
-            )}
-          </div>
-        </div>
+        )}
       </td>
 
       {/* 5. Interviewer Name */}
@@ -190,23 +212,42 @@ export default function InterviewCard({
             menuWidthClass="min-w-[210px]"
             items={[
               {
+                id: 'candidate_detail',
+                label: 'Xem chi tiết',
+                icon: <Eye size={14} />,
+                variant: 'primary',
+                hidden: !onOpenCandidateDetailModal,
+                onClick: () => onOpenCandidateDetailModal?.(item)
+              },
+              {
                 id: 'dept_schedule',
-                label: 'Xếp lịch phỏng vấn',
-                icon: <CalendarIcon size={14} />,
-                variant: 'warning',
+                label:
+                  item.confirmationStatus === 'WAITING_HR_APPROVAL'
+                    ? 'Cập nhật lịch phỏng vấn'
+                    : 'Xếp lịch phỏng vấn',
+                icon:
+                  item.confirmationStatus === 'WAITING_HR_APPROVAL' ? (
+                    <Edit3 size={14} />
+                  ) : (
+                    <CalendarIcon size={14} />
+                  ),
+                variant: item.confirmationStatus === 'WAITING_HR_APPROVAL' ? 'indigo' : 'warning',
                 hidden:
                   !isDeptManager ||
-                  item.confirmationStatus !== 'WAITING_DEPT_SCHEDULE' ||
+                  isCandidateRejected ||
+                  (item.confirmationStatus !== 'WAITING_DEPT_SCHEDULE' &&
+                    item.confirmationStatus !== 'WAITING_HR_APPROVAL') ||
                   !onOpenDeptScheduleModal,
                 onClick: () => onOpenDeptScheduleModal?.(item)
               },
               {
                 id: 'dept_reject',
-                label: 'Từ chối CV',
+                label: 'Từ chối ứng viên',
                 icon: <AlertTriangle size={14} />,
                 variant: 'danger',
                 hidden:
                   !isDeptManager ||
+                  isCandidateRejected ||
                   item.confirmationStatus !== 'WAITING_DEPT_SCHEDULE' ||
                   !onRejectDeptCv,
                 onClick: () => onRejectDeptCv?.(item)
@@ -245,21 +286,6 @@ export default function InterviewCard({
                 icon: <MessageSquare size={14} />,
                 variant: 'primary',
                 onClick: () => onOpenStatusModal(item)
-              },
-              {
-                id: 'edit_schedule',
-                label: 'Chỉnh sửa lịch phỏng vấn',
-                icon: <Edit3 size={14} />,
-                variant: 'indigo',
-                onClick: () => onOpenEditModal(item)
-              },
-              {
-                id: 'reschedule_propose',
-                label: 'Đề xuất khung giờ khác',
-                icon: <Clock size={14} />,
-                variant: 'purple',
-                hidden: !onOpenRescheduleModal,
-                onClick: () => onOpenRescheduleModal?.(item)
               }
             ]}
           />

@@ -105,9 +105,13 @@ export default function InterviewsFilterToolbar({
           placeholder="Tất cả trạng thái"
           options={[
             { value: 'ALL', label: 'Tất cả trạng thái' },
-            { value: InterviewStatus.SCHEDULED, label: 'Đã lên lịch' },
-            { value: InterviewStatus.COMPLETED, label: 'Hoàn thành' },
-            { value: InterviewStatus.CANCELLED, label: 'Đã hủy' },
+            { value: 'WAITING_DEPT_SCHEDULE', label: 'Chờ Trưởng phòng xếp lịch' },
+            { value: 'WAITING_HR_APPROVAL', label: 'Chờ HR duyệt' },
+            { value: 'SCHEDULED', label: 'Đã lên lịch (Chờ ứng viên)' },
+            { value: 'CONFIRMED', label: 'Sắp diễn ra' },
+            { value: 'IN_PROGRESS', label: 'Đang diễn ra' },
+            { value: 'COMPLETED', label: 'Hoàn thành' },
+            { value: 'CANCELLED', label: 'Đã hủy / Từ chối' },
           ]}
         />
 
