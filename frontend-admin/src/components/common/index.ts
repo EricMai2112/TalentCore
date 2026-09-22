@@ -24,3 +24,6 @@ export type { CustomTableContainerProps } from './CustomTableContainer';
 
 export { default as CustomActionMenu } from './CustomActionMenu';
 export type { CustomActionMenuProps, CustomActionMenuItem, ActionItemVariant } from './CustomActionMenu';
+
+export { RejectCandidateModal, default as RejectCandidateModalComponent } from './RejectCandidateModal';
+export type { RejectCandidateModalProps } from './RejectCandidateModal';

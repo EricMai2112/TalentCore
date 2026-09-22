@@ -114,11 +114,15 @@ export interface KanbanApplication {
   jobDescriptionId: KanbanJobDescription;
   currentStageId: string;
   appliedAt: string;
+  status?: "ACTIVE" | "REJECTED" | "HIRED" | string;
+  rejectReason?: string;
+  rejectedAt?: string;
   aiFitScore?: number;
   evidenceStrengthScore?: number;
   isMissingMandatory?: boolean;
   ratingScore?: number;
-  reviewStatus?: "Pending" | "Approved" | "Rejected";
+  stageName?: string;
+  reviewStatus?: "Pending" | "Approved" | "Rejected" | string;
   aiEvaluation?: AiEvaluationData;
 }
 

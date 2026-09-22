@@ -126,6 +126,23 @@ export class ApplicationController {
     };
   }
 
+  @Post(':id/reject')
+  async rejectApplication(
+    @Param('id') id: string,
+    @Body() dto: { reason: string; authorName?: string; authorRole?: string },
+  ) {
+    const data = await this.applicationService.rejectApplication(
+      id,
+      dto.reason,
+      dto.authorName,
+      dto.authorRole,
+    );
+    return {
+      message: 'Từ chối đơn ứng tuyển thành công',
+      data,
+    };
+  }
+
   @Delete(':id')
   async deleteApplication(@Param('id') id: string) {
     const data = await this.applicationService.deleteApplication(id);

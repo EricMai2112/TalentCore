@@ -24,6 +24,7 @@ import KanbanHeaderFilters from "./KanbanHeaderFilters";
 import KanbanColumn from "./KanbanColumn";
 import CandidateKanbanCard from "./CandidateKanbanCard";
 import CandidateDetailModal from "@/src/features/candidates/components/CandidateDetailModal";
+import { RejectCandidateModal } from "@/src/components/common";
 
 interface KanbanContainerProps {
   initialDepartments: Department[];
@@ -72,10 +73,12 @@ export default function KanbanContainer({
 
   const [searchQuery, setSearchQuery] = useState<string>("");
   const [scoreFilter, setScoreFilter] = useState<string>("all");
+  const [showRejected, setShowRejected] = useState<boolean>(false);
 
   // Real-time applications state
   const [applications, setApplications] = useState<KanbanApplication[]>(initialApplications);
   const [selectedCandidateApp, setSelectedCandidateApp] = useState<KanbanApplication | null>(null);
+  const [rejectingKanbanApp, setRejectingKanbanApp] = useState<KanbanApplication | null>(null);
   const [activeApplication, setActiveApplication] = useState<KanbanApplication | null>(null);
 
   // Carousel 4-stages-per-page state
@@ -297,9 +300,34 @@ export default function KanbanContainer({
     };
   }, [activeApplication, maxCarouselIndex]);
 
-  // Filter applications by score threshold
+  // Helper to check if an application is rejected
+  const isAppRejected = (app: KanbanApplication) => {
+    return (
+      app.status === "REJECTED" ||
+      (app as any).reviewStatus === "Rejected" ||
+      Boolean(
+        app.stageName &&
+          (app.stageName.toLowerCase().includes("từ chối") ||
+            app.stageName.toLowerCase().includes("reject"))
+      )
+    );
+  };
+
+  // Filter applications by score threshold and showRejected status (Strict Mutually Exclusive)
   const filteredApplications = useMemo(() => {
     return applications.filter((app) => {
+      const isRejected = isAppRejected(app);
+
+      // Mode 1: showRejected is false -> ONLY show active (non-rejected) candidates
+      if (!showRejected && isRejected) {
+        return false;
+      }
+
+      // Mode 2: showRejected is true -> ONLY show rejected candidates
+      if (showRejected && !isRejected) {
+        return false;
+      }
+
       if (scoreFilter !== "all") {
         const minScore = Number(scoreFilter);
         const score = app.aiFitScore || 80;
@@ -307,7 +335,7 @@ export default function KanbanContainer({
       }
       return true;
     });
-  }, [applications, scoreFilter]);
+  }, [applications, scoreFilter, showRejected]);
 
   // Group applications by stageId and sort by score & evidence
   const applicationsByStage = useMemo(() => {
@@ -462,10 +490,12 @@ export default function KanbanContainer({
         selectedJobId={selectedJobId}
         searchQuery={searchQuery}
         scoreFilter={scoreFilter}
+        showRejected={showRejected}
         onDepartmentChange={handleDepartmentChange}
         onJobChange={setSelectedJobId}
         onSearchChange={setSearchQuery}
         onScoreFilterChange={setScoreFilter}
+        onShowRejectedChange={setShowRejected}
         onResetFilters={handleResetFilters}
         rightSection={
           maxCarouselIndex > 0 ? (
@@ -599,6 +629,7 @@ export default function KanbanContainer({
                   applications={applicationsByStage.get(stage._id || "") || []}
                   onSelectCandidate={setSelectedCandidateApp}
                   onMoveStage={handleMoveStage}
+                  onRejectCandidate={(app) => setRejectingKanbanApp(app)}
                   style={{ width: columnWidthStyle }}
                 />
               ))}
@@ -633,6 +664,7 @@ export default function KanbanContainer({
                 applications={applicationsByStage.get(stage._id || "") || []}
                 onSelectCandidate={setSelectedCandidateApp}
                 onMoveStage={handleMoveStage}
+                onRejectCandidate={(app) => setRejectingKanbanApp(app)}
                 style={{ width: columnWidthStyle }}
               />
             ))}
@@ -645,6 +677,38 @@ export default function KanbanContainer({
         application={selectedCandidateApp}
         onClose={() => setSelectedCandidateApp(null)}
       />
+
+      {/* Quick Reject Modal for Kanban Card */}
+      {rejectingKanbanApp && (
+        <RejectCandidateModal
+          isOpen={!!rejectingKanbanApp}
+          onClose={() => setRejectingKanbanApp(null)}
+          applicationId={rejectingKanbanApp._id}
+          candidateName={
+            typeof rejectingKanbanApp.candidateId === "object"
+              ? rejectingKanbanApp.candidateId?.userId?.name ||
+                rejectingKanbanApp.candidateId?.fullName ||
+                (rejectingKanbanApp.candidateId?.profileName && rejectingKanbanApp.candidateId?.profileName !== "Hồ sơ của tôi"
+                  ? rejectingKanbanApp.candidateId?.profileName
+                  : "Ứng viên")
+              : "Ứng viên"
+          }
+          jobTitle={
+            typeof rejectingKanbanApp.jobDescriptionId === "object"
+              ? rejectingKanbanApp.jobDescriptionId?.title
+              : "Vị trí tuyển dụng"
+          }
+          onSuccess={() => {
+            setApplications((prev) =>
+              prev.map((app) =>
+                app._id === rejectingKanbanApp._id
+                  ? { ...app, status: "REJECTED", reviewStatus: "Rejected" }
+                  : app
+              )
+            );
+          }}
+        />
+      )}
     </div>
   );
 }

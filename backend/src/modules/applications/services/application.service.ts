@@ -1,7 +1,7 @@
 import { Injectable, BadRequestException, NotFoundException, Logger } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model, Types } from 'mongoose';
-import { Application, ApplicationDocument } from '../schemas/application.schema';
+import { Application, ApplicationDocument, ApplicationStatus } from '../schemas/application.schema';
 import { Candidate, CandidateDocument } from 'src/modules/candidates/schema/candidate.schema';
 import { JobDescription, JobDescriptionDocument, JobStatus } from 'src/modules/job-description/schemas/job-description.schema';
 import { PipelineTemplate, PipelineTemplateDocument } from 'src/modules/pipeline-template/schemas/pipeline-template.schema';
@@ -398,6 +398,42 @@ export class ApplicationService {
     application.notes.push(newNote as any);
     await application.save();
 
+    return this.getApplicationById(applicationId);
+  }
+
+  async rejectApplication(
+    applicationId: string,
+    reason: string,
+    authorName: string = 'Hệ thống',
+    authorRole: string = 'Người đánh giá',
+  ) {
+    if (!Types.ObjectId.isValid(applicationId)) {
+      throw new BadRequestException('ID đơn ứng tuyển không hợp lệ');
+    }
+
+    const application = await this.applicationModel.findById(applicationId).exec();
+    if (!application) {
+      throw new NotFoundException('Không tìm thấy hồ sơ ứng tuyển');
+    }
+
+    application.status = ApplicationStatus.REJECTED;
+    application.reviewStatus = 'Rejected';
+    application.rejectReason = reason ? reason.trim() : 'Không đạt yêu cầu vị trí';
+    application.rejectedAt = new Date();
+
+    if (!application.notes) {
+      application.notes = [];
+    }
+    if (reason && reason.trim()) {
+      application.notes.push({
+        authorName,
+        authorRole,
+        content: `[LÝ DO TỪ CHỐI]: ${reason.trim()}`,
+        createdAt: new Date(),
+      } as any);
+    }
+
+    await application.save();
     return this.getApplicationById(applicationId);
   }
 

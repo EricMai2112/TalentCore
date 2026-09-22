@@ -23,9 +23,8 @@ import { useAuth } from '@/src/providers/AuthProvider'
 import { UserRole } from '@/src/features/users/types/user.types'
 import CandidateDetailModal from './CandidateDetailModal'
 import CandidateNotesModal from './CandidateNotesModal'
-import RejectConfirmModal from './RejectConfirmModal'
 import CandidateStatCards from './CandidateStatCards'
-import { CustomSelect, CustomInput, CustomPagination, CustomTableContainer } from '@/src/components/common'
+import { CustomSelect, CustomInput, CustomPagination, CustomTableContainer, RejectCandidateModal } from '@/src/components/common'
 import { CustomSelectOption } from '@/src/components/common/CustomSelect'
 
 export default function CandidatesManager() {
@@ -568,11 +567,26 @@ export default function CandidatesManager() {
 
       {/* Reject Confirmation Modal */}
       {rejectApp && (
-        <RejectConfirmModal
-          application={rejectApp}
+        <RejectCandidateModal
+          isOpen={!!rejectApp}
           onClose={() => setRejectApp(null)}
-          onRejected={(appId) => {
-            setApplications((prev) => prev.filter((item) => item._id !== appId))
+          applicationId={rejectApp._id}
+          candidateName={
+            typeof rejectApp.candidateId === 'object'
+              ? rejectApp.candidateId?.userId?.name ||
+                rejectApp.candidateId?.fullName ||
+                (rejectApp.candidateId?.profileName && rejectApp.candidateId?.profileName !== 'Hồ sơ của tôi'
+                  ? rejectApp.candidateId?.profileName
+                  : 'Ứng viên')
+              : 'Ứng viên'
+          }
+          jobTitle={
+            typeof rejectApp.jobDescriptionId === 'object'
+              ? rejectApp.jobDescriptionId?.title
+              : 'Vị trí tuyển dụng'
+          }
+          onSuccess={() => {
+            setApplications((prev) => prev.filter((item) => item._id !== rejectApp._id))
             setToast({ message: 'Đã từ chối ứng viên thành công', type: 'success' })
           }}
         />

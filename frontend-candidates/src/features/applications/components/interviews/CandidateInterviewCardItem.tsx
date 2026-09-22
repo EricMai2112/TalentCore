@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import {
   Calendar,
   Video,
@@ -33,6 +33,12 @@ export function CandidateInterviewCardItem({
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [isCancelModalOpen, setIsCancelModalOpen] = useState(false)
   const [isConfirmModalOpen, setIsConfirmModalOpen] = useState(false)
+
+  useEffect(() => {
+    if (interview.confirmationStatus) {
+      setConfirmationStatus(interview.confirmationStatus)
+    }
+  }, [interview.confirmationStatus])
 
   const job = interview.jobDescriptionId
   const deptName =
@@ -80,6 +86,8 @@ export function CandidateInterviewCardItem({
           </span>
         )
       case 'SCHEDULED':
+      case 'UPCOMING':
+      case 'IN_PROGRESS':
       default:
         return (
           <span className="px-3 py-1 rounded-full text-xs font-bold bg-indigo-50 text-indigo-700 border border-indigo-200 inline-flex items-center gap-1.5 shrink-0">
@@ -91,7 +99,7 @@ export function CandidateInterviewCardItem({
   }
 
   const getConfirmationBadge = () => {
-    if (interview.status !== 'SCHEDULED') return null
+    if (interview.status === 'COMPLETED' || interview.status === 'CANCELLED') return null
 
     switch (confirmationStatus) {
       case 'CONFIRMED':
@@ -175,12 +183,12 @@ export function CandidateInterviewCardItem({
         </div>
 
         {/* HR Support Zalo/Phone Contact Callout Note */}
-        {interview.status === 'SCHEDULED' && (
+        {(interview.status === 'SCHEDULED' || interview.status === 'UPCOMING' || interview.status === 'IN_PROGRESS') && (
           <HrContactNoteCallout phone="0987654321" zaloPhone="0987654321" />
         )}
 
         {/* Card Footer Actions */}
-        {interview.status === 'SCHEDULED' && (
+        {(interview.status === 'SCHEDULED' || interview.status === 'UPCOMING' || interview.status === 'IN_PROGRESS') && (
           <div className="flex flex-wrap items-center justify-end gap-2 pt-3 border-t border-slate-100">
             {confirmationStatus !== 'CONFIRMED' && confirmationStatus !== 'CANCEL_REQUESTED' && (
               <button
@@ -206,7 +214,7 @@ export function CandidateInterviewCardItem({
               </button>
             )}
 
-            {interview.meetingLink && (
+            {confirmationStatus === 'CONFIRMED' && (interview.locationType === 'ONLINE' || !interview.locationType) && interview.meetingLink && (
               <a
                 href={interview.meetingLink}
                 target="_blank"

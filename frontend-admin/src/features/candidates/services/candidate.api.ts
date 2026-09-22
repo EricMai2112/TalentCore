@@ -34,6 +34,17 @@ export const candidateApi = {
     return res.data;
   },
 
+  rejectApplication: async (
+    applicationId: string,
+    reason: string
+  ): Promise<CandidateApplication> => {
+    const res = await apiClient.post<ApiResponse<CandidateApplication>>(
+      `/applications/${applicationId}/reject`,
+      { reason }
+    );
+    return res.data;
+  },
+
   deleteApplication: async (applicationId: string): Promise<void> => {
     await apiClient.delete(`/applications/${applicationId}`);
   },

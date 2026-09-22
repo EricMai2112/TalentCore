@@ -202,9 +202,23 @@ export default function InterviewsCalendarView({
   const todayISO = formatDate(new Date().toISOString())
   const activeWeekISOs = weekDays.map((d) => formatDate(d.toISOString()))
 
+  // Helper: Only render official approved interviews on the calendar view grid
+  const isOfficialSchedule = (item: InterviewItem) => {
+    if (!item.date || !item.startTime || !item.endTime) return false
+    if (
+      item.confirmationStatus === 'WAITING_DEPT_SCHEDULE' ||
+      item.confirmationStatus === 'WAITING_HR_APPROVAL' ||
+      item.confirmationStatus === 'REJECTED' ||
+      item.status === InterviewStatus.CANCELLED
+    ) {
+      return false
+    }
+    return true
+  }
+
   // Filter today's interviews, sort by User Priority Rules, and limit to MAX 5 items
   const todayInterviews = interviews
-    .filter((inv) => formatDate(inv.date) === todayISO)
+    .filter((inv) => isOfficialSchedule(inv) && formatDate(inv.date) === todayISO)
     .sort((a, b) => {
       const rankA = getInterviewTimeRank(a)
       const rankB = getInterviewTimeRank(b)
@@ -526,7 +540,9 @@ export default function InterviewsCalendarView({
                   const dayISOStr = formatDate(weekDay.toISOString())
 
                   // Filter interviews for this day
-                  const dayEvents = interviews.filter((inv) => formatDate(inv.date) === dayISOStr)
+                  const dayEvents = interviews.filter(
+                    (inv) => isOfficialSchedule(inv) && formatDate(inv.date) === dayISOStr
+                  )
 
                   return (
                     <div

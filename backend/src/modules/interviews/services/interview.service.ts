@@ -2,7 +2,7 @@ import { Injectable, NotFoundException, BadRequestException } from '@nestjs/comm
 import { InjectModel } from '@nestjs/mongoose';
 import { Model, Types } from 'mongoose';
 import { Interview, InterviewDocument, LocationType, InterviewStatus, InterviewResult, InterviewConfirmationStatus } from '../schemas/interview.schema';
-import { Application, ApplicationDocument } from '../../applications/schemas/application.schema';
+import { Application, ApplicationDocument, ApplicationStatus } from '../../applications/schemas/application.schema';
 import { JobDescription, JobDescriptionDocument } from '../../job-description/schemas/job-description.schema';
 import { Candidate, CandidateDocument } from '../../candidates/schema/candidate.schema';
 import { User, UserDocument, UserRole } from '../../users/schemas/user.schema';
@@ -303,6 +303,7 @@ export class InterviewService {
     newEnd.setHours(eHour, eMin, 0, 0);
 
     for (const exist of existingInterviews) {
+      if (!exist.date) continue;
       const existDate = new Date(exist.date);
       const exYear = existDate.getFullYear();
       const exMonth = String(existDate.getMonth() + 1).padStart(2, '0');
@@ -461,7 +462,10 @@ export class InterviewService {
     const targetStatus = dto.status || interview.status;
     if (
       (targetStatus === InterviewStatus.SCHEDULED || targetStatus === InterviewStatus.UPCOMING) &&
-      targetInterviewerId
+      targetInterviewerId &&
+      targetDate &&
+      targetStartTime &&
+      targetEndTime
     ) {
       const conflict = await this.checkInterviewerConflict(
         targetInterviewerId,
@@ -662,16 +666,21 @@ export class InterviewService {
         candidateId: application.candidateId,
         jobDescriptionId: application.jobDescriptionId,
         interviewerId: defaultInterviewer || new Types.ObjectId(),
-        date: new Date(),
-        startTime: '09:00',
-        endTime: '10:00',
+        date: undefined,
+        startTime: undefined,
+        endTime: undefined,
         locationType: LocationType.ONLINE,
         status: InterviewStatus.SCHEDULED,
         result: InterviewResult.PENDING,
         confirmationStatus: InterviewConfirmationStatus.WAITING_DEPT_SCHEDULE,
       });
     } else {
-      interview.confirmationStatus = InterviewConfirmationStatus.WAITING_DEPT_SCHEDULE;
+      if (!interview.date || !interview.startTime) {
+        interview.confirmationStatus = InterviewConfirmationStatus.WAITING_DEPT_SCHEDULE;
+        interview.date = undefined;
+        interview.startTime = undefined;
+        interview.endTime = undefined;
+      }
     }
 
     const saved = await interview.save();
@@ -715,7 +724,10 @@ export class InterviewService {
 
     if (interview.applicationId) {
       await this.applicationModel.findByIdAndUpdate(interview.applicationId, {
+        status: ApplicationStatus.REJECTED,
         reviewStatus: 'Rejected',
+        rejectReason: reason || 'Trưởng phòng từ chối CV',
+        rejectedAt: new Date(),
       }).exec();
     }
 
@@ -749,7 +761,20 @@ export class InterviewService {
     interview.startTime = dto.startTime;
     interview.endTime = dto.endTime;
     if (dto.locationType) interview.locationType = dto.locationType;
-    if (dto.meetingLink) interview.meetingLink = dto.meetingLink;
+    if (dto.locationType === LocationType.OFFSITE) {
+      interview.meetingLink = undefined;
+    } else if (dto.locationType === LocationType.ONLINE) {
+      if (dto.meetingLink) {
+        interview.meetingLink = dto.meetingLink;
+      } else if (!interview.meetingLink) {
+        const jobObj: any = interview.jobDescriptionId;
+        const deptName = jobObj?.departmentId?.name || 'PhongBan';
+        const jobTitle = jobObj?.title || 'ViTri';
+        interview.meetingLink = this.generateJitsiMeetUrl(deptName, 'UngVien', jobTitle);
+      }
+    } else if (dto.meetingLink) {
+      interview.meetingLink = dto.meetingLink;
+    }
     if (dto.offsiteLocation) interview.offsiteLocation = dto.offsiteLocation;
     if (dto.interviewerId && Types.ObjectId.isValid(dto.interviewerId)) {
       interview.interviewerId = new Types.ObjectId(dto.interviewerId);
@@ -857,41 +882,36 @@ export class InterviewService {
     interview.confirmationStatus = confirmationStatus;
     const saved = await interview.save();
 
-    // Thông báo cho HR và Interviewer khi ứng viên phản hồi
-    try {
-      let statusText = '';
-      if (confirmationStatus === InterviewConfirmationStatus.CONFIRMED) {
-        statusText = 'xác nhận ĐỒNG Ý tham gia';
-      } else if (
-        confirmationStatus === InterviewConfirmationStatus.CANCEL_REQUESTED ||
-        confirmationStatus === InterviewConfirmationStatus.CANCELLED
-      ) {
-        statusText = 'yêu cầu HỦY';
-      } else if (confirmationStatus === InterviewConfirmationStatus.RESCHEDULE_REQUESTED) {
-        statusText = 'đề xuất ĐỔI THỜI GIAN';
-      }
-
-      if (statusText) {
+    // Khi ứng viên xác nhận phỏng vấn, tự động chuyển card ứng viên ở Kanban sang cột tiếp theo
+    if (confirmationStatus === InterviewConfirmationStatus.CONFIRMED && interview.applicationId) {
+      try {
         const application = await this.applicationModel
           .findById(interview.applicationId)
-          .populate({ path: 'candidateId', populate: { path: 'userId' } })
-          .populate('jobDescriptionId')
+          .populate({
+            path: 'jobDescriptionId',
+            populate: { path: 'pipelineTemplateId' },
+          })
           .exec();
-        const candUser = (application?.candidateId as any)?.userId;
-        const candName = candUser?.name || (application?.candidateId as any)?.profileName || 'Ứng viên';
-        const job: any = application?.jobDescriptionId;
-        const jobTitle = job?.title || 'Vị trí tuyển dụng';
 
-        await this.notificationsService.notifyInterviewCandidateResponse({
-          candidateName: candName,
-          jobTitle,
-          statusText,
-          interviewId: saved._id.toString(),
-          interviewerId: interview.interviewerId?.toString(),
-        });
+        if (application && application.jobDescriptionId) {
+          const job: any = application.jobDescriptionId;
+          const pipeline: any = job?.pipelineTemplateId;
+          if (pipeline && Array.isArray(pipeline.stages) && pipeline.stages.length > 0) {
+            const sortedStages = [...pipeline.stages].sort((a: any, b: any) => (a.order ?? 0) - (b.order ?? 0));
+            const currentIndex = sortedStages.findIndex(
+              (s: any) => s._id?.toString() === application.currentStageId?.toString(),
+            );
+
+            if (currentIndex >= 0 && currentIndex < sortedStages.length - 1) {
+              const nextStage = sortedStages[currentIndex + 1];
+              application.currentStageId = nextStage._id;
+              await application.save();
+            }
+          }
+        }
+      } catch (stageErr) {
+        console.error('Lỗi khi tự động chuyển stage Kanban:', stageErr);
       }
-    } catch (notifErr) {
-      console.error('Lỗi gửi thông báo updateCandidateConfirmation:', notifErr);
     }
 
     return saved;
