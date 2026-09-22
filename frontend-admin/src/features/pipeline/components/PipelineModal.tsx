@@ -1,5 +1,18 @@
+"use client";
+
 import { useState, useEffect } from "react";
-import { X, Plus, ChevronUp, ChevronDown, Trash2, Check, Loader2, AlertTriangle } from "lucide-react";
+import { createPortal } from "react-dom";
+import {
+  X,
+  Plus,
+  ChevronUp,
+  ChevronDown,
+  Trash2,
+  Check,
+  Loader2,
+  AlertTriangle,
+  GitBranch,
+} from "lucide-react";
 import { Stage, PipelineTemplate } from "../types/pipeline.types";
 import { CustomInput } from "@/src/components/common";
 
@@ -31,11 +44,16 @@ export default function PipelineModal({
   initialTemplate,
   isSubmitting,
 }: PipelineModalProps) {
+  const [isMounted, setIsMounted] = useState(false);
   const [templateName, setTemplateName] = useState("");
   const [stages, setStages] = useState<Omit<Stage, "_id">[]>([]);
   const [newStageName, setNewStageName] = useState("");
   const [newStageColor, setNewStageColor] = useState(PREDEFINED_COLORS[0]);
   const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    setIsMounted(true);
+  }, []);
 
   // Sync state with initialTemplate
   useEffect(() => {
@@ -48,6 +66,8 @@ export default function PipelineModal({
         { name: "Mới ứng tuyển", order: 1, color: "#3b82f6" },
         { name: "Sàng lọc CV", order: 2, color: "#6366f1" },
         { name: "Phỏng vấn", order: 3, color: "#f59e0b" },
+        { name: "Đề nghị tuyển dụng", order: 4, color: "#10b981" },
+        { name: "Từ chối", order: 5, color: "#f43f5e" },
       ]);
     }
     setNewStageName("");
@@ -55,74 +75,71 @@ export default function PipelineModal({
     setError(null);
   }, [initialTemplate, isOpen]);
 
-  if (!isOpen) return null;
+  if (!isOpen || !isMounted) return null;
 
+  // Add new stage
   const handleAddStage = () => {
     if (!newStageName.trim()) {
-      setError("Tên giai đoạn mới không được để trống");
+      setError("Vui lòng nhập tên giai đoạn");
       return;
     }
 
-    if (stages.some(s => s.name.toLowerCase() === newStageName.trim().toLowerCase())) {
-      setError("Giai đoạn này đã tồn tại trong danh sách");
-      return;
-    }
-
-    const newStage = {
+    const newStage: Omit<Stage, "_id"> = {
       name: newStageName.trim(),
       order: stages.length + 1,
       color: newStageColor,
     };
 
-    setStages([...stages, newStage]);
+    setStages((prev) => [...prev, newStage]);
     setNewStageName("");
+    setNewStageColor(PREDEFINED_COLORS[0]);
     setError(null);
   };
 
-  const handleUpdateStageColor = (index: number, color: string) => {
-    const updated = [...stages];
-    updated[index].color = color;
-    setStages(updated);
-  };
-
-  const handleUpdateStageName = (index: number, name: string) => {
-    const updated = [...stages];
-    updated[index].name = name;
-    setStages(updated);
-  };
-
+  // Remove stage
   const handleRemoveStage = (index: number) => {
     if (stages.length <= 1) {
-      setError("Pipeline template phải có ít nhất 1 giai đoạn");
+      setError("Quy trình phải có ít nhất một giai đoạn");
       return;
     }
-    const updated = stages.filter((_, idx) => idx !== index).map((s, idx) => ({
-      ...s,
-      order: idx + 1,
-    }));
-    setStages(updated);
+
+    const updated = stages.filter((_, idx) => idx !== index);
+    // Reorder
+    const reordered = updated.map((st, idx) => ({ ...st, order: idx + 1 }));
+    setStages(reordered);
     setError(null);
   };
 
+  // Move stage up or down
   const handleMoveStage = (index: number, direction: "up" | "down") => {
-    if (direction === "up" && index === 0) return;
-    if (direction === "down" && index === stages.length - 1) return;
-
     const targetIndex = direction === "up" ? index - 1 : index + 1;
-    const updated = [...stages];
+    if (targetIndex < 0 || targetIndex >= stages.length) return;
 
-    const temp = updated[index];
-    updated[index] = updated[targetIndex];
-    updated[targetIndex] = temp;
+    const newStages = [...stages];
+    const temp = newStages[index];
+    newStages[index] = newStages[targetIndex];
+    newStages[targetIndex] = temp;
 
-    const sequential = updated.map((s, idx) => ({
-      ...s,
-      order: idx + 1,
-    }));
-
-    setStages(sequential);
+    // Recalculate order values
+    const reordered = newStages.map((st, idx) => ({ ...st, order: idx + 1 }));
+    setStages(reordered);
   };
 
+  // Update inline stage name
+  const handleUpdateStageName = (index: number, name: string) => {
+    setStages((prev) =>
+      prev.map((stage, idx) => (idx === index ? { ...stage, name } : stage))
+    );
+  };
+
+  // Update inline stage color
+  const handleUpdateStageColor = (index: number, color: string) => {
+    setStages((prev) =>
+      prev.map((stage, idx) => (idx === index ? { ...stage, color } : stage))
+    );
+  };
+
+  // Validate and submit
   const handleFormSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError(null);
@@ -133,7 +150,13 @@ export default function PipelineModal({
     }
 
     if (stages.length === 0) {
-      setError("Phải có ít nhất 1 giai đoạn trong template");
+      setError("Quy trình cần ít nhất một giai đoạn");
+      return;
+    }
+
+    const emptyStage = stages.find((st) => !st.name.trim());
+    if (emptyStage) {
+      setError("Tất cả giai đoạn đều phải có tên");
       return;
     }
 
@@ -144,27 +167,42 @@ export default function PipelineModal({
     }
   };
 
-  return (
-    <div className="fixed inset-0 z-50 bg-black/45 backdrop-blur-xs flex items-center justify-center p-4 animate-in fade-in duration-200">
+  return createPortal(
+    <div className="fixed inset-0 z-[9999] flex items-center justify-center p-4">
+      {/* Full Backdrop */}
       <div
-        className="bg-white rounded-2xl w-full max-w-xl shadow-2xl overflow-hidden border border-gray-100 flex flex-col max-h-[90vh] animate-in zoom-in-95 duration-200"
+        className="fixed inset-0 bg-slate-950/45 backdrop-blur-xs transition-opacity animate-in fade-in duration-200"
+        onClick={onClose}
+      />
+
+      <div
+        className="relative bg-white/95 backdrop-blur-2xl rounded-3xl w-full max-w-xl shadow-2xl shadow-blue-500/10 border border-white/90 overflow-hidden flex flex-col max-h-[90vh] z-10 text-slate-900 animate-in zoom-in-95 duration-200"
         onClick={(e) => e.stopPropagation()}
       >
         {/* Modal Header */}
-        <div className="px-6 py-5 border-b border-gray-100 flex items-center justify-between bg-white sticky top-0 z-10">
-          <h3 className="text-lg font-bold text-gray-900">
-            {initialTemplate ? "Cập nhật Pipeline Template" : "Tạo Pipeline Template mới"}
-          </h3>
+        <div className="px-6 py-4 border-b border-slate-100 flex items-center justify-between bg-white/80 sticky top-0 z-10 shrink-0">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-2xl bg-gradient-to-tr from-blue-500 to-teal-500 text-white flex items-center justify-center shrink-0 shadow-md shadow-blue-500/20">
+              <GitBranch size={18} />
+            </div>
+            <div>
+              <h3 className="text-base font-bold text-slate-900">
+                {initialTemplate ? "Cập nhật Pipeline Template" : "Tạo Pipeline Template mới"}
+              </h3>
+              <p className="text-xs text-slate-500">Quy trình các giai đoạn tuyển dụng ứng viên</p>
+            </div>
+          </div>
           <button
+            type="button"
             onClick={onClose}
-            className="p-1.5 text-gray-400 hover:text-gray-700 hover:bg-gray-100 rounded-xl transition-colors cursor-pointer"
+            className="p-2 text-slate-400 hover:text-slate-700 hover:bg-slate-100 rounded-xl transition-colors cursor-pointer"
           >
             <X size={18} />
           </button>
         </div>
 
         {/* Modal Scrollable Content */}
-        <form onSubmit={handleFormSubmit} className="flex-1 overflow-y-auto px-6 py-5 space-y-5">
+        <form onSubmit={handleFormSubmit} className="flex-1 overflow-y-auto px-6 py-5 space-y-5 [scrollbar-width:thin]">
           {error && (
             <div className="bg-red-50 border border-red-100 rounded-xl p-3 flex items-start gap-2 text-red-800 text-xs">
               <AlertTriangle size={16} className="shrink-0 mt-0.5" />
@@ -183,25 +221,25 @@ export default function PipelineModal({
 
           {/* Stages List */}
           <div className="space-y-2">
-            <label className="text-xs font-bold text-gray-600 uppercase tracking-wider">
-              Các giai đoạn (kéo để sắp xếp)
+            <label className="text-xs font-bold text-slate-600 uppercase tracking-wider">
+              Các giai đoạn (kéo mũi tên để sắp xếp thứ tự)
             </label>
 
-            <div className="space-y-2.5 max-h-[300px] overflow-y-auto pr-1">
+            <div className="space-y-2.5 max-h-[300px] overflow-y-auto pr-1 [scrollbar-width:thin]">
               {stages.map((stage, idx) => (
                 <div
                   key={idx}
-                  className="flex items-center justify-between bg-gray-50/75 border border-gray-100 rounded-xl p-3 shadow-3xs"
+                  className="flex items-center justify-between bg-slate-50/80 border border-slate-100 rounded-2xl p-3 shadow-3xs"
                 >
                   <div className="flex items-center gap-3 flex-1 min-w-0 mr-3">
-                    <span className="w-7 h-7 rounded-full bg-indigo-50 border border-indigo-100 text-indigo-600 font-bold text-xs flex items-center justify-center shrink-0">
+                    <span className="w-7 h-7 rounded-xl bg-blue-50 border border-blue-100 text-blue-600 font-bold text-xs flex items-center justify-center shrink-0">
                       {idx + 1}
                     </span>
                     <input
                       type="text"
                       value={stage.name}
                       onChange={(e) => handleUpdateStageName(idx, e.target.value)}
-                      className="bg-transparent border-b border-transparent hover:border-gray-200 focus:border-indigo-500 focus:bg-white focus:outline-none rounded px-1.5 py-0.5 text-gray-800 font-semibold text-sm flex-grow min-w-0"
+                      className="bg-transparent border-b border-transparent hover:border-slate-300 focus:border-blue-500 focus:bg-white focus:outline-none rounded px-2 py-1 text-slate-800 font-semibold text-sm flex-grow min-w-0 transition-colors"
                       placeholder="Tên giai đoạn"
                       required
                     />
@@ -209,14 +247,14 @@ export default function PipelineModal({
 
                   <div className="flex items-center gap-3 shrink-0">
                     {/* Inline color picker */}
-                    <div className="flex items-center gap-1 bg-white border border-gray-100 rounded-lg p-1 shadow-3xs">
+                    <div className="flex items-center gap-1 bg-white border border-slate-100 rounded-xl p-1 shadow-3xs">
                       {PREDEFINED_COLORS.slice(0, 6).map((color) => (
                         <button
                           key={color}
                           type="button"
                           onClick={() => handleUpdateStageColor(idx, color)}
-                          className={`w-3 h-3 rounded-full transition-transform hover:scale-125 cursor-pointer ${
-                            stage.color === color ? 'ring-2 ring-indigo-500 ring-offset-1 scale-110' : ''
+                          className={`w-3.5 h-3.5 rounded-full transition-transform hover:scale-125 cursor-pointer ${
+                            stage.color === color ? 'ring-2 ring-blue-500 ring-offset-1 scale-110' : ''
                           }`}
                           style={{ backgroundColor: color }}
                         />
@@ -224,12 +262,12 @@ export default function PipelineModal({
                     </div>
 
                     {/* Reorder and Delete buttons */}
-                    <div className="flex items-center">
+                    <div className="flex items-center gap-0.5">
                       <button
                         type="button"
                         disabled={idx === 0}
                         onClick={() => handleMoveStage(idx, "up")}
-                        className="p-1 text-gray-400 hover:text-indigo-600 disabled:opacity-20 disabled:hover:text-gray-400 rounded-md transition-colors cursor-pointer"
+                        className="p-1 text-slate-400 hover:text-blue-600 disabled:opacity-20 disabled:hover:text-slate-400 rounded-lg transition-colors cursor-pointer"
                       >
                         <ChevronUp size={16} />
                       </button>
@@ -237,7 +275,7 @@ export default function PipelineModal({
                         type="button"
                         disabled={idx === stages.length - 1}
                         onClick={() => handleMoveStage(idx, "down")}
-                        className="p-1 text-gray-400 hover:text-indigo-600 disabled:opacity-20 disabled:hover:text-gray-400 rounded-md transition-colors cursor-pointer"
+                        className="p-1 text-slate-400 hover:text-blue-600 disabled:opacity-20 disabled:hover:text-slate-400 rounded-lg transition-colors cursor-pointer"
                       >
                         <ChevronDown size={16} />
                       </button>
@@ -245,7 +283,7 @@ export default function PipelineModal({
                         type="button"
                         disabled={stages.length <= 1}
                         onClick={() => handleRemoveStage(idx)}
-                        className="p-1 text-gray-400 hover:text-red-500 disabled:opacity-20 disabled:hover:text-gray-400 rounded-md transition-colors ml-1 cursor-pointer"
+                        className="p-1 text-slate-400 hover:text-rose-500 disabled:opacity-20 disabled:hover:text-slate-400 rounded-lg transition-colors ml-1 cursor-pointer"
                       >
                         <Trash2 size={15} />
                       </button>
@@ -257,14 +295,14 @@ export default function PipelineModal({
           </div>
 
           {/* Add New Stage Section */}
-          <div className="bg-indigo-50/30 border border-indigo-100/40 rounded-xl p-4 space-y-3">
+          <div className="bg-blue-50/40 border border-blue-100/60 rounded-2xl p-4 space-y-3">
             <div className="flex items-center gap-2">
               <input
                 type="text"
                 value={newStageName}
                 onChange={(e) => setNewStageName(e.target.value)}
-                placeholder="demo"
-                className="flex-grow px-3 py-2 border border-gray-200 rounded-xl text-sm text-gray-700 focus:outline-none focus:ring-2 focus:ring-indigo-500 bg-white placeholder-gray-400"
+                placeholder="Nhập tên giai đoạn mới..."
+                className="flex-grow px-3 py-2 border border-slate-200 rounded-xl text-sm text-slate-800 focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white placeholder-slate-400 font-medium"
                 onKeyDown={(e) => {
                   if (e.key === "Enter") {
                     e.preventDefault();
@@ -275,7 +313,7 @@ export default function PipelineModal({
               <button
                 type="button"
                 onClick={handleAddStage}
-                className="flex items-center gap-1 px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white font-semibold rounded-xl text-sm transition-colors shadow-sm shadow-indigo-100 cursor-pointer shrink-0"
+                className="flex items-center gap-1 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-xl text-xs sm:text-sm transition-colors shadow-md shadow-blue-500/20 cursor-pointer shrink-0"
               >
                 <Plus size={15} />
                 Thêm
@@ -283,7 +321,7 @@ export default function PipelineModal({
             </div>
 
             <div className="flex items-center gap-2 flex-wrap">
-              <span className="text-[11px] text-gray-500 font-bold uppercase tracking-wider shrink-0">
+              <span className="text-[11px] text-slate-500 font-bold uppercase tracking-wider shrink-0">
                 Màu sắc:
               </span>
               <div className="flex items-center gap-1.5 flex-wrap">
@@ -293,7 +331,7 @@ export default function PipelineModal({
                     type="button"
                     onClick={() => setNewStageColor(color)}
                     className={`w-4 h-4 rounded-full transition-transform hover:scale-125 cursor-pointer ${
-                      newStageColor === color ? 'ring-2 ring-indigo-500 ring-offset-1 scale-110' : ''
+                      newStageColor === color ? 'ring-2 ring-blue-500 ring-offset-1 scale-110' : ''
                     }`}
                     style={{ backgroundColor: color }}
                   />
@@ -304,11 +342,11 @@ export default function PipelineModal({
         </form>
 
         {/* Modal Footer */}
-        <div className="px-6 py-4 border-t border-gray-100 bg-gray-50 flex items-center justify-end gap-3 sticky bottom-0 z-10">
+        <div className="px-6 py-4 border-t border-slate-100 bg-slate-50/80 backdrop-blur-md flex items-center justify-end gap-3 sticky bottom-0 z-10 shrink-0">
           <button
             type="button"
             onClick={onClose}
-            className="px-4 py-2 border border-gray-200 bg-white hover:bg-gray-50 text-gray-700 font-semibold text-sm rounded-xl transition-colors cursor-pointer"
+            className="px-4 py-2 border border-slate-200 bg-white hover:bg-slate-50 text-slate-700 font-bold text-xs sm:text-sm rounded-xl transition-all shadow-3xs cursor-pointer"
           >
             Hủy
           </button>
@@ -316,17 +354,18 @@ export default function PipelineModal({
             type="button"
             onClick={handleFormSubmit}
             disabled={isSubmitting}
-            className="flex items-center gap-1.5 px-5 py-2 bg-indigo-600 hover:bg-indigo-700 disabled:bg-indigo-400 text-white font-semibold text-sm rounded-xl transition-all shadow-sm shadow-indigo-100 cursor-pointer"
+            className="flex items-center gap-1.5 px-5 py-2 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 disabled:opacity-50 text-white font-bold text-xs sm:text-sm rounded-xl transition-all shadow-md shadow-blue-500/20 cursor-pointer"
           >
             {isSubmitting ? (
               <Loader2 size={16} className="animate-spin" />
             ) : (
               <Check size={16} />
             )}
-            {initialTemplate ? "Lưu thay đổi" : "Tạo template"}
+            <span>{initialTemplate ? "Lưu thay đổi" : "Tạo template"}</span>
           </button>
         </div>
       </div>
-    </div>
+    </div>,
+    document.body
   );
 }

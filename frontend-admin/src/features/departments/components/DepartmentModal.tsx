@@ -1,25 +1,30 @@
+"use client";
+
 import { useState, useEffect } from "react";
-import { X, Check, Loader2, AlertTriangle, Building2 } from "lucide-react";
-import { Department, CreateDepartmentDto, UpdateDepartmentDto } from "../types/department.types";
-import { CustomInput, CustomSelect, CustomTextarea } from "@/src/components/common";
+import { createPortal } from "react-dom";
+import { X, Building2, Check, Loader2, AlertTriangle } from "lucide-react";
+import {
+  Department,
+  CreateDepartmentDto,
+  UpdateDepartmentDto,
+} from "../types/department.types";
 import { User } from "@/src/features/users/types/user.types";
+import { CustomInput, CustomSelect } from "@/src/components/common";
 
 interface DepartmentModalProps {
   isOpen: boolean;
   onClose: () => void;
-  onSubmit: (data: CreateDepartmentDto | UpdateDepartmentDto) => Promise<void>;
+  onSubmit: (payload: CreateDepartmentDto | UpdateDepartmentDto) => Promise<void>;
   initialDepartment: Department | null;
-  managers: User[]; // danh sách employees để chọn trưởng phòng
+  managers: User[];
   isSubmitting: boolean;
 }
 
-interface FormState {
-  name: string;
-  code: string;
-  managerId: string;
-}
-
-const emptyForm = (): FormState => ({ name: "", code: "", managerId: "" });
+const INITIAL_FORM = {
+  name: "",
+  code: "",
+  managerId: "",
+};
 
 export default function DepartmentModal({
   isOpen,
@@ -29,39 +34,44 @@ export default function DepartmentModal({
   managers,
   isSubmitting,
 }: DepartmentModalProps) {
-  const [form, setForm] = useState<FormState>(emptyForm());
+  const [isMounted, setIsMounted] = useState(false);
+  const [form, setForm] = useState(INITIAL_FORM);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    if (!isOpen) return;
-    if (initialDepartment) {
-      const mgr = initialDepartment.managerId;
-      const managerId = mgr
-        ? typeof mgr === "string"
-          ? mgr
-          : mgr._id
-        : "";
-      setForm({
-        name: initialDepartment.name,
-        code: initialDepartment.code,
-        managerId,
-      });
-    } else {
-      setForm(emptyForm());
+    setIsMounted(true);
+  }, []);
+
+  // Sync form khi mở modal hoặc thay đổi initialDepartment
+  useEffect(() => {
+    if (isOpen) {
+      if (initialDepartment) {
+        const mgrId =
+          typeof initialDepartment.managerId === "object" && initialDepartment.managerId
+            ? initialDepartment.managerId._id
+            : typeof initialDepartment.managerId === "string"
+            ? initialDepartment.managerId
+            : "";
+        setForm({
+          name: initialDepartment.name,
+          code: initialDepartment.code,
+          managerId: mgrId,
+        });
+      } else {
+        setForm(INITIAL_FORM);
+      }
+      setError(null);
     }
-    setError(null);
   }, [isOpen, initialDepartment]);
 
-  if (!isOpen) return null;
+  if (!isOpen || !isMounted) return null;
 
-  const handleChange = (
-    e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>
-  ) => {
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
-    // Auto-uppercase code field
     setForm((prev) => ({
       ...prev,
-      [name]: name === "code" ? value.toUpperCase() : value,
+      // Mã phòng ban tự động viết hoa, không khoảng trắng
+      [name]: name === "code" ? value.toUpperCase().replace(/\s/g, "") : value,
     }));
   };
 
@@ -69,13 +79,14 @@ export default function DepartmentModal({
     e.preventDefault();
     setError(null);
 
-    if (!form.name.trim()) return setError("Tên phòng ban không được để trống");
-    if (!form.code.trim()) return setError("Mã phòng ban không được để trống");
+    // Validate
+    if (!form.name.trim()) return setError("Vui lòng nhập tên phòng ban");
+    if (!form.code.trim()) return setError("Vui lòng nhập mã phòng ban");
 
     const payload: CreateDepartmentDto | UpdateDepartmentDto = {
       name: form.name.trim(),
       code: form.code.trim(),
-      ...(form.managerId ? { managerId: form.managerId } : {}),
+      managerId: form.managerId ? form.managerId : undefined,
     };
 
     try {
@@ -88,32 +99,42 @@ export default function DepartmentModal({
 
   const isEdit = !!initialDepartment;
 
-  return (
-    <div className="fixed inset-0 z-50 bg-black/45 backdrop-blur-sm flex items-center justify-center p-4 animate-in fade-in duration-200">
+  return createPortal(
+    <div className="fixed inset-0 z-[9999] flex items-center justify-center p-4">
+      {/* Full Backdrop */}
       <div
-        className="bg-white rounded-2xl w-full max-w-md shadow-2xl overflow-hidden border border-gray-100 flex flex-col max-h-[95vh] animate-in zoom-in-95 duration-200"
+        className="fixed inset-0 bg-slate-950/45 backdrop-blur-xs transition-opacity animate-in fade-in duration-200"
+        onClick={onClose}
+      />
+
+      <div
+        className="relative bg-white/95 backdrop-blur-2xl rounded-3xl w-full max-w-md shadow-2xl shadow-blue-500/10 border border-white/90 overflow-hidden flex flex-col max-h-[90vh] z-10 text-slate-900 animate-in zoom-in-95 duration-200"
         onClick={(e) => e.stopPropagation()}
       >
         {/* Header */}
-        <div className="px-6 py-5 border-b border-gray-100 flex items-center justify-between sticky top-0 bg-white z-10">
-          <div className="flex items-center gap-2.5">
-            <div className="w-8 h-8 rounded-lg bg-indigo-50 flex items-center justify-center">
-              <Building2 size={16} className="text-indigo-600" />
+        <div className="px-6 py-4 border-b border-slate-100 flex items-center justify-between sticky top-0 bg-white/80 z-10 shrink-0">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-2xl bg-gradient-to-tr from-indigo-600 to-purple-500 text-white flex items-center justify-center shrink-0 shadow-md shadow-indigo-500/20">
+              <Building2 size={18} />
             </div>
-            <h3 className="text-base font-bold text-gray-900">
-              {isEdit ? "Chỉnh sửa phòng ban" : "Thêm phòng ban mới"}
-            </h3>
+            <div>
+              <h3 className="text-base font-bold text-slate-900">
+                {isEdit ? "Chỉnh sửa phòng ban" : "Thêm phòng ban mới"}
+              </h3>
+              <p className="text-xs text-slate-500">Thiết lập cơ cấu phòng ban và trưởng bộ phận</p>
+            </div>
           </div>
           <button
+            type="button"
             onClick={onClose}
-            className="p-1.5 text-gray-400 hover:text-gray-700 hover:bg-gray-100 rounded-xl transition-colors cursor-pointer"
+            className="p-2 text-slate-400 hover:text-slate-700 hover:bg-slate-100 rounded-xl transition-colors cursor-pointer"
           >
             <X size={18} />
           </button>
         </div>
 
         {/* Body */}
-        <form onSubmit={handleSubmit} className="flex-1 overflow-y-auto px-6 py-5 space-y-4">
+        <form onSubmit={handleSubmit} className="flex-1 overflow-y-auto px-6 py-5 space-y-4 [scrollbar-width:thin]">
           {error && (
             <div className="bg-red-50 border border-red-100 rounded-xl p-3 flex items-start gap-2 text-red-800 text-xs">
               <AlertTriangle size={15} className="shrink-0 mt-0.5" />
@@ -160,12 +181,12 @@ export default function DepartmentModal({
         </form>
 
         {/* Footer */}
-        <div className="px-6 py-4 border-t border-gray-100 bg-gray-50 flex items-center justify-end gap-3 sticky bottom-0 z-10">
+        <div className="px-6 py-4 border-t border-slate-100 bg-slate-50/80 backdrop-blur-md flex items-center justify-end gap-3 sticky bottom-0 z-10 shrink-0">
           <button
             type="button"
             onClick={onClose}
             disabled={isSubmitting}
-            className="px-4 py-2 border border-gray-200 bg-white hover:bg-gray-50 text-gray-700 font-semibold text-sm rounded-xl transition-colors cursor-pointer disabled:opacity-50"
+            className="px-4 py-2 border border-slate-200 bg-white hover:bg-slate-50 text-slate-700 font-bold text-xs sm:text-sm rounded-xl transition-all shadow-3xs cursor-pointer disabled:opacity-50"
           >
             Hủy
           </button>
@@ -173,17 +194,18 @@ export default function DepartmentModal({
             type="button"
             onClick={handleSubmit}
             disabled={isSubmitting}
-            className="flex items-center gap-1.5 px-5 py-2 bg-indigo-600 hover:bg-indigo-700 disabled:bg-indigo-400 text-white font-semibold text-sm rounded-xl transition-all shadow-sm shadow-indigo-100 cursor-pointer"
+            className="flex items-center gap-1.5 px-5 py-2 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 disabled:opacity-50 text-white font-bold text-xs sm:text-sm rounded-xl transition-all shadow-md shadow-blue-500/20 cursor-pointer"
           >
             {isSubmitting ? (
               <Loader2 size={16} className="animate-spin" />
             ) : (
               <Check size={16} />
             )}
-            {isEdit ? "Lưu thay đổi" : "Tạo phòng ban"}
+            <span>{isEdit ? "Lưu thay đổi" : "Tạo phòng ban"}</span>
           </button>
         </div>
       </div>
-    </div>
+    </div>,
+    document.body
   );
 }

@@ -1,5 +1,8 @@
+"use client";
+
 import { useState, useEffect } from "react";
-import { X, Check, Loader2, AlertTriangle, Zap, Plus } from "lucide-react";
+import { createPortal } from "react-dom";
+import { X, Check, Loader2, AlertTriangle, Zap, Plus, Briefcase } from "lucide-react";
 import { Skill, DeptOption, PositionWithSkills, CreateSkillDto } from "../types/skill.types";
 import { CustomInput, CustomSelect } from "@/src/components/common";
 
@@ -38,6 +41,7 @@ export default function AddSkillModal({
   isDeptManager = false,
   userDeptId = "",
 }: AddSkillModalProps) {
+  const [isMounted, setIsMounted] = useState(false);
   const [tab, setTab] = useState<ModalMode>(mode);
 
   // ── Add skill form ──────────────────────────────────────────────────────
@@ -47,26 +51,34 @@ export default function AddSkillModal({
 
   // ── Add position form ───────────────────────────────────────────────────
   const [posName, setPosName] = useState("");
-  const [posDeptId, setPosDeptId] = useState(
-    isDeptManager && userDeptId ? userDeptId : (preselectedDeptId ?? "")
-  );
+  const [posDeptId, setPosDeptId] = useState("");
 
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    if (!isOpen) return;
-    setTab(mode);
-    setSkillName("");
-    setAliasInput("");
-    setAliases([]);
-    setPosName("");
-    setPosDeptId(isDeptManager && userDeptId ? userDeptId : (preselectedDeptId ?? ""));
-    setError(null);
-  }, [isOpen, mode, preselectedDeptId, isDeptManager, userDeptId]);
+    setIsMounted(true);
+  }, []);
 
-  if (!isOpen) return null;
+  // Sync tab khi mode prop đổi hoặc modal mở lại
+  useEffect(() => {
+    if (isOpen) {
+      setTab(mode);
+      setSkillName("");
+      setAliasInput("");
+      setAliases([]);
+      setPosName("");
+      setPosDeptId(
+        isDeptManager && userDeptId
+          ? userDeptId
+          : preselectedDeptId ?? departments[0]?._id ?? ""
+      );
+      setError(null);
+    }
+  }, [isOpen, mode, preselectedDeptId, departments, isDeptManager, userDeptId]);
 
-  // ── Alias helpers ───────────────────────────────────────────────────────
+  if (!isOpen || !isMounted) return null;
+
+  // ── Aliases tags ────────────────────────────────────────────────────────
   const addAlias = () => {
     const v = aliasInput.trim();
     if (!v || aliases.includes(v)) return;
@@ -98,49 +110,62 @@ export default function AddSkillModal({
 
   const isAddSkill = tab === "add-skill";
 
-  return (
-    <div className="fixed inset-0 z-50 bg-black/45 backdrop-blur-sm flex items-center justify-center p-4 animate-in fade-in duration-200">
+  return createPortal(
+    <div className="fixed inset-0 z-[9999] flex items-center justify-center p-4">
+      {/* Full Backdrop */}
       <div
-        className="bg-white rounded-2xl w-full max-w-md shadow-2xl overflow-hidden border border-gray-100 flex flex-col max-h-[95vh] animate-in zoom-in-95 duration-200"
+        className="fixed inset-0 bg-slate-950/45 backdrop-blur-xs transition-opacity animate-in fade-in duration-200"
+        onClick={onClose}
+      />
+
+      <div
+        className="relative bg-white/95 backdrop-blur-2xl rounded-3xl w-full max-w-md shadow-2xl shadow-blue-500/10 border border-white/90 overflow-hidden flex flex-col max-h-[90vh] z-10 text-slate-900 animate-in zoom-in-95 duration-200"
         onClick={(e) => e.stopPropagation()}
       >
         {/* Header */}
-        <div className="px-6 py-5 border-b border-gray-100 flex items-center justify-between sticky top-0 bg-white z-10">
-          <div className="flex items-center gap-2.5">
-            <div className="w-8 h-8 rounded-lg bg-indigo-50 flex items-center justify-center">
-              <Zap size={15} className="text-indigo-600" />
+        <div className="px-6 py-4 border-b border-slate-100 flex items-center justify-between sticky top-0 bg-white/80 z-10 shrink-0">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-2xl bg-gradient-to-tr from-amber-500 to-orange-500 text-white flex items-center justify-center shrink-0 shadow-md shadow-amber-500/20">
+              {isAddSkill ? <Zap size={18} /> : <Briefcase size={18} />}
             </div>
-            <h3 className="text-base font-bold text-gray-900">
-              {isAddSkill ? "Thêm kỹ năng mới" : "Thêm vị trí mới"}
-            </h3>
+            <div>
+              <h3 className="text-base font-bold text-slate-900">
+                {isAddSkill ? "Thêm kỹ năng mới" : "Thêm vị trí mới"}
+              </h3>
+              <p className="text-xs text-slate-500">
+                {isAddSkill ? "Tạo danh mục kỹ năng để khớp nối hồ sơ AI" : "Thiết lập vị trí công việc theo phòng ban"}
+              </p>
+            </div>
           </div>
           <button
+            type="button"
             onClick={onClose}
-            className="p-1.5 text-gray-400 hover:text-gray-700 hover:bg-gray-100 rounded-xl transition-colors cursor-pointer"
+            className="p-2 text-slate-400 hover:text-slate-700 hover:bg-slate-100 rounded-xl transition-colors cursor-pointer"
           >
             <X size={18} />
           </button>
         </div>
 
         {/* Tab switcher */}
-        <div className="px-6 pt-4 flex gap-1 bg-white border-b border-gray-100 pb-0">
+        <div className="px-6 pt-3 flex gap-2 bg-slate-50/50 border-b border-slate-100 shrink-0">
           {(["add-skill", "add-position"] as ModalMode[]).map((t) => (
             <button
               key={t}
+              type="button"
               onClick={() => { setTab(t); setError(null); }}
-              className={`px-4 py-2 text-sm font-semibold border-b-2 transition-colors cursor-pointer ${
+              className={`pb-2.5 px-3 text-xs font-bold border-b-2 transition-all cursor-pointer ${
                 tab === t
-                  ? "border-indigo-600 text-indigo-600"
-                  : "border-transparent text-gray-400 hover:text-gray-700"
+                  ? "border-blue-600 text-blue-600"
+                  : "border-transparent text-slate-400 hover:text-slate-700"
               }`}
             >
-              {t === "add-skill" ? "Kỹ năng" : "Vị trí"}
+              {t === "add-skill" ? "Kỹ năng" : "Vị trí tuyển dụng"}
             </button>
           ))}
         </div>
 
         {/* Body */}
-        <form onSubmit={handleSubmit} className="flex-1 overflow-y-auto px-6 py-5 space-y-4">
+        <form onSubmit={handleSubmit} className="flex-1 overflow-y-auto px-6 py-5 space-y-4 [scrollbar-width:thin]">
           {error && (
             <div className="bg-red-50 border border-red-100 rounded-xl p-3 flex items-start gap-2 text-red-800 text-xs">
               <AlertTriangle size={15} className="shrink-0 mt-0.5" />
@@ -162,9 +187,9 @@ export default function AddSkillModal({
 
               {/* Aliases */}
               <div className="space-y-1.5">
-                <label className="text-xs font-bold text-gray-600 uppercase tracking-wider block">
+                <label className="text-xs font-bold text-slate-600 uppercase tracking-wider block">
                   Tên khác (aliases)
-                  <span className="text-gray-400 font-normal ml-1 normal-case">(tuỳ chọn)</span>
+                  <span className="text-slate-400 font-normal ml-1 normal-case">(tuỳ chọn)</span>
                 </label>
                 <div className="flex gap-2 items-center">
                   <div className="flex-1">
@@ -178,7 +203,7 @@ export default function AddSkillModal({
                   <button
                     type="button"
                     onClick={addAlias}
-                    className="p-3 bg-gray-100 hover:bg-gray-200 text-gray-600 rounded-2xl transition-colors cursor-pointer shrink-0"
+                    className="p-3 bg-slate-100 hover:bg-slate-200 text-slate-600 rounded-2xl transition-colors cursor-pointer shrink-0"
                   >
                     <Plus size={18} />
                   </button>
@@ -188,7 +213,7 @@ export default function AddSkillModal({
                     {aliases.map((a) => (
                       <span
                         key={a}
-                        className="inline-flex items-center gap-1 px-2.5 py-1 bg-indigo-50 border border-indigo-100 text-indigo-700 text-xs rounded-lg"
+                        className="inline-flex items-center gap-1.5 px-2.5 py-1 bg-blue-50 border border-blue-100 text-blue-700 text-xs font-semibold rounded-lg"
                       >
                         {a}
                         <button
@@ -196,7 +221,7 @@ export default function AddSkillModal({
                           onClick={() => removeAlias(a)}
                           className="hover:text-red-500 cursor-pointer"
                         >
-                          <X size={10} />
+                          <X size={12} />
                         </button>
                       </span>
                     ))}
@@ -238,12 +263,12 @@ export default function AddSkillModal({
         </form>
 
         {/* Footer */}
-        <div className="px-6 py-4 border-t border-gray-100 bg-gray-50 flex items-center justify-end gap-3 sticky bottom-0 z-10">
+        <div className="px-6 py-4 border-t border-slate-100 bg-slate-50/80 backdrop-blur-md flex items-center justify-end gap-3 sticky bottom-0 z-10 shrink-0">
           <button
             type="button"
             onClick={onClose}
             disabled={isSubmitting}
-            className="px-4 py-2 border border-gray-200 bg-white hover:bg-gray-50 text-gray-700 font-semibold text-sm rounded-xl transition-colors cursor-pointer disabled:opacity-50"
+            className="px-4 py-2 border border-slate-200 bg-white hover:bg-slate-50 text-slate-700 font-bold text-xs sm:text-sm rounded-xl transition-all shadow-3xs cursor-pointer disabled:opacity-50"
           >
             Hủy
           </button>
@@ -251,13 +276,14 @@ export default function AddSkillModal({
             type="button"
             onClick={handleSubmit}
             disabled={isSubmitting}
-            className="flex items-center gap-1.5 px-5 py-2 bg-indigo-600 hover:bg-indigo-700 disabled:bg-indigo-400 text-white font-semibold text-sm rounded-xl transition-all shadow-sm shadow-indigo-100 cursor-pointer"
+            className="flex items-center gap-1.5 px-5 py-2 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 disabled:opacity-50 text-white font-bold text-xs sm:text-sm rounded-xl transition-all shadow-md shadow-blue-500/20 cursor-pointer"
           >
             {isSubmitting ? <Loader2 size={16} className="animate-spin" /> : <Check size={16} />}
-            {isAddSkill ? "Tạo kỹ năng" : "Tạo vị trí"}
+            <span>{isAddSkill ? "Tạo kỹ năng" : "Tạo vị trí"}</span>
           </button>
         </div>
       </div>
-    </div>
+    </div>,
+    document.body
   );
 }
