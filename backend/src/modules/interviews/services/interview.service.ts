@@ -547,7 +547,9 @@ export class InterviewService {
         const candUserId = candUser?._id?.toString() || candUser?.toString();
         const job: any = application?.jobDescriptionId;
         const jobTitle = job?.title || 'Vị trí tuyển dụng';
-        const dateFormatted = new Date(interview.date).toLocaleDateString('vi-VN');
+        const dateFormatted = interview.date
+          ? new Date(interview.date).toLocaleDateString('vi-VN')
+          : 'Chưa xếp lịch';
         const timeRange = `${interview.startTime} - ${interview.endTime}`;
 
         if (candUserId) {
@@ -840,7 +842,9 @@ export class InterviewService {
       const candName = candUser?.name || (application?.candidateId as any)?.profileName || 'Ứng viên';
       const job: any = application?.jobDescriptionId;
       const jobTitle = job?.title || 'Vị trí tuyển dụng';
-      const dateFormatted = new Date(interview.date).toLocaleDateString('vi-VN');
+      const dateFormatted = interview.date
+        ? new Date(interview.date).toLocaleDateString('vi-VN')
+        : 'Chưa xếp lịch';
       const timeRange = `${interview.startTime} - ${interview.endTime}`;
       const deptId = typeof job?.departmentId === 'object' ? job?.departmentId?._id?.toString() : job?.departmentId?.toString();
       const interviewerId = interview.interviewerId?.toString();
