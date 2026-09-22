@@ -4,10 +4,14 @@ import { User, UserDocument, UserRole, UserStatus } from "../schemas/user.schema
 import { Model } from "mongoose";
 import { CreateEmployeeDto, UpdateEmployeeDto, ToggleStatusDto } from "../dtos/user.dto";
 import * as bcrypt from 'bcrypt';
+import { EmailService } from "../../email-template/services/email.service";
 
 @Injectable()
 export class UserService {
-    constructor(@InjectModel(User.name) private userModel: Model<UserDocument>) {}
+    constructor(
+        @InjectModel(User.name) private userModel: Model<UserDocument>,
+        private emailService: EmailService,
+    ) {}
 
     async findByEmail(email: string) {
         return this.userModel.findOne({ email }).exec();
@@ -27,6 +31,18 @@ export class UserService {
         }
 
         const defaultPassword = "111111";
+
+        try {
+            await this.emailService.sendWelcomeEmployeeEmail(
+                { email, name, role },
+                defaultPassword,
+            );
+        } catch (emailError: any) {
+            throw new BadRequestException(
+                `Gửi email thông tin tài khoản qua AWS SES thất bại: ${emailError.message || emailError}`,
+            );
+        }
+
         const hashedPassword = await bcrypt.hash(defaultPassword, 10);
 
         const newUser = new this.userModel({
@@ -42,7 +58,7 @@ export class UserService {
         await newUser.save();
 
         return {
-            message: "Tạo tài khoản nhân viên thành công",
+            message: "Tạo tài khoản nhân viên và gửi email thành công",
             user: {
                 id: newUser.id,
                 email: newUser.email,
