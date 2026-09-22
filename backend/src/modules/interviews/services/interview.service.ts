@@ -427,6 +427,16 @@ export class InterviewService {
         timeRange,
         interviewId: savedInterview._id.toString(),
       });
+
+      const candUserId = candUser?._id?.toString() || candUser?.toString();
+      if (candUserId) {
+        await this.notificationsService.notifyCandidateInterviewScheduled(candUserId, {
+          jobTitle: jobTitle || 'Vị trí tuyển dụng',
+          dateFormatted,
+          timeRange,
+          interviewId: savedInterview._id.toString(),
+        });
+      }
     } catch (notifErr) {
       console.error('Lỗi gửi thông báo createInterview:', notifErr);
     }
@@ -520,7 +530,36 @@ export class InterviewService {
       interview.meetingLink = undefined;
     }
 
-    return await interview.save();
+    const saved = await interview.save();
+
+    if (dto.date || dto.startTime || dto.endTime) {
+      try {
+        const application = await this.applicationModel
+          .findById(interview.applicationId)
+          .populate({ path: 'candidateId', populate: { path: 'userId' } })
+          .populate('jobDescriptionId')
+          .exec();
+        const candUser = (application?.candidateId as any)?.userId;
+        const candUserId = candUser?._id?.toString() || candUser?.toString();
+        const job: any = application?.jobDescriptionId;
+        const jobTitle = job?.title || 'Vị trí tuyển dụng';
+        const dateFormatted = new Date(interview.date).toLocaleDateString('vi-VN');
+        const timeRange = `${interview.startTime} - ${interview.endTime}`;
+
+        if (candUserId) {
+          await this.notificationsService.notifyCandidateInterviewRescheduled(candUserId, {
+            jobTitle,
+            dateFormatted,
+            timeRange,
+            interviewId: saved._id.toString(),
+          });
+        }
+      } catch (notifErr) {
+        console.error('Lỗi gửi thông báo updateInterview cho candidate:', notifErr);
+      }
+    }
+
+    return saved;
   }
 
   /**
@@ -790,6 +829,16 @@ export class InterviewService {
         interviewerId,
         departmentId: deptId,
       });
+
+      const candUserId = candUser?._id?.toString() || candUser?.toString();
+      if (candUserId) {
+        await this.notificationsService.notifyCandidateInterviewScheduled(candUserId, {
+          jobTitle: jobTitle || 'Vị trí tuyển dụng',
+          dateFormatted,
+          timeRange,
+          interviewId: saved._id.toString(),
+        });
+      }
     } catch (notifErr) {
       console.error('Lỗi gửi thông báo approveInterviewSchedule:', notifErr);
     }

@@ -390,6 +390,84 @@ export class NotificationsService {
     }
   }
 
+  async notifyCandidateInterviewScheduled(
+    candidateUserId: string,
+    params: {
+      jobTitle: string;
+      dateFormatted: string;
+      timeRange: string;
+      interviewId: string;
+    },
+  ) {
+    if (!candidateUserId) return;
+
+    return this.create({
+      recipientId: candidateUserId,
+      title: 'Lịch phỏng vấn mới',
+      message: `Bạn có buổi phỏng vấn cho vị trí "${params.jobTitle}" vào lúc ${params.timeRange}, ngày ${params.dateFormatted}. Vui lòng kiểm tra và xác nhận tham gia.`,
+      type: NotificationType.INTERVIEW_SCHEDULED,
+      category: NotificationCategory.INTERVIEW,
+      priority: NotificationPriority.HIGH,
+      actionUrl: '/user/applications',
+      metadata: {
+        interviewId: params.interviewId,
+        jobTitle: params.jobTitle,
+      },
+    });
+  }
+
+  async notifyCandidateInterviewRescheduled(
+    candidateUserId: string,
+    params: {
+      jobTitle: string;
+      dateFormatted: string;
+      timeRange: string;
+      interviewId: string;
+    },
+  ) {
+    if (!candidateUserId) return;
+
+    return this.create({
+      recipientId: candidateUserId,
+      title: 'Thay đổi thời gian phỏng vấn',
+      message: `Lịch phỏng vấn vị trí "${params.jobTitle}" của bạn đã được cập nhật sang lúc ${params.timeRange}, ngày ${params.dateFormatted}. Vui lòng kiểm tra và xác nhận lại.`,
+      type: NotificationType.INTERVIEW_RESCHEDULED,
+      category: NotificationCategory.INTERVIEW,
+      priority: NotificationPriority.HIGH,
+      actionUrl: '/user/applications',
+      metadata: {
+        interviewId: params.interviewId,
+        jobTitle: params.jobTitle,
+      },
+    });
+  }
+
+  async notifyCandidateStageChanged(
+    candidateUserId: string,
+    params: {
+      jobTitle: string;
+      stageName: string;
+      applicationId: string;
+    },
+  ) {
+    if (!candidateUserId) return;
+
+    return this.create({
+      recipientId: candidateUserId,
+      title: 'Cập nhật tiến trình tuyển dụng',
+      message: `Chúc mừng bạn! Hồ sơ ứng tuyển vị trí "${params.jobTitle}" đã được chuyển sang giai đoạn: "${params.stageName}".`,
+      type: NotificationType.STAGE_CHANGED,
+      category: NotificationCategory.CANDIDATE,
+      priority: NotificationPriority.HIGH,
+      actionUrl: '/user/applications',
+      metadata: {
+        applicationId: params.applicationId,
+        jobTitle: params.jobTitle,
+        stageName: params.stageName,
+      },
+    });
+  }
+
   async getUserNotifications(userId: string, query: QueryNotificationDto) {
     if (!Types.ObjectId.isValid(userId)) {
       throw new BadRequestException('User ID không hợp lệ');
