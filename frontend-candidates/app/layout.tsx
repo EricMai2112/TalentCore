@@ -4,6 +4,7 @@ import "./globals.css";
 import Header from "@/src/components/layout/Header";
 import Footer from "@/src/components/layout/Footer";
 import { AuthProvider } from "@/src/providers/AuthProvider";
+import { NotificationProvider } from "@/src/providers/NotificationProvider";
 import { Toaster } from "react-hot-toast";
 import { ToastContainer } from "react-toastify";
 
@@ -34,12 +35,14 @@ export default function RootLayout({
     >
       <body className="min-h-full flex flex-col bg-slate-950 text-slate-100 selection:bg-blue-600/30">
         <AuthProvider>
-          <Header />
-          <main className="flex flex-col flex-1">
-            <ToastContainer />
-            {children}
-          </main>
-          <Footer />
+          <NotificationProvider>
+            <Header />
+            <main className="flex flex-col flex-1">
+              <ToastContainer />
+              {children}
+            </main>
+            <Footer />
+          </NotificationProvider>
         </AuthProvider>
       </body>
     </html>

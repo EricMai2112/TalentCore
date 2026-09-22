@@ -319,8 +319,22 @@ export class ApplicationService {
           });
         }
       }
+
+      // Thông báo cho Ứng viên khi hồ sơ được chuyển sang vòng mới
+      const candidate = populated.candidateId as any;
+      const candidateUser = candidate?.userId as any;
+      const candidateUserId = candidateUser?._id?.toString() || candidateUser?.toString();
+      const jobTitle = job?.title || 'Vị trí tuyển dụng';
+
+      if (candidateUserId && stageName) {
+        await this.notificationsService.notifyCandidateStageChanged(candidateUserId, {
+          jobTitle,
+          stageName,
+          applicationId: populated._id.toString(),
+        });
+      }
     } catch (notifErr) {
-      this.logger.error('Lỗi khi gửi thông báo Department Review:', notifErr);
+      this.logger.error('Lỗi khi gửi thông báo chuyển vòng ứng tuyển:', notifErr);
     }
 
     return populated;
