@@ -48,9 +48,9 @@ export default function SettingsLayout({ children }: { children: React.ReactNode
       </div>
 
       {/* Tab Navigation */}
-      <div className="bg-white/40 backdrop-blur-xl rounded-3xl shadow-xs border border-white/70 overflow-hidden">
+      <div className="bg-white/40 backdrop-blur-xl rounded-3xl shadow-xs border border-white/70">
         {/* Tabs */}
-        <div className="border-b border-slate-200/60 bg-white/50 backdrop-blur-md px-4 overflow-x-auto">
+        <div className="border-b border-slate-200/60 bg-white/50 backdrop-blur-md px-4 overflow-x-auto rounded-t-3xl">
           <nav className="flex gap-1 min-w-max sm:min-w-0" aria-label="Settings tabs">
             {visibleTabs.map((tab) => {
               const isActive = pathname === tab.href || pathname.startsWith(tab.href + '/')
