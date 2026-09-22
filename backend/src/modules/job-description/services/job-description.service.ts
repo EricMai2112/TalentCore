@@ -334,6 +334,8 @@ export class JobDescriptionService {
 
     this.validateCriteriaWeights(updateDto.criteria);
 
+    const oldJob = await this.jobDescriptionModel.findById(id).select('status').exec();
+
     const updatedJob = await this.jobDescriptionModel
       .findByIdAndUpdate(id, { $set: updateDto }, { new: true, runValidators: true })
       .populate('departmentId')
@@ -353,6 +355,17 @@ export class JobDescriptionService {
       this.eventsGateway.emitJobPublished(updatedJob);
     } else {
       this.eventsGateway.emitJobUpdated(updatedJob);
+    }
+
+    // Gửi thông báo khi HR phê duyệt hoặc từ chối JD
+    try {
+      if (updatedJob.status === JobStatus.APPROVED && oldJob?.status !== JobStatus.APPROVED) {
+        await this.notificationsService.notifyJdApproved(updatedJob);
+      } else if (updatedJob.status === JobStatus.REJECTED && oldJob?.status !== JobStatus.REJECTED) {
+        await this.notificationsService.notifyJdRejected(updatedJob);
+      }
+    } catch (notifErr) {
+      console.error('Lỗi khi gửi thông báo cập nhật trạng thái JD:', notifErr);
     }
 
     return updatedJob;

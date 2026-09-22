@@ -9,11 +9,11 @@ export enum LocationType {
 }
 
 export enum InterviewStatus {
-  SCHEDULED = 'SCHEDULED', // Đã lên lịch (Chờ duyệt / Chờ xác nhận)
-  UPCOMING = 'UPCOMING',   // Sắp diễn ra (Ứng viên đã xác nhận)
-  IN_PROGRESS = 'IN_PROGRESS', // Đang diễn ra (Đang trong thời gian phỏng vấn)
-  COMPLETED = 'COMPLETED', // Hoàn thành / Đã kết thúc
-  CANCELLED = 'CANCELLED', // Đã hủy
+  SCHEDULED = 'SCHEDULED',
+  UPCOMING = 'UPCOMING',
+  IN_PROGRESS = 'IN_PROGRESS',
+  COMPLETED = 'COMPLETED',
+  CANCELLED = 'CANCELLED',
 }
 
 export enum InterviewResult {
@@ -23,14 +23,15 @@ export enum InterviewResult {
 }
 
 export enum InterviewConfirmationStatus {
-  PENDING = 'PENDING',                             // Chờ xác nhận
-  WAITING_DEPT_SCHEDULE = 'WAITING_DEPT_SCHEDULE', // Chờ Trưởng phòng xếp lịch / Xem CV ở Department Review
-  WAITING_HR_APPROVAL = 'WAITING_HR_APPROVAL',     // Trưởng phòng đã xếp lịch -> Chờ HR phê duyệt
-  SCHEDULED = 'SCHEDULED',                         // HR đã duyệt -> Chờ Ứng viên xác nhận
-  CONFIRMED = 'CONFIRMED',                         // Ứng viên đã xác nhận tham gia (Sắp diễn ra)
-  CANCEL_REQUESTED = 'CANCEL_REQUESTED',           // Ứng viên yêu cầu hủy lịch
-  CANCELLED = 'CANCELLED',                         // HR đã duyệt hủy lịch
-  REJECTED = 'REJECTED',                           // Trưởng phòng từ chối CV ở Department Review
+  PENDING = 'PENDING',
+  WAITING_DEPT_SCHEDULE = 'WAITING_DEPT_SCHEDULE',
+  WAITING_HR_APPROVAL = 'WAITING_HR_APPROVAL',
+  SCHEDULED = 'SCHEDULED',
+  CONFIRMED = 'CONFIRMED',
+  CANCEL_REQUESTED = 'CANCEL_REQUESTED',
+  CANCELLED = 'CANCELLED',
+  REJECTED = 'REJECTED',
+  RESCHEDULE_REQUESTED = 'RESCHEDULE_REQUESTED',
 }
 
 @Schema({ timestamps: true })

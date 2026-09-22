@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { createPortal } from 'react-dom';
-import { Menu, X, ArrowRight, User, BookCheck, LogOut } from 'lucide-react';
+import { Menu, X, ArrowRight, User, BookCheck, LogOut, Bell } from 'lucide-react';
 import Link from 'next/link';
 import Image from 'next/image';
 import { useAuth } from '@/src/providers/AuthProvider';
@@ -121,6 +121,16 @@ export default function MobileMenu({ navItems }: MobileMenuProps) {
               >
                 <BookCheck size={18} className="text-blue-400" />
                 <span>Công việc đã ứng tuyển</span>
+              </Link>
+
+              {/* Notifications Link */}
+              <Link
+                href="/notifications"
+                onClick={() => setIsOpen(false)}
+                className="flex items-center gap-3 px-4 py-3 rounded-xl bg-slate-900/60 border border-slate-800/80 text-sm font-semibold text-slate-200 hover:text-blue-400 hover:bg-slate-900 transition-all"
+              >
+                <Bell size={18} className="text-blue-400" />
+                <span>Thông báo của tôi</span>
               </Link>
 
               {/* Logout Button */}

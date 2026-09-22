@@ -191,6 +191,283 @@ export class NotificationsService {
     });
   }
 
+  async notifyJdApproved(job: any, approverName?: string) {
+    const deptId = typeof job.departmentId === 'object' ? job.departmentId?._id?.toString() : job.departmentId?.toString();
+    if (!deptId) return;
+
+    const byStr = approverName ? ` bởi ${approverName}` : '';
+    return this.notifyDepartmentManagers(deptId, {
+      title: 'Yêu cầu tuyển dụng đã được phê duyệt',
+      message: `Yêu cầu tuyển dụng cho vị trí "${job.title}" đã được phê duyệt${byStr}. Tin tuyển dụng đã sẵn sàng triển khai.`,
+      type: NotificationType.JD_APPROVED,
+      category: NotificationCategory.RECRUITMENT,
+      priority: NotificationPriority.HIGH,
+      actionUrl: '/job-description',
+      metadata: {
+        jobId: job._id?.toString(),
+        jobTitle: job.title,
+      },
+    });
+  }
+
+  async notifyJdRejected(job: any, rejectorName?: string) {
+    const deptId = typeof job.departmentId === 'object' ? job.departmentId?._id?.toString() : job.departmentId?.toString();
+    if (!deptId) return;
+
+    const byStr = rejectorName ? ` bởi ${rejectorName}` : '';
+    return this.notifyDepartmentManagers(deptId, {
+      title: 'Yêu cầu tuyển dụng bị từ chối',
+      message: `Yêu cầu tuyển dụng cho vị trí "${job.title}" đã bị từ chối${byStr}. Vui lòng kiểm tra lại thông tin yêu cầu.`,
+      type: NotificationType.JD_REJECTED,
+      category: NotificationCategory.RECRUITMENT,
+      priority: NotificationPriority.HIGH,
+      actionUrl: '/job-description',
+      metadata: {
+        jobId: job._id?.toString(),
+        jobTitle: job.title,
+      },
+    });
+  }
+
+  async notifyInterviewScheduled(
+    interviewerId: string,
+    params: {
+      candidateName: string;
+      jobTitle: string;
+      dateFormatted: string;
+      timeRange: string;
+      interviewId: string;
+    },
+  ) {
+    if (!interviewerId) return;
+
+    return this.create({
+      recipientId: interviewerId,
+      title: 'Lịch phỏng vấn mới được phân công',
+      message: `Bạn được phân công phỏng vấn ứng viên ${params.candidateName} (Vị trí: "${params.jobTitle}") vào ngày ${params.dateFormatted} (${params.timeRange}).`,
+      type: NotificationType.INTERVIEW_SCHEDULED,
+      category: NotificationCategory.INTERVIEW,
+      priority: NotificationPriority.HIGH,
+      actionUrl: '/interviews',
+      metadata: {
+        interviewId: params.interviewId,
+        candidateName: params.candidateName,
+        jobTitle: params.jobTitle,
+      },
+    });
+  }
+
+  async notifyDeptScheduleRequested(
+    departmentId: string,
+    params: {
+      candidateName: string;
+      jobTitle: string;
+      applicationId: string;
+      interviewId?: string;
+    },
+  ) {
+    return this.notifyDepartmentManagers(departmentId, {
+      title: 'Yêu cầu phòng ban lên lịch phỏng vấn',
+      message: `HR yêu cầu phòng ban lên lịch phỏng vấn và chọn Người phỏng vấn cho ứng viên ${params.candidateName} (Vị trí: "${params.jobTitle}").`,
+      type: NotificationType.INTERVIEW_REQUEST_DEPT_SCHEDULE,
+      category: NotificationCategory.INTERVIEW,
+      priority: NotificationPriority.HIGH,
+      actionUrl: '/interviews',
+      metadata: {
+        applicationId: params.applicationId,
+        interviewId: params.interviewId,
+        candidateName: params.candidateName,
+        jobTitle: params.jobTitle,
+      },
+    });
+  }
+
+  async notifyInterviewSubmittedForApproval(params: {
+    candidateName: string;
+    jobTitle: string;
+    dateFormatted: string;
+    timeRange: string;
+    interviewId: string;
+  }) {
+    return this.notifyHrAdmins({
+      title: 'Đề xuất lịch phỏng vấn chờ duyệt',
+      message: `Trưởng phòng đã đề xuất lịch phỏng vấn cho ứng viên ${params.candidateName} (Vị trí: "${params.jobTitle}") vào lúc ${params.timeRange}, ngày ${params.dateFormatted}. Vui lòng kiểm tra và duyệt.`,
+      type: NotificationType.INTERVIEW_DEPT_SUBMITTED,
+      category: NotificationCategory.INTERVIEW,
+      priority: NotificationPriority.HIGH,
+      actionUrl: '/interviews',
+      metadata: {
+        interviewId: params.interviewId,
+        candidateName: params.candidateName,
+        jobTitle: params.jobTitle,
+      },
+    });
+  }
+
+  async notifyInterviewApproved(params: {
+    candidateName: string;
+    jobTitle: string;
+    dateFormatted: string;
+    timeRange: string;
+    interviewId: string;
+    interviewerId?: string;
+    departmentId?: string;
+  }) {
+    const promises: Promise<any>[] = [];
+
+    // Báo Interviewer
+    if (params.interviewerId) {
+      promises.push(
+        this.create({
+          recipientId: params.interviewerId,
+          title: 'Lịch phỏng vấn đã được phê duyệt',
+          message: `Lịch phỏng vấn ứng viên ${params.candidateName} (Vị trí: "${params.jobTitle}") vào lúc ${params.timeRange}, ngày ${params.dateFormatted} đã được duyệt chính thức.`,
+          type: NotificationType.INTERVIEW_APPROVED,
+          category: NotificationCategory.INTERVIEW,
+          priority: NotificationPriority.HIGH,
+          actionUrl: '/interviews',
+          metadata: {
+            interviewId: params.interviewId,
+          },
+        }),
+      );
+    }
+
+    // Báo Trưởng phòng
+    if (params.departmentId) {
+      promises.push(
+        this.notifyDepartmentManagers(params.departmentId, {
+          title: 'Lịch phỏng vấn đã được HR phê duyệt',
+          message: `Lịch phỏng vấn ứng viên ${params.candidateName} (Vị trí: "${params.jobTitle}") vào lúc ${params.timeRange}, ngày ${params.dateFormatted} đã được HR duyệt.`,
+          type: NotificationType.INTERVIEW_APPROVED,
+          category: NotificationCategory.INTERVIEW,
+          priority: NotificationPriority.MEDIUM,
+          actionUrl: '/interviews',
+          metadata: {
+            interviewId: params.interviewId,
+          },
+        }),
+      );
+    }
+
+    return Promise.all(promises);
+  }
+
+  async notifyInterviewCandidateResponse(params: {
+    candidateName: string;
+    jobTitle: string;
+    statusText: string;
+    interviewId: string;
+    interviewerId?: string;
+  }) {
+    // Báo HR Admins
+    await this.notifyHrAdmins({
+      title: 'Phản hồi lịch phỏng vấn từ ứng viên',
+      message: `Ứng viên ${params.candidateName} (Vị trí: "${params.jobTitle}") đã ${params.statusText} lịch phỏng vấn.`,
+      type: NotificationType.INTERVIEW_CONFIRMATION,
+      category: NotificationCategory.INTERVIEW,
+      priority: NotificationPriority.HIGH,
+      actionUrl: '/interviews',
+      metadata: {
+        interviewId: params.interviewId,
+      },
+    });
+
+    // Báo Interviewer
+    if (params.interviewerId) {
+      await this.create({
+        recipientId: params.interviewerId,
+        title: 'Phản hồi lịch phỏng vấn từ ứng viên',
+        message: `Ứng viên ${params.candidateName} (Vị trí: "${params.jobTitle}") đã ${params.statusText} lịch phỏng vấn.`,
+        type: NotificationType.INTERVIEW_CONFIRMATION,
+        category: NotificationCategory.INTERVIEW,
+        priority: NotificationPriority.HIGH,
+        actionUrl: '/interviews',
+        metadata: {
+          interviewId: params.interviewId,
+        },
+      });
+    }
+  }
+
+  async notifyCandidateInterviewScheduled(
+    candidateUserId: string,
+    params: {
+      jobTitle: string;
+      dateFormatted: string;
+      timeRange: string;
+      interviewId: string;
+    },
+  ) {
+    if (!candidateUserId) return;
+
+    return this.create({
+      recipientId: candidateUserId,
+      title: 'Lịch phỏng vấn mới',
+      message: `Bạn có buổi phỏng vấn cho vị trí "${params.jobTitle}" vào lúc ${params.timeRange}, ngày ${params.dateFormatted}. Vui lòng kiểm tra và xác nhận tham gia.`,
+      type: NotificationType.INTERVIEW_SCHEDULED,
+      category: NotificationCategory.INTERVIEW,
+      priority: NotificationPriority.HIGH,
+      actionUrl: '/user/applications',
+      metadata: {
+        interviewId: params.interviewId,
+        jobTitle: params.jobTitle,
+      },
+    });
+  }
+
+  async notifyCandidateInterviewRescheduled(
+    candidateUserId: string,
+    params: {
+      jobTitle: string;
+      dateFormatted: string;
+      timeRange: string;
+      interviewId: string;
+    },
+  ) {
+    if (!candidateUserId) return;
+
+    return this.create({
+      recipientId: candidateUserId,
+      title: 'Thay đổi thời gian phỏng vấn',
+      message: `Lịch phỏng vấn vị trí "${params.jobTitle}" của bạn đã được cập nhật sang lúc ${params.timeRange}, ngày ${params.dateFormatted}. Vui lòng kiểm tra và xác nhận lại.`,
+      type: NotificationType.INTERVIEW_RESCHEDULED,
+      category: NotificationCategory.INTERVIEW,
+      priority: NotificationPriority.HIGH,
+      actionUrl: '/user/applications',
+      metadata: {
+        interviewId: params.interviewId,
+        jobTitle: params.jobTitle,
+      },
+    });
+  }
+
+  async notifyCandidateStageChanged(
+    candidateUserId: string,
+    params: {
+      jobTitle: string;
+      stageName: string;
+      applicationId: string;
+    },
+  ) {
+    if (!candidateUserId) return;
+
+    return this.create({
+      recipientId: candidateUserId,
+      title: 'Cập nhật tiến trình tuyển dụng',
+      message: `Chúc mừng bạn! Hồ sơ ứng tuyển vị trí "${params.jobTitle}" đã được chuyển sang giai đoạn: "${params.stageName}".`,
+      type: NotificationType.STAGE_CHANGED,
+      category: NotificationCategory.CANDIDATE,
+      priority: NotificationPriority.HIGH,
+      actionUrl: '/user/applications',
+      metadata: {
+        applicationId: params.applicationId,
+        jobTitle: params.jobTitle,
+        stageName: params.stageName,
+      },
+    });
+  }
+
   async getUserNotifications(userId: string, query: QueryNotificationDto) {
     if (!Types.ObjectId.isValid(userId)) {
       throw new BadRequestException('User ID không hợp lệ');

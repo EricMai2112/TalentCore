@@ -10,6 +10,8 @@ import { User, UserSchema } from '../users/schemas/user.schema';
 import { InterviewService } from './services/interview.service';
 import { InterviewController } from './controllers/interview.controller';
 
+import { NotificationsModule } from '../notifications/notifications.module';
+
 @Module({
   imports: [
     MongooseModule.forFeature([
@@ -26,6 +28,7 @@ import { InterviewController } from './controllers/interview.controller';
       }),
       inject: [ConfigService],
     }),
+    NotificationsModule,
   ],
   controllers: [InterviewController],
   providers: [InterviewService],
