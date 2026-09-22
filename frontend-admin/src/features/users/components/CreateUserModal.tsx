@@ -201,12 +201,14 @@ export default function CreateUserModal({
             />
           </div>
 
-          {/* Ghi chú mật khẩu mặc định */}
-          <p className="text-xs text-slate-500 bg-slate-50 border border-slate-100 rounded-xl px-4 py-2.5">
-            Mật khẩu mặc định sẽ là{" "}
-            <span className="font-bold text-slate-700 font-mono">111111</span>.
-            Người dùng nên đổi mật khẩu sau khi đăng nhập lần đầu.
-          </p>
+          <div className="text-xs text-slate-600 bg-blue-50/60 border border-blue-100/80 rounded-2xl p-3.5 space-y-1">
+            <div className="flex items-center gap-1.5 font-semibold text-blue-900">
+              <span>📧 Tự động gửi email chào mừng</span>
+            </div>
+            <p className="text-[11px] text-slate-500 leading-relaxed">
+              Mật khẩu khởi tạo là <span className="font-bold text-slate-800 font-mono">111111</span>. Hệ thống sẽ tự động gửi email thông tin tài khoản và đường dẫn đăng nhập tới địa chỉ email trên qua AWS SES trước khi kích hoạt.
+            </p>
+          </div>
         </form>
 
         {/* Footer */}
