@@ -10,15 +10,12 @@ interface ApplicationCardItemProps {
 
 export function ApplicationCardItem({ app }: ApplicationCardItemProps) {
   const job = app.jobDescriptionId
-  const deptName =
-    typeof job?.departmentId === 'object' ? job?.departmentId?.name : 'Engineering'
+  const deptName = typeof job?.departmentId === 'object' ? job?.departmentId?.name : 'Engineering'
   const location = job?.location || 'Hồ Chí Minh'
   const salary = job?.salaryRange || '$2500-$4000'
 
   const activeIdx =
-    app.currentStageIndex !== undefined && app.currentStageIndex >= 0
-      ? app.currentStageIndex
-      : 0
+    app.currentStageIndex !== undefined && app.currentStageIndex >= 0 ? app.currentStageIndex : 0
 
   const statusLower = ((app as any).status || '').toLowerCase()
   const reviewStatusLower = ((app as any).reviewStatus || '').toLowerCase()
@@ -94,7 +91,9 @@ export function ApplicationCardItem({ app }: ApplicationCardItemProps) {
   }
 
   const step1Date = formatDate(app.appliedAt)
-  const rejectedDate = formatDate((app as any).rejectedAt || (app as any).updatedAt || app.appliedAt)
+  const rejectedDate = formatDate(
+    (app as any).rejectedAt || (app as any).updatedAt || app.appliedAt
+  )
 
   // Step 2 ("NTD đã xem"): reached if activeIdx >= 1 or if moved past initial stage
   const isStep2Active =
@@ -139,9 +138,6 @@ export function ApplicationCardItem({ app }: ApplicationCardItemProps) {
             </div>
           </div>
         </div>
-
-        {/* Top Right Stage Pill */}
-        <div>{getStageBadge(app.stageName, app.stageColor)}</div>
       </div>
 
       {/* 3-Step CV Stepper Progress Bar */}
@@ -172,7 +168,9 @@ export function ApplicationCardItem({ app }: ApplicationCardItemProps) {
                 <Clock size={15} />
               </div>
             )}
-            <span className={`text-xs font-bold ${isStep2Active ? 'text-slate-800' : 'text-slate-400'}`}>
+            <span
+              className={`text-xs font-bold ${isStep2Active ? 'text-slate-800' : 'text-slate-400'}`}
+            >
               NTD đã xem
             </span>
           </div>
@@ -221,8 +219,7 @@ export function ApplicationCardItem({ app }: ApplicationCardItemProps) {
       <div className="flex flex-wrap items-center justify-between gap-3 pt-4 text-xs border-t border-slate-100">
         <div className="flex items-center gap-4 font-medium text-slate-500">
           <span>
-            Ngày ứng tuyển:{' '}
-            <strong className="text-slate-700">{step1Date}</strong>
+            Ngày ứng tuyển: <strong className="text-slate-700">{step1Date}</strong>
           </span>
         </div>
 

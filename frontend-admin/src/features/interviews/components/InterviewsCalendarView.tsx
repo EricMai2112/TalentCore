@@ -1,6 +1,7 @@
 'use client'
 
 import React, { useState } from 'react'
+import { useRouter } from 'next/navigation'
 import { ChevronLeft, ChevronRight, Clock, Calendar as CalendarIcon } from 'lucide-react'
 import InterviewPopoverTooltip from './InterviewPopoverTooltip'
 import { InterviewItem, InterviewStatus, InterviewResult } from '../types/interview.types'
@@ -21,7 +22,7 @@ interface InterviewsCalendarViewProps {
       y: number
     } | null>
   >
-  onOpenStatusModal: (interview: InterviewItem) => void
+  onOpenStatusModal?: (interview: InterviewItem) => void
   formatDate: (dateStr?: string) => string
   getStatusBadge: (status: InterviewStatus, confirmationStatus?: string) => React.ReactNode
   getResultBadge: (result: InterviewResult) => React.ReactNode
@@ -38,6 +39,8 @@ export default function InterviewsCalendarView({
   getStatusBadge,
   getResultBadge
 }: InterviewsCalendarViewProps) {
+  const router = useRouter()
+
   // Selected date state for weekly navigation (default today)
   const [selectedDate, setSelectedDate] = useState<Date>(new Date())
 
@@ -381,7 +384,7 @@ export default function InterviewsCalendarView({
                 return (
                   <div
                     key={item._id}
-                    onClick={() => onOpenStatusModal(item)}
+                    onClick={() => router.push(`/interviews/${item._id}/evaluate`)}
                     className="flex gap-2.5 group cursor-pointer relative pb-3"
                   >
                     {/* Left Timeline Line & Dot Column */}
@@ -596,7 +599,7 @@ export default function InterviewsCalendarView({
                               })
                             }}
                             onMouseLeave={() => setHoveredInterview(null)}
-                            onClick={() => onOpenStatusModal(event)}
+                            onClick={() => router.push(`/interviews/${event._id}/evaluate`)}
                             className={`absolute inset-x-1 p-1 px-1.5 rounded-lg text-[10px] font-bold transition-all cursor-pointer overflow-hidden z-10 flex flex-col justify-center gap-0.5 border ${getEventBgByStatus(
                               event.status
                             )}`}

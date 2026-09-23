@@ -22,7 +22,6 @@ import { Department } from '@/src/features/departments/types/department.types'
 import { useAuth } from '@/src/providers/AuthProvider'
 import { UserRole } from '@/src/features/users/types/user.types'
 import CandidateDetailModal from './CandidateDetailModal'
-import CandidateNotesModal from './CandidateNotesModal'
 import CandidateStatCards from './CandidateStatCards'
 import { CustomSelect, CustomInput, CustomPagination, CustomTableContainer, RejectCandidateModal } from '@/src/components/common'
 import { CustomSelectOption } from '@/src/components/common/CustomSelect'
@@ -51,7 +50,6 @@ export default function CandidatesManager() {
 
   // Modals state
   const [detailApp, setDetailApp] = useState<CandidateApplication | null>(null)
-  const [notesApp, setNotesApp] = useState<CandidateApplication | null>(null)
   const [rejectApp, setRejectApp] = useState<CandidateApplication | null>(null)
 
   // Auto dismiss notification toast
@@ -515,19 +513,6 @@ export default function CandidatesManager() {
                           <Eye size={15} />
                         </button>
 
-                        {/* Notes Modal */}
-                        <button
-                          type="button"
-                          onClick={() => setNotesApp(app)}
-                          className="p-1.5 rounded-xl border border-white/80 bg-white/60 hover:bg-white text-slate-500 hover:text-[#3B82F6] shadow-2xs transition-all cursor-pointer relative"
-                          title="Ghi chú ứng viên"
-                        >
-                          <FileText size={15} />
-                          {app.notes && app.notes.length > 0 && (
-                            <span className="absolute w-2 h-2 bg-[#3B82F6] rounded-full top-1 right-1" />
-                          )}
-                        </button>
-
                         {/* Reject Modal Trigger */}
                         <button
                           type="button"
@@ -549,20 +534,6 @@ export default function CandidatesManager() {
       {/* Candidate Detail Side Drawer Modal */}
       {detailApp && (
         <CandidateDetailModal application={detailApp} onClose={() => setDetailApp(null)} />
-      )}
-
-      {/* Candidate Notes Modal */}
-      {notesApp && (
-        <CandidateNotesModal
-          application={notesApp}
-          onClose={() => setNotesApp(null)}
-          onNotesUpdated={(updatedApp) => {
-            setApplications((prev) =>
-              prev.map((item) => (item._id === updatedApp._id ? updatedApp : item))
-            )
-            setNotesApp(updatedApp)
-          }}
-        />
       )}
 
       {/* Reject Confirmation Modal */}

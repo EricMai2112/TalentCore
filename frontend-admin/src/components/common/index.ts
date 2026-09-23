@@ -26,4 +26,6 @@ export { default as CustomActionMenu } from './CustomActionMenu';
 export type { CustomActionMenuProps, CustomActionMenuItem, ActionItemVariant } from './CustomActionMenu';
 
 export { RejectCandidateModal, default as RejectCandidateModalComponent } from './RejectCandidateModal';
-export type { RejectCandidateModalProps } from './RejectCandidateModal';
+export { default as UnsavedChangesModal } from './UnsavedChangesModal';
+export type { UnsavedChangesModalProps } from './UnsavedChangesModal';
+

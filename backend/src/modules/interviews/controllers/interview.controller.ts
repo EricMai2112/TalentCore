@@ -7,6 +7,7 @@ import {
   SubmitDeptScheduleDto,
   CandidateCancelDto,
   UpdateInterviewStatusDto,
+  SaveEvaluationDto,
 } from '../dtos/interview.dto';
 import { InterviewConfirmationStatus } from '../schemas/interview.schema';
 
@@ -151,4 +152,35 @@ export class InterviewController {
   async approveCandidateCancellation(@Param('id') id: string) {
     return await this.interviewService.approveCandidateCancellation(id);
   }
+
+  @Get(':id/evaluation')
+  async getEvaluationByInterviewId(@Param('id') id: string) {
+    return await this.interviewService.getEvaluationByInterviewId(id);
+  }
+
+  @Post(':id/evaluation')
+  async saveEvaluation(
+    @Param('id') id: string,
+    @Body() dto: SaveEvaluationDto,
+    @Req() req: any,
+  ) {
+    let userId = 'system';
+    let token = req.cookies?.['accessToken'];
+    if (!token && req.headers.authorization) {
+      const parts = req.headers.authorization.split(' ');
+      if (parts.length === 2 && parts[0] === 'Bearer') {
+        token = parts[1];
+      }
+    }
+    if (token) {
+      try {
+        const payload = this.jwtService.verify(token);
+        userId = payload.sub || payload.id || payload._id || 'system';
+      } catch (e) {
+        // ignore token verify error if default user
+      }
+    }
+    return await this.interviewService.saveEvaluation(id, userId, dto);
+  }
 }
+
