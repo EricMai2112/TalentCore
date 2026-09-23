@@ -15,7 +15,7 @@ import {
   InterviewsFilterToolbar,
   InterviewsListView,
   InterviewsCalendarView,
-  InterviewStatusModal
+  ApproveInterviewCancelModal
 } from './'
 import { RejectCandidateModal } from '@/src/components/common'
 import { InterviewStatCards } from './InterviewStatCards'
@@ -74,14 +74,6 @@ export default function InterviewsManager() {
     y: number
   } | null>(null)
 
-  // State cho Modal Cập nhật trạng thái / Đánh giá
-  const [selectedInterview, setSelectedInterview] = useState<InterviewItem | null>(null)
-  const [isModalOpen, setIsModalOpen] = useState<boolean>(false)
-  const [updateStatusVal, setUpdateStatusVal] = useState<InterviewStatus>(InterviewStatus.COMPLETED)
-  const [updateResultVal, setUpdateResultVal] = useState<InterviewResult>(InterviewResult.PASS)
-  const [feedbackText, setFeedbackText] = useState<string>('')
-  const [isUpdating, setIsUpdating] = useState<boolean>(false)
-
   // State cho Modal Xem chi tiết ứng viên
   const [selectedDetailInterview, setSelectedDetailInterview] = useState<InterviewItem | null>(null)
   const [selectedCandidateApp, setSelectedCandidateApp] = useState<any | null>(null)
@@ -134,6 +126,16 @@ export default function InterviewsManager() {
   const handleRejectDeptCv = (interview: InterviewItem) => {
     setSelectedRejectDeptCvInterview(interview)
     setIsRejectDeptCvModalOpen(true)
+  }
+
+  // State cho Modal HR Duyệt hủy lịch phỏng vấn
+  const [selectedApproveCancelInterview, setSelectedApproveCancelInterview] =
+    useState<InterviewItem | null>(null)
+  const [isApproveCancelModalOpen, setIsApproveCancelModalOpen] = useState<boolean>(false)
+
+  const handleApproveCandidateCancellation = (interview: InterviewItem) => {
+    setSelectedApproveCancelInterview(interview)
+    setIsApproveCancelModalOpen(true)
   }
 
   // Active dropdown action ID
@@ -372,54 +374,6 @@ export default function InterviewsManager() {
     isMatchingTimeTab(item.date, timeTabFilter)
   )
 
-  const handleOpenStatusModal = (interview: InterviewItem) => {
-    setSelectedInterview(interview)
-    setUpdateStatusVal(interview.status || InterviewStatus.COMPLETED)
-    setUpdateResultVal(interview.result || InterviewResult.PASS)
-    setFeedbackText(interview.feedback || '')
-    setIsModalOpen(true)
-    setActiveMenuId(null)
-    setHoveredInterview(null)
-  }
-
-  const handleApproveCandidateCancellation = async (interview: InterviewItem) => {
-    const candName =
-      typeof interview.candidateId === 'object'
-        ? interview.candidateId.fullName || interview.candidateId.name
-        : 'Ứng viên'
-    if (!window.confirm(`Xác nhận hủy lịch phỏng vấn của ứng viên "${candName}"?`)) {
-      return
-    }
-
-    try {
-      await interviewsApi.approveCandidateCancellation(interview._id)
-      fetchInterviews()
-    } catch (err: any) {
-      alert(err?.response?.data?.message || err?.message || 'Lỗi khi xác nhận hủy lịch phỏng vấn')
-    }
-  }
-
-  const handleSaveStatus = async (e: React.FormEvent) => {
-    e.preventDefault()
-    if (!selectedInterview) return
-
-    setIsUpdating(true)
-    try {
-      await interviewsApi.updateStatus(
-        selectedInterview._id,
-        updateStatusVal,
-        updateResultVal,
-        feedbackText
-      )
-      setIsModalOpen(false)
-      fetchInterviews()
-    } catch (err) {
-      console.error('Lỗi cập nhật trạng thái phỏng vấn:', err)
-    } finally {
-      setIsUpdating(false)
-    }
-  }
-
   const formatDate = (dateStr?: string) => {
     if (!dateStr) return '2026-07-28'
     const d = new Date(dateStr)
@@ -535,7 +489,6 @@ export default function InterviewsManager() {
           interviews={filteredInterviews}
           activeMenuId={activeMenuId}
           setActiveMenuId={setActiveMenuId}
-          onOpenStatusModal={handleOpenStatusModal}
           onOpenCandidateDetailModal={handleOpenCandidateDetailModal}
           onApproveCandidateCancellation={handleApproveCandidateCancellation}
           onOpenDeptScheduleModal={handleOpenDeptScheduleModal}
@@ -559,7 +512,6 @@ export default function InterviewsManager() {
           interviews={filteredInterviews}
           hoveredInterview={hoveredInterview}
           setHoveredInterview={setHoveredInterview}
-          onOpenStatusModal={handleOpenStatusModal}
           formatDate={formatDate}
           getStatusBadge={getStatusBadge}
           getResultBadge={getResultBadge}
@@ -582,21 +534,6 @@ export default function InterviewsManager() {
         onSuccess={fetchInterviews}
       />
 
-      {/* Status & Feedback Modal */}
-      <InterviewStatusModal
-        isOpen={isModalOpen}
-        onClose={() => setIsModalOpen(false)}
-        selectedInterview={selectedInterview}
-        updateStatusVal={updateStatusVal}
-        setUpdateStatusVal={setUpdateStatusVal}
-        updateResultVal={updateResultVal}
-        setUpdateResultVal={setUpdateResultVal}
-        feedbackText={feedbackText}
-        setFeedbackText={setFeedbackText}
-        isUpdating={isUpdating}
-        onSaveStatus={handleSaveStatus}
-      />
-
       {/* Modal Từ chối CV của Trưởng phòng */}
       <RejectCandidateModal
         isOpen={isRejectDeptCvModalOpen}
@@ -608,6 +545,14 @@ export default function InterviewsManager() {
           'Ứng viên'
         }
         jobTitle={selectedRejectDeptCvInterview?.jobDescriptionId?.title || 'Vị trí tuyển dụng'}
+        onSuccess={fetchInterviews}
+      />
+
+      {/* Modal HR Duyệt hủy lịch phỏng vấn */}
+      <ApproveInterviewCancelModal
+        isOpen={isApproveCancelModalOpen}
+        onClose={() => setIsApproveCancelModalOpen(false)}
+        interview={selectedApproveCancelInterview}
         onSuccess={fetchInterviews}
       />
 

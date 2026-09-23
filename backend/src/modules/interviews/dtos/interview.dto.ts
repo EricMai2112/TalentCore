@@ -190,3 +190,52 @@ export class UpdateInterviewStatusDto {
   @IsOptional()
   feedback?: string;
 }
+
+export class CriteriaScoreDto {
+  @IsNotEmpty()
+  @IsString()
+  name: string;
+
+  @IsNotEmpty()
+  @IsString()
+  category: string;
+
+  @IsNotEmpty()
+  score: number;
+
+  @IsOptional()
+  weight?: number;
+
+  @IsOptional()
+  @IsString()
+  comment?: string;
+}
+
+export class SaveEvaluationDto {
+  @IsOptional()
+  @IsBoolean()
+  isDraft?: boolean;
+
+  @IsOptional()
+  criteriaScores?: CriteriaScoreDto[];
+
+  @IsOptional()
+  overallScore?: number;
+
+  @IsOptional()
+  @IsString()
+  strengths?: string;
+
+  @IsOptional()
+  @IsString()
+  weaknesses?: string;
+
+  @IsOptional()
+  @IsString()
+  recommendation?: string;
+
+  @IsOptional()
+  @IsString()
+  generalFeedback?: string;
+}
+

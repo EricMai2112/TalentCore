@@ -2,17 +2,19 @@ import { Injectable, NotFoundException, BadRequestException } from '@nestjs/comm
 import { InjectModel } from '@nestjs/mongoose';
 import { Model, Types } from 'mongoose';
 import { Interview, InterviewDocument, LocationType, InterviewStatus, InterviewResult, InterviewConfirmationStatus } from '../schemas/interview.schema';
+import { InterviewEvaluation, InterviewEvaluationDocument, RecommendationType } from '../schemas/interview-evaluation.schema';
 import { Application, ApplicationDocument, ApplicationStatus } from '../../applications/schemas/application.schema';
 import { JobDescription, JobDescriptionDocument } from '../../job-description/schemas/job-description.schema';
 import { Candidate, CandidateDocument } from '../../candidates/schema/candidate.schema';
 import { User, UserDocument, UserRole } from '../../users/schemas/user.schema';
-import { CreateInterviewDto, UpdateInterviewDto } from '../dtos/interview.dto';
+import { CreateInterviewDto, UpdateInterviewDto, SaveEvaluationDto } from '../dtos/interview.dto';
 import { NotificationsService } from '../../notifications/services/notifications.service';
 
 @Injectable()
 export class InterviewService {
   constructor(
     @InjectModel(Interview.name) private interviewModel: Model<InterviewDocument>,
+    @InjectModel(InterviewEvaluation.name) private evaluationModel: Model<InterviewEvaluationDocument>,
     @InjectModel(Application.name) private applicationModel: Model<ApplicationDocument>,
     @InjectModel(JobDescription.name) private jobDescriptionModel: Model<JobDescriptionDocument>,
     @InjectModel(Candidate.name) private candidateModel: Model<CandidateDocument>,
@@ -952,4 +954,84 @@ export class InterviewService {
     interview.confirmationStatus = InterviewConfirmationStatus.CANCELLED;
     return await interview.save();
   }
+
+  /**
+   * Lấy kết quả đánh giá phỏng vấn theo Interview ID
+   */
+  async getEvaluationByInterviewId(interviewId: string) {
+    const evaluation = await this.evaluationModel
+      .findOne({ interviewId: new Types.ObjectId(interviewId) })
+      .populate('interviewerId', 'name email avatar role')
+      .exec();
+    return evaluation;
+  }
+
+  /**
+   * Lưu hoặc cập nhật bản đánh giá ứng viên (Lưu nháp / Gửi chính thức)
+   */
+  async saveEvaluation(interviewId: string, interviewerId: string, dto: SaveEvaluationDto) {
+    const interview = await this.interviewModel.findById(interviewId).exec();
+    if (!interview) {
+      throw new NotFoundException('Không tìm thấy lịch phỏng vấn.');
+    }
+
+    let evaluation = await this.evaluationModel.findOne({
+      interviewId: new Types.ObjectId(interviewId),
+    }).exec();
+
+    const isDraft = dto.isDraft ?? true;
+
+    if (!evaluation) {
+      evaluation = new this.evaluationModel({
+        interviewId: interview._id,
+        applicationId: interview.applicationId,
+        candidateId: interview.candidateId,
+        jobDescriptionId: interview.jobDescriptionId,
+        interviewerId: new Types.ObjectId(interviewerId),
+        isDraft,
+      });
+    }
+
+    evaluation.isDraft = isDraft;
+    if (dto.criteriaScores) {
+      evaluation.criteriaScores = dto.criteriaScores as any;
+    }
+    if (dto.overallScore !== undefined) {
+      evaluation.overallScore = dto.overallScore;
+    }
+    if (dto.strengths !== undefined) {
+      evaluation.strengths = dto.strengths;
+    }
+    if (dto.weaknesses !== undefined) {
+      evaluation.weaknesses = dto.weaknesses;
+    }
+    if (dto.recommendation !== undefined) {
+      evaluation.recommendation = dto.recommendation as RecommendationType;
+    }
+    if (dto.generalFeedback !== undefined) {
+      evaluation.generalFeedback = dto.generalFeedback;
+    }
+
+    const savedEvaluation = await evaluation.save();
+
+    // Nếu không phải bản nháp (nộp đánh giá chính thức), tự động cập nhật trạng thái lịch phỏng vấn
+    if (!isDraft) {
+      interview.status = InterviewStatus.COMPLETED;
+      if (
+        dto.recommendation === RecommendationType.STRONG_HIRE ||
+        dto.recommendation === RecommendationType.HIRE
+      ) {
+        interview.result = InterviewResult.PASS;
+      } else if (dto.recommendation === RecommendationType.NO_HIRE) {
+        interview.result = InterviewResult.FAIL;
+      }
+      if (dto.generalFeedback) {
+        interview.feedback = dto.generalFeedback;
+      }
+      await interview.save();
+    }
+
+    return savedEvaluation;
+  }
 }
+

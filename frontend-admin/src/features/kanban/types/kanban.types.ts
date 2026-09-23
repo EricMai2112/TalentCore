@@ -124,6 +124,9 @@ export interface KanbanApplication {
   stageName?: string;
   reviewStatus?: "Pending" | "Approved" | "Rejected" | string;
   aiEvaluation?: AiEvaluationData;
+  interviewStatus?: string;
+  interviewConfirmationStatus?: string;
+  interviewCancelReason?: string;
 }
 
 export interface KanbanFilterParams {

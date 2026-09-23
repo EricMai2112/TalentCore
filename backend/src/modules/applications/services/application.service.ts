@@ -7,6 +7,7 @@ import { JobDescription, JobDescriptionDocument, JobStatus } from 'src/modules/j
 import { PipelineTemplate, PipelineTemplateDocument } from 'src/modules/pipeline-template/schemas/pipeline-template.schema';
 import { AiMatchingProcessor } from '../processors/ai-matching.processor';
 import { AiEvaluation, AiEvaluationDocument } from '../schemas/ai-evaluation.schema';
+import { Interview, InterviewDocument } from 'src/modules/interviews/schemas/interview.schema';
 import { NotificationsService } from '../../notifications/services/notifications.service';
 import {
   NotificationType,
@@ -33,6 +34,9 @@ export class ApplicationService {
 
     @InjectModel(AiEvaluation.name)
     private readonly aiEvaluationModel: Model<AiEvaluationDocument>,
+
+    @InjectModel(Interview.name)
+    private readonly interviewModel: Model<InterviewDocument>,
 
     private readonly aiMatchingProcessor: AiMatchingProcessor,
     private readonly notificationsService: NotificationsService,
@@ -175,20 +179,36 @@ export class ApplicationService {
       .lean()
       .exec();
 
-    // Lấy thông tin AI Evaluation gắn vào từng Application
+    // Lấy thông tin AI Evaluation & Lịch phỏng vấn gắn vào từng Application
     const appIds = applications.map((app) => app._id);
-    const evaluations = await this.aiEvaluationModel
-      .find({ applicationId: { $in: appIds } })
-      .lean()
-      .exec();
+    const [evaluations, interviews] = await Promise.all([
+      this.aiEvaluationModel
+        .find({ applicationId: { $in: appIds } })
+        .lean()
+        .exec(),
+      this.interviewModel
+        .find({ applicationId: { $in: appIds } })
+        .sort({ createdAt: -1 })
+        .lean()
+        .exec(),
+    ]);
 
     const evalMap = new Map<string, any>();
     evaluations.forEach((item) => {
       evalMap.set(item.applicationId.toString(), item);
     });
 
+    const interviewMap = new Map<string, any>();
+    interviews.forEach((inv) => {
+      const key = inv.applicationId.toString();
+      if (!interviewMap.has(key)) {
+        interviewMap.set(key, inv);
+      }
+    });
+
     let filtered = applications.map((app: any) => {
       const aiEval = evalMap.get(app._id.toString());
+      const inv = interviewMap.get(app._id.toString());
       const job = app.jobDescriptionId as any;
       const pipeline = job?.pipelineTemplateId;
       const currentStage = pipeline?.stages?.find(
@@ -204,6 +224,9 @@ export class ApplicationService {
         evidenceStrengthScore: aiEval?.evidenceStrengthScore ?? 0,
         isMissingMandatory: Boolean(aiEval?.isMissingMandatory),
         aiEvaluation: aiEval || null,
+        interviewStatus: inv?.status || null,
+        interviewConfirmationStatus: inv?.confirmationStatus || null,
+        interviewCancelReason: inv?.cancelReason || null,
       };
     });
 

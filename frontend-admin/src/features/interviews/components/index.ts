@@ -4,7 +4,7 @@ export { default as InterviewCard } from './InterviewCard';
 export { default as InterviewsListView } from './InterviewsListView';
 export { default as InterviewsCalendarView } from './InterviewsCalendarView';
 export { default as InterviewPopoverTooltip } from './InterviewPopoverTooltip';
-export { default as InterviewStatusModal } from './InterviewStatusModal';
 export { DeptScheduleFormModal } from './DeptScheduleFormModal';
 export { HrApproveScheduleModal } from './HrApproveScheduleModal';
+export { ApproveInterviewCancelModal } from './ApproveInterviewCancelModal';
 export { default as InterviewForm } from './InterviewForm';

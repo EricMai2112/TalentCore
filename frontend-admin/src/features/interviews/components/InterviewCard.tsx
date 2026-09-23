@@ -30,7 +30,7 @@ import { CustomActionMenu } from '@/src/components/common'
 interface InterviewCardProps {
   item: InterviewItem
   index?: number
-  onOpenStatusModal: (interview: InterviewItem) => void
+  onOpenStatusModal?: (interview: InterviewItem) => void
   onOpenCandidateDetailModal?: (interview: InterviewItem) => void
   onApproveCandidateCancellation?: (interview: InterviewItem) => void
   onOpenDeptScheduleModal?: (interview: InterviewItem) => void
@@ -277,15 +277,15 @@ export default function InterviewCard({
                 label: 'Duyệt hủy lịch phỏng vấn',
                 icon: <AlertTriangle size={14} />,
                 variant: 'danger',
-                hidden: !isCancelRequested || !onApproveCandidateCancellation,
+                hidden: !isHrAdmin || !isCancelRequested || !onApproveCandidateCancellation,
                 onClick: () => onApproveCandidateCancellation?.(item)
               },
               {
-                id: 'status_update',
-                label: 'Cập nhật & Đánh giá',
+                id: 'evaluate',
+                label: 'Đánh giá phỏng vấn',
                 icon: <MessageSquare size={14} />,
                 variant: 'primary',
-                onClick: () => onOpenStatusModal(item)
+                href: `/interviews/${item._id}/evaluate`
               }
             ]}
           />

@@ -36,7 +36,14 @@ export default function CandidateKanbanCard({
     return application.status === "REJECTED" || (application as any).reviewStatus === "Rejected";
   }, [application.status, (application as any).reviewStatus]);
 
-  // dnd-kit sortable hook - disabled if rejected
+  const isInterviewCancelled = useMemo(() => {
+    return (
+      application.interviewConfirmationStatus === "CANCELLED" ||
+      application.interviewStatus === "CANCELLED"
+    );
+  }, [application.interviewConfirmationStatus, application.interviewStatus]);
+
+  // dnd-kit sortable hook - disabled if rejected or interview cancelled
   const {
     attributes,
     listeners,
@@ -46,7 +53,7 @@ export default function CandidateKanbanCard({
     isDragging,
   } = useSortable({
     id: application._id,
-    disabled: isRejected,
+    disabled: isRejected || isInterviewCancelled,
   });
 
   const style = {
@@ -82,13 +89,13 @@ export default function CandidateKanbanCard({
   const hasScore = application.aiFitScore !== null && application.aiFitScore !== undefined;
   const aiScore = application.aiFitScore ?? 0;
 
-  // Card accent color matching Kanban Stage Color (or gray if rejected)
+  // Card accent color matching Kanban Stage Color (or rose red if rejected or interview cancelled)
   const cardColor = useMemo(() => {
-    if (isRejected) return "#cbd5e1";
+    if (isRejected || isInterviewCancelled) return "#f43f5e";
     if (stageColor) return stageColor;
     const found = stages.find((s) => s._id === application.currentStageId);
     return found?.color || "#6366f1";
-  }, [isRejected, stageColor, stages, application.currentStageId]);
+  }, [isRejected, isInterviewCancelled, stageColor, stages, application.currentStageId]);
 
   // Current, previous, and next stage calculation for Left/Right mover buttons
   const currentStageIndex = useMemo(() => {
@@ -131,12 +138,12 @@ export default function CandidateKanbanCard({
     <div
       ref={setNodeRef}
       style={style}
-      {...(isRejected ? {} : attributes)}
-      {...(isRejected ? {} : listeners)}
+      {...(isRejected || isInterviewCancelled ? {} : attributes)}
+      {...(isRejected || isInterviewCancelled ? {} : listeners)}
       onClick={() => onSelect && onSelect(application)}
       className={`bg-white/75 border rounded-2xl overflow-hidden transition-all flex flex-col justify-between group select-none relative min-h-[168px] ${
-        isRejected
-          ? "opacity-75 bg-slate-100/70 border-rose-200/80 hover:bg-slate-100/90 shadow-2xs cursor-pointer"
+        isRejected || isInterviewCancelled
+          ? "opacity-80 bg-slate-100/70 border-rose-200/90 hover:bg-slate-100/90 shadow-2xs cursor-pointer"
           : isOverlay
           ? "border-indigo-400/80 bg-white/95 backdrop-blur-md shadow-2xl ring-2 ring-indigo-500/30 scale-[1.02] rotate-1 cursor-grabbing"
           : "hover:bg-white/95 backdrop-blur-sm border-slate-200/60 hover:border-slate-300 shadow-2xs hover:shadow-md cursor-grab active:cursor-grabbing"
@@ -163,23 +170,30 @@ export default function CandidateKanbanCard({
               <div className="flex items-center gap-1.5 flex-wrap">
                 <h4
                   className={`text-[14px] font-black truncate leading-snug transition-colors ${
-                    isRejected ? "text-slate-600 line-through decoration-slate-400" : "text-gray-900 group-hover:text-indigo-600"
+                    isRejected || isInterviewCancelled ? "text-slate-600 line-through decoration-slate-400" : "text-gray-900 group-hover:text-indigo-600"
                   }`}
                   title={name}
                 >
                   {name}
                 </h4>
-                {isRejected && (
+                {isInterviewCancelled ? (
+                  <span
+                    className="px-2 py-0.5 rounded-full bg-rose-100 text-rose-700 border border-rose-200/90 text-[10px] font-extrabold shrink-0"
+                    title={application.interviewCancelReason ? `Lý do hủy lịch: ${application.interviewCancelReason}` : "Lịch phỏng vấn đã bị hủy"}
+                  >
+                    Đã hủy lịch
+                  </span>
+                ) : isRejected ? (
                   <span
                     className="px-2 py-0.5 rounded-full bg-rose-100 text-rose-600 border border-rose-200 text-[10px] font-extrabold shrink-0"
                     title={application.rejectReason ? `Lý do từ chối: ${application.rejectReason}` : "Hồ sơ đã bị từ chối"}
                   >
                     Đã từ chối
                   </span>
-                )}
+                ) : null}
               </div>
               <div className="flex items-center gap-1.5 text-xs text-gray-500 pt-0.5 min-w-0">
-                <Briefcase size={12} className={isRejected ? "text-slate-400 shrink-0" : "text-indigo-500 shrink-0"} />
+                <Briefcase size={12} className={isRejected || isInterviewCancelled ? "text-slate-400 shrink-0" : "text-indigo-500 shrink-0"} />
                 <span
                   className="truncate font-semibold text-slate-600 text-[11.5px]"
                   title={job?.title || "Vị trí tuyển dụng"}
@@ -191,7 +205,7 @@ export default function CandidateKanbanCard({
           </div>
 
           <div className="flex items-center gap-1.5 shrink-0">
-            {!isRejected && onRejectCandidate && (
+            {!isRejected && !isInterviewCancelled && onRejectCandidate && (
               <button
                 type="button"
                 onClick={(e) => {
@@ -299,7 +313,7 @@ export default function CandidateKanbanCard({
           </div>
         </div>
 
-        {/* Bottom Footer: Stage Navigation Controls (Disabled if Rejected) */}
+        {/* Bottom Footer: Stage Navigation Controls (Disabled if Rejected or Interview Cancelled) */}
         <div
           className="pt-2.5 border-t border-slate-100 flex items-center gap-2 justify-between w-full"
           onClick={(e) => e.stopPropagation()}
@@ -307,17 +321,17 @@ export default function CandidateKanbanCard({
           {/* Left Arrow Button */}
           <button
             type="button"
-            disabled={!prevStage || isRejected}
+            disabled={!prevStage || isRejected || isInterviewCancelled}
             onClick={(e) => {
               e.stopPropagation();
-              if (prevStage && !isRejected) onMoveStage && onMoveStage(application._id, prevStage._id!);
+              if (prevStage && !isRejected && !isInterviewCancelled) onMoveStage && onMoveStage(application._id, prevStage._id!);
             }}
             className={`w-8 h-8 rounded-xl border flex items-center justify-center transition-all duration-150 shrink-0 ${
-              !prevStage || isRejected
+              !prevStage || isRejected || isInterviewCancelled
                 ? "bg-slate-50 text-slate-300 border-slate-200/60 cursor-not-allowed opacity-35"
                 : "bg-indigo-50/80 hover:bg-indigo-600 text-indigo-600 hover:text-white border-indigo-200/70 hover:border-indigo-600 shadow-2xs hover:shadow-xs active:scale-90 cursor-pointer"
             }`}
-            title={isRejected ? "Không thể chuyển giai đoạn hồ sơ đã từ chối" : prevStage ? `Lùi về: ${prevStage.name}` : "Đang ở giai đoạn đầu tiên"}
+            title={isInterviewCancelled ? "Không thể chuyển giai đoạn khi lịch phỏng vấn đã bị hủy" : isRejected ? "Không thể chuyển giai đoạn hồ sơ đã từ chối" : prevStage ? `Lùi về: ${prevStage.name}` : "Đang ở giai đoạn đầu tiên"}
           >
             <ChevronLeft size={16} strokeWidth={2.4} />
           </button>
@@ -326,10 +340,10 @@ export default function CandidateKanbanCard({
           <div className="flex-1 min-w-0" onClick={(e) => e.stopPropagation()}>
             <CustomSelect
               size="sm"
-              disabled={isRejected}
+              disabled={isRejected || isInterviewCancelled}
               value={application.currentStageId || ""}
               onChange={(val) => {
-                if (val && val !== application.currentStageId && !isRejected) {
+                if (val && val !== application.currentStageId && !isRejected && !isInterviewCancelled) {
                   onMoveStage && onMoveStage(application._id, val);
                 }
               }}
@@ -349,17 +363,17 @@ export default function CandidateKanbanCard({
           {/* Right Arrow Button */}
           <button
             type="button"
-            disabled={!nextStage || isRejected}
+            disabled={!nextStage || isRejected || isInterviewCancelled}
             onClick={(e) => {
               e.stopPropagation();
-              if (nextStage && !isRejected) onMoveStage && onMoveStage(application._id, nextStage._id!);
+              if (nextStage && !isRejected && !isInterviewCancelled) onMoveStage && onMoveStage(application._id, nextStage._id!);
             }}
             className={`w-8 h-8 rounded-xl border flex items-center justify-center transition-all duration-150 shrink-0 ${
-              !nextStage || isRejected
+              !nextStage || isRejected || isInterviewCancelled
                 ? "bg-slate-50 text-slate-300 border-slate-200/60 cursor-not-allowed opacity-35"
                 : "bg-indigo-50/80 hover:bg-indigo-600 text-indigo-600 hover:text-white border-indigo-200/70 hover:border-indigo-600 shadow-2xs hover:shadow-xs active:scale-90 cursor-pointer"
             }`}
-            title={isRejected ? "Không thể chuyển giai đoạn hồ sơ đã từ chối" : nextStage ? `Chuyển tiếp: ${nextStage.name}` : "Đang ở giai đoạn cuối cùng"}
+            title={isInterviewCancelled ? "Không thể chuyển giai đoạn khi lịch phỏng vấn đã bị hủy" : isRejected ? "Không thể chuyển giai đoạn hồ sơ đã từ chối" : nextStage ? `Chuyển tiếp: ${nextStage.name}` : "Đang ở giai đoạn cuối cùng"}
           >
             <ChevronRight size={16} strokeWidth={2.4} />
           </button>

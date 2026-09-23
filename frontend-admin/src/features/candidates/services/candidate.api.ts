@@ -23,16 +23,6 @@ export const candidateApi = {
     return res.data || [];
   },
 
-  addNote: async (
-    applicationId: string,
-    note: { authorName: string; authorRole: string; content: string }
-  ): Promise<CandidateApplication> => {
-    const res = await apiClient.post<ApiResponse<CandidateApplication>>(
-      `/applications/${applicationId}/notes`,
-      note
-    );
-    return res.data;
-  },
 
   rejectApplication: async (
     applicationId: string,

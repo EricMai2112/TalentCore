@@ -12,7 +12,7 @@ interface InterviewsListViewProps {
   interviews: InterviewItem[]
   activeMenuId: string | null
   setActiveMenuId: (id: string | null) => void
-  onOpenStatusModal: (interview: InterviewItem) => void
+  onOpenStatusModal?: (interview: InterviewItem) => void
   onOpenCandidateDetailModal?: (interview: InterviewItem) => void
   onApproveCandidateCancellation?: (interview: InterviewItem) => void
   onOpenDeptScheduleModal?: (interview: InterviewItem) => void

@@ -3,6 +3,7 @@ import { MongooseModule } from '@nestjs/mongoose';
 import { JwtModule } from '@nestjs/jwt';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { Interview, InterviewSchema } from './schemas/interview.schema';
+import { InterviewEvaluation, InterviewEvaluationSchema } from './schemas/interview-evaluation.schema';
 import { Application, ApplicationSchema } from '../applications/schemas/application.schema';
 import { JobDescription, JobDescriptionSchema } from '../job-description/schemas/job-description.schema';
 import { Candidate, CandidateSchema } from '../candidates/schema/candidate.schema';
@@ -16,6 +17,7 @@ import { NotificationsModule } from '../notifications/notifications.module';
   imports: [
     MongooseModule.forFeature([
       { name: Interview.name, schema: InterviewSchema },
+      { name: InterviewEvaluation.name, schema: InterviewEvaluationSchema },
       { name: Application.name, schema: ApplicationSchema },
       { name: JobDescription.name, schema: JobDescriptionSchema },
       { name: Candidate.name, schema: CandidateSchema },
