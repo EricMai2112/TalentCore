@@ -134,6 +134,14 @@ export class SubmitDeptScheduleDto {
   @IsString()
   @IsOptional()
   notes?: string;
+
+  @IsBoolean()
+  @IsOptional()
+  isHrAdmin?: boolean;
+
+  @IsBoolean()
+  @IsOptional()
+  byHr?: boolean;
 }
 
 export class TimeSlotDto {
