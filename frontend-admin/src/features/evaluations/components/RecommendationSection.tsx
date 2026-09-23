@@ -20,31 +20,29 @@ export const RECOMMENDATION_OPTIONS: {
 }[] = [
   {
     type: 'STRONG_HIRE',
-    label: 'Đề xuất nhận ngay (Strong Hire)',
+    label: 'Đề xuất nhận ngay',
     description: 'Ứng viên xuất sắc, đáp ứng vượt trội mọi tiêu chí chuyên môn & văn hóa.',
     activeClass:
       'bg-emerald-500/15 border-emerald-500 ring-2 ring-emerald-500/40 text-emerald-950 font-bold'
   },
   {
     type: 'HIRE',
-    label: 'Đồng ý nhận (Hire)',
+    label: 'Đồng ý nhận',
     description: 'Ứng viên tốt, đạt tiêu chí yêu cầu cho vị trí.',
-    activeClass:
-      'bg-blue-500/15 border-blue-500 ring-2 ring-blue-500/40 text-blue-950 font-bold'
+    activeClass: 'bg-blue-500/15 border-blue-500 ring-2 ring-blue-500/40 text-blue-950 font-bold'
   },
   {
     type: 'CONSIDER',
-    label: 'Cân nhắc thêm (Consider)',
+    label: 'Cân nhắc thêm',
     description: 'Đạt một số tiêu chí nhưng có một vài điểm lưu ý, cần xem xét thêm.',
     activeClass:
       'bg-amber-500/15 border-amber-500 ring-2 ring-amber-500/40 text-amber-950 font-bold'
   },
   {
     type: 'NO_HIRE',
-    label: 'Từ chối (No Hire)',
+    label: 'Từ chối',
     description: 'Ứng viên không phù hợp với yêu cầu tuyển dụng của vị trí.',
-    activeClass:
-      'bg-rose-500/15 border-rose-500 ring-2 ring-rose-500/40 text-rose-950 font-bold'
+    activeClass: 'bg-rose-500/15 border-rose-500 ring-2 ring-rose-500/40 text-rose-950 font-bold'
   }
 ]
 
@@ -55,13 +53,13 @@ export default function RecommendationSection({
   onGeneralFeedbackChange
 }: RecommendationSectionProps) {
   return (
-    <div className="space-y-4 lg:col-span-4 lg:sticky lg:top-20 self-start">
+    <div className="self-start space-y-4 lg:col-span-4 lg:sticky lg:top-1">
       {/* Recommendation Selection Glass Card */}
-      <div className="p-4 sm:p-5 bg-white/40 backdrop-blur-xl border border-white/60 shadow-lg shadow-blue-500/5 rounded-2xl md:rounded-3xl space-y-3">
+      <div className="p-4 space-y-3 border shadow-lg sm:p-5 bg-white/40 backdrop-blur-xl border-white/60 shadow-blue-500/5 rounded-2xl md:rounded-3xl">
         <div>
-          <h3 className="text-base font-extrabold text-slate-900 flex items-center gap-2">
+          <h3 className="flex items-center gap-2 text-base font-extrabold text-slate-900">
             <CheckCircle2 size={16} className="text-emerald-500" />
-            <span>Đề xuất kết quả (Recommendation)</span>
+            <span>Đề xuất kết quả</span>
           </h3>
           <p className="text-xs font-semibold text-slate-500">
             Lựa chọn quyết định tuyển dụng của người phỏng vấn
@@ -83,7 +81,7 @@ export default function RecommendationSection({
                 }`}
               >
                 <div className="flex items-center justify-between">
-                  <span className="text-xs font-extrabold block">{opt.label}</span>
+                  <span className="block text-xs font-extrabold">{opt.label}</span>
                   {isSelected && <CheckCircle2 size={14} className="text-current shrink-0" />}
                 </div>
                 <p className="text-[11px] font-medium opacity-85 leading-tight">
@@ -96,11 +94,11 @@ export default function RecommendationSection({
       </div>
 
       {/* General Feedback & Summary Notes */}
-      <div className="p-4 sm:p-5 bg-white/40 backdrop-blur-xl border border-white/60 shadow-lg shadow-blue-500/5 rounded-2xl md:rounded-3xl space-y-3">
+      <div className="p-4 space-y-3 border shadow-lg sm:p-5 bg-white/40 backdrop-blur-xl border-white/60 shadow-blue-500/5 rounded-2xl md:rounded-3xl">
         <div>
-          <h3 className="text-base font-extrabold text-slate-900 flex items-center gap-2">
+          <h3 className="flex items-center gap-2 text-base font-extrabold text-slate-900">
             <FileText size={16} className="text-[#3B82F6]" />
-            <span>Nhận xét chung (General Feedback)</span>
+            <span>Nhận xét chung</span>
           </h3>
           <p className="text-xs font-semibold text-slate-500">
             Ghi chú hoặc thông điệp gửi tới bộ phận Tuyển dụng / HR
