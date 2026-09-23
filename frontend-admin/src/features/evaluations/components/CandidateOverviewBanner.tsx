@@ -39,15 +39,15 @@ export default function CandidateOverviewBanner({
   }
 
   return (
-    <div className="p-4 sm:p-5 bg-white/40 backdrop-blur-xl border border-white/60 shadow-xl shadow-blue-500/5 rounded-2xl md:rounded-3xl">
-      <div className="grid grid-cols-1 md:grid-cols-12 gap-4 items-center">
+    <div className="p-4 border shadow-xl sm:p-5 bg-white/40 backdrop-blur-xl border-white/60 shadow-blue-500/5 rounded-2xl md:rounded-3xl">
+      <div className="grid items-center grid-cols-1 gap-4 md:grid-cols-12">
         {/* Candidate Profile Avatar & Name */}
         <div className="md:col-span-5 flex items-center gap-3.5">
           <div className="w-12 h-12 rounded-2xl font-black bg-gradient-to-br from-[#3B82F6] to-indigo-600 text-white border-2 border-white shadow-md flex items-center justify-center shrink-0 text-base">
             {getInitials(candName || '')}
           </div>
-          <div className="space-y-1 min-w-0">
-            <h2 className="text-base font-extrabold text-slate-900 truncate">{candName}</h2>
+          <div className="min-w-0 space-y-1">
+            <h2 className="text-base font-extrabold truncate text-slate-900">{candName}</h2>
             <p className="text-xs font-medium text-slate-500 truncate flex items-center gap-1.5">
               <span>{candEmail}</span>
               <span>•</span>
@@ -68,11 +68,10 @@ export default function CandidateOverviewBanner({
 
         {/* Interview Details */}
         <div className="md:col-span-4 border-t md:border-t-0 md:border-l border-slate-200/60 md:pl-4 space-y-1.5 text-xs text-slate-600 font-medium">
-          <div className="flex items-center gap-2 text-slate-800 font-bold">
+          <div className="flex items-center gap-2 font-bold text-slate-800">
             <Calendar size={13} className="text-[#3B82F6]" />
             <span>
-              Ngày:{' '}
-              {interview.date ? new Date(interview.date).toLocaleDateString('vi-VN') : 'N/A'}
+              Ngày: {interview.date ? new Date(interview.date).toLocaleDateString('vi-VN') : 'N/A'}
             </span>
           </div>
           <div className="flex items-center gap-2">
@@ -91,13 +90,13 @@ export default function CandidateOverviewBanner({
 
         {/* Overall Score Redesigned Solid Gradient Glass Card */}
         <div className="md:col-span-3 bg-gradient-to-br from-blue-600 via-indigo-600 to-blue-700 text-white rounded-2xl p-3.5 text-center shadow-lg shadow-blue-500/20 flex flex-col items-center justify-center relative overflow-hidden group border border-white/20">
-          <div className="absolute -right-6 -bottom-6 w-20 h-20 bg-white/10 rounded-full blur-lg group-hover:scale-125 transition-all pointer-events-none" />
+          <div className="absolute w-20 h-20 transition-all rounded-full pointer-events-none -right-6 -bottom-6 bg-white/10 blur-lg group-hover:scale-125" />
           <div className="flex items-center gap-1.5 text-[10.5px] font-black uppercase tracking-wider text-blue-100/90 bg-white/15 px-2.5 py-0.5 rounded-full backdrop-blur-md border border-white/20">
             <Award size={12} className="text-amber-300" />
-            <span>Điểm Tổng Thể</span>
+            <span>Điểm Tổng</span>
           </div>
           <div className="flex items-baseline gap-1 mt-1.5">
-            <span className="text-3xl font-black text-white tracking-tight drop-shadow-xs">
+            <span className="text-3xl font-black tracking-tight text-white drop-shadow-xs">
               {overallScore > 0 ? overallScore : '--'}
             </span>
             <span className="text-xs font-extrabold text-blue-200">/ 5.0</span>

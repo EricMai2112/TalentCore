@@ -27,7 +27,7 @@ export default function EvaluationHeader({
         <button
           type="button"
           onClick={onNavigateBack}
-          className="p-2 text-slate-500 hover:text-slate-900 hover:bg-white/80 rounded-xl transition-all cursor-pointer border border-white/80 shadow-2xs bg-white/40 backdrop-blur-md"
+          className="p-2 transition-all border cursor-pointer text-slate-500 hover:text-slate-900 hover:bg-white/80 rounded-xl border-white/80 shadow-2xs bg-white/40 backdrop-blur-md"
           title="Quay lại danh sách"
         >
           <ArrowLeft size={18} />
@@ -46,9 +46,6 @@ export default function EvaluationHeader({
           <h1 className="text-xl font-extrabold text-slate-900 mt-0.5 leading-tight">
             Chấm điểm & Quyết định tuyển dụng
           </h1>
-          <p className="text-[11px] font-medium text-slate-500 mt-0.5">
-            Đánh giá năng lực chuyên môn, thái độ ứng viên và đưa ra đề xuất tuyển dụng chính thức.
-          </p>
         </div>
       </div>
 

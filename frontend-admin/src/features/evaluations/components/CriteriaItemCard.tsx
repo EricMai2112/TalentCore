@@ -28,7 +28,7 @@ export default function CriteriaItemCard({
   const getCategoryLabel = (category: string) => {
     switch (category) {
       case 'TECHNICAL':
-        return 'Chuyên môn & Kỹ thuật'
+        return 'Chuyên môn'
       case 'SOFT_SKILLS':
         return 'Kỹ năng mềm'
       case 'CULTURE_FIT':
@@ -55,7 +55,7 @@ export default function CriteriaItemCard({
     <div className="p-3.5 bg-white/60 backdrop-blur-md border border-white/80 rounded-xl sm:rounded-2xl space-y-2.5 transition-all hover:bg-white/80 shadow-xs">
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5">
         {/* Inline Title & Category Badge */}
-        <div className="flex items-center gap-2 flex-wrap">
+        <div className="flex flex-wrap items-center gap-2">
           <span className="w-5 h-5 rounded-full bg-blue-100 text-[#3B82F6] font-bold text-[10px] flex items-center justify-center shrink-0">
             {index + 1}
           </span>
@@ -69,7 +69,7 @@ export default function CriteriaItemCard({
           </span>
         </div>
 
-        <div className="flex items-center gap-3 pl-7 sm:pl-0 justify-between sm:justify-end">
+        <div className="flex items-center justify-between gap-3 pl-7 sm:pl-0 sm:justify-end">
           {/* Interactive 1-5 Rating Number Boxes */}
           <div className="flex items-center gap-1.5">
             {[1, 2, 3, 4, 5].map((num) => (
@@ -113,20 +113,7 @@ export default function CriteriaItemCard({
 
       {/* Collapsible Double-Height Textarea */}
       {isExpanded && (
-        <div className="pl-7 pt-1 animate-in fade-in slide-in-from-top-2 duration-200 space-y-1">
-          <div className="flex items-center justify-between">
-            <label className="text-[11px] font-bold text-slate-500 flex items-center gap-1">
-              <span>Ghi chú chi tiết cho tiêu chí này:</span>
-            </label>
-            <button
-              type="button"
-              onClick={() => onToggleExpand(itemId)}
-              className="text-[10.5px] font-bold text-slate-400 hover:text-slate-600 flex items-center gap-0.5 cursor-pointer"
-            >
-              <span>Thu gọn</span>
-              <ChevronUp size={11} />
-            </button>
-          </div>
+        <div className="space-y-1 duration-200 animate-in fade-in slide-in-from-top-2">
           <CustomTextarea
             placeholder="Nhập ghi chú chi tiết, bằng chứng hoặc lý do cho mức điểm của tiêu chí này..."
             rows={4}
