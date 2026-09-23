@@ -95,7 +95,7 @@ export default function InterviewCard({
     item.status === InterviewStatus.CANCELLED ||
     (typeof item.applicationId === 'object' &&
       ((item.applicationId as any)?.status === 'REJECTED' ||
-       (item.applicationId as any)?.reviewStatus === 'Rejected'))
+        (item.applicationId as any)?.reviewStatus === 'Rejected'))
 
   return (
     <tr
@@ -141,7 +141,9 @@ export default function InterviewCard({
           <div className="space-y-1 text-slate-600 text-[11px] font-medium">
             <div className="flex items-center gap-1.5 font-bold text-sky-800 text-[13px]">
               <Clock size={12} className="text-sky-500" />
-              <span>{item.startTime} - {item.endTime}</span>
+              <span>
+                {item.startTime} - {item.endTime}
+              </span>
             </div>
             <div className="flex items-center gap-1.5 text-slate-500">
               <CalendarIcon size={12} className="text-slate-400" />
@@ -167,7 +169,9 @@ export default function InterviewCard({
               {item.locationType === LocationType.OFFSITE ? (
                 <>
                   <Building2 size={12} className="text-amber-500 shrink-0" />
-                  <span className="truncate max-w-[130px]">{item.offsiteLocation || 'Offsite'}</span>
+                  <span className="truncate max-w-[130px]">
+                    {item.offsiteLocation || 'Offsite'}
+                  </span>
                 </>
               ) : (
                 <>
@@ -186,7 +190,7 @@ export default function InterviewCard({
       </td>
 
       {/* 6. Status & Badges & Alerts (Left aligned) */}
-      <td className="px-4 py-4 align-middle text-left">
+      <td className="px-4 py-4 text-left align-middle">
         <div className="flex flex-col items-start justify-start gap-1.5">
           <div className="inline-flex items-center gap-1.5 flex-wrap justify-start">
             <InterviewWorkflowStatusBadge
@@ -206,7 +210,7 @@ export default function InterviewCard({
       </td>
 
       {/* 7. Actions */}
-      <td className="px-5 py-4 align-middle text-center">
+      <td className="px-5 py-4 text-center align-middle">
         <div className="flex items-center justify-center">
           <CustomActionMenu
             menuWidthClass="min-w-[210px]"
@@ -222,22 +226,25 @@ export default function InterviewCard({
               {
                 id: 'dept_schedule',
                 label:
-                  item.confirmationStatus === 'WAITING_HR_APPROVAL'
-                    ? 'Cập nhật lịch phỏng vấn'
-                    : 'Xếp lịch phỏng vấn',
+                  item.confirmationStatus === 'WAITING_DEPT_SCHEDULE'
+                    ? 'Xếp lịch phỏng vấn'
+                    : isHrAdmin
+                      ? 'Chỉnh sửa lịch phỏng vấn'
+                      : 'Cập nhật lịch phỏng vấn',
                 icon:
-                  item.confirmationStatus === 'WAITING_HR_APPROVAL' ? (
-                    <Edit3 size={14} />
-                  ) : (
+                  item.confirmationStatus === 'WAITING_DEPT_SCHEDULE' ? (
                     <CalendarIcon size={14} />
+                  ) : (
+                    <Edit3 size={14} />
                   ),
-                variant: item.confirmationStatus === 'WAITING_HR_APPROVAL' ? 'indigo' : 'warning',
+                variant: item.confirmationStatus === 'WAITING_DEPT_SCHEDULE' ? 'warning' : 'indigo',
                 hidden:
-                  !isDeptManager ||
+                  !onOpenDeptScheduleModal ||
                   isCandidateRejected ||
-                  (item.confirmationStatus !== 'WAITING_DEPT_SCHEDULE' &&
-                    item.confirmationStatus !== 'WAITING_HR_APPROVAL') ||
-                  !onOpenDeptScheduleModal,
+                  (!isHrAdmin && !isDeptManager) ||
+                  (!isHrAdmin &&
+                    item.confirmationStatus !== 'WAITING_DEPT_SCHEDULE' &&
+                    item.confirmationStatus !== 'WAITING_HR_APPROVAL'),
                 onClick: () => onOpenDeptScheduleModal?.(item)
               },
               {
@@ -265,12 +272,13 @@ export default function InterviewCard({
               },
               {
                 id: 'google_meet',
-                label: 'Vào Google Meet',
+                label: 'Vào Jetsi Meet',
                 icon: <Video size={14} />,
                 variant: 'primary',
                 href: item.meetingLink,
                 target: '_blank',
-                hidden: !isApproved || item.locationType !== LocationType.ONLINE || !item.meetingLink
+                hidden:
+                  !isApproved || item.locationType !== LocationType.ONLINE || !item.meetingLink
               },
               {
                 id: 'cancel_approve',

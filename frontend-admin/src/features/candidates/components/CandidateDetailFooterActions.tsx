@@ -160,15 +160,31 @@ export function CandidateDetailFooterActions({
           )}
 
           {/* HR / ADMIN FOOTER ACTIONS (Hidden if Candidate Rejected) */}
-          {isHrAdmin && !isEffectiveRejected && onRejectCandidate && (
-            <CustomButton
-              variant="danger"
-              size="sm"
-              onClick={onRejectCandidate}
-              icon={AlertTriangle}
-            >
-              Từ chối ứng viên
-            </CustomButton>
+          {isHrAdmin && !isEffectiveRejected && (
+            <>
+              {interview && onOpenDeptScheduleModal && (
+                <CustomButton
+                  variant="primary"
+                  size="sm"
+                  onClick={() => {
+                    onOpenDeptScheduleModal(interview);
+                  }}
+                  icon={Edit3}
+                >
+                  Chỉnh sửa lịch phỏng vấn
+                </CustomButton>
+              )}
+              {onRejectCandidate && (
+                <CustomButton
+                  variant="danger"
+                  size="sm"
+                  onClick={onRejectCandidate}
+                  icon={AlertTriangle}
+                >
+                  Từ chối ứng viên
+                </CustomButton>
+              )}
+            </>
           )}
         </div>
       </div>

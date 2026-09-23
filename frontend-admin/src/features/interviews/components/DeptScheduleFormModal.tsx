@@ -6,7 +6,8 @@ import { X, Calendar, Clock, Video, MapPin, UserCheck, Loader2 } from "lucide-re
 import { InterviewItem, LocationType } from "../types/interview.types";
 import { interviewsApi } from "../services/interviews.api";
 import { userApi } from "@/src/features/users/services/user.api";
-import { User, USER_ROLE_LABEL } from "@/src/features/users/types/user.types";
+import { User, UserRole, USER_ROLE_LABEL } from "@/src/features/users/types/user.types";
+import { useAuth } from "@/src/providers/AuthProvider";
 import {
   CustomDatePicker,
   CustomTimePicker,
@@ -28,6 +29,10 @@ export function DeptScheduleFormModal({
   interview,
   onSuccess,
 }: DeptScheduleFormModalProps) {
+  const { user: currentUser } = useAuth();
+  const isHrAdmin =
+    currentUser?.role === UserRole.HR_ADMIN || (currentUser?.role as string) === "ADMIN";
+
   const [date, setDate] = useState("");
   const [startTime, setStartTime] = useState("09:00");
   const [endTime, setEndTime] = useState("10:00");
@@ -232,6 +237,8 @@ export function DeptScheduleFormModal({
         offsiteLocation: locationType === LocationType.OFFSITE ? offsiteLocation.trim() : undefined,
         interviewerId: selectedInterviewerId,
         interviewerIds: [selectedInterviewerId],
+        isHrAdmin: !!isHrAdmin,
+        byHr: !!isHrAdmin,
       });
 
       onSuccess();
@@ -257,7 +264,7 @@ export function DeptScheduleFormModal({
         <div className="px-6 py-5 border-b border-slate-200/60 flex items-start justify-between bg-blue-500/5">
           <div>
             <h3 className="font-bold text-lg text-slate-900 leading-snug">
-              Xếp lịch Phỏng vấn & Chọn Người phỏng vấn
+              {isHrAdmin ? "Chỉnh sửa Lịch phỏng vấn & Phân công Interviewer" : "Xếp lịch Phỏng vấn & Chọn Người phỏng vấn"}
             </h3>
             <p className="text-xs font-semibold text-slate-700 mt-1">
               Ứng viên: <strong className="text-slate-900 font-bold">{candName} - {jobTitle}</strong>
@@ -414,7 +421,7 @@ export function DeptScheduleFormModal({
               className="px-6 py-2.5 rounded-2xl bg-gradient-to-r from-[#3B82F6] to-[#2563EB] hover:from-[#2563EB] hover:to-[#1D4ED8] active:scale-95 text-white font-bold text-xs transition-all shadow-md shadow-blue-500/25 hover:shadow-lg hover:shadow-blue-500/35 inline-flex items-center gap-2 cursor-pointer disabled:opacity-75"
             >
               {isSubmitting && <Loader2 size={15} className="animate-spin" />}
-              <span>Gửi HR duyệt lịch</span>
+              <span>{isHrAdmin ? "Lưu & Cập nhật lịch" : "Gửi HR duyệt lịch"}</span>
             </button>
           </div>
         </form>
