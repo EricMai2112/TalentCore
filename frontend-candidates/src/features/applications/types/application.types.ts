@@ -87,3 +87,47 @@ export interface CandidateInterviewItem {
   isEscalated?: boolean;
   createdAt?: string;
 }
+
+export enum CandidateOfferStatus {
+  DRAFT = 'DRAFT',
+  SENT = 'SENT',
+  ACCEPTED = 'ACCEPTED',
+  DECLINED = 'DECLINED',
+  CANCELLED = 'CANCELLED',
+  EXPIRED = 'EXPIRED',
+}
+
+export interface CandidateOfferItem {
+  _id: string;
+  applicationId: string | { _id: string; status: string };
+  jobDescriptionId: {
+    _id: string;
+    title: string;
+    employmentType?: string;
+    departmentId?: string | { _id: string; name: string };
+  };
+  departmentId?: {
+    _id: string;
+    name: string;
+    code: string;
+  };
+  positionTitle: string;
+  contractType: string;
+  workLocation: string;
+  salary: number;
+  currency: string;
+  probationDurationMonths: number;
+  probationSalaryPercentage: number;
+  startDate: string;
+  expirationDate: string;
+  benefits: string[];
+  notes?: string;
+  emailSubject: string;
+  offerLetterHtml: string;
+  status: CandidateOfferStatus;
+  sentAt?: string;
+  respondedAt?: string;
+  declineReason?: string;
+  createdAt: string;
+  updatedAt: string;
+}

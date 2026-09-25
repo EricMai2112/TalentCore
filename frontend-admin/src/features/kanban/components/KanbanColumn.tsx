@@ -15,6 +15,7 @@ interface KanbanColumnProps {
   onSelectCandidate: (app: KanbanApplication) => void;
   onMoveStage?: (appId: string, targetStageId: string) => void;
   onRejectCandidate?: (app: KanbanApplication) => void;
+  onCreateOffer?: (app: KanbanApplication) => void;
   style?: React.CSSProperties;
   className?: string;
 }
@@ -26,6 +27,7 @@ export default function KanbanColumn({
   onSelectCandidate,
   onMoveStage,
   onRejectCandidate,
+  onCreateOffer,
   style,
   className = "w-[335px]",
 }: KanbanColumnProps) {
@@ -91,6 +93,7 @@ export default function KanbanColumn({
                   onSelect={onSelectCandidate}
                   onMoveStage={onMoveStage}
                   onRejectCandidate={onRejectCandidate}
+                  onCreateOffer={onCreateOffer}
                 />
               ))
             )}
