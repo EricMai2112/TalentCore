@@ -30,6 +30,7 @@ import {
 import { CandidateApplication } from '../types/candidate.types'
 import { useAuth } from '@/src/providers/AuthProvider'
 import { CandidateDetailFooterActions } from './CandidateDetailFooterActions'
+import { CandidateInterviewEvaluationTab } from './CandidateInterviewEvaluationTab'
 import { RejectCandidateModal } from '@/src/components/common'
 import { InterviewItem } from '@/src/features/interviews/types/interview.types'
 
@@ -216,10 +217,7 @@ export default function CandidateDetailModal({
             }`}
           >
             <ClipboardCheck size={15} />
-            <span>Đánh giá</span>
-            <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-slate-100 text-slate-600 border border-slate-200">
-              {aiEval?.evaluatedCriteria?.length || 0}
-            </span>
+            <span>Đánh giá phỏng vấn</span>
           </button>
 
           <button
@@ -438,151 +436,12 @@ export default function CandidateDetailModal({
             </div>
           )}
 
-          {/* TAB 2: EVALUATION & CRITERIA BREAKDOWN (ĐÁNH GIÁ) */}
+          {/* TAB 2: INTERVIEWER EVALUATION (ĐÁNH GIÁ PHỎNG VẤN - READ ONLY) */}
           {activeTab === 'evaluation' && (
-            <div className="space-y-5">
-              {/* Overview Banner for Criteria */}
-              <div className="p-4.5 bg-gradient-to-r from-slate-50 via-indigo-50/30 to-blue-50/40 border border-slate-200/80 rounded-2xl flex flex-col sm:flex-row sm:items-center justify-between gap-4 shadow-2xs">
-                <div>
-                  <h4 className="text-sm font-bold text-slate-900 flex items-center gap-2">
-                    <ClipboardCheck size={16} className="text-indigo-600" />
-                    Bảng đánh giá tiêu chí tuyển dụng & Bằng chứng thực tế
-                  </h4>
-                  <p className="text-xs text-slate-500 mt-1">
-                    Đối soát từng tiêu chí theo thang điểm 6 mức (0, 20, 40, 60, 80, 100) và kiểm
-                    định bằng chứng từ CV.
-                  </p>
-                </div>
-
-                {/* Quick Summary Badges */}
-                <div className="flex items-center gap-2 flex-wrap">
-                  <div className="px-3.5 py-1.5 bg-white border border-slate-200 rounded-xl text-center shadow-2xs">
-                    <span className="text-[10px] text-slate-400 font-bold uppercase block">
-                      Tiêu chí Đạt
-                    </span>
-                    <span className="text-xs font-black text-emerald-600">
-                      {aiEval?.evaluatedCriteria?.filter((c: any) => c.isPassed).length || 0} /{' '}
-                      {aiEval?.evaluatedCriteria?.length || 0}
-                    </span>
-                  </div>
-                  <div className="px-3.5 py-1.5 bg-white border border-slate-200 rounded-xl text-center shadow-2xs">
-                    <span className="text-[10px] text-slate-400 font-bold uppercase block">
-                      Tiêu chí Bắt buộc
-                    </span>
-                    <span
-                      className={`text-xs font-black ${isMissingMandatory ? 'text-rose-600' : 'text-emerald-600'}`}
-                    >
-                      {isMissingMandatory ? 'Thiếu tiêu chí' : 'Đáp ứng đầy đủ'}
-                    </span>
-                  </div>
-                  <div className="px-3.5 py-1.5 bg-white border border-slate-200 rounded-xl text-center shadow-2xs">
-                    <span className="text-[10px] text-slate-400 font-bold uppercase block">
-                      Điểm tổng AI
-                    </span>
-                    <span className="text-xs font-black text-indigo-600">{aiScore}%</span>
-                  </div>
-                </div>
-              </div>
-
-              {/* Criteria List */}
-              {aiEval?.evaluatedCriteria && aiEval.evaluatedCriteria.length > 0 ? (
-                <div className="space-y-3.5">
-                  {aiEval.evaluatedCriteria.map((c: any, idx: number) => (
-                    <div
-                      key={idx}
-                      className="p-4.5 bg-white border border-slate-200/90 rounded-2xl space-y-3.5 text-xs shadow-2xs hover:border-indigo-200 transition-colors"
-                    >
-                      {/* Criteria Header */}
-                      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5">
-                        <div className="flex items-center gap-2 flex-wrap">
-                          <span className="w-5 h-5 rounded-full bg-slate-100 text-slate-700 font-bold text-[10px] flex items-center justify-center shrink-0">
-                            {idx + 1}
-                          </span>
-                          <span className="font-extrabold text-slate-900 text-sm">{c.name}</span>
-                          <span
-                            className={`px-2.5 py-0.5 rounded-full text-[10px] font-extrabold uppercase ${
-                              c.requirementType === 'MANDATORY'
-                                ? 'bg-rose-100 text-rose-700 border border-rose-200'
-                                : 'bg-blue-100 text-blue-700 border border-blue-200'
-                            }`}
-                          >
-                            {c.requirementType === 'MANDATORY' ? 'Bắt buộc' : 'Ưu tiên'}
-                          </span>
-                          {c.isPassed ? (
-                            <span className="px-2.5 py-0.5 rounded-md text-[10px] font-bold bg-emerald-100 text-emerald-700 border border-emerald-200 flex items-center gap-1">
-                              <CheckCircle2 size={11} /> Đạt ({c.score}/100)
-                            </span>
-                          ) : (
-                            <span className="px-2.5 py-0.5 rounded-md text-[10px] font-bold bg-rose-50 text-rose-600 border border-rose-200 flex items-center gap-1">
-                              <XCircle size={11} /> Chưa đạt ({c.score}/100)
-                            </span>
-                          )}
-                        </div>
-
-                        <div className="flex items-center gap-2 flex-wrap self-end sm:self-auto">
-                          <span className="text-slate-500 font-medium text-xs">
-                            Trọng số: <strong className="text-slate-700">{c.weight}%</strong>
-                          </span>
-                          <span className="px-2.5 py-1 rounded-xl bg-indigo-50 border border-indigo-200 text-indigo-700 font-extrabold text-xs shadow-2xs">
-                            +{c.scoreContribution}% tổng điểm
-                          </span>
-                          {typeof c.evidenceStrengthScore === 'number' && (
-                            <span
-                              title="Điểm độ mạnh bằng chứng (tính theo độ khớp văn bản CV, số liệu định lượng & độ dài)"
-                              className="px-2.5 py-1 rounded-xl bg-violet-50 border border-violet-200 text-violet-700 font-extrabold text-xs flex items-center gap-1 shadow-2xs"
-                            >
-                              <Sparkles size={11} className="text-violet-500" />
-                              <span>Evidence: {c.evidenceStrengthScore}/100</span>
-                            </span>
-                          )}
-                        </div>
-                      </div>
-
-                      {/* Evidence Quote */}
-                      <div className="p-3 bg-slate-50/90 rounded-xl border border-slate-200/80 space-y-1.5">
-                        <div className="flex items-center justify-between">
-                          <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider flex items-center gap-1">
-                            <FileText size={11} className="text-slate-400" /> Trích dẫn bằng chứng
-                            từ CV (Evidence):
-                          </span>
-                          {c.isEvidenceVerified ? (
-                            <span className="text-[10px] font-bold text-emerald-600 flex items-center gap-1 bg-emerald-50 px-2 py-0.5 rounded-md border border-emerald-200">
-                              <CheckCircle2 size={11} /> Đã kiểm chứng trong văn bản CV
-                            </span>
-                          ) : c.evidence ? (
-                            <span className="text-[10px] font-bold text-amber-600 flex items-center gap-1 bg-amber-50 px-2 py-0.5 rounded-md border border-amber-200">
-                              <AlertTriangle size={11} /> Cần kiểm tra lại độ khớp
-                            </span>
-                          ) : null}
-                        </div>
-
-                        {c.evidence ? (
-                          <p className="text-slate-800 leading-relaxed italic text-xs bg-white p-2.5 rounded-lg border border-slate-200">
-                            &ldquo;{c.evidence}&rdquo;
-                          </p>
-                        ) : (
-                          <p className="text-slate-400 italic text-xs py-1">
-                            Không tìm thấy đoạn văn bản nào tương ứng trong CV.
-                          </p>
-                        )}
-                      </div>
-
-                      {/* Reasoning if available */}
-                      {c.reasoning && (
-                        <div className="text-[11px] text-slate-600 bg-indigo-50/40 border border-indigo-100 rounded-xl p-2.5">
-                          <span className="font-bold text-indigo-900">Phân tích đánh giá: </span>
-                          <span>{c.reasoning}</span>
-                        </div>
-                      )}
-                    </div>
-                  ))}
-                </div>
-              ) : (
-                <div className="p-10 text-center bg-white rounded-2xl border border-slate-200 text-slate-400 text-xs shadow-2xs">
-                  Chưa có dữ liệu bảng điểm chi tiết từng tiêu chí cho ứng viên này.
-                </div>
-              )}
-            </div>
+            <CandidateInterviewEvaluationTab
+              applicationId={renderApp._id}
+              interview={interview}
+            />
           )}
 
           {/* TAB 3: CANDIDATE RESUME / CV SHEET (SINGLE COLUMN FULL-WIDTH MODERN RESUME) */}
