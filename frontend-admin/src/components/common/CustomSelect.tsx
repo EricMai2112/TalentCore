@@ -82,6 +82,7 @@ export default function CustomSelect({
     setMenuStyle(style)
   }
 
+  // Single unified effect for positioning, outside click, and keyboard handling
   useEffect(() => {
     if (!isOpen) return
 
@@ -95,20 +96,6 @@ export default function CustomSelect({
       updatePosition()
     }
 
-    window.addEventListener('scroll', handleScrollOrResize, true)
-    window.addEventListener('resize', handleScrollOrResize)
-
-    return () => {
-      cancelAnimationFrame(timer)
-      window.removeEventListener('scroll', handleScrollOrResize, true)
-      window.removeEventListener('resize', handleScrollOrResize)
-    }
-  }, [isOpen, align])
-
-  // Close dropdown on click outside
-  useEffect(() => {
-    if (!isOpen) return
-
     const handleClickOutside = (event: MouseEvent) => {
       const target = event.target as Node
       const isInsideButton = buttonRef.current && buttonRef.current.contains(target)
@@ -119,19 +106,23 @@ export default function CustomSelect({
       }
     }
 
-    document.addEventListener('mousedown', handleClickOutside)
-    return () => document.removeEventListener('mousedown', handleClickOutside)
-  }, [isOpen])
-
-  // Handle escape key
-  useEffect(() => {
-    if (!isOpen) return
     const handleKeyDown = (event: KeyboardEvent) => {
       if (event.key === 'Escape') setIsOpen(false)
     }
+
+    window.addEventListener('scroll', handleScrollOrResize, true)
+    window.addEventListener('resize', handleScrollOrResize)
+    document.addEventListener('mousedown', handleClickOutside)
     document.addEventListener('keydown', handleKeyDown)
-    return () => document.removeEventListener('keydown', handleKeyDown)
-  }, [isOpen])
+
+    return () => {
+      cancelAnimationFrame(timer)
+      window.removeEventListener('scroll', handleScrollOrResize, true)
+      window.removeEventListener('resize', handleScrollOrResize)
+      document.removeEventListener('mousedown', handleClickOutside)
+      document.removeEventListener('keydown', handleKeyDown)
+    }
+  }, [isOpen, align])
 
   const selectedOption = options.find((opt) => opt.value === value)
   const displayLabel = selectedOption ? selectedOption.label : placeholder

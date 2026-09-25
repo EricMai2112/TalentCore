@@ -8,6 +8,9 @@ export const metadata: Metadata = {
   description: "Theo dõi và quản lý ứng viên qua từng vòng phỏng vấn chuyên nghiệp.",
 };
 
+// Opt-out of static rendering — Kanban data is dynamic and must be live
+export const dynamic = "force-dynamic";
+
 /**
  * Server Component (SSR) for Recruitment Kanban Board
  */

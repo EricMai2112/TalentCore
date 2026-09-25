@@ -2,10 +2,9 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { Check, AlertTriangle } from "lucide-react";
+import dynamic from "next/dynamic";
 import JobRequestTable from "./JobRequestTable";
 import DeleteConfirmModal from "./DeleteConfirmModal";
-import ReviewModal from "./ReviewModal";
 import { jobDescriptionApi } from "../services/job-description.api";
 import {
   JobDescription,
@@ -18,6 +17,10 @@ import {
 } from "../types/job-description.types";
 import { useAuth } from "@/src/providers/AuthProvider";
 import { UserRole } from "@/src/features/users/types/user.types";
+import { Toast, useToast } from "@/src/components/common";
+
+// Lazy load ReviewModal on demand
+const ReviewModal = dynamic(() => import("./ReviewModal"), { ssr: false });
 
 interface JobRequestManagerProps {
   initialJobs: JobDescription[];
@@ -60,13 +63,8 @@ export default function JobRequestManager({
   const [isReviewOpen, setIsReviewOpen] = useState(false);
   const [isSubmittingReview, setIsSubmittingReview] = useState(false);
 
-  // Toast alert state
-  const [toast, setToast] = useState<{ message: string; type: "success" | "error" } | null>(null);
-
-  const showToast = (message: string, type: "success" | "error" = "success") => {
-    setToast({ message, type });
-    setTimeout(() => setToast(null), 3000);
-  };
+  // Toast alert state from shared hook
+  const { toast, showToast, hideToast } = useToast();
 
   // Route Page Navigations
   const handleAdd = () => {
@@ -95,12 +93,14 @@ export default function JobRequestManager({
 
   // Promote approved requisition to JD_CREATED status
   const handlePromote = async (job: JobDescription) => {
+    const previousJobs = jobs
+    // Optimistic update — reflect change instantly in UI
+    setJobs((prev) => prev.map((j) => j._id === job._id ? { ...j, status: JobStatus.JD_CREATED } : j))
     try {
       await jobDescriptionApi.updateJob(job._id, { status: JobStatus.JD_CREATED });
-      const refreshed = await jobDescriptionApi.getJobs();
-      setJobs(refreshed);
       showToast("Đã chuyển yêu cầu tuyển dụng thành Job thành công!", "success");
     } catch (err: any) {
+      setJobs(previousJobs) // rollback on error
       console.error("Lỗi khi chuyển trạng thái thành Job:", err);
       showToast(err.message || "Lỗi khi chuyển trạng thái thành Job", "error");
     }
@@ -108,12 +108,14 @@ export default function JobRequestManager({
 
   // Complete requisition
   const handleComplete = async (job: JobDescription) => {
+    const previousJobs = jobs
+    // Optimistic update
+    setJobs((prev) => prev.map((j) => j._id === job._id ? { ...j, status: JobStatus.COMPLETED } : j))
     try {
       await jobDescriptionApi.updateJob(job._id, { status: JobStatus.COMPLETED });
-      const refreshed = await jobDescriptionApi.getJobs();
-      setJobs(refreshed);
       showToast("Đã chuyển trạng thái yêu cầu sang Hoàn thành thành công!", "success");
     } catch (err: any) {
+      setJobs(previousJobs) // rollback on error
       console.error("Lỗi khi chuyển trạng thái Hoàn thành:", err);
       showToast(err.message || "Lỗi khi chuyển trạng thái Hoàn thành", "error");
     }
@@ -122,11 +124,12 @@ export default function JobRequestManager({
   // Handle review approval/rejection submission
   const handleReviewSubmit = async (status: JobStatus, note: string) => {
     if (!activeJob) return;
+    const previousJobs = jobs
     setIsSubmittingReview(true);
     try {
       await jobDescriptionApi.updateJob(activeJob._id, { status, note });
-      const refreshed = await jobDescriptionApi.getJobs();
-      setJobs(refreshed);
+      // Optimistic update after successful API call
+      setJobs((prev) => prev.map((j) => j._id === activeJob._id ? { ...j, status, note } : j))
       setIsReviewOpen(false);
       showToast(
         status === JobStatus.APPROVED
@@ -135,6 +138,7 @@ export default function JobRequestManager({
         "success"
       );
     } catch (err: any) {
+      setJobs(previousJobs) // rollback on error
       console.error("Lỗi xét duyệt:", err);
       showToast(err.message || "Lỗi khi lưu quyết định xét duyệt", "error");
       throw err;
@@ -163,18 +167,7 @@ export default function JobRequestManager({
   return (
     <div className="space-y-6">
       {/* Toast Alert */}
-      {toast && (
-        <div
-          className={`fixed top-4 right-4 z-50 flex items-center gap-2 px-4 py-3 rounded-xl shadow-lg border transition-all duration-300 animate-in slide-in-from-top-5 ${
-            toast.type === "success"
-              ? "bg-emerald-50 border-emerald-100 text-emerald-800"
-              : "bg-red-50 border-red-100 text-red-800"
-          }`}
-        >
-          {toast.type === "success" ? <Check size={18} /> : <AlertTriangle size={18} />}
-          <span className="text-sm font-semibold">{toast.message}</span>
-        </div>
-      )}
+      <Toast toast={toast} onClose={hideToast} position="top-right" />
 
       {/* Table view with headers, statistics and filters */}
       <JobRequestTable

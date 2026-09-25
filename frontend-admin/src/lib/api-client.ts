@@ -74,3 +74,57 @@ export const apiClient = {
   delete: <T>(endpoint: string, options?: RequestOptions) => 
     request<T>(endpoint, { ...options, method: "DELETE" }),
 };
+
+/**
+ * Server-side API client that forwards the session cookie from the incoming
+ * Next.js request to the backend. Use this ONLY inside Server Components,
+ * Route Handlers, or Server Actions (anywhere `next/headers` is available).
+ *
+ * Usage:
+ *   const api = await createServerApiClient();
+ *   const data = await api.get<T>('/endpoint');
+ */
+export async function createServerApiClient() {
+  // Dynamically import to avoid bundling next/headers in client code
+  const { cookies } = await import("next/headers");
+  const cookieStore = await cookies();
+  const cookieHeader = cookieStore
+    .getAll()
+    .map((c) => `${c.name}=${c.value}`)
+    .join("; ");
+
+  const serverHeaders = { Cookie: cookieHeader };
+
+  return {
+    get: <T>(endpoint: string, options?: RequestOptions) =>
+      request<T>(endpoint, {
+        cache: options?.cache ?? (options?.next ? undefined : "no-store"),
+        ...options,
+        method: "GET",
+        headers: { ...serverHeaders, ...(options?.headers ?? {}) },
+      }),
+
+    post: <T>(endpoint: string, body: any, options?: RequestOptions) =>
+      request<T>(endpoint, {
+        ...options,
+        method: "POST",
+        body: JSON.stringify(body),
+        headers: { ...serverHeaders, ...(options?.headers ?? {}) },
+      }),
+
+    put: <T>(endpoint: string, body: any, options?: RequestOptions) =>
+      request<T>(endpoint, {
+        ...options,
+        method: "PUT",
+        body: JSON.stringify(body),
+        headers: { ...serverHeaders, ...(options?.headers ?? {}) },
+      }),
+
+    delete: <T>(endpoint: string, options?: RequestOptions) =>
+      request<T>(endpoint, {
+        ...options,
+        method: "DELETE",
+        headers: { ...serverHeaders, ...(options?.headers ?? {}) },
+      }),
+  };
+}

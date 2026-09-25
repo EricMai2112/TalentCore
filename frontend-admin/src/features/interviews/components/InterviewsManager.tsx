@@ -1,15 +1,21 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useMemo } from 'react'
+import dynamic from 'next/dynamic'
 import { Loader2, Calendar as CalendarIcon } from 'lucide-react'
 import { InterviewItem, InterviewStatus, InterviewResult } from '../types/interview.types'
 import { interviewsApi } from '../services/interviews.api'
 import { departmentApi } from '@/src/features/departments/services/department.api'
 import { Department } from '@/src/features/departments/types/department.types'
 import { candidateApi } from '@/src/features/candidates/services/candidate.api'
-import CandidateDetailModal from '@/src/features/candidates/components/CandidateDetailModal'
 import { useAuth } from '@/src/providers/AuthProvider'
 import { UserRole } from '@/src/features/users/types/user.types'
+
+// Lazy load heavy CandidateDetailModal (43KB) on demand
+const CandidateDetailModal = dynamic(
+  () => import('@/src/features/candidates/components/CandidateDetailModal'),
+  { ssr: false }
+)
 import {
   InterviewsHeader,
   InterviewsFilterToolbar,
@@ -23,7 +29,66 @@ import { TodayScheduleSidebar } from './TodayScheduleSidebar'
 import { DeptScheduleFormModal } from './DeptScheduleFormModal'
 import { HrApproveScheduleModal } from './HrApproveScheduleModal'
 
-export default function InterviewsManager() {
+/**
+ * Pure helper — no closure deps, safe to call inside useMemo.
+ * todayISO: pre-computed 'YYYY-MM-DD' string from the component.
+ */
+function isMatchingTimeTab(
+  itemDateStr?: string,
+  tab: 'ALL' | 'TODAY' | 'THIS_WEEK' | 'NEXT_WEEK' = 'ALL',
+  todayISO?: string
+): boolean {
+  if (tab === 'ALL' || !itemDateStr) return true
+  const d = new Date(itemDateStr)
+  if (isNaN(d.getTime())) return true
+  const dStr = d.toISOString().split('T')[0]
+
+  if (tab === 'TODAY') {
+    return dStr === (todayISO ?? new Date().toISOString().split('T')[0])
+  }
+
+  const curr = new Date()
+  const dayOfWeek = curr.getDay() === 0 ? 7 : curr.getDay() // Mon = 1, Sun = 7
+
+  const mondayThisWeek = new Date(curr)
+  mondayThisWeek.setDate(curr.getDate() - dayOfWeek + 1)
+  mondayThisWeek.setHours(0, 0, 0, 0)
+
+  const sundayThisWeek = new Date(mondayThisWeek)
+  sundayThisWeek.setDate(mondayThisWeek.getDate() + 6)
+  sundayThisWeek.setHours(23, 59, 59, 999)
+
+  if (tab === 'THIS_WEEK') {
+    return d >= mondayThisWeek && d <= sundayThisWeek
+  }
+
+  const mondayNextWeek = new Date(mondayThisWeek)
+  mondayNextWeek.setDate(mondayThisWeek.getDate() + 7)
+
+  const sundayNextWeek = new Date(sundayThisWeek)
+  sundayNextWeek.setDate(sundayThisWeek.getDate() + 7)
+
+  if (tab === 'NEXT_WEEK') {
+    return d >= mondayNextWeek && d <= sundayNextWeek
+  }
+
+  return true
+}
+
+interface InterviewsManagerProps {
+  /** Pre-fetched interviews from the Server Component (SSR). */
+  initialInterviews?: InterviewItem[]
+  /** Pre-fetched departments from the Server Component (SSR). */
+  initialDepartments?: Department[]
+  /** Pre-fetched candidate applications from the Server Component (SSR). */
+  initialApplications?: any[]
+}
+
+export default function InterviewsManager({
+  initialInterviews = [],
+  initialDepartments = [],
+  initialApplications = [],
+}: InterviewsManagerProps) {
   const { user } = useAuth()
 
   const isDeptManager = user?.role === UserRole.DEPARTMENT_MANAGER
@@ -59,10 +124,11 @@ export default function InterviewsManager() {
     setPositionFilter('ALL')
   }
 
-  const [departments, setDepartments] = useState<Department[]>([])
-  const [interviews, setInterviews] = useState<InterviewItem[]>([])
-  const [candidateApplications, setCandidateApplications] = useState<any[]>([])
-  const [isLoading, setIsLoading] = useState<boolean>(true)
+  const [departments, setDepartments] = useState<Department[]>(initialDepartments)
+  const [interviews, setInterviews] = useState<InterviewItem[]>(initialInterviews)
+  const [candidateApplications, setCandidateApplications] = useState<any[]>(initialApplications)
+  // Start as not loading when initial data is provided via SSR
+  const [isLoading, setIsLoading] = useState<boolean>(initialInterviews.length === 0)
 
   // Calendar Month Navigation
   const [currentMonthDate, setCurrentMonthDate] = useState<Date>(new Date()) // Default Current Month
@@ -141,9 +207,11 @@ export default function InterviewsManager() {
   // Active dropdown action ID
   const [activeMenuId, setActiveMenuId] = useState<string | null>(null)
 
-  // Load department list and candidate applications
+  // Load department list and candidate applications — skipped if provided via SSR
   useEffect(() => {
+    if (initialDepartments.length > 0 && initialApplications.length > 0) return // Already hydrated from SSR
     const loadDepartments = async () => {
+      if (initialDepartments.length > 0) return
       try {
         const list = await departmentApi.getAll()
         setDepartments(list)
@@ -152,6 +220,7 @@ export default function InterviewsManager() {
       }
     }
     const loadApplications = async () => {
+      if (initialApplications.length > 0) return
       try {
         const apps = await candidateApi.getCandidates()
         setCandidateApplications(apps || [])
@@ -161,7 +230,7 @@ export default function InterviewsManager() {
     }
     loadDepartments()
     loadApplications()
-  }, [])
+  }, []) // eslint-disable-line react-hooks/exhaustive-deps
 
   // Lock department filter if user is Department Manager or Employee
   useEffect(() => {
@@ -189,11 +258,13 @@ export default function InterviewsManager() {
   }
 
   useEffect(() => {
+    // Skip initial fetch if data was already provided via SSR
+    if (initialInterviews.length > 0) return
     fetchInterviews()
-  }, [])
+  }, []) // eslint-disable-line react-hooks/exhaustive-deps
 
   // Dynamic positions options based on current interviews & active department filter
-  const availablePositions = Array.from(
+  const availablePositions = useMemo(() => Array.from(
     new Set(
       interviews
         .filter((item) => {
@@ -211,55 +282,13 @@ export default function InterviewsManager() {
         )
         .filter(Boolean)
     )
-  ) as string[]
+  ) as string[], [interviews, departmentFilter])
 
-  // Time filter helper functions
-  const now = new Date()
-  const todayISO = now.toISOString().split('T')[0]
+  // Stable today string — only recomputed when component first mounts
+  const todayISO = useMemo(() => new Date().toISOString().split('T')[0], [])
 
-  const isMatchingTimeTab = (
-    itemDateStr?: string,
-    tab: 'ALL' | 'TODAY' | 'THIS_WEEK' | 'NEXT_WEEK' = 'ALL'
-  ) => {
-    if (tab === 'ALL' || !itemDateStr) return true
-    const d = new Date(itemDateStr)
-    if (isNaN(d.getTime())) return true
-    const dStr = d.toISOString().split('T')[0]
-
-    if (tab === 'TODAY') {
-      return dStr === todayISO
-    }
-
-    const curr = new Date()
-    const dayOfWeek = curr.getDay() === 0 ? 7 : curr.getDay() // Mon = 1, Sun = 7
-
-    const mondayThisWeek = new Date(curr)
-    mondayThisWeek.setDate(curr.getDate() - dayOfWeek + 1)
-    mondayThisWeek.setHours(0, 0, 0, 0)
-
-    const sundayThisWeek = new Date(mondayThisWeek)
-    sundayThisWeek.setDate(mondayThisWeek.getDate() + 6)
-    sundayThisWeek.setHours(23, 59, 59, 999)
-
-    if (tab === 'THIS_WEEK') {
-      return d >= mondayThisWeek && d <= sundayThisWeek
-    }
-
-    const mondayNextWeek = new Date(mondayThisWeek)
-    mondayNextWeek.setDate(mondayThisWeek.getDate() + 7)
-
-    const sundayNextWeek = new Date(sundayThisWeek)
-    sundayNextWeek.setDate(sundayThisWeek.getDate() + 7)
-
-    if (tab === 'NEXT_WEEK') {
-      return d >= mondayNextWeek && d <= sundayNextWeek
-    }
-
-    return true
-  }
-
-  // Base role & filter scoping
-  const baseFilteredInterviews = interviews.filter((item) => {
+  // Base role & filter scoping — memoized to avoid full recompute on every render
+  const baseFilteredInterviews = useMemo(() => interviews.filter((item) => {
     const itemDeptId =
       typeof item.jobDescriptionId === 'object' && item.jobDescriptionId?.departmentId
         ? typeof item.jobDescriptionId.departmentId === 'object'
@@ -359,19 +388,22 @@ export default function InterviewsManager() {
     }
 
     return true
-  })
+  }), [interviews, isDeptManager, isEmployee, userDeptId, user, departmentFilter, positionFilter, statusFilter, searchQuery])
 
-  // Calculate tab counts
-  const tabCounts = {
+  // Calculate tab counts — memoized, depends only on baseFilteredInterviews and todayISO
+  const tabCounts = useMemo(() => ({
     all: baseFilteredInterviews.length,
-    today: baseFilteredInterviews.filter((i) => isMatchingTimeTab(i.date, 'TODAY')).length,
-    thisWeek: baseFilteredInterviews.filter((i) => isMatchingTimeTab(i.date, 'THIS_WEEK')).length,
-    nextWeek: baseFilteredInterviews.filter((i) => isMatchingTimeTab(i.date, 'NEXT_WEEK')).length
-  }
+    today: baseFilteredInterviews.filter((i) => isMatchingTimeTab(i.date, 'TODAY', todayISO)).length,
+    thisWeek: baseFilteredInterviews.filter((i) => isMatchingTimeTab(i.date, 'THIS_WEEK', todayISO)).length,
+    nextWeek: baseFilteredInterviews.filter((i) => isMatchingTimeTab(i.date, 'NEXT_WEEK', todayISO)).length
+  }), [baseFilteredInterviews, todayISO])
 
   // Final filtered list based on active time tab
-  const filteredInterviews = baseFilteredInterviews.filter((item) =>
-    isMatchingTimeTab(item.date, timeTabFilter)
+  const filteredInterviews = useMemo(() =>
+    baseFilteredInterviews.filter((item) =>
+      isMatchingTimeTab(item.date, timeTabFilter, todayISO)
+    ),
+    [baseFilteredInterviews, timeTabFilter, todayISO]
   )
 
   const formatDate = (dateStr?: string) => {

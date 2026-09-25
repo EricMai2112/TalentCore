@@ -1,8 +1,8 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { useRouter } from 'next/navigation'
-import { Plus, Users, Check, AlertTriangle, Search } from 'lucide-react'
+import dynamic from 'next/dynamic'
+import { Plus, Users, Search } from 'lucide-react'
 import {
   User,
   Department,
@@ -13,10 +13,12 @@ import {
 } from '../types/user.types'
 import { userApi } from '../services/user.api'
 import UserRow from './UserRow'
-import CreateUserModal from './CreateUserModal'
-import EditUserModal from './EditUserModal'
 import { useAuth } from '@/src/providers/AuthProvider'
-import { CustomButton } from '@/src/components/common'
+import { CustomButton, CustomInput, CustomTableContainer, Toast, useToast } from '@/src/components/common'
+
+// Lazy load user modals on demand
+const CreateUserModal = dynamic(() => import('./CreateUserModal'), { ssr: false })
+const EditUserModal = dynamic(() => import('./EditUserModal'), { ssr: false })
 
 interface UserManagerProps {
   initialUsers: User[]
@@ -31,7 +33,6 @@ const getDeptIdStr = (dept: string | Department | undefined): string => {
 }
 
 export default function UserManager({ initialUsers, initialDepartments }: UserManagerProps) {
-  const router = useRouter()
   const { user: currentUser } = useAuth()
 
   const isDeptManager = currentUser?.role === UserRole.DEPARTMENT_MANAGER
@@ -41,26 +42,26 @@ export default function UserManager({ initialUsers, initialDepartments }: UserMa
   const [departments] = useState<Department[]>(initialDepartments)
   const [searchQuery, setSearchQuery] = useState('')
 
+  // Pagination state
+  const [currentPage, setCurrentPage] = useState(1)
+  const pageSize = 10
+
   useEffect(() => {
     setUsers(initialUsers)
   }, [initialUsers])
+
+  useEffect(() => {
+    setCurrentPage(1)
+  }, [searchQuery])
 
   // Modal states
   const [isCreateOpen, setIsCreateOpen] = useState(false)
   const [isEditOpen, setIsEditOpen] = useState(false)
   const [editingUser, setEditingUser] = useState<User | null>(null)
 
-  // Loading & toast
+  // Loading & shared toast
   const [isSubmitting, setIsSubmitting] = useState(false)
-  const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' } | null>(null)
-
-  useEffect(() => {
-    if (!toast) return
-    const t = setTimeout(() => setToast(null), 3000)
-    return () => clearTimeout(t)
-  }, [toast])
-
-  const showToast = (message: string, type: 'success' | 'error') => setToast({ message, type })
+  const { toast, showToast, hideToast } = useToast()
 
   const fetchUsers = async () => {
     try {
@@ -80,7 +81,6 @@ export default function UserManager({ initialUsers, initialDepartments }: UserMa
       showToast('Tạo tài khoản nhân viên thành công!', 'success')
       setIsCreateOpen(false)
       await fetchUsers()
-      router.refresh()
     } catch (err: unknown) {
       throw new Error(err instanceof Error ? err.message : 'Đã xảy ra lỗi')
     } finally {
@@ -102,7 +102,6 @@ export default function UserManager({ initialUsers, initialDepartments }: UserMa
       setIsEditOpen(false)
       setEditingUser(null)
       await fetchUsers()
-      router.refresh()
     } catch (err: unknown) {
       throw new Error(err instanceof Error ? err.message : 'Đã xảy ra lỗi')
     } finally {
@@ -123,7 +122,6 @@ export default function UserManager({ initialUsers, initialDepartments }: UserMa
           : `Đã mở khóa tài khoản ${user.name}`,
         'success'
       )
-      router.refresh()
     } catch (err: unknown) {
       // Rollback nếu lỗi
       setUsers((prev) => prev.map((u) => (u._id === user._id ? { ...u, status: user.status } : u)))
@@ -154,21 +152,12 @@ export default function UserManager({ initialUsers, initialDepartments }: UserMa
     )
   })
 
+  const paginatedUsers = filtered.slice((currentPage - 1) * pageSize, currentPage * pageSize)
+
   return (
     <div className="space-y-5">
-      {/* Toast */}
-      {toast && (
-        <div
-          className={`fixed top-4 right-4 z-50 flex items-center gap-2 px-4 py-3 rounded-xl shadow-lg border transition-all duration-300 animate-in slide-in-from-top-5 ${
-            toast.type === 'success'
-              ? 'bg-emerald-50 border-emerald-100 text-emerald-800'
-              : 'bg-red-50 border-red-100 text-red-800'
-          }`}
-        >
-          {toast.type === 'success' ? <Check size={16} /> : <AlertTriangle size={16} />}
-          <span className="text-sm font-semibold">{toast.message}</span>
-        </div>
-      )}
+      {/* Toast Alert */}
+      <Toast toast={toast} onClose={hideToast} position="top-right" />
 
       {/* Header section */}
       <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
@@ -194,88 +183,58 @@ export default function UserManager({ initialUsers, initialDepartments }: UserMa
       </div>
 
       {/* Search bar */}
-      <div className="flex items-center gap-2 bg-gray-50 border border-gray-200 rounded-xl px-3.5 py-2.5 w-full sm:max-w-xs">
-        <Search size={15} className="text-gray-400 shrink-0" />
-        <input
-          type="text"
+      <div className="w-full sm:max-w-xs">
+        <CustomInput
           value={searchQuery}
           onChange={(e) => setSearchQuery(e.target.value)}
           placeholder="Tìm theo tên, email..."
-          className="w-full text-sm text-gray-700 placeholder-gray-400 bg-transparent outline-none"
+          icon={<Search size={15} />}
+          className="!py-1.5 !rounded-xl text-xs"
         />
       </div>
 
-      {/* Table */}
-      {filtered.length === 0 ? (
-        <div className="p-12 text-center bg-white border border-gray-100 shadow-xs rounded-2xl">
-          <Users className="mx-auto mb-3 text-gray-300" size={40} />
-          {searchQuery ? (
-            <>
-              <h3 className="text-base font-semibold text-gray-800">Không tìm thấy kết quả</h3>
-              <p className="mt-1 text-sm text-gray-400">Thử tìm với từ khoá khác.</p>
-            </>
-          ) : (
-            <>
-              <h3 className="text-base font-semibold text-gray-800">Chưa có người dùng nào</h3>
-              <p className="max-w-sm mx-auto mt-1 text-sm text-gray-400">
-                {isDeptManager
-                  ? 'Chưa có nhân viên nào thuộc phòng ban của bạn.'
-                  : 'Tạo tài khoản nhân viên đầu tiên để bắt đầu quản lý quy trình tuyển dụng.'}
-              </p>
-              <button
-                onClick={() => setIsCreateOpen(true)}
-                className="inline-flex items-center gap-1 px-4 py-2 mt-4 text-sm font-semibold text-indigo-600 transition-colors border border-indigo-100 cursor-pointer bg-indigo-50 hover:bg-indigo-100 rounded-xl"
-              >
-                <Plus size={16} />
-                Tạo người dùng mới
-              </button>
-            </>
-          )}
-        </div>
-      ) : (
-        <div className="overflow-hidden border border-gray-100 shadow-xs rounded-2xl">
-          <div className="overflow-x-auto">
-            <table className="w-full min-w-[640px] bg-white">
-              <thead>
-                <tr className="border-b border-gray-100 bg-gray-50/80">
-                  {['Người dùng', 'Email', 'Vai trò', 'Phòng ban', 'Trạng thái', 'Thao tác'].map(
-                    (h) => (
-                      <th
-                        key={h}
-                        className="px-4 py-3 text-xs font-bold tracking-wider text-left text-gray-500 uppercase"
-                      >
-                        {h}
-                      </th>
-                    )
-                  )}
-                </tr>
-              </thead>
-              <tbody>
-                {filtered.map((user) => {
-                  const deptIdStr = getDeptIdStr(user.departmentId)
-                  return (
-                    <UserRow
-                      key={user._id}
-                      user={user}
-                      departmentName={deptMap.get(deptIdStr)}
-                      onEdit={() => handleOpenEdit(user)}
-                      onToggleStatus={() => handleToggleStatus(user)}
-                    />
-                  )
-                })}
-              </tbody>
-            </table>
-          </div>
-
-          {/* Footer count */}
-          <div className="px-4 py-2.5 bg-gray-50/60 border-t border-gray-100">
-            <p className="text-xs font-medium text-gray-400">
-              Hiển thị <span className="font-bold text-gray-600">{filtered.length}</span> /{' '}
-              {scopedUsers.length} người dùng
-            </p>
-          </div>
-        </div>
-      )}
+      {/* Reusable Table Container */}
+      <CustomTableContainer
+        pagination={{
+          currentPage,
+          totalPages: Math.ceil(filtered.length / pageSize),
+          totalItems: filtered.length,
+          pageSize,
+          onPageChange: setCurrentPage,
+        }}
+        isEmpty={filtered.length === 0}
+        emptyTitle="Không tìm thấy người dùng nào"
+        emptyDescription={searchQuery ? 'Thử tìm với từ khoá khác.' : isDeptManager ? 'Chưa có nhân viên nào thuộc phòng ban của bạn.' : 'Tạo tài khoản nhân viên đầu tiên để bắt đầu quản lý quy trình tuyển dụng.'}
+        emptyIcon={<Users className="w-8 h-8 stroke-[1.5]" />}
+      >
+        <table className="w-full min-w-[640px] text-left border-collapse text-xs">
+          <thead className="sticky top-0 z-10 bg-white/80 backdrop-blur-lg border-b border-slate-200/60 shadow-sm">
+            <tr className="text-[11px] font-semibold text-slate-600 uppercase tracking-wider">
+              {['Người dùng', 'Email', 'Vai trò', 'Phòng ban', 'Trạng thái', 'Thao tác'].map(
+                (h) => (
+                  <th key={h} className="px-4 py-3.5">
+                    {h}
+                  </th>
+                )
+              )}
+            </tr>
+          </thead>
+          <tbody className="divide-y divide-slate-200/40">
+            {paginatedUsers.map((user) => {
+              const deptIdStr = getDeptIdStr(user.departmentId)
+              return (
+                <UserRow
+                  key={user._id}
+                  user={user}
+                  departmentName={deptMap.get(deptIdStr)}
+                  onEdit={() => handleOpenEdit(user)}
+                  onToggleStatus={() => handleToggleStatus(user)}
+                />
+              )
+            })}
+          </tbody>
+        </table>
+      </CustomTableContainer>
 
       {/* Modals */}
       <CreateUserModal
