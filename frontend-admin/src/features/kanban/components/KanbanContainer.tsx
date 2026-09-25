@@ -20,11 +20,17 @@ import { kanbanApi } from "../services/kanban.api";
 import { interviewsApi } from "@/src/features/interviews/services/interviews.api";
 import { useAuth } from "@/src/providers/AuthProvider";
 import { UserRole } from "@/src/features/users/types/user.types";
+import dynamic from "next/dynamic";
 import KanbanHeaderFilters from "./KanbanHeaderFilters";
 import KanbanColumn from "./KanbanColumn";
 import CandidateKanbanCard from "./CandidateKanbanCard";
-import CandidateDetailModal from "@/src/features/candidates/components/CandidateDetailModal";
 import { RejectCandidateModal } from "@/src/components/common";
+
+// Lazy load heavy CandidateDetailModal on demand
+const CandidateDetailModal = dynamic(
+  () => import("@/src/features/candidates/components/CandidateDetailModal"),
+  { ssr: false }
+);
 
 interface KanbanContainerProps {
   initialDepartments: Department[];
@@ -291,11 +297,9 @@ export default function KanbanContainer({
     };
 
     window.addEventListener("pointermove", handlePointerMove);
-    window.addEventListener("mousemove", handlePointerMove);
 
     return () => {
       window.removeEventListener("pointermove", handlePointerMove);
-      window.removeEventListener("mousemove", handlePointerMove);
       clearTimers();
     };
   }, [activeApplication, maxCarouselIndex]);

@@ -74,6 +74,9 @@ export default function WeatherWidget() {
   useEffect(() => {
     let isMounted = true
 
+    const CACHE_KEY = 'talentcore_weather_cache'
+    const CACHE_TTL = 10 * 60 * 1000 // 10 minutes
+
     const fetchWeather = async (lat: number, lon: number, locationName: string) => {
       try {
         const response = await fetch(
@@ -86,15 +89,23 @@ export default function WeatherWidget() {
         const code = data.current?.weather_code ?? 1
         const info = getWeatherInfo(code)
 
+        const weatherData: WeatherData = {
+          temperature: currentTemp,
+          weatherCode: code,
+          description: info.description,
+          icon: info.icon,
+          iconColor: info.color,
+          locationName
+        }
+
         if (isMounted) {
-          setWeather({
-            temperature: currentTemp,
-            weatherCode: code,
-            description: info.description,
-            icon: info.icon,
-            iconColor: info.color,
-            locationName
-          })
+          setWeather(weatherData)
+          // Cache result to avoid re-fetching on every page navigation
+          try {
+            sessionStorage.setItem(CACHE_KEY, JSON.stringify({ data: { ...weatherData, icon: undefined }, code, timestamp: Date.now(), locationName }))
+          } catch {
+            // sessionStorage may be unavailable in some environments — ignore
+          }
         }
       } catch (err) {
         console.error('Failed to fetch weather data:', err)
@@ -114,6 +125,25 @@ export default function WeatherWidget() {
       }
     }
 
+    // Check cache first — skip API call if data is fresh
+    try {
+      const cached = sessionStorage.getItem(CACHE_KEY)
+      if (cached) {
+        const { code, timestamp, locationName } = JSON.parse(cached)
+        if (Date.now() - timestamp < CACHE_TTL && code !== undefined) {
+          const info = getWeatherInfo(code)
+          const { data } = JSON.parse(cached)
+          if (isMounted) {
+            setWeather({ ...data, icon: info.icon, iconColor: info.color, locationName })
+            setLoading(false)
+            return
+          }
+        }
+      }
+    } catch {
+      // Invalid cache — fall through to API fetch
+    }
+
     if (typeof window !== 'undefined' && navigator.geolocation) {
       navigator.geolocation.getCurrentPosition(
         (pos) => {
@@ -122,7 +152,7 @@ export default function WeatherWidget() {
         () => {
           fetchWeather(DEFAULT_LAT, DEFAULT_LON, 'TP. Hồ Chí Minh')
         },
-        { timeout: 5000 }
+        { timeout: 2000 }  // Reduced from 5000ms — fallback to default city faster
       )
     } else {
       fetchWeather(DEFAULT_LAT, DEFAULT_LON, 'TP. Hồ Chí Minh')

@@ -15,23 +15,39 @@ import {
   AlertTriangle,
   RotateCcw
 } from 'lucide-react'
+import dynamic from 'next/dynamic'
 import { CandidateApplication } from '../types/candidate.types'
 import { candidateApi } from '../services/candidate.api'
 import { departmentApi } from '@/src/features/departments/services/department.api'
 import { Department } from '@/src/features/departments/types/department.types'
 import { useAuth } from '@/src/providers/AuthProvider'
 import { UserRole } from '@/src/features/users/types/user.types'
-import CandidateDetailModal from './CandidateDetailModal'
 import CandidateStatCards from './CandidateStatCards'
-import { CustomSelect, CustomInput, CustomPagination, CustomTableContainer, RejectCandidateModal } from '@/src/components/common'
+import { CustomSelect, CustomInput, CustomPagination, CustomTableContainer, RejectCandidateModal, Toast, useToast } from '@/src/components/common'
 import { CustomSelectOption } from '@/src/components/common/CustomSelect'
 
-export default function CandidatesManager() {
+// Lazy load the heavy (43KB) CandidateDetailModal on demand
+const CandidateDetailModal = dynamic(() => import('./CandidateDetailModal'), {
+  ssr: false,
+})
+
+interface CandidatesManagerProps {
+  /** Pre-fetched applications from the Server Component (SSR). */
+  initialApplications?: CandidateApplication[]
+  /** Pre-fetched departments from the Server Component (SSR). */
+  initialDepartments?: Department[]
+}
+
+export default function CandidatesManager({
+  initialApplications = [],
+  initialDepartments = [],
+}: CandidatesManagerProps) {
   const { user } = useAuth()
-  const [applications, setApplications] = useState<CandidateApplication[]>([])
-  const [departments, setDepartments] = useState<Department[]>([])
-  const [isLoading, setIsLoading] = useState(true)
-  const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' } | null>(null)
+  const [applications, setApplications] = useState<CandidateApplication[]>(initialApplications)
+  const [departments, setDepartments] = useState<Department[]>(initialDepartments)
+  // Start as not loading when initial data is provided via SSR
+  const [isLoading, setIsLoading] = useState(initialApplications.length === 0)
+  const { toast, showToast, hideToast } = useToast()
 
   // Filters
   const [searchQuery, setSearchQuery] = useState('')
@@ -52,13 +68,6 @@ export default function CandidatesManager() {
   const [detailApp, setDetailApp] = useState<CandidateApplication | null>(null)
   const [rejectApp, setRejectApp] = useState<CandidateApplication | null>(null)
 
-  // Auto dismiss notification toast
-  useEffect(() => {
-    if (!toast) return
-    const timer = setTimeout(() => setToast(null), 3000)
-    return () => clearTimeout(timer)
-  }, [toast])
-
   // Check if logged in user is Employee or Department Manager
   const isRestrictedDept =
     user?.role === UserRole.EMPLOYEE || user?.role === UserRole.DEPARTMENT_MANAGER
@@ -68,8 +77,9 @@ export default function CandidatesManager() {
     return typeof user.departmentId === 'object' ? user.departmentId._id : user.departmentId
   }, [user])
 
-  // Fetch departments & initial load
+  // Fetch departments only if not provided via SSR
   useEffect(() => {
+    if (initialDepartments.length > 0) return // Skip — already hydrated from SSR
     const fetchDepartments = async () => {
       try {
         const list = await departmentApi.getAll()
@@ -79,7 +89,7 @@ export default function CandidatesManager() {
       }
     }
     fetchDepartments()
-  }, [])
+  }, []) // eslint-disable-line react-hooks/exhaustive-deps
 
   // Initialize department filter for restricted roles
   useEffect(() => {
@@ -88,7 +98,7 @@ export default function CandidatesManager() {
     }
   }, [isRestrictedDept, userDeptId])
 
-  // Load candidate applications
+  // Load candidate applications — re-fetch when department filter changes (client-side filter change)
   const fetchApplications = async () => {
     setIsLoading(true)
     try {
@@ -100,15 +110,17 @@ export default function CandidatesManager() {
       setApplications(data || [])
     } catch (err) {
       console.error('Lỗi lấy danh sách ứng viên:', err)
-      setToast({ message: 'Không thể tải danh sách ứng viên', type: 'error' })
+      showToast('Không thể tải danh sách ứng viên', 'error')
     } finally {
       setIsLoading(false)
     }
   }
 
   useEffect(() => {
+    // Skip initial fetch if data was already provided via SSR
+    if (initialApplications.length > 0 && selectedDepartmentId === '' && !isRestrictedDept) return
     fetchApplications()
-  }, [selectedDepartmentId, isRestrictedDept, userDeptId])
+  }, [selectedDepartmentId, isRestrictedDept, userDeptId]) // eslint-disable-line react-hooks/exhaustive-deps
 
   // Scope applications strictly for restricted department roles (e.g. Department Manager)
   const scopedApplications = useMemo(() => {
@@ -331,23 +343,8 @@ export default function CandidatesManager() {
 
   return (
     <div className="space-y-4">
-      {/* Floating Notification Toast */}
-      {toast && (
-        <div
-          className={`fixed bottom-6 right-6 z-50 px-4 py-3 rounded-2xl shadow-xl border flex items-center gap-2.5 animate-in slide-in-from-bottom duration-300 ${
-            toast.type === 'success'
-              ? 'bg-slate-900 text-white border-slate-800'
-              : 'bg-rose-900 text-white border-rose-800'
-          }`}
-        >
-          {toast.type === 'success' ? (
-            <CheckCircle size={18} className="text-emerald-400" />
-          ) : (
-            <AlertTriangle size={18} className="text-rose-400" />
-          )}
-          <span className="text-xs font-bold">{toast.message}</span>
-        </div>
-      )}
+      {/* Toast Notification */}
+      <Toast toast={toast} onClose={hideToast} position="bottom-right" />
 
       {/* Top Stat Cards Section */}
       <CandidateStatCards applications={scopedApplications} />
@@ -558,7 +555,7 @@ export default function CandidatesManager() {
           }
           onSuccess={() => {
             setApplications((prev) => prev.filter((item) => item._id !== rejectApp._id))
-            setToast({ message: 'Đã từ chối ứng viên thành công', type: 'success' })
+            showToast('Đã từ chối ứng viên thành công', 'success')
           }}
         />
       )}

@@ -1,6 +1,3 @@
-'use client';
-
-import React from 'react';
 import { Users, Briefcase, Calendar, CheckCircle2, TrendingUp, ArrowUpRight } from 'lucide-react';
 import { GlassCard, GlassBadge, GlassButton } from '@/src/components/common/glass';
 import Link from 'next/link';
