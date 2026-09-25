@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, useMemo, useRef } from "react";
+import { useRouter } from "next/navigation";
 import { createPortal } from "react-dom";
 import { Briefcase, ChevronLeft, ChevronRight } from "lucide-react";
 import {
@@ -51,6 +52,7 @@ export default function KanbanContainer({
   initialJobs,
   initialApplications,
 }: KanbanContainerProps) {
+  const router = useRouter();
   const { user } = useAuth();
   const isDeptManager = user?.role === UserRole.DEPARTMENT_MANAGER;
 
@@ -634,6 +636,7 @@ export default function KanbanContainer({
                   onSelectCandidate={setSelectedCandidateApp}
                   onMoveStage={handleMoveStage}
                   onRejectCandidate={(app) => setRejectingKanbanApp(app)}
+                  onCreateOffer={(app) => router.push(`/offers/create?applicationId=${app._id}`)}
                   style={{ width: columnWidthStyle }}
                 />
               ))}
@@ -669,6 +672,7 @@ export default function KanbanContainer({
                 onSelectCandidate={setSelectedCandidateApp}
                 onMoveStage={handleMoveStage}
                 onRejectCandidate={(app) => setRejectingKanbanApp(app)}
+                onCreateOffer={(app) => router.push(`/offers/create?applicationId=${app._id}`)}
                 style={{ width: columnWidthStyle }}
               />
             ))}

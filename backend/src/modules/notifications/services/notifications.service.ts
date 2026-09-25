@@ -468,6 +468,114 @@ export class NotificationsService {
     });
   }
 
+  async notifyCandidateOfferSent(
+    candidateUserId: string,
+    params: {
+      jobTitle: string;
+      offerId: string;
+      expirationDateFormatted: string;
+    },
+  ) {
+    if (!candidateUserId) return;
+
+    return this.create({
+      recipientId: candidateUserId,
+      title: 'Bạn nhận được Lời mời nhận việc (Offer Letter)',
+      message: `Chúc mừng bạn! Bạn đã nhận được lời mời nhận việc cho vị trí "${params.jobTitle}". Vui lòng xem chi tiết và phản hồi trước ngày ${params.expirationDateFormatted}.`,
+      type: NotificationType.OFFER_SENT,
+      category: NotificationCategory.OFFER,
+      priority: NotificationPriority.HIGH,
+      actionUrl: '/user/applications',
+      metadata: {
+        offerId: params.offerId,
+        jobTitle: params.jobTitle,
+      },
+    });
+  }
+
+  async notifyHrOfferAccepted(params: {
+    candidateName: string;
+    jobTitle: string;
+    offerId: string;
+    departmentId?: string;
+  }) {
+    // Notify HR Admins
+    await this.notifyHrAdmins({
+      title: 'Ứng viên đã chấp nhận Offer!',
+      message: `Ứng viên ${params.candidateName} đã đồng ý nhận việc cho vị trí "${params.jobTitle}".`,
+      type: NotificationType.OFFER_ACCEPTED,
+      category: NotificationCategory.OFFER,
+      priority: NotificationPriority.HIGH,
+      actionUrl: '/offers',
+      metadata: {
+        offerId: params.offerId,
+        candidateName: params.candidateName,
+        jobTitle: params.jobTitle,
+      },
+    });
+
+    // Notify Department Manager if departmentId exists
+    if (params.departmentId) {
+      await this.notifyDepartmentManagers(params.departmentId, {
+        title: 'Ứng viên đã chấp nhận Offer!',
+        message: `Ứng viên ${params.candidateName} đã chấp nhận lời mời nhận việc vị trí "${params.jobTitle}".`,
+        type: NotificationType.OFFER_ACCEPTED,
+        category: NotificationCategory.OFFER,
+        priority: NotificationPriority.HIGH,
+        actionUrl: '/offers',
+        metadata: {
+          offerId: params.offerId,
+          candidateName: params.candidateName,
+          jobTitle: params.jobTitle,
+        },
+      });
+    }
+  }
+
+  async notifyHrOfferDeclined(params: {
+    candidateName: string;
+    jobTitle: string;
+    offerId: string;
+    declineReason?: string;
+    departmentId?: string;
+  }) {
+    const reasonText = params.declineReason ? ` Lý do: "${params.declineReason}"` : '';
+
+    // Notify HR Admins
+    await this.notifyHrAdmins({
+      title: 'Ứng viên đã từ chối Offer',
+      message: `Ứng viên ${params.candidateName} đã từ chối lời mời nhận việc cho vị trí "${params.jobTitle}".${reasonText}`,
+      type: NotificationType.OFFER_DECLINED,
+      category: NotificationCategory.OFFER,
+      priority: NotificationPriority.HIGH,
+      actionUrl: '/offers',
+      metadata: {
+        offerId: params.offerId,
+        candidateName: params.candidateName,
+        jobTitle: params.jobTitle,
+        declineReason: params.declineReason,
+      },
+    });
+
+    // Notify Department Manager if departmentId exists
+    if (params.departmentId) {
+      await this.notifyDepartmentManagers(params.departmentId, {
+        title: 'Ứng viên đã từ chối Offer',
+        message: `Ứng viên ${params.candidateName} đã từ chối lời mời nhận việc cho vị trí "${params.jobTitle}".${reasonText}`,
+        type: NotificationType.OFFER_DECLINED,
+        category: NotificationCategory.OFFER,
+        priority: NotificationPriority.HIGH,
+        actionUrl: '/offers',
+        metadata: {
+          offerId: params.offerId,
+          candidateName: params.candidateName,
+          jobTitle: params.jobTitle,
+          declineReason: params.declineReason,
+        },
+      });
+    }
+  }
+
   async getUserNotifications(userId: string, query: QueryNotificationDto) {
     if (!Types.ObjectId.isValid(userId)) {
       throw new BadRequestException('User ID không hợp lệ');

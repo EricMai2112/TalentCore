@@ -2,7 +2,7 @@
 
 import { useMemo } from "react";
 
-import { Calendar, AlertTriangle, Briefcase, ChevronLeft, ChevronRight, CheckCircle2, UserX } from "lucide-react";
+import { Calendar, AlertTriangle, Briefcase, ChevronLeft, ChevronRight, CheckCircle2, UserX, FileText } from "lucide-react";
 import { useSortable } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 import { KanbanApplication } from "../types/kanban.types";
@@ -16,6 +16,7 @@ interface CandidateKanbanCardProps {
   onSelect?: (app: KanbanApplication) => void;
   onMoveStage?: (appId: string, targetStageId: string) => void;
   onRejectCandidate?: (app: KanbanApplication) => void;
+  onCreateOffer?: (app: KanbanApplication) => void;
   isOverlay?: boolean;
 }
 
@@ -26,6 +27,7 @@ export default function CandidateKanbanCard({
   onSelect,
   onMoveStage,
   onRejectCandidate,
+  onCreateOffer,
   isOverlay = false,
 }: CandidateKanbanCardProps) {
   const candidate = application.candidateId;
@@ -112,6 +114,13 @@ export default function CandidateKanbanCard({
     if (!stages || currentStageIndex === -1 || currentStageIndex >= stages.length - 1) return null;
     return stages[currentStageIndex + 1];
   }, [stages, currentStageIndex]);
+
+  // Check if current stage is Offer stage
+  const isOfferStage = useMemo(() => {
+    const currentStage = stages.find((s) => s._id === application.currentStageId);
+    const stageName = currentStage?.name?.toLowerCase() || "";
+    return stageName.includes("đề nghị") || stageName.includes("offer") || stageName.includes("nhận việc");
+  }, [stages, application.currentStageId]);
 
   // Format applied date
   const formattedDate = useMemo(() => {
@@ -312,6 +321,21 @@ export default function CandidateKanbanCard({
             )}
           </div>
         </div>
+
+        {/* Offer Action Button when in Offer Stage */}
+        {isOfferStage && onCreateOffer && !isRejected && (
+          <button
+            type="button"
+            onClick={(e) => {
+              e.stopPropagation();
+              onCreateOffer(application);
+            }}
+            className="w-full py-1.5 px-3 rounded-xl bg-emerald-50 hover:bg-emerald-100 text-emerald-700 border border-emerald-200/90 font-bold text-xs flex items-center justify-center gap-1.5 transition-colors shadow-2xs cursor-pointer"
+          >
+            <FileText size={13} className="text-emerald-600" />
+            Soạn Đề Nghị Nhận Việc (Offer)
+          </button>
+        )}
 
         {/* Bottom Footer: Stage Navigation Controls (Disabled if Rejected or Interview Cancelled) */}
         <div
