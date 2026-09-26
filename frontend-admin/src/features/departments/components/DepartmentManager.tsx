@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { Plus, Building2, Check, AlertTriangle } from "lucide-react";
+import { Plus, Building2 } from "lucide-react";
 import {
   Department,
   CreateDepartmentDto,
@@ -13,7 +13,7 @@ import { departmentApi } from "../services/department.api";
 import DepartmentCard from "./DepartmentCard";
 import DepartmentModal from "./DepartmentModal";
 import DeleteConfirmModal from "./DeleteConfirmModal";
-import { CustomButton } from "@/src/components/common";
+import { CustomButton, Toast, useToast } from "@/src/components/common";
 
 interface DepartmentManagerProps {
   initialDepartments: Department[];
@@ -26,6 +26,7 @@ export default function DepartmentManager({
 }: DepartmentManagerProps) {
   const router = useRouter();
   const [departments, setDepartments] = useState<Department[]>(initialDepartments);
+  const { toast, showToast, hideToast } = useToast();
 
   useEffect(() => {
     setDepartments(initialDepartments);
@@ -37,21 +38,8 @@ export default function DepartmentManager({
   const [isDeleteOpen, setIsDeleteOpen] = useState(false);
   const [deptToDelete, setDeptToDelete] = useState<Department | null>(null);
 
-  // Loading & toast
+  // Loading state
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [toast, setToast] = useState<{
-    message: string;
-    type: "success" | "error";
-  } | null>(null);
-
-  useEffect(() => {
-    if (!toast) return;
-    const t = setTimeout(() => setToast(null), 3000);
-    return () => clearTimeout(t);
-  }, [toast]);
-
-  const showToast = (message: string, type: "success" | "error") =>
-    setToast({ message, type });
 
   const fetchDepartments = async () => {
     try {
@@ -124,33 +112,17 @@ export default function DepartmentManager({
   };
 
   return (
-    <div className="space-y-5">
-      {/* Toast */}
-      {toast && (
-        <div
-          className={`fixed top-4 right-4 z-50 flex items-center gap-2 px-4 py-3 rounded-xl shadow-lg border transition-all duration-300 animate-in slide-in-from-top-5 ${
-            toast.type === "success"
-              ? "bg-emerald-50 border-emerald-100 text-emerald-800"
-              : "bg-red-50 border-red-100 text-red-800"
-          }`}
-        >
-          {toast.type === "success" ? (
-            <Check size={16} />
-          ) : (
-            <AlertTriangle size={16} />
-          )}
-          <span className="text-sm font-semibold">{toast.message}</span>
-        </div>
-      )}
-
+    <div className="space-y-6">
       {/* Header section */}
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <h2 className="text-xl font-bold text-gray-900 flex items-center gap-2">
-            <Building2 className="text-indigo-600 shrink-0" size={22} />
+          <h2 className="text-xl font-bold text-slate-900 flex items-center gap-2.5">
+            <span className="p-2 rounded-xl bg-blue-50 text-blue-600 border border-blue-100/60 shadow-2xs shrink-0">
+              <Building2 size={20} />
+            </span>
             Quản lý phòng ban
           </h2>
-          <p className="text-sm text-gray-500 mt-0.5">
+          <p className="text-sm text-slate-500 mt-1">
             Phân công người phỏng vấn và quản lý cấu trúc từng phòng ban
           </p>
         </div>
@@ -166,24 +138,27 @@ export default function DepartmentManager({
 
       {/* List */}
       {departments.length === 0 ? (
-        <div className="bg-white border border-gray-100 rounded-2xl p-12 text-center shadow-xs">
-          <Building2 className="mx-auto text-gray-300 mb-3" size={40} />
-          <h3 className="text-base font-semibold text-gray-800">
+        <div className="flex flex-col items-center justify-center py-16 px-6 text-center bg-white/50 border border-white/70 rounded-3xl backdrop-blur-md shadow-xl shadow-blue-500/5">
+          <div className="p-4 rounded-2xl bg-slate-100/80 text-slate-400 mb-4 shadow-2xs">
+            <Building2 size={36} />
+          </div>
+          <h3 className="text-base font-bold text-slate-800">
             Chưa có phòng ban nào
           </h3>
-          <p className="text-sm text-gray-400 mt-1 max-w-sm mx-auto">
+          <p className="text-sm text-slate-500 mt-1 max-w-sm mx-auto">
             Tạo phòng ban đầu tiên để bắt đầu phân công nhân sự.
           </p>
-          <button
+          <CustomButton
             onClick={handleOpenCreate}
-            className="mt-4 inline-flex items-center gap-1 px-4 py-2 bg-indigo-50 hover:bg-indigo-100 text-indigo-600 font-semibold text-sm rounded-xl transition-colors border border-indigo-100 cursor-pointer"
+            variant="secondary"
+            icon={<Plus size={16} />}
+            className="mt-5"
           >
-            <Plus size={16} />
             Tạo phòng ban đầu tiên
-          </button>
+          </CustomButton>
         </div>
       ) : (
-        <div className="space-y-3">
+        <div className="space-y-3.5">
           {departments.map((dept) => (
             <DepartmentCard
               key={dept._id}
@@ -216,6 +191,9 @@ export default function DepartmentManager({
         departmentName={deptToDelete?.name ?? ""}
         isDeleting={isSubmitting}
       />
+
+      {/* Standard Toast Notification */}
+      <Toast toast={toast} onClose={hideToast} />
     </div>
   );
 }

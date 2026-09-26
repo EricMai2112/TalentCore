@@ -14,7 +14,7 @@ import {
   GitBranch,
 } from "lucide-react";
 import { Stage, PipelineTemplate } from "../types/pipeline.types";
-import { CustomInput } from "@/src/components/common";
+import { CustomInput, CustomButton } from "@/src/components/common";
 
 interface PipelineModalProps {
   isOpen: boolean;
@@ -295,14 +295,14 @@ export default function PipelineModal({
           </div>
 
           {/* Add New Stage Section */}
-          <div className="bg-blue-50/40 border border-blue-100/60 rounded-2xl p-4 space-y-3">
+          <div className="bg-white/60 border border-white/80 rounded-2xl p-4 space-y-3 shadow-2xs backdrop-blur-xs">
             <div className="flex items-center gap-2">
               <input
                 type="text"
                 value={newStageName}
                 onChange={(e) => setNewStageName(e.target.value)}
                 placeholder="Nhập tên giai đoạn mới..."
-                className="flex-grow px-3 py-2 border border-slate-200 rounded-xl text-sm text-slate-800 focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white placeholder-slate-400 font-medium"
+                className="flex-grow px-3.5 py-2.5 border border-slate-200/90 rounded-xl text-xs sm:text-sm text-slate-800 focus:outline-none focus:ring-4 focus:ring-blue-500/15 focus:border-blue-500 bg-white placeholder-slate-400 font-medium"
                 onKeyDown={(e) => {
                   if (e.key === "Enter") {
                     e.preventDefault();
@@ -310,14 +310,16 @@ export default function PipelineModal({
                   }
                 }}
               />
-              <button
+              <CustomButton
                 type="button"
                 onClick={handleAddStage}
-                className="flex items-center gap-1 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-xl text-xs sm:text-sm transition-colors shadow-md shadow-blue-500/20 cursor-pointer shrink-0"
+                variant="primary"
+                size="sm"
+                icon={<Plus size={15} />}
+                className="shrink-0"
               >
-                <Plus size={15} />
                 Thêm
-              </button>
+              </CustomButton>
             </div>
 
             <div className="flex items-center gap-2 flex-wrap">
@@ -342,27 +344,24 @@ export default function PipelineModal({
         </form>
 
         {/* Modal Footer */}
-        <div className="px-6 py-4 border-t border-slate-100 bg-slate-50/80 backdrop-blur-md flex items-center justify-end gap-3 sticky bottom-0 z-10 shrink-0">
-          <button
+        <div className="px-6 py-4 border-t border-slate-100 bg-slate-50/80 backdrop-blur-md flex items-center justify-end gap-2.5 sticky bottom-0 z-10 shrink-0">
+          <CustomButton
             type="button"
+            variant="ghost"
             onClick={onClose}
-            className="px-4 py-2 border border-slate-200 bg-white hover:bg-slate-50 text-slate-700 font-bold text-xs sm:text-sm rounded-xl transition-all shadow-3xs cursor-pointer"
+            disabled={isSubmitting}
           >
             Hủy
-          </button>
-          <button
+          </CustomButton>
+          <CustomButton
             type="button"
+            variant="primary"
             onClick={handleFormSubmit}
-            disabled={isSubmitting}
-            className="flex items-center gap-1.5 px-5 py-2 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 disabled:opacity-50 text-white font-bold text-xs sm:text-sm rounded-xl transition-all shadow-md shadow-blue-500/20 cursor-pointer"
+            isLoading={isSubmitting}
+            icon={<Check size={16} />}
           >
-            {isSubmitting ? (
-              <Loader2 size={16} className="animate-spin" />
-            ) : (
-              <Check size={16} />
-            )}
-            <span>{initialTemplate ? "Lưu thay đổi" : "Tạo template"}</span>
-          </button>
+            {initialTemplate ? "Lưu thay đổi" : "Tạo template"}
+          </CustomButton>
         </div>
       </div>
     </div>,

@@ -23,15 +23,15 @@ export default function CriteriaBenchmarkHint({
     : positionTitle || 'Vị trí này'
 
   return (
-    <div className="p-3.5 bg-[#3B82F6]/10 border border-[#3B82F6]/20 rounded-2xl flex items-start gap-3 text-xs text-slate-800 shadow-2xs">
-      <div className="p-1.5 bg-[#3B82F6]/15 text-[#3B82F6] rounded-xl shrink-0 mt-0.5">
+    <div className="p-4 bg-blue-50/70 backdrop-blur-md border border-blue-200/80 rounded-2xl flex items-start gap-3.5 text-xs text-slate-800 shadow-2xs">
+      <div className="p-2 bg-blue-500/15 text-[#3B82F6] rounded-xl shrink-0 mt-0.5">
         <Info size={16} />
       </div>
-      <div className="space-y-0.5">
+      <div className="space-y-1">
         <span className="font-extrabold uppercase tracking-wider block text-[#3B82F6] text-[11px]">
           Gợi ý chuẩn Tham chiếu
         </span>
-        <p className="text-slate-600 text-xs leading-relaxed font-medium">
+        <p className="text-slate-700 text-xs leading-relaxed font-medium">
           Đối với vị trí <strong className="text-slate-900 font-bold">{titleToShow}</strong>:
           Thường dành <strong className="text-rose-600 font-bold">50% - 70% tổng trọng số</strong>{' '}
           cho nhóm tiêu chí <span className="text-rose-600 font-bold">🔴 Bắt buộc</span>,{' '}
