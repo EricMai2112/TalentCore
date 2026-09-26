@@ -19,6 +19,7 @@ export interface CustomTableContainerProps {
   emptyIcon?: React.ReactNode
   emptyTitle?: string
   emptyDescription?: string
+  heightClass?: string
   maxHeightClass?: string
   className?: string
 }
@@ -32,12 +33,16 @@ export default function CustomTableContainer({
   emptyIcon,
   emptyTitle = 'Không tìm thấy dữ liệu',
   emptyDescription = 'Không có kết quả nào phù hợp với điều kiện tìm kiếm.',
-  maxHeightClass = 'max-h-[calc(100vh-270px)]',
+  heightClass = 'h-[calc(100vh-250px)] min-h-[380px]',
+  maxHeightClass,
   className = ''
 }: CustomTableContainerProps) {
+  const containerHeightClass =
+    heightClass || maxHeightClass || 'h-[calc(100vh-240px)] min-h-[380px]'
+
   return (
     <div
-      className={`overflow-hidden bg-white/50 border border-white/70 shadow-xl shadow-[#1261A6]/8 rounded-3xl transition-all duration-300 backdrop-blur-md flex flex-col ${maxHeightClass} ${className}`}
+      className={`overflow-hidden bg-white/50 border border-white/70 shadow-xl shadow-[#1261A6]/8 rounded-3xl transition-all duration-300 backdrop-blur-md flex flex-col ${containerHeightClass} ${className}`}
     >
       {/* Loading Overlay State */}
       {isLoading ? (
@@ -48,12 +53,12 @@ export default function CustomTableContainer({
       ) : isEmpty ? (
         /* Empty Data State */
         <div className="flex flex-col items-center justify-center py-16 px-6 text-center text-slate-500 bg-white/40 flex-1 min-h-[300px] space-y-3">
-          <div className="w-16 h-16 rounded-full bg-slate-100/80 text-slate-400 border border-slate-200/80 flex items-center justify-center shadow-2xs">
+          <div className="flex items-center justify-center w-16 h-16 border rounded-full bg-slate-100/80 text-slate-400 border-slate-200/80 shadow-2xs">
             {emptyIcon || <TableIcon className="w-8 h-8 stroke-[1.5]" />}
           </div>
           <div className="max-w-sm space-y-1">
             <h3 className="text-sm font-bold text-slate-800">{emptyTitle}</h3>
-            <p className="text-xs text-slate-500 leading-relaxed">{emptyDescription}</p>
+            <p className="text-xs leading-relaxed text-slate-500">{emptyDescription}</p>
           </div>
         </div>
       ) : (
@@ -65,7 +70,7 @@ export default function CustomTableContainer({
 
       {/* Pinned Pagination Footer */}
       {pagination && !isLoading && !isEmpty && (
-        <div className="sticky bottom-0 z-10 bg-white/60 backdrop-blur-lg border-t border-white/60 shrink-0">
+        <div className="sticky bottom-0 z-10 border-t bg-white/60 backdrop-blur-lg border-white/60 shrink-0">
           <CustomPagination
             currentPage={pagination.currentPage}
             totalPages={pagination.totalPages}

@@ -1,12 +1,18 @@
+'use client';
+
 import React from 'react';
-import { FileText, Send, CheckCircle2, XCircle, Clock } from 'lucide-react';
+import { FileText, Clock, CheckCircle2, XCircle } from 'lucide-react';
 import { OfferItem, OfferStatus } from '../types/offer.types';
 
 interface OfferStatCardsProps {
   offers: OfferItem[];
+  className?: string;
 }
 
-export const OfferStatCards: React.FC<OfferStatCardsProps> = ({ offers }) => {
+export const OfferStatCards: React.FC<OfferStatCardsProps> = ({
+  offers,
+  className = '',
+}) => {
   const stats = React.useMemo(() => {
     let draft = 0;
     let sent = 0;
@@ -29,56 +35,83 @@ export const OfferStatCards: React.FC<OfferStatCardsProps> = ({ offers }) => {
     };
   }, [offers]);
 
-  const cards = [
+  const statCardsConfig = [
     {
-      label: 'Tổng số đề nghị',
-      value: stats.total,
+      id: 'ALL',
+      label: 'TỔNG SỐ ĐỀ NGHỊ',
+      count: stats.total,
       icon: FileText,
-      iconColor: 'text-indigo-600',
-      bgColor: 'bg-indigo-50/80',
-      borderColor: 'border-indigo-100',
+      iconBg: 'bg-blue-100/90 text-[#3B82F6] border-blue-200/60',
+      blobGradient: 'from-blue-500/15 via-sky-400/10 to-transparent',
+      ratioColor: 'bg-blue-50 text-[#3B82F6] border-blue-100',
     },
     {
-      label: 'Chờ ứng viên phản hồi',
-      value: stats.sent,
+      id: OfferStatus.SENT,
+      label: 'CHỜ PHẢN HỒI',
+      count: stats.sent,
       icon: Clock,
-      iconColor: 'text-amber-600',
-      bgColor: 'bg-amber-50/80',
-      borderColor: 'border-amber-100',
+      iconBg: 'bg-amber-100/90 text-amber-600 border-amber-200/60',
+      blobGradient: 'from-amber-500/15 via-orange-400/10 to-transparent',
+      ratioColor: 'bg-amber-50 text-amber-700 border-amber-100',
     },
     {
-      label: 'Đã chấp nhận',
-      value: stats.accepted,
+      id: OfferStatus.ACCEPTED,
+      label: 'ĐÃ CHẤP NHẬN',
+      count: stats.accepted,
       icon: CheckCircle2,
-      iconColor: 'text-emerald-600',
-      bgColor: 'bg-emerald-50/80',
-      borderColor: 'border-emerald-100',
+      iconBg: 'bg-emerald-100/90 text-emerald-600 border-emerald-200/60',
+      blobGradient: 'from-emerald-500/15 via-teal-400/10 to-transparent',
+      ratioColor: 'bg-emerald-50 text-emerald-700 border-emerald-100',
     },
     {
-      label: 'Đã từ chối',
-      value: stats.declined,
+      id: OfferStatus.DECLINED,
+      label: 'ĐÃ TỪ CHỐI',
+      count: stats.declined,
       icon: XCircle,
-      iconColor: 'text-rose-600',
-      bgColor: 'bg-rose-50/80',
-      borderColor: 'border-rose-100',
+      iconBg: 'bg-rose-100/90 text-rose-600 border-rose-200/60',
+      blobGradient: 'from-rose-500/15 via-pink-400/10 to-transparent',
+      ratioColor: 'bg-rose-50 text-rose-700 border-rose-100',
     },
   ];
 
   return (
-    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-      {cards.map((card, idx) => {
-        const Icon = card.icon;
+    <div className={`grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-4 gap-3 ${className}`}>
+      {statCardsConfig.map((card) => {
+        const IconComponent = card.icon;
+        const percentRatio = stats.total > 0 ? Math.round((card.count / stats.total) * 100) : 0;
+
         return (
           <div
-            key={idx}
-            className={`flex items-center gap-4 p-4 rounded-2xl bg-white border ${card.borderColor} shadow-xs transition-all hover:shadow-sm`}
+            key={card.id}
+            className="relative bg-white/25 border border-white/60 rounded-2xl p-3 px-3.5 shadow-md shadow-blue-500/5 overflow-hidden flex items-center gap-3 select-none"
           >
-            <div className={`p-3 rounded-xl ${card.bgColor} ${card.iconColor}`}>
-              <Icon className="w-5 h-5" />
+            {/* Ambient Accent background */}
+            <div
+              className={`absolute -bottom-6 -right-6 w-20 h-20 rounded-full bg-gradient-to-br ${card.blobGradient} blur-lg pointer-events-none`}
+            />
+
+            {/* Left: Icon Badge */}
+            <div
+              className={`w-8.5 h-8.5 rounded-xl border flex items-center justify-center shrink-0 shadow-2xs ${card.iconBg}`}
+            >
+              <IconComponent size={16} className="stroke-[2.2]" />
             </div>
-            <div>
-              <p className="text-xs font-medium text-slate-500">{card.label}</p>
-              <h3 className="text-xl font-bold text-slate-800 mt-0.5">{card.value}</h3>
+
+            {/* Right: Label + Count & Dynamic Percentage Ratio */}
+            <div className="relative z-10 flex-1 min-w-0">
+              <span className="text-[10px] font-bold tracking-wider text-slate-500 uppercase block truncate leading-tight">
+                {card.label}
+              </span>
+              <div className="flex items-baseline justify-between gap-1 mt-0.5">
+                <span className="text-lg sm:text-xl font-black text-slate-900 tracking-tight leading-none">
+                  {card.count}
+                </span>
+                <span
+                  className={`text-[10px] font-bold px-1.5 py-0.5 rounded-md border shrink-0 leading-none ${card.ratioColor}`}
+                >
+                  {percentRatio}%
+                </span>
+              </div>
             </div>
           </div>
         );
@@ -86,3 +119,5 @@ export const OfferStatCards: React.FC<OfferStatCardsProps> = ({ offers }) => {
     </div>
   );
 };
+
+export default OfferStatCards;

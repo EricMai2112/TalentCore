@@ -90,7 +90,7 @@ interface InterviewsManagerProps {
 export default function InterviewsManager({
   initialInterviews = [],
   initialDepartments = [],
-  initialApplications = [],
+  initialApplications = []
 }: InterviewsManagerProps) {
   const { user } = useAuth()
 
@@ -283,145 +283,172 @@ export default function InterviewsManager({
   }, []) // eslint-disable-line react-hooks/exhaustive-deps
 
   // Dynamic positions options based on current interviews & active department filter
-  const availablePositions = useMemo(() => Array.from(
-    new Set(
-      interviews
-        .filter((item) => {
-          if (!departmentFilter || departmentFilter === 'ALL') return true
-          const itemDeptId =
-            typeof item.jobDescriptionId === 'object' && item.jobDescriptionId?.departmentId
-              ? typeof item.jobDescriptionId.departmentId === 'object'
-                ? item.jobDescriptionId.departmentId._id
-                : item.jobDescriptionId.departmentId
-              : null
-          return itemDeptId === departmentFilter
-        })
-        .map((item) =>
-          typeof item.jobDescriptionId === 'object' ? item.jobDescriptionId?.title : null
+  const availablePositions = useMemo(
+    () =>
+      Array.from(
+        new Set(
+          interviews
+            .filter((item) => {
+              if (!departmentFilter || departmentFilter === 'ALL') return true
+              const itemDeptId =
+                typeof item.jobDescriptionId === 'object' && item.jobDescriptionId?.departmentId
+                  ? typeof item.jobDescriptionId.departmentId === 'object'
+                    ? item.jobDescriptionId.departmentId._id
+                    : item.jobDescriptionId.departmentId
+                  : null
+              return itemDeptId === departmentFilter
+            })
+            .map((item) =>
+              typeof item.jobDescriptionId === 'object' ? item.jobDescriptionId?.title : null
+            )
+            .filter(Boolean)
         )
-        .filter(Boolean)
-    )
-  ) as string[], [interviews, departmentFilter])
+      ) as string[],
+    [interviews, departmentFilter]
+  )
 
   // Stable today string — only recomputed when component first mounts
   const todayISO = useMemo(() => new Date().toISOString().split('T')[0], [])
 
   // Base role & filter scoping — memoized to avoid full recompute on every render
-  const baseFilteredInterviews = useMemo(() => interviews.filter((item) => {
-    const itemDeptId =
-      typeof item.jobDescriptionId === 'object' && item.jobDescriptionId?.departmentId
-        ? typeof item.jobDescriptionId.departmentId === 'object'
-          ? item.jobDescriptionId.departmentId._id
-          : item.jobDescriptionId.departmentId
-        : null
+  const baseFilteredInterviews = useMemo(
+    () =>
+      interviews.filter((item) => {
+        const itemDeptId =
+          typeof item.jobDescriptionId === 'object' && item.jobDescriptionId?.departmentId
+            ? typeof item.jobDescriptionId.departmentId === 'object'
+              ? item.jobDescriptionId.departmentId._id
+              : item.jobDescriptionId.departmentId
+            : null
 
-    const itemInterviewerId =
-      typeof item.interviewerId === 'object' ? item.interviewerId?._id : item.interviewerId
+        const itemInterviewerId =
+          typeof item.interviewerId === 'object' ? item.interviewerId?._id : item.interviewerId
 
-    // 1. Role Scope Filter
-    if (isDeptManager) {
-      if (userDeptId && itemDeptId !== userDeptId) return false
-    } else if (isEmployee) {
-      const isAssigned = itemInterviewerId === user?._id || itemInterviewerId === (user as any)?.id
-      if (!isAssigned) return false
-    }
+        // 1. Role Scope Filter
+        if (isDeptManager) {
+          if (userDeptId && itemDeptId !== userDeptId) return false
+        } else if (isEmployee) {
+          const isAssigned =
+            itemInterviewerId === user?._id || itemInterviewerId === (user as any)?.id
+          if (!isAssigned) return false
+        }
 
-    // 2. Department Dropdown Filter
-    if (departmentFilter && departmentFilter !== 'ALL') {
-      if (itemDeptId !== departmentFilter) return false
-    }
+        // 2. Department Dropdown Filter
+        if (departmentFilter && departmentFilter !== 'ALL') {
+          if (itemDeptId !== departmentFilter) return false
+        }
 
-    // 3. Position Dropdown Filter
-    if (positionFilter && positionFilter !== 'ALL') {
-      const jobTitle = typeof item.jobDescriptionId === 'object' ? item.jobDescriptionId?.title : ''
-      if (jobTitle !== positionFilter) return false
-    }
+        // 3. Position Dropdown Filter
+        if (positionFilter && positionFilter !== 'ALL') {
+          const jobTitle =
+            typeof item.jobDescriptionId === 'object' ? item.jobDescriptionId?.title : ''
+          if (jobTitle !== positionFilter) return false
+        }
 
-    // 4. Status Dropdown Filter
-    if (statusFilter && statusFilter !== 'ALL') {
-      const confirmationStatus = item.confirmationStatus
-      const status = item.status
+        // 4. Status Dropdown Filter
+        if (statusFilter && statusFilter !== 'ALL') {
+          const confirmationStatus = item.confirmationStatus
+          const status = item.status
 
-      switch (statusFilter) {
-        case 'WAITING_DEPT_SCHEDULE':
-          if (confirmationStatus !== 'WAITING_DEPT_SCHEDULE') return false
-          break
-        case 'WAITING_HR_APPROVAL':
-          if (confirmationStatus !== 'WAITING_HR_APPROVAL') return false
-          break
-        case 'SCHEDULED':
-          if (
-            confirmationStatus !== 'SCHEDULED' &&
-            !(status === InterviewStatus.SCHEDULED && !confirmationStatus)
-          )
-            return false
-          break
-        case 'CONFIRMED':
-        case 'UPCOMING':
-          if (
-            confirmationStatus !== 'CONFIRMED' &&
-            status !== InterviewStatus.UPCOMING
-          )
-            return false
-          break
-        case 'IN_PROGRESS':
-          if (status !== InterviewStatus.IN_PROGRESS) return false
-          break
-        case 'COMPLETED':
-          if (status !== InterviewStatus.COMPLETED) return false
-          break
-        case 'CANCELLED':
-        case 'REJECTED':
-          if (
-            status !== InterviewStatus.CANCELLED &&
-            confirmationStatus !== 'CANCELLED' &&
-            confirmationStatus !== 'REJECTED' &&
-            confirmationStatus !== 'CANCEL_REQUESTED'
-          )
-            return false
-          break
-        default:
-          if (status !== statusFilter && confirmationStatus !== statusFilter) return false
-          break
-      }
-    }
+          switch (statusFilter) {
+            case 'WAITING_DEPT_SCHEDULE':
+              if (confirmationStatus !== 'WAITING_DEPT_SCHEDULE') return false
+              break
+            case 'WAITING_HR_APPROVAL':
+              if (confirmationStatus !== 'WAITING_HR_APPROVAL') return false
+              break
+            case 'SCHEDULED':
+              if (
+                confirmationStatus !== 'SCHEDULED' &&
+                !(status === InterviewStatus.SCHEDULED && !confirmationStatus)
+              )
+                return false
+              break
+            case 'CONFIRMED':
+            case 'UPCOMING':
+              if (confirmationStatus !== 'CONFIRMED' && status !== InterviewStatus.UPCOMING)
+                return false
+              break
+            case 'IN_PROGRESS':
+              if (status !== InterviewStatus.IN_PROGRESS) return false
+              break
+            case 'COMPLETED':
+              if (status !== InterviewStatus.COMPLETED) return false
+              break
+            case 'CANCELLED':
+            case 'REJECTED':
+              if (
+                status !== InterviewStatus.CANCELLED &&
+                confirmationStatus !== 'CANCELLED' &&
+                confirmationStatus !== 'REJECTED' &&
+                confirmationStatus !== 'CANCEL_REQUESTED'
+              )
+                return false
+              break
+            default:
+              if (status !== statusFilter && confirmationStatus !== statusFilter) return false
+              break
+          }
+        }
 
-    // 5. Search Query Filter
-    if (searchQuery.trim()) {
-      const q = searchQuery.toLowerCase().trim()
-      const candName =
-        typeof item.candidateId === 'object'
-          ? (item.candidateId?.fullName || item.candidateId?.name || '').toLowerCase()
-          : ''
-      const jobTitle =
-        typeof item.jobDescriptionId === 'object'
-          ? (item.jobDescriptionId?.title || '').toLowerCase()
-          : ''
-      const interviewerName =
-        typeof item.interviewerId === 'object'
-          ? (item.interviewerId?.name || item.interviewerId?.email || '').toLowerCase()
-          : ''
+        // 5. Search Query Filter
+        if (searchQuery.trim()) {
+          const q = searchQuery.toLowerCase().trim()
+          const candName =
+            typeof item.candidateId === 'object'
+              ? (item.candidateId?.fullName || item.candidateId?.name || '').toLowerCase()
+              : ''
+          const jobTitle =
+            typeof item.jobDescriptionId === 'object'
+              ? (item.jobDescriptionId?.title || '').toLowerCase()
+              : ''
+          const interviewerName =
+            typeof item.interviewerId === 'object'
+              ? (item.interviewerId?.name || item.interviewerId?.email || '').toLowerCase()
+              : ''
 
-      const matches = candName.includes(q) || jobTitle.includes(q) || interviewerName.includes(q)
-      if (!matches) return false
-    }
+          const matches =
+            candName.includes(q) || jobTitle.includes(q) || interviewerName.includes(q)
+          if (!matches) return false
+        }
 
-    return true
-  }), [interviews, isDeptManager, isEmployee, userDeptId, user, departmentFilter, positionFilter, statusFilter, searchQuery])
+        return true
+      }),
+    [
+      interviews,
+      isDeptManager,
+      isEmployee,
+      userDeptId,
+      user,
+      departmentFilter,
+      positionFilter,
+      statusFilter,
+      searchQuery
+    ]
+  )
 
   // Calculate tab counts — memoized, depends only on baseFilteredInterviews and todayISO
-  const tabCounts = useMemo(() => ({
-    all: baseFilteredInterviews.length,
-    today: baseFilteredInterviews.filter((i) => isMatchingTimeTab(i.date, 'TODAY', todayISO)).length,
-    thisWeek: baseFilteredInterviews.filter((i) => isMatchingTimeTab(i.date, 'THIS_WEEK', todayISO)).length,
-    nextWeek: baseFilteredInterviews.filter((i) => isMatchingTimeTab(i.date, 'NEXT_WEEK', todayISO)).length
-  }), [baseFilteredInterviews, todayISO])
+  const tabCounts = useMemo(
+    () => ({
+      all: baseFilteredInterviews.length,
+      today: baseFilteredInterviews.filter((i) => isMatchingTimeTab(i.date, 'TODAY', todayISO))
+        .length,
+      thisWeek: baseFilteredInterviews.filter((i) =>
+        isMatchingTimeTab(i.date, 'THIS_WEEK', todayISO)
+      ).length,
+      nextWeek: baseFilteredInterviews.filter((i) =>
+        isMatchingTimeTab(i.date, 'NEXT_WEEK', todayISO)
+      ).length
+    }),
+    [baseFilteredInterviews, todayISO]
+  )
 
   // Final filtered list based on active time tab
-  const filteredInterviews = useMemo(() =>
-    baseFilteredInterviews.filter((item) =>
-      isMatchingTimeTab(item.date, timeTabFilter, todayISO)
-    ),
+  const filteredInterviews = useMemo(
+    () =>
+      baseFilteredInterviews.filter((item) =>
+        isMatchingTimeTab(item.date, timeTabFilter, todayISO)
+      ),
     [baseFilteredInterviews, timeTabFilter, todayISO]
   )
 
@@ -435,12 +462,7 @@ export default function InterviewsManager({
   }
 
   const getStatusBadge = (status: InterviewStatus, confirmationStatus?: string) => {
-    return (
-      <InterviewWorkflowStatusBadge
-        status={status}
-        confirmationStatus={confirmationStatus}
-      />
-    )
+    return <InterviewWorkflowStatusBadge status={status} confirmationStatus={confirmationStatus} />
   }
 
   const getResultBadge = (result: InterviewResult) => {
@@ -449,7 +471,7 @@ export default function InterviewsManager({
 
   return (
     <div
-      className={`transition-all duration-300 ${viewMode === 'calendar' ? 'space-y-3.5' : 'space-y-6'}`}
+      className={`transition-all duration-300 ${viewMode === 'calendar' ? 'space-y-3.5' : 'space-y-3'}`}
     >
       {/* Top Header */}
       <InterviewsHeader totalCount={filteredInterviews.length} />
@@ -478,7 +500,7 @@ export default function InterviewsManager({
 
       {/* Main Content Area (Full Width) */}
       {isLoading ? (
-        <div className="py-20 text-center space-y-3 bg-white/20 border border-white/60 rounded-3xl">
+        <div className="py-20 space-y-3 text-center border bg-white/20 border-white/60 rounded-3xl">
           <Loader2 size={32} className="animate-spin text-[#3B82F6] mx-auto" />
           <p className="text-xs font-medium text-slate-500">Đang tải danh sách phỏng vấn...</p>
         </div>
