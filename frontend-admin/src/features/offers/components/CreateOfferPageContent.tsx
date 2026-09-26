@@ -1,12 +1,11 @@
 'use client'
 
-import React, { useState, useEffect, useMemo } from 'react'
+import React, { useState, useEffect, useMemo, useRef } from 'react'
 import { useRouter } from 'next/navigation'
 import {
   ArrowLeft,
   FileText,
   Send,
-  Sparkles,
   Building2,
   User,
   DollarSign,
@@ -16,7 +15,10 @@ import {
   Mail,
   Phone,
   CheckCircle2,
-  Clock
+  Clock,
+  X,
+  Search,
+  Edit3
 } from 'lucide-react'
 import {
   CustomInput,
@@ -24,20 +26,25 @@ import {
   CustomDatePicker,
   CustomTextarea,
   CustomButton,
+  UnsavedChangesModal,
   Toast,
   useToast
 } from '@/src/components/common'
 import { offersApi } from '../services/offers.api'
-import { ContractType } from '../types/offer.types'
+import { ContractType, OfferItem } from '../types/offer.types'
 import { Department } from '@/src/features/departments/types/department.types'
 
 interface CreateOfferPageContentProps {
+  initialOfferId?: string
+  initialOffer?: OfferItem | null
   initialApplicationId?: string
   initialApplications?: any[]
   initialDepartments?: Department[]
 }
 
 export default function CreateOfferPageContent({
+  initialOfferId,
+  initialOffer = null,
   initialApplicationId,
   initialApplications = [],
   initialDepartments = []
@@ -45,9 +52,21 @@ export default function CreateOfferPageContent({
   const router = useRouter()
   const { toast, showToast, hideToast } = useToast()
 
+  const isEditMode = Boolean(initialOfferId || initialOffer?._id)
+  const targetOfferId = initialOfferId || initialOffer?._id
+
+  // Unsaved changes state
+  const [isDirty, setIsDirty] = useState(false)
+  const [isUnsavedModalOpen, setIsUnsavedModalOpen] = useState(false)
+  const pendingNavigationUrlRef = useRef<string>('/offers')
+
   const [selectedApplicationId, setSelectedApplicationId] = useState<string>(
     initialApplicationId || ''
   )
+  const [candidateSearchText, setCandidateSearchText] = useState('')
+  const [isCandidateDropdownOpen, setIsCandidateDropdownOpen] = useState(false)
+  const candidateInputRef = useRef<HTMLDivElement>(null)
+
   const [positionTitle, setPositionTitle] = useState('')
   const [contractType, setContractType] = useState<ContractType>(ContractType.FULL_TIME)
   const [workLocation, setWorkLocation] = useState(
@@ -60,15 +79,70 @@ export default function CreateOfferPageContent({
   const [startDate, setStartDate] = useState<string>('')
   const [expirationDate, setExpirationDate] = useState<string>('')
   const [benefits, setBenefits] = useState<string>(
-    'Bảo hiểm sức khỏe toàn diện PTI\nThưởng lương tháng 13 & thưởng hiệu quả kinh doanh\nXét tăng lương định kỳ 2 lần/năm\nPhụ cấp ăn trưa, gửi xe và teambuilding hàng quý\nTrang bị máy tính làm việc hiệu năng cao (MacBook / Dell XPS)'
+    `- Bảo hiểm sức khỏe toàn diện PTI
+- Thưởng lương tháng 13 & thưởng hiệu quả kinh doanh
+- Xét tăng lương định kỳ 2 lần/năm
+- Phụ cấp ăn trưa, gửi xe và teambuilding hàng quý
+- Trang bị máy tính làm việc hiệu năng cao (MacBook / Dell XPS)`
   )
   const [notes, setNotes] = useState('')
   const [emailSubject, setEmailSubject] = useState('')
   const [offerLetterHtml, setOfferLetterHtml] = useState('')
   const [submitting, setSubmitting] = useState(false)
 
-  // Set default dates: start in 14 days, expire in 3 days
+  // Populate data if in edit mode
   useEffect(() => {
+    const populateFromOffer = (offer: OfferItem) => {
+      const appId =
+        typeof offer.applicationId === 'object'
+          ? (offer.applicationId as any)._id || (offer.applicationId as any).id
+          : offer.applicationId
+      setSelectedApplicationId(appId)
+      setPositionTitle(offer.positionTitle || '')
+      setContractType(offer.contractType || ContractType.FULL_TIME)
+      setWorkLocation(offer.workLocation || '')
+      setSalary(String(offer.salary || ''))
+      setProbationDurationMonths(String(offer.probationDurationMonths || '2'))
+      setProbationSalaryPercentage(String(offer.probationSalaryPercentage || '85'))
+      if (offer.startDate) {
+        setStartDate(offer.startDate.split('T')[0])
+      }
+      if (offer.expirationDate) {
+        setExpirationDate(offer.expirationDate.split('T')[0])
+      }
+      if (offer.benefits && offer.benefits.length > 0) {
+        setBenefits(offer.benefits.map((b) => (b.startsWith('-') ? b : `- ${b}`)).join('\n'))
+      }
+      setNotes(offer.notes || '')
+      setEmailSubject(offer.emailSubject || '')
+      setOfferLetterHtml(offer.offerLetterHtml || '')
+
+      const cand = offer.candidateId
+      const name = cand?.userId?.name || cand?.profileName || 'Ứng viên'
+      setCandidateSearchText(offer.positionTitle ? `${name} — ${offer.positionTitle}` : name)
+    }
+
+    if (initialOffer) {
+      populateFromOffer(initialOffer)
+    } else if (initialOfferId) {
+      const fetchOffer = async () => {
+        try {
+          const res = await offersApi.getOfferById(initialOfferId)
+          if (res) {
+            populateFromOffer(res)
+          }
+        } catch (err: any) {
+          console.error('Lỗi khi tải thông tin offer:', err)
+          showToast('Không thể tải thông tin đề nghị nhận việc', 'error')
+        }
+      }
+      fetchOffer()
+    }
+  }, [initialOffer, initialOfferId])
+
+  // Set default dates if in create mode
+  useEffect(() => {
+    if (isEditMode) return
     const today = new Date()
     const inTwoWeeks = new Date(today)
     inTwoWeeks.setDate(today.getDate() + 14)
@@ -77,7 +151,7 @@ export default function CreateOfferPageContent({
 
     setStartDate(inTwoWeeks.toISOString().split('T')[0])
     setExpirationDate(inThreeDays.toISOString().split('T')[0])
-  }, [])
+  }, [isEditMode])
 
   // Determine selected application
   const selectedApp = useMemo(() => {
@@ -91,40 +165,164 @@ export default function CreateOfferPageContent({
       selectedApp?.candidateId?.name ||
       selectedApp?.candidateName ||
       selectedApp?.candidateId?.profileName ||
+      initialOffer?.candidateId?.userId?.name ||
+      initialOffer?.candidateId?.profileName ||
       'Ứng viên'
     )
-  }, [selectedApp])
+  }, [selectedApp, initialOffer])
 
   const candidateEmail = useMemo(() => {
-    return selectedApp?.candidateId?.userId?.email || selectedApp?.candidateEmail || ''
-  }, [selectedApp])
+    return (
+      selectedApp?.candidateId?.userId?.email ||
+      selectedApp?.candidateEmail ||
+      initialOffer?.candidateId?.userId?.email ||
+      ''
+    )
+  }, [selectedApp, initialOffer])
 
   const candidatePhone = useMemo(() => {
-    return selectedApp?.candidateId?.userId?.phone || selectedApp?.candidatePhone || ''
-  }, [selectedApp])
+    return (
+      selectedApp?.candidateId?.userId?.phone ||
+      selectedApp?.candidatePhone ||
+      initialOffer?.candidateId?.userId?.phone ||
+      ''
+    )
+  }, [selectedApp, initialOffer])
 
   const jobTitle = useMemo(() => {
     return (
       selectedApp?.jobDescriptionId?.title ||
       selectedApp?.jobTitle ||
       selectedApp?.positionTitle ||
+      initialOffer?.jobDescriptionId?.title ||
       ''
     )
-  }, [selectedApp])
+  }, [selectedApp, initialOffer])
 
   const departmentName = useMemo(() => {
     return (
       selectedApp?.departmentId?.name ||
       selectedApp?.jobDescriptionId?.departmentId?.name ||
+      initialOffer?.departmentId?.name ||
       'TalentCore'
     )
-  }, [selectedApp])
+  }, [selectedApp, initialOffer])
 
+  // Auto set position title when job title changes in create mode
   useEffect(() => {
-    if (jobTitle && !positionTitle) {
+    if (!isEditMode && jobTitle && !positionTitle) {
       setPositionTitle(jobTitle)
     }
-  }, [jobTitle, positionTitle])
+  }, [isEditMode, jobTitle, positionTitle])
+
+  // Synchronize candidate input text when selectedApp is found
+  useEffect(() => {
+    if (selectedApp && !candidateSearchText) {
+      const name =
+        selectedApp?.candidateId?.userId?.name ||
+        selectedApp?.candidateId?.name ||
+        selectedApp?.candidateName ||
+        selectedApp?.candidateId?.profileName ||
+        ''
+      const title =
+        selectedApp?.jobDescriptionId?.title ||
+        selectedApp?.jobTitle ||
+        selectedApp?.positionTitle ||
+        ''
+      setCandidateSearchText(title ? `${name} — ${title}` : name)
+    }
+  }, [selectedApp, candidateSearchText])
+
+  // Global unsaved changes listener (link interception & window beforeunload)
+  useEffect(() => {
+    const handleBeforeUnload = (e: BeforeUnloadEvent) => {
+      if (isDirty) {
+        e.preventDefault()
+        e.returnValue = ''
+      }
+    }
+
+    const handleGlobalDocumentClick = (e: MouseEvent) => {
+      if (!isDirty) return
+
+      const target = e.target as HTMLElement | null
+      const anchor = target?.closest('a') as HTMLAnchorElement | null
+
+      if (anchor && anchor.href) {
+        const targetUrl = new URL(anchor.href, window.location.href)
+        const currentUrl = new URL(window.location.href)
+
+        if (targetUrl.pathname !== currentUrl.pathname) {
+          e.preventDefault()
+          e.stopPropagation()
+          pendingNavigationUrlRef.current = targetUrl.pathname + targetUrl.search + targetUrl.hash
+          setIsUnsavedModalOpen(true)
+        }
+      }
+    }
+
+    window.addEventListener('beforeunload', handleBeforeUnload)
+    document.addEventListener('click', handleGlobalDocumentClick, true)
+
+    return () => {
+      window.removeEventListener('beforeunload', handleBeforeUnload)
+      document.removeEventListener('click', handleGlobalDocumentClick, true)
+    }
+  }, [isDirty])
+
+  // Filtered applications based on candidate input text
+  const filteredApplications = useMemo(() => {
+    if (!candidateSearchText.trim()) return initialApplications
+    const q = candidateSearchText.toLowerCase().trim()
+    return initialApplications.filter((app) => {
+      const name = (
+        app.candidateName ||
+        app.candidateId?.userId?.name ||
+        app.candidateId?.profileName ||
+        ''
+      ).toLowerCase()
+      const title = (app.jobTitle || app.jobDescriptionId?.title || '').toLowerCase()
+      const email = (
+        app.candidateEmail ||
+        app.candidateId?.userId?.email ||
+        ''
+      ).toLowerCase()
+      return name.includes(q) || title.includes(q) || email.includes(q)
+    })
+  }, [initialApplications, candidateSearchText])
+
+  // Close candidate dropdown when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (e: MouseEvent) => {
+      if (candidateInputRef.current && !candidateInputRef.current.contains(e.target as Node)) {
+        setIsCandidateDropdownOpen(false)
+      }
+    }
+    document.addEventListener('mousedown', handleClickOutside)
+    return () => document.removeEventListener('mousedown', handleClickOutside)
+  }, [])
+
+  const handleSelectCandidate = (app: any) => {
+    setSelectedApplicationId(app._id || app.id)
+    const name =
+      app.candidateName ||
+      app.candidateId?.userId?.name ||
+      app.candidateId?.profileName ||
+      'Ứng viên'
+    const title = app.jobTitle || app.jobDescriptionId?.title || ''
+    setCandidateSearchText(title ? `${name} — ${title}` : name)
+    setIsCandidateDropdownOpen(false)
+    setIsDirty(true)
+  }
+
+  const handleBackOrCancelClick = () => {
+    if (isDirty) {
+      pendingNavigationUrlRef.current = '/offers'
+      setIsUnsavedModalOpen(true)
+    } else {
+      router.push('/offers')
+    }
+  }
 
   // Generate Letter Subject & HTML Template
   const generateTemplate = () => {
@@ -142,14 +340,14 @@ export default function CreateOfferPageContent({
       .split('\n')
       .map((b) => b.trim())
       .filter(Boolean)
-      .map((b) => `<li style="margin-bottom: 6px;">${b}</li>`)
+      .map((b) => `<li style="margin-bottom: 6px;">${b.replace(/^[-•*]\s*/, '')}</li>`)
       .join('\n')
 
     const subject = `[TalentCore] Thư mời nhận việc - Vị trí ${positionTitle || jobTitle || 'Chuyên viên'} - ${candidateName}`
     const html = `
 <div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; max-width: 680px; margin: 0 auto; color: #1e293b; line-height: 1.6;">
   <div style="text-align: center; padding-bottom: 24px; border-bottom: 2px solid #e2e8f0;">
-    <h1 style="color: #2563eb; margin: 0; font-size: 24px; font-weight: 700;">THƯ MỜI NHẬN VIỆC (JOB OFFER LETTER)</h1>
+    <h1 style="color: #2563eb; margin: 0; font-size: 24px; font-weight: 700;">THƯ MỜI NHẬN VIỆC</h1>
     <p style="color: #64748b; margin: 6px 0 0 0; font-size: 14px;">Công ty Cổ phần Giải pháp Công nghệ TalentCore</p>
   </div>
 
@@ -233,7 +431,7 @@ export default function CreateOfferPageContent({
   ])
 
   const handleSubmit = async (sendImmediately: boolean) => {
-    if (!selectedApp) {
+    if (!selectedApp && !isEditMode) {
       showToast('Vui lòng chọn hồ sơ ứng viên nhận offer', 'error')
       return
     }
@@ -262,96 +460,127 @@ export default function CreateOfferPageContent({
         .map((b) => b.trim())
         .filter(Boolean)
 
-      const candidateId =
-        typeof selectedApp.candidateId === 'object'
-          ? selectedApp.candidateId._id
-          : selectedApp.candidateId
+      if (isEditMode && targetOfferId) {
+        await offersApi.updateOffer(targetOfferId, {
+          positionTitle,
+          contractType,
+          workLocation,
+          salary: Number(salary),
+          currency,
+          probationDurationMonths: Number(probationDurationMonths),
+          probationSalaryPercentage: Number(probationSalaryPercentage),
+          startDate: new Date(startDate).toISOString(),
+          expirationDate: new Date(expirationDate).toISOString(),
+          benefits: benefitsArray,
+          notes,
+          emailSubject: emailSubject || `Thư mời nhận việc vị trí ${positionTitle}`,
+          offerLetterHtml
+        })
 
-      const jobDescriptionId =
-        typeof selectedApp.jobDescriptionId === 'object'
-          ? selectedApp.jobDescriptionId._id
-          : selectedApp.jobDescriptionId
+        if (sendImmediately) {
+          await offersApi.sendOffer(targetOfferId)
+        }
 
-      const departmentId =
-        typeof selectedApp.departmentId === 'object'
-          ? selectedApp.departmentId?._id
-          : selectedApp.departmentId ||
-            selectedApp.jobDescriptionId?.departmentId?._id ||
-            selectedApp.jobDescriptionId?.departmentId
+        setIsDirty(false)
+        showToast(
+          sendImmediately
+            ? 'Đã cập nhật và gửi đề nghị thành công đến ứng viên!'
+            : 'Đã cập nhật đề nghị nhận việc thành công!',
+          'success'
+        )
+      } else {
+        const candidateId =
+          typeof selectedApp?.candidateId === 'object'
+            ? selectedApp.candidateId._id
+            : selectedApp?.candidateId
 
-      await offersApi.createOffer({
-        applicationId: selectedApp._id || selectedApp.id,
-        candidateId,
-        jobDescriptionId,
-        departmentId: departmentId || '660000000000000000000000',
-        positionTitle,
-        contractType,
-        workLocation,
-        salary: Number(salary),
-        currency,
-        probationDurationMonths: Number(probationDurationMonths),
-        probationSalaryPercentage: Number(probationSalaryPercentage),
-        startDate: new Date(startDate).toISOString(),
-        expirationDate: new Date(expirationDate).toISOString(),
-        benefits: benefitsArray,
-        notes,
-        emailSubject: emailSubject || `Thư mời nhận việc vị trí ${positionTitle}`,
-        offerLetterHtml,
-        sendImmediately
-      })
+        const jobDescriptionId =
+          typeof selectedApp?.jobDescriptionId === 'object'
+            ? selectedApp.jobDescriptionId._id
+            : selectedApp?.jobDescriptionId
 
-      showToast(
-        sendImmediately
-          ? 'Đã gửi lời mời nhận việc thành công đến ứng viên!'
-          : 'Đã lưu bản nháp đề nghị nhận việc thành công!',
-        'success'
-      )
+        const departmentId =
+          typeof selectedApp?.departmentId === 'object'
+            ? selectedApp.departmentId?._id
+            : selectedApp?.departmentId ||
+              selectedApp?.jobDescriptionId?.departmentId?._id ||
+              selectedApp?.jobDescriptionId?.departmentId
+
+        await offersApi.createOffer({
+          applicationId: selectedApp._id || selectedApp.id,
+          candidateId,
+          jobDescriptionId,
+          departmentId: departmentId || '660000000000000000000000',
+          positionTitle,
+          contractType,
+          workLocation,
+          salary: Number(salary),
+          currency,
+          probationDurationMonths: Number(probationDurationMonths),
+          probationSalaryPercentage: Number(probationSalaryPercentage),
+          startDate: new Date(startDate).toISOString(),
+          expirationDate: new Date(expirationDate).toISOString(),
+          benefits: benefitsArray,
+          notes,
+          emailSubject: emailSubject || `Thư mời nhận việc vị trí ${positionTitle}`,
+          offerLetterHtml,
+          sendImmediately
+        })
+
+        setIsDirty(false)
+        showToast(
+          sendImmediately
+            ? 'Đã gửi lời mời nhận việc thành công đến ứng viên!'
+            : 'Đã lưu bản nháp đề nghị nhận việc thành công!',
+          'success'
+        )
+      }
 
       // Redirect back to offers management page after short delay
       setTimeout(() => {
         router.push('/offers')
       }, 1000)
     } catch (err: any) {
-      showToast(err.message || 'Lỗi khi tạo đề nghị nhận việc', 'error')
+      showToast(err.message || 'Lỗi khi lưu đề nghị nhận việc', 'error')
     } finally {
       setSubmitting(false)
     }
   }
 
   return (
-    <div className="space-y-6 pb-8">
+    <div className="space-y-4 pb-6">
       {/* Top Navigation Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-white/70 backdrop-blur-md p-5 rounded-3xl border border-slate-200/80 shadow-xs">
-        <div className="flex items-center gap-4">
-          <button
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-white/70 backdrop-blur-md p-3.5 sm:p-4 rounded-2xl border border-slate-200/80 shadow-xs">
+        <div className="flex items-center gap-3">
+          <CustomButton
             type="button"
-            onClick={() => router.back()}
-            className="p-2.5 rounded-2xl bg-white border border-slate-200 text-slate-600 hover:text-slate-900 hover:bg-slate-50 transition-colors shadow-2xs cursor-pointer"
-            title="Quay lại"
+            variant="secondary"
+            size="sm"
+            onClick={handleBackOrCancelClick}
+            title="Quay lại danh sách"
+            className="!p-2.5 !rounded-xl"
           >
             <ArrowLeft className="w-5 h-5" />
-          </button>
+          </CustomButton>
           <div>
-            <div className="flex items-center gap-2">
-              <span className="px-2.5 py-0.5 rounded-full text-2xs font-extrabold bg-blue-50 text-blue-700 border border-blue-100">
-                Giai đoạn 5
-              </span>
-              <h1 className="text-xl sm:text-2xl font-bold text-slate-800 tracking-tight">
-                Soạn Đề Nghị Nhận Việc (Job Offer)
-              </h1>
-            </div>
-            <p className="text-xs text-slate-500 mt-0.5">
-              Thiết lập điều khoản tuyển dụng và xuất bản thư mời nhận việc chính thức gửi ứng viên
+            <h1 className="text-lg sm:text-xl font-bold text-slate-800 tracking-tight">
+              {isEditMode ? 'Chỉnh Sửa Đề Nghị Nhận Việc' : 'Soạn Đề Nghị Nhận Việc'}
+            </h1>
+            <p className="text-2xs sm:text-xs text-slate-500 mt-0.5">
+              {isEditMode
+                ? 'Cập nhật điều khoản tuyển dụng và xuất bản lại thư mời nhận việc cho ứng viên'
+                : 'Thiết lập điều khoản tuyển dụng và xuất bản thư mời nhận việc chính thức gửi ứng viên'}
             </p>
           </div>
         </div>
 
         {/* Action Buttons on Top Bar */}
-        <div className="flex items-center gap-2.5 self-end sm:self-auto">
+        <div className="flex items-center gap-2 self-end sm:self-auto">
           <CustomButton
             type="button"
             variant="ghost"
-            onClick={() => router.back()}
+            size="sm"
+            onClick={handleBackOrCancelClick}
             disabled={submitting}
           >
             Hủy bỏ
@@ -359,72 +588,134 @@ export default function CreateOfferPageContent({
           <CustomButton
             type="button"
             variant="outline"
+            size="sm"
             onClick={() => handleSubmit(false)}
             disabled={submitting}
           >
-            Lưu bản nháp
+            {isEditMode ? 'Lưu thay đổi' : 'Lưu bản nháp'}
           </CustomButton>
           <CustomButton
             type="button"
             variant="primary"
+            size="sm"
             onClick={() => handleSubmit(true)}
             disabled={submitting}
             icon={Send}
           >
-            Gửi đề nghị ngay cho ứng viên
+            {isEditMode ? 'Cập nhật & gửi cho ứng viên' : 'Gửi đề nghị ngay cho ứng viên'}
           </CustomButton>
         </div>
       </div>
 
       {/* Main 2-Column Grid */}
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 items-start">
         {/* Left Column: Form Configuration (7 cols) */}
-        <div className="lg:col-span-7 space-y-6">
+        <div className="lg:col-span-7 space-y-3.5">
           {/* Card 1: Candidate Selection & Info */}
-          <div className="bg-white rounded-3xl border border-slate-200/80 p-6 shadow-xs space-y-5">
-            <div className="flex items-center gap-2.5 border-b border-slate-100 pb-3.5">
-              <div className="p-2 rounded-xl bg-blue-50 text-blue-600">
+          <div className="bg-white rounded-2xl border border-slate-200/80 p-4 sm:p-5 shadow-2xs space-y-3.5">
+            <div className="flex items-center gap-2.5 border-b border-slate-100 pb-2.5">
+              <div className="p-1.5 rounded-lg bg-blue-50 text-blue-600">
                 <User className="w-4 h-4" />
               </div>
-              <h2 className="text-sm font-bold text-slate-800 uppercase tracking-wider">
+              <h2 className="text-xs sm:text-sm font-bold text-slate-800 uppercase tracking-wider">
                 1. Thông tin Ứng viên & Hồ sơ
               </h2>
             </div>
 
-            <div>
-              <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-2">
-                Chọn hồ sơ ứng viên nhận Offer *
-              </label>
-              <CustomSelect
-                options={initialApplications.map((app) => ({
-                  value: app._id || app.id,
-                  label: `${
-                    app.candidateName ||
-                    app.candidateId?.userId?.name ||
-                    app.candidateId?.profileName ||
-                    'Ứng viên'
-                  } — ${app.jobTitle || app.jobDescriptionId?.title || 'Vị trí'} (${
-                    app.departmentId?.name ||
-                    app.jobDescriptionId?.departmentId?.name ||
-                    'Phòng ban'
-                  })`
-                }))}
-                value={selectedApplicationId}
-                onChange={(val) => setSelectedApplicationId(val)}
-                placeholder="-- Chọn hồ sơ ứng viên để soạn Offer --"
+            {/* Input with Autocomplete Suggestion Dropdown */}
+            <div ref={candidateInputRef} className="relative">
+              <CustomInput
+                label="Chọn hồ sơ ứng viên nhận Offer"
+                required
+                value={candidateSearchText}
+                onChange={(e) => {
+                  setCandidateSearchText(e.target.value)
+                  setIsCandidateDropdownOpen(true)
+                  setIsDirty(true)
+                  if (!e.target.value) {
+                    setSelectedApplicationId('')
+                  }
+                }}
+                onFocus={() => setIsCandidateDropdownOpen(true)}
+                placeholder="Nhập tên ứng viên hoặc chọn hồ sơ từ danh sách..."
+                icon={<Search className="w-4 h-4 text-slate-400" />}
+                rightElement={
+                  candidateSearchText ? (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setCandidateSearchText('')
+                        setSelectedApplicationId('')
+                        setIsCandidateDropdownOpen(true)
+                        setIsDirty(true)
+                      }}
+                      className="text-slate-400 hover:text-slate-600 p-1 cursor-pointer"
+                      title="Xóa lựa chọn"
+                    >
+                      <X className="w-3.5 h-3.5" />
+                    </button>
+                  ) : null
+                }
               />
+
+              {/* Suggestions Dropdown */}
+              {isCandidateDropdownOpen && (
+                <div className="absolute top-full left-0 right-0 mt-1.5 max-h-60 overflow-y-auto bg-white/95 backdrop-blur-xl border border-slate-200/90 rounded-2xl shadow-xl shadow-blue-500/10 z-50 py-1.5 [scrollbar-width:thin]">
+                  {filteredApplications.length === 0 ? (
+                    <div className="px-4 py-3 text-xs text-slate-400 text-center">
+                      Không tìm thấy hồ sơ ứng viên phù hợp
+                    </div>
+                  ) : (
+                    filteredApplications.map((app) => {
+                      const appId = app._id || app.id
+                      const name =
+                        app.candidateName ||
+                        app.candidateId?.userId?.name ||
+                        app.candidateId?.profileName ||
+                        'Ứng viên'
+                      const title = app.jobTitle || app.jobDescriptionId?.title || 'Vị trí'
+                      const dept =
+                        app.departmentId?.name ||
+                        app.jobDescriptionId?.departmentId?.name ||
+                        'Phòng ban'
+                      const email =
+                        app.candidateEmail || app.candidateId?.userId?.email || ''
+                      const isSelected = selectedApplicationId === appId
+
+                      return (
+                        <button
+                          key={appId}
+                          type="button"
+                          onClick={() => handleSelectCandidate(app)}
+                          className={`w-full text-left px-4 py-2.5 hover:bg-blue-50/80 transition-colors flex items-center justify-between gap-3 text-xs cursor-pointer ${
+                            isSelected ? 'bg-blue-50/60 font-bold text-blue-700' : 'text-slate-700'
+                          }`}
+                        >
+                          <div>
+                            <p className="font-semibold text-slate-800">{name}</p>
+                            <p className="text-2xs text-slate-400 mt-0.5">
+                              {title} • {dept} {email ? `• ${email}` : ''}
+                            </p>
+                          </div>
+                          {isSelected && <CheckCircle2 className="w-4 h-4 text-blue-600 shrink-0" />}
+                        </button>
+                      )
+                    })
+                  )}
+                </div>
+              )}
             </div>
 
             {/* Candidate Card Summary */}
-            {selectedApp && (
-              <div className="p-4 rounded-2xl bg-gradient-to-r from-blue-50/70 to-indigo-50/50 border border-blue-100 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-                <div className="flex items-center gap-3.5">
-                  <div className="w-12 h-12 rounded-2xl bg-blue-600 text-white font-extrabold text-base flex items-center justify-center shadow-xs">
+            {(selectedApp || initialOffer) && (
+              <div className="p-3 sm:p-3.5 rounded-xl bg-gradient-to-r from-blue-50/70 to-indigo-50/50 border border-blue-100 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-xl bg-blue-600 text-white font-extrabold text-sm flex items-center justify-center shadow-xs">
                     {candidateName.charAt(0)}
                   </div>
                   <div>
-                    <h3 className="font-bold text-slate-900 text-sm">{candidateName}</h3>
-                    <div className="flex flex-wrap items-center gap-3 text-xs text-slate-500 mt-1">
+                    <h3 className="font-bold text-slate-900 text-xs sm:text-sm">{candidateName}</h3>
+                    <div className="flex flex-wrap items-center gap-3 text-2xs sm:text-xs text-slate-500 mt-0.5">
                       {candidateEmail && (
                         <span className="flex items-center gap-1">
                           <Mail className="w-3.5 h-3.5" />
@@ -442,44 +733,44 @@ export default function CreateOfferPageContent({
                 </div>
 
                 <div className="text-left sm:text-right">
-                  <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-emerald-100 text-emerald-800 text-2xs font-bold">
+                  <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-emerald-100 text-emerald-800 text-2xs font-bold">
                     <CheckCircle2 className="w-3 h-3 text-emerald-600" />
                     Đạt yêu cầu phỏng vấn
                   </span>
-                  <p className="text-xs text-slate-500 mt-1 font-medium">{departmentName}</p>
+                  <p className="text-2xs sm:text-xs text-slate-500 mt-0.5 font-medium">{departmentName}</p>
                 </div>
               </div>
             )}
           </div>
 
           {/* Card 2: Work Conditions & Compensation */}
-          <div className="bg-white rounded-3xl border border-slate-200/80 p-6 shadow-xs space-y-5">
-            <div className="flex items-center gap-2.5 border-b border-slate-100 pb-3.5">
-              <div className="p-2 rounded-xl bg-emerald-50 text-emerald-600">
+          <div className="bg-white rounded-2xl border border-slate-200/80 p-4 sm:p-5 shadow-2xs space-y-3.5">
+            <div className="flex items-center gap-2.5 border-b border-slate-100 pb-2.5">
+              <div className="p-1.5 rounded-lg bg-emerald-50 text-emerald-600">
                 <DollarSign className="w-4 h-4" />
               </div>
-              <h2 className="text-sm font-bold text-slate-800 uppercase tracking-wider">
+              <h2 className="text-xs sm:text-sm font-bold text-slate-800 uppercase tracking-wider">
                 2. Vị trí, Địa điểm & Chế độ Lương thưởng
               </h2>
             </div>
 
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <div>
-                <label className="text-xs font-bold text-slate-700 uppercase tracking-wider block mb-1.5">
-                  Vị trí công tác chính thức *
-                </label>
                 <CustomInput
+                  label="Vị trí công tác chính thức"
+                  required
                   value={positionTitle}
-                  onChange={(e) => setPositionTitle(e.target.value)}
+                  onChange={(e) => {
+                    setPositionTitle(e.target.value)
+                    setIsDirty(true)
+                  }}
                   placeholder="Ví dụ: Senior Frontend Developer"
                 />
               </div>
 
               <div>
-                <label className="text-xs font-bold text-slate-700 uppercase tracking-wider block mb-1.5">
-                  Hình thức hợp đồng
-                </label>
                 <CustomSelect
+                  label="Hình thức hợp đồng"
                   options={[
                     { value: ContractType.FULL_TIME, label: 'Toàn thời gian (Full-time)' },
                     { value: ContractType.PART_TIME, label: 'Bán thời gian (Part-time)' },
@@ -487,81 +778,92 @@ export default function CreateOfferPageContent({
                     { value: ContractType.FREELANCE, label: 'Cộng tác viên (Freelance)' }
                   ]}
                   value={contractType}
-                  onChange={(val) => setContractType(val as ContractType)}
+                  onChange={(val) => {
+                    setContractType(val as ContractType)
+                    setIsDirty(true)
+                  }}
                 />
               </div>
 
               <div className="sm:col-span-2">
-                <label className="text-xs font-bold text-slate-700 uppercase tracking-wider block mb-1.5">
-                  Địa điểm làm việc *
-                </label>
                 <CustomInput
+                  label="Địa điểm làm việc"
+                  required
                   value={workLocation}
-                  onChange={(e) => setWorkLocation(e.target.value)}
+                  onChange={(e) => {
+                    setWorkLocation(e.target.value)
+                    setIsDirty(true)
+                  }}
                   placeholder="Địa chỉ làm việc chính thức của ứng viên"
                   icon={<MapPin className="w-4 h-4 text-slate-400" />}
                 />
               </div>
 
               <div>
-                <label className="text-xs font-bold text-slate-700 uppercase tracking-wider block mb-1.5">
-                  Mức lương chính thức (VND/tháng) *
-                </label>
                 <CustomInput
+                  label="Mức lương chính thức (VND/tháng)"
+                  required
                   type="number"
                   value={salary}
-                  onChange={(e) => setSalary(e.target.value)}
+                  onChange={(e) => {
+                    setSalary(e.target.value)
+                    setIsDirty(true)
+                  }}
                   placeholder="20000000"
                   icon={<DollarSign className="w-4 h-4 text-slate-400" />}
+                  helperText={`Đọc: ${Number(salary || 0).toLocaleString('vi-VN')} ${currency} (Gross)`}
                 />
-                <p className="text-2xs text-slate-500 font-semibold mt-1">
-                  Đọc: {Number(salary || 0).toLocaleString('vi-VN')} {currency} (Gross)
-                </p>
               </div>
 
               <div className="grid grid-cols-2 gap-2">
                 <div>
-                  <label className="text-xs font-bold text-slate-700 uppercase tracking-wider block mb-1.5">
-                    Thử việc (Tháng)
-                  </label>
                   <CustomInput
+                    label="Thử việc (Tháng)"
                     type="number"
                     value={probationDurationMonths}
-                    onChange={(e) => setProbationDurationMonths(e.target.value)}
+                    onChange={(e) => {
+                      setProbationDurationMonths(e.target.value)
+                      setIsDirty(true)
+                    }}
                     placeholder="2"
                   />
                 </div>
                 <div>
-                  <label className="text-xs font-bold text-slate-700 uppercase tracking-wider block mb-1.5">
-                    % Lương thử việc
-                  </label>
                   <CustomInput
+                    label="% Lương thử việc"
                     type="number"
                     value={probationSalaryPercentage}
-                    onChange={(e) => setProbationSalaryPercentage(e.target.value)}
+                    onChange={(e) => {
+                      setProbationSalaryPercentage(e.target.value)
+                      setIsDirty(true)
+                    }}
                     placeholder="85"
                   />
                 </div>
               </div>
 
               <div>
-                <label className="text-xs font-bold text-slate-700 uppercase tracking-wider block mb-1.5">
-                  Ngày bắt đầu làm việc (Start Date) *
-                </label>
                 <CustomDatePicker
+                  label="Ngày bắt đầu làm việc (Start Date)"
+                  required
                   value={startDate}
-                  onChange={(date) => setStartDate(date)}
+                  onChange={(date) => {
+                    setStartDate(date)
+                    setIsDirty(true)
+                  }}
                   placeholder="Chọn ngày bắt đầu"
                 />
               </div>
 
               <div>
-                <label className="text-xs font-bold text-slate-700 uppercase tracking-wider block mb-1.5">
-                  Hạn chót phản hồi Offer *
-                </label>
                 <CustomDatePicker
+                  label="Hạn chót phản hồi Offer"
+                  required
                   value={expirationDate}
-                  onChange={(date) => setExpirationDate(date)}
+                  onChange={(date) => {
+                    setExpirationDate(date)
+                    setIsDirty(true)
+                  }}
                   placeholder="Chọn hạn chót phản hồi"
                 />
               </div>
@@ -569,36 +871,38 @@ export default function CreateOfferPageContent({
           </div>
 
           {/* Card 3: Benefits & Internal Notes */}
-          <div className="bg-white rounded-3xl border border-slate-200/80 p-6 shadow-xs space-y-5">
-            <div className="flex items-center gap-2.5 border-b border-slate-100 pb-3.5">
-              <div className="p-2 rounded-xl bg-purple-50 text-purple-600">
+          <div className="bg-white rounded-2xl border border-slate-200/80 p-4 sm:p-5 shadow-2xs space-y-3.5">
+            <div className="flex items-center gap-2.5 border-b border-slate-100 pb-2.5">
+              <div className="p-1.5 rounded-lg bg-purple-50 text-purple-600">
                 <Briefcase className="w-4 h-4" />
               </div>
-              <h2 className="text-sm font-bold text-slate-800 uppercase tracking-wider">
+              <h2 className="text-xs sm:text-sm font-bold text-slate-800 uppercase tracking-wider">
                 3. Chế độ Phúc Lợi & Ghi chú nội bộ
               </h2>
             </div>
 
-            <div className="space-y-4">
+            <div className="space-y-3">
               <div>
-                <label className="text-xs font-bold text-slate-700 uppercase tracking-wider block mb-1.5">
-                  Quyền lợi & Chế độ đãi ngộ (Mỗi dòng một quyền lợi)
-                </label>
                 <CustomTextarea
+                  label="Quyền lợi & Chế độ đãi ngộ (Mỗi dòng một quyền lợi)"
                   rows={5}
                   value={benefits}
-                  onChange={(e) => setBenefits(e.target.value)}
+                  onChange={(e) => {
+                    setBenefits(e.target.value)
+                    setIsDirty(true)
+                  }}
                   placeholder="Nhập danh sách quyền lợi (thưởng, bảo hiểm, đào tạo...)"
                 />
               </div>
 
               <div>
-                <label className="text-xs font-bold text-slate-700 uppercase tracking-wider block mb-1.5">
-                  Ghi chú nội bộ (Chỉ HR & Ban quản lý xem, không gửi ứng viên)
-                </label>
                 <CustomInput
+                  label="Ghi chú nội bộ (Chỉ HR & Ban quản lý xem, không gửi ứng viên)"
                   value={notes}
-                  onChange={(e) => setNotes(e.target.value)}
+                  onChange={(e) => {
+                    setNotes(e.target.value)
+                    setIsDirty(true)
+                  }}
                   placeholder="Ghi chú thêm về thỏa thuận lương hoặc đề xuất của phòng ban..."
                 />
               </div>
@@ -607,47 +911,51 @@ export default function CreateOfferPageContent({
         </div>
 
         {/* Right Column: Live Letter Preview (5 cols) */}
-        <div className="lg:col-span-5 sticky top-6 space-y-4">
-          <div className="bg-white rounded-3xl border border-slate-200/80 p-6 shadow-xs space-y-4">
-            <div className="flex items-center justify-between border-b border-slate-100 pb-3.5">
+        <div className="lg:col-span-5 sticky top-4 space-y-3.5">
+          <div className="bg-white rounded-2xl border border-slate-200/80 p-4 sm:p-5 shadow-2xs space-y-3.5">
+            <div className="flex items-center justify-between border-b border-slate-100 pb-2.5">
               <div className="flex items-center gap-2">
                 <FileText className="w-4 h-4 text-blue-600" />
-                <h3 className="text-sm font-bold text-slate-800 uppercase tracking-wider">
-                  Xem trước Thư mời (Preview)
+                <h3 className="text-xs sm:text-sm font-bold text-slate-800 uppercase tracking-wider">
+                  Xem trước Thư mời
                 </h3>
               </div>
-              <button
-                type="button"
-                onClick={generateTemplate}
-                className="text-xs text-blue-600 hover:text-blue-700 font-bold flex items-center gap-1 transition-colors"
-                title="Cập nhật lại theo dữ liệu đã nhập"
-              >
-                <Sparkles className="w-3.5 h-3.5" />
-                Làm mới
-              </button>
             </div>
 
             <div>
-              <label className="text-xs font-bold text-slate-700 uppercase tracking-wider block mb-1.5">
-                Tiêu đề email thư mời
-              </label>
               <CustomInput
+                label="Tiêu đề email thư mời"
                 value={emailSubject}
-                onChange={(e) => setEmailSubject(e.target.value)}
+                onChange={(e) => {
+                  setEmailSubject(e.target.value)
+                  setIsDirty(true)
+                }}
                 placeholder="Tiêu đề email gửi đến ứng viên"
               />
             </div>
 
             {/* Letter Preview Frame */}
-            <div className="rounded-2xl border border-slate-200 bg-slate-50/50 p-4">
+            <div className="rounded-xl border border-slate-200 bg-slate-50/50 p-3.5">
               <div
-                className="bg-white p-5 rounded-xl border border-slate-100 shadow-2xs max-h-[580px] overflow-y-auto text-xs leading-relaxed"
+                className="bg-white p-4.5 rounded-lg border border-slate-100 shadow-2xs max-h-[560px] overflow-y-auto text-xs leading-relaxed [scrollbar-width:thin]"
                 dangerouslySetInnerHTML={{ __html: offerLetterHtml }}
               />
             </div>
           </div>
         </div>
       </div>
+
+      {/* Unsaved Changes Warning Modal */}
+      <UnsavedChangesModal
+        isOpen={isUnsavedModalOpen}
+        onClose={() => setIsUnsavedModalOpen(false)}
+        onCancel={() => setIsUnsavedModalOpen(false)}
+        onConfirm={() => {
+          setIsDirty(false)
+          setIsUnsavedModalOpen(false)
+          router.push(pendingNavigationUrlRef.current || '/offers')
+        }}
+      />
 
       <Toast toast={toast} onClose={hideToast} />
     </div>
