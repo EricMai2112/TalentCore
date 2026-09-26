@@ -15,7 +15,8 @@ import {
   Building2,
   Briefcase,
   Calendar,
-  RotateCcw
+  RotateCcw,
+  Edit3
 } from 'lucide-react'
 import {
   CustomTableContainer,
@@ -311,6 +312,15 @@ export const OffersManager: React.FC<OffersManagerProps> = ({
                   onClick: () => handleOpenDetail(offer)
                 }
               ]
+
+              if (offer.status !== OfferStatus.ACCEPTED && offer.status !== OfferStatus.DECLINED) {
+                menuItems.push({
+                  id: 'edit',
+                  label: 'Chỉnh sửa đề nghị',
+                  icon: <Edit3 className="w-4 h-4" />,
+                  onClick: () => router.push(`/offers/${offer._id}/edit`)
+                })
+              }
 
               if (offer.status === OfferStatus.DRAFT) {
                 menuItems.push({

@@ -205,8 +205,8 @@ export class OffersService {
       throw new NotFoundException('Không tìm thấy lời mời nhận việc');
     }
 
-    if (offer.status !== OfferStatus.DRAFT) {
-      throw new BadRequestException('Chỉ có thể chỉnh sửa Offer ở trạng thái Bản nháp (DRAFT)');
+    if (offer.status === OfferStatus.ACCEPTED || offer.status === OfferStatus.DECLINED) {
+      throw new BadRequestException('Không thể chỉnh sửa Offer đã được ứng viên phản hồi (Đồng ý hoặc Từ chối)');
     }
 
     if (dto.positionTitle !== undefined) offer.positionTitle = dto.positionTitle;
@@ -236,8 +236,8 @@ export class OffersService {
       throw new NotFoundException('Không tìm thấy lời mời nhận việc');
     }
 
-    if (offer.status !== OfferStatus.DRAFT) {
-      throw new BadRequestException('Chỉ có thể gửi Offer đang ở trạng thái Bản nháp (DRAFT)');
+    if (offer.status === OfferStatus.ACCEPTED || offer.status === OfferStatus.DECLINED) {
+      throw new BadRequestException('Không thể gửi lại Offer đã được ứng viên phản hồi');
     }
 
     offer.status = OfferStatus.SENT;
