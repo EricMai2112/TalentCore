@@ -23,8 +23,18 @@ import { Department } from '@/src/features/departments/types/department.types'
 import { useAuth } from '@/src/providers/AuthProvider'
 import { UserRole } from '@/src/features/users/types/user.types'
 import CandidateStatCards from './CandidateStatCards'
-import { CustomSelect, CustomInput, CustomPagination, CustomTableContainer, RejectCandidateModal, Toast, useToast } from '@/src/components/common'
+import {
+  CustomSelect,
+  CustomInput,
+  CustomPagination,
+  CustomTableContainer,
+  CustomActionMenu,
+  RejectCandidateModal,
+  Toast,
+  useToast
+} from '@/src/components/common'
 import { CustomSelectOption } from '@/src/components/common/CustomSelect'
+import { CandidateStageBadge, CandidateAiScoreBadge } from './'
 
 // Lazy load the heavy (43KB) CandidateDetailModal on demand
 const CandidateDetailModal = dynamic(() => import('./CandidateDetailModal'), {
@@ -236,87 +246,13 @@ export default function CandidatesManager({
   }, [scopedApplications, searchQuery, selectedPosition, selectedStage])
 
   const getAiScoreBadge = (score?: number | null) => {
-    if (score === null || score === undefined) {
-      return (
-        <span className="px-2.5 py-0.5 text-[11px] font-bold rounded-full bg-slate-100 text-slate-500 border border-slate-200">
-          N/A
-        </span>
-      )
-    }
-    if (score >= 80) {
-      return (
-        <span className="px-2.5 py-0.5 text-[11px] font-extrabold rounded-full bg-emerald-500/15 text-emerald-700 border border-emerald-300/50">
-          {score}/100
-        </span>
-      )
-    }
-    if (score >= 50) {
-      return (
-        <span className="px-2.5 py-0.5 text-[11px] font-extrabold rounded-full bg-amber-500/15 text-amber-700 border border-amber-300/50">
-          {score}/100
-        </span>
-      )
-    }
-    return (
-      <span className="px-2.5 py-0.5 text-[11px] font-extrabold rounded-full bg-rose-500/15 text-rose-700 border border-rose-300/50">
-        {score}/100
-      </span>
-    )
+    return <CandidateAiScoreBadge score={score} />
   }
 
   const getStageBadge = (app: CandidateApplication) => {
-    const s = app.stageName || (app as any).currentStage?.name || 'Mới'
-    const customColor = app.stageColor || (app as any).currentStage?.color
-
-    let style = 'bg-slate-500/10 text-slate-700 border-slate-300/50'
-    let dotColor = 'bg-slate-500'
-
-    const sLower = s.toLowerCase()
-    if (sLower.includes('tech')) {
-      style = 'bg-blue-500/15 text-[#3B82F6] border-blue-300/50'
-      dotColor = 'bg-[#3B82F6]'
-    } else if (sLower.includes('phone')) {
-      style = 'bg-purple-500/15 text-purple-700 border-purple-300/50'
-      dotColor = 'bg-purple-500'
-    } else if (sLower.includes('culture') || sLower.includes('văn hóa')) {
-      style = 'bg-cyan-500/15 text-cyan-700 border-cyan-300/50'
-      dotColor = 'bg-cyan-500'
-    } else if (sLower.includes('offer')) {
-      style = 'bg-emerald-500/15 text-emerald-700 border-emerald-300/50'
-      dotColor = 'bg-emerald-500'
-    } else if (sLower.includes('từ chối') || sLower.includes('reject')) {
-      style = 'bg-rose-500/15 text-rose-700 border-rose-300/50'
-      dotColor = 'bg-rose-500'
-    } else if (sLower.includes('sàng lọc') || sLower.includes('filter')) {
-      style = 'bg-amber-500/15 text-amber-700 border-amber-300/50'
-      dotColor = 'bg-amber-500'
-    } else if (sLower.includes('mới') || sLower.includes('new')) {
-      style = 'bg-slate-500/10 text-slate-700 border-slate-300/50'
-      dotColor = 'bg-slate-500'
-    } else if (customColor) {
-      return (
-        <span
-          style={{
-            backgroundColor: `${customColor}20`,
-            borderColor: `${customColor}50`,
-            color: customColor
-          }}
-          className="px-2.5 py-0.5 rounded-full text-[11px] font-bold border inline-flex items-center gap-1.5"
-        >
-          <span style={{ backgroundColor: customColor }} className="w-1.5 h-1.5 rounded-full" />
-          <span>{s}</span>
-        </span>
-      )
-    }
-
-    return (
-      <span
-        className={`px-2.5 py-0.5 rounded-full text-[11px] font-bold border inline-flex items-center gap-1.5 ${style}`}
-      >
-        <span className={`w-1.5 h-1.5 rounded-full ${dotColor}`} />
-        <span>{s}</span>
-      </span>
-    )
+    const stageName = app.stageName || (app as any).currentStage?.name
+    const stageColor = app.stageColor || (app as any).currentStage?.color
+    return <CandidateStageBadge stageName={stageName} stageColor={stageColor} />
   }
 
   const getInitials = (nameStr: string) => {
@@ -499,26 +435,26 @@ export default function CandidatesManager({
 
                     {/* Actions */}
                     <td className="px-5 py-4 text-center">
-                      <div className="flex items-center justify-center gap-1">
-                        {/* View Detail Modal */}
-                        <button
-                          type="button"
-                          onClick={() => setDetailApp(app)}
-                          className="p-1.5 rounded-xl border border-white/80 bg-white/60 hover:bg-white text-slate-500 hover:text-[#3B82F6] shadow-2xs transition-all cursor-pointer"
-                          title="Xem chi tiết"
-                        >
-                          <Eye size={15} />
-                        </button>
-
-                        {/* Reject Modal Trigger */}
-                        <button
-                          type="button"
-                          onClick={() => setRejectApp(app)}
-                          className="p-1.5 rounded-xl border border-white/80 bg-white/60 hover:bg-white text-rose-500 hover:text-rose-600 shadow-2xs transition-all cursor-pointer"
-                          title="Từ chối ứng viên"
-                        >
-                          <XCircle size={15} />
-                        </button>
+                      <div className="flex items-center justify-center">
+                        <CustomActionMenu
+                          menuWidthClass="min-w-[190px]"
+                          items={[
+                            {
+                              id: 'view_detail',
+                              label: 'Xem chi tiết',
+                              icon: <Eye size={14} />,
+                              variant: 'primary',
+                              onClick: () => setDetailApp(app),
+                            },
+                            {
+                              id: 'reject_candidate',
+                              label: 'Từ chối ứng viên',
+                              icon: <XCircle size={14} />,
+                              variant: 'danger',
+                              onClick: () => setRejectApp(app),
+                            },
+                          ]}
+                        />
                       </div>
                     </td>
                   </tr>

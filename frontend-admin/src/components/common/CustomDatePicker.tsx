@@ -169,8 +169,8 @@ export default function CustomDatePicker({
             disabled
               ? "bg-slate-100/70 text-slate-400 border-slate-200/80 cursor-not-allowed opacity-75"
               : isOpen
-              ? "bg-white/80 text-slate-900 border-[#3B82F6] ring-4 ring-[#3B82F6]/15 shadow-sm"
-              : "bg-white/25 text-slate-800 border-white/60 hover:bg-white/40 hover:border-slate-300 focus:bg-white/50"
+              ? "bg-white text-slate-900 border-[#3B82F6] ring-4 ring-[#3B82F6]/15 shadow-sm"
+              : "bg-white/80 backdrop-blur-md text-slate-800 border-slate-200/90 hover:bg-white hover:border-[#3B82F6]/60 focus:bg-white"
           } ${error ? "border-rose-400 ring-4 ring-rose-500/10" : ""} cursor-pointer`}
         >
           <div className="flex items-center gap-2.5">

@@ -104,36 +104,36 @@ export default function ReviewModal({
           )}
 
           {/* Info Card */}
-          <div className="bg-white/30 border border-white/60 rounded-2xl p-4 space-y-3.5 shadow-2xs">
+          <div className="bg-white/60 border border-white/80 rounded-2xl p-4.5 space-y-3.5 shadow-2xs">
             <div className="flex justify-between items-baseline gap-4">
               <span className="text-xs text-slate-500 font-bold uppercase tracking-wider shrink-0">Vị trí</span>
               <span className="text-sm font-extrabold text-slate-900 truncate">{job.title}</span>
             </div>
-            <div className="flex justify-between items-baseline gap-4 border-t border-white/60 pt-3">
+            <div className="flex justify-between items-baseline gap-4 border-t border-slate-200/60 pt-3">
               <span className="text-xs text-slate-500 font-bold uppercase tracking-wider shrink-0">Phòng ban</span>
               <span className="text-sm font-bold text-slate-700 truncate">{deptName}</span>
             </div>
-            <div className="flex justify-between items-baseline gap-4 border-t border-white/60 pt-3">
+            <div className="flex justify-between items-baseline gap-4 border-t border-slate-200/60 pt-3">
               <span className="text-xs text-slate-500 font-bold uppercase tracking-wider shrink-0">Người yêu cầu</span>
               <span className="text-sm font-bold text-slate-700 truncate">{postedByName}</span>
             </div>
-            <div className="flex justify-between items-baseline gap-4 border-t border-white/60 pt-3">
+            <div className="flex justify-between items-baseline gap-4 border-t border-slate-200/60 pt-3">
               <span className="text-xs text-slate-500 font-bold uppercase tracking-wider shrink-0">Ngày gửi</span>
               <span className="text-sm font-bold text-slate-700 truncate">{createdDate}</span>
             </div>
           </div>
 
           {/* Decision Buttons */}
-          <div className="space-y-1.5">
+          <div className="space-y-2">
             <span className="text-xs font-bold text-slate-600 uppercase tracking-wider block">Quyết định</span>
-            <div className="flex gap-3 bg-white/20 p-1.5 border border-white/60 rounded-xl">
+            <div className="flex gap-2 bg-slate-100/80 p-1.5 border border-slate-200/70 rounded-2xl">
               <button
                 type="button"
                 onClick={() => setDecision(JobStatus.APPROVED)}
-                className={`flex-1 flex items-center justify-center gap-1.5 py-2 px-4 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+                className={`flex-1 flex items-center justify-center gap-1.5 py-2.5 px-4 rounded-xl text-xs font-bold transition-all cursor-pointer ${
                   decision === JobStatus.APPROVED
                     ? "bg-emerald-600 text-white shadow-xs"
-                    : "bg-transparent text-slate-600 hover:bg-white/50"
+                    : "bg-transparent text-slate-600 hover:bg-white"
                 }`}
               >
                 <Check size={14} />
@@ -142,10 +142,10 @@ export default function ReviewModal({
               <button
                 type="button"
                 onClick={() => setDecision(JobStatus.REJECTED)}
-                className={`flex-1 flex items-center justify-center gap-1.5 py-2 px-4 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+                className={`flex-1 flex items-center justify-center gap-1.5 py-2.5 px-4 rounded-xl text-xs font-bold transition-all cursor-pointer ${
                   decision === JobStatus.REJECTED
                     ? "bg-rose-600 text-white shadow-xs"
-                    : "bg-transparent text-slate-600 hover:bg-white/50"
+                    : "bg-transparent text-slate-600 hover:bg-white"
                 }`}
               >
                 <X size={14} />

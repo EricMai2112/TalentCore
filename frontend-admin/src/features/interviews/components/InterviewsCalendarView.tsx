@@ -1,9 +1,10 @@
 'use client'
 
-import React, { useState } from 'react'
+import React, { useState, useMemo, useRef } from 'react'
 import { useRouter } from 'next/navigation'
 import { ChevronLeft, ChevronRight, Clock, Calendar as CalendarIcon } from 'lucide-react'
 import InterviewPopoverTooltip from './InterviewPopoverTooltip'
+import InterviewGroupPopoverModal from './InterviewGroupPopoverModal'
 import { InterviewItem, InterviewStatus, InterviewResult } from '../types/interview.types'
 
 interface InterviewsCalendarViewProps {
@@ -44,6 +45,55 @@ export default function InterviewsCalendarView({
   // Selected date state for weekly navigation (default today)
   const [selectedDate, setSelectedDate] = useState<Date>(new Date())
 
+  // Overlapping cluster popover state
+  const [selectedCluster, setSelectedCluster] = useState<{
+    dateStr: string
+    startTime: string
+    endTime: string
+    items: InterviewItem[]
+  } | null>(null)
+
+  // Smooth Interactive Hover Tooltip Timeout Ref
+  const hoverTimeoutRef = useRef<NodeJS.Timeout | null>(null)
+
+  const handleCardMouseEnter = (item: InterviewItem, e: React.MouseEvent<HTMLDivElement>) => {
+    if (hoverTimeoutRef.current) {
+      clearTimeout(hoverTimeoutRef.current)
+      hoverTimeoutRef.current = null
+    }
+    const rect = e.currentTarget.getBoundingClientRect()
+    setHoveredInterview({
+      item,
+      x: rect.left + rect.width / 2,
+      y: rect.top - 10
+    })
+  }
+
+  const handleCardMouseLeave = () => {
+    if (hoverTimeoutRef.current) {
+      clearTimeout(hoverTimeoutRef.current)
+    }
+    hoverTimeoutRef.current = setTimeout(() => {
+      setHoveredInterview(null)
+    }, 250)
+  }
+
+  const handleTooltipMouseEnter = () => {
+    if (hoverTimeoutRef.current) {
+      clearTimeout(hoverTimeoutRef.current)
+      hoverTimeoutRef.current = null
+    }
+  }
+
+  const handleTooltipMouseLeave = () => {
+    if (hoverTimeoutRef.current) {
+      clearTimeout(hoverTimeoutRef.current)
+    }
+    hoverTimeoutRef.current = setTimeout(() => {
+      setHoveredInterview(null)
+    }, 150)
+  }
+
   // Helper: Get 7 days of the active week (Monday -> Sunday)
   const getWeekDays = (date: Date) => {
     const d = new Date(date)
@@ -71,7 +121,8 @@ export default function InterviewsCalendarView({
     const firstDayOfMonth = new Date(year, month, 1)
     const lastDayOfMonth = new Date(year, month + 1, 0)
 
-    let startDay = firstDayOfMonth.getDay() // 0 = Sun, 6 = Sat
+    // Convert JavaScript Sunday-first day (0=Sun, 1=Mon, ..., 6=Sat) to Monday-first (0=Mon, ..., 6=Sun)
+    const startDay = (firstDayOfMonth.getDay() + 6) % 7 // 0 = Mon (T2), ..., 6 = Sun (Cn)
 
     const days: { date: Date; isCurrentMonth: boolean; dateStr: string }[] = []
 
@@ -174,6 +225,71 @@ export default function InterviewsCalendarView({
     return h * 60 + m
   }
 
+  // Helper to cluster overlapping interviews into groups (Method 2: Representative Card with +N Badge)
+  interface EventCluster {
+    id: string
+    startTime: string
+    endTime: string
+    startMin: number
+    endMin: number
+    items: InterviewItem[]
+  }
+
+  const clusterOverlappingEvents = (events: InterviewItem[]): EventCluster[] => {
+    if (events.length === 0) return []
+
+    const sorted = [...events].sort((a, b) => {
+      const sA = timeToMinutes(a.startTime)
+      const sB = timeToMinutes(b.startTime)
+      if (sA !== sB) return sA - sB
+      return timeToMinutes(a.endTime) - timeToMinutes(b.endTime)
+    })
+
+    const clusters: EventCluster[] = []
+    let current: EventCluster | null = null
+
+    for (const event of sorted) {
+      const sMin = timeToMinutes(event.startTime)
+      let eMin = timeToMinutes(event.endTime)
+      if (eMin <= sMin) eMin = sMin + 60
+
+      if (!current) {
+        current = {
+          id: event._id,
+          startTime: event.startTime,
+          endTime: event.endTime,
+          startMin: sMin,
+          endMin: eMin,
+          items: [event]
+        }
+      } else {
+        if (sMin < current.endMin) {
+          current.items.push(event)
+          if (eMin > current.endMin) {
+            current.endMin = eMin
+            current.endTime = event.endTime
+          }
+        } else {
+          clusters.push(current)
+          current = {
+            id: event._id,
+            startTime: event.startTime,
+            endTime: event.endTime,
+            startMin: sMin,
+            endMin: eMin,
+            items: [event]
+          }
+        }
+      }
+    }
+
+    if (current) {
+      clusters.push(current)
+    }
+
+    return clusters
+  }
+
   // Helper to calculate rank relative to current time:
   // 0 = Ongoing (current time is between startTime and endTime)
   // 1 = Upcoming (startTime is after current time)
@@ -237,6 +353,22 @@ export default function InterviewsCalendarView({
     })
     .slice(0, 5) // Maximum 5 items!
 
+  // Set of dates (YYYY-MM-DD) that have scheduled interviews
+  const interviewDatesSet = useMemo(() => {
+    const set = new Set<string>()
+    interviews.forEach((item) => {
+      if (
+        item.date &&
+        item.status !== InterviewStatus.CANCELLED &&
+        item.confirmationStatus !== 'REJECTED'
+      ) {
+        const dStr = formatDate(item.date)
+        if (dStr) set.add(dStr)
+      }
+    })
+    return set
+  }, [interviews, formatDate])
+
   const formattedTodayText = new Date().toLocaleDateString('vi-VN', {
     weekday: 'long',
     day: '2-digit',
@@ -245,12 +377,12 @@ export default function InterviewsCalendarView({
   })
 
   return (
-    <div className="flex flex-col lg:flex-row gap-3 relative">
+    <div className="relative flex flex-col gap-3 lg:flex-row">
       {/* LEFT COLUMN: Mini Month Calendar Sidebar & Vertical Timeline Today Schedule */}
-      <div className="w-full lg:w-56 shrink-0 bg-white/20 border border-white/70 shadow-xl shadow-blue-500/5 rounded-3xl p-3 space-y-3">
+      <div className="w-full p-3 space-y-3 border shadow-xl lg:w-56 shrink-0 bg-white/20 border-white/70 shadow-blue-500/5 rounded-3xl">
         {/* Mini Calendar Header */}
         <div className="flex items-center justify-between">
-          <h3 className="text-xs font-extrabold text-slate-800 tracking-tight">
+          <h3 className="text-xs font-extrabold tracking-tight text-slate-800">
             Tháng {currentMonthDate.getMonth() + 1}, {currentMonthDate.getFullYear()}
           </h3>
           <div className="flex items-center gap-0.5 bg-white/50 border border-white/70 p-0.5 rounded-lg shadow-2xs">
@@ -273,50 +405,62 @@ export default function InterviewsCalendarView({
           </div>
         </div>
 
-        {/* Mini Calendar Weekday Header (Cn T2 T3 T4 T5 T6 T7) */}
+        {/* Mini Calendar Weekday Header (T2 T3 T4 T5 T6 T7 Cn) */}
         <div className="grid grid-cols-7 text-center font-bold text-[10px] text-slate-500">
-          <div>Cn</div>
           <div>T2</div>
           <div>T3</div>
           <div>T4</div>
           <div>T5</div>
           <div>T6</div>
           <div>T7</div>
+          <div>Cn</div>
         </div>
 
         {/* Mini Month Grid */}
-        <div className="grid grid-cols-7 gap-1 text-center text-xs">
+        <div className="grid grid-cols-7 gap-y-0.5 text-center text-xs">
           {miniDays.map((dayObj, idx) => {
             const isToday = dayObj.dateStr === todayISO
             const isSelected = dayObj.dateStr === formatDate(selectedDate.toISOString())
             const isInActiveWeek = activeWeekISOs.includes(dayObj.dateStr)
+            const hasInterview = interviewDatesSet.has(dayObj.dateStr)
 
             return (
-              <button
-                type="button"
-                key={idx}
-                onClick={() => {
-                  setSelectedDate(dayObj.date)
-                  if (dayObj.date.getMonth() !== currentMonthDate.getMonth()) {
-                    setCurrentMonthDate(
-                      new Date(dayObj.date.getFullYear(), dayObj.date.getMonth(), 1)
-                    )
-                  }
-                }}
-                className={`w-6 h-6 mx-auto flex items-center justify-center rounded-full text-[10.5px] font-bold transition-all cursor-pointer ${
-                  isToday
-                    ? 'bg-[#3B82F6] text-white shadow-sm shadow-blue-500/30'
-                    : isSelected
-                      ? 'bg-blue-100 text-blue-900 ring-2 ring-[#3B82F6]'
-                      : isInActiveWeek
-                        ? 'bg-blue-50/80 text-blue-900 font-extrabold'
-                        : dayObj.isCurrentMonth
-                          ? 'text-slate-700 hover:bg-white/60'
-                          : 'text-slate-400/60'
-                }`}
-              >
-                {dayObj.date.getDate()}
-              </button>
+              <div key={idx} className="flex flex-col items-center justify-center py-0.5">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setSelectedDate(dayObj.date)
+                    if (dayObj.date.getMonth() !== currentMonthDate.getMonth()) {
+                      setCurrentMonthDate(
+                        new Date(dayObj.date.getFullYear(), dayObj.date.getMonth(), 1)
+                      )
+                    }
+                  }}
+                  className={`w-6 h-6 flex items-center justify-center rounded-full text-[10.5px] font-bold transition-all cursor-pointer ${
+                    isToday
+                      ? 'bg-[#3B82F6] text-white shadow-sm shadow-blue-500/30'
+                      : isSelected
+                        ? 'bg-blue-100 text-blue-900 ring-2 ring-[#3B82F6]'
+                        : isInActiveWeek
+                          ? 'bg-blue-50/80 text-blue-900 font-extrabold'
+                          : dayObj.isCurrentMonth
+                            ? 'text-slate-700 hover:bg-white/60'
+                            : 'text-slate-400/60'
+                  }`}
+                  title={hasInterview ? `${dayObj.date.getDate()}: Có lịch phỏng vấn` : undefined}
+                >
+                  {dayObj.date.getDate()}
+                </button>
+                <div className="flex items-center justify-center h-1 mt-1">
+                  {hasInterview && (
+                    <span
+                      className={`w-1 h-1 rounded-full ${
+                        dayObj.isCurrentMonth ? 'bg-[#3B82F6]' : 'bg-blue-300/80'
+                      }`}
+                    />
+                  )}
+                </div>
+              </div>
             )
           })}
         </div>
@@ -329,7 +473,7 @@ export default function InterviewsCalendarView({
                 <CalendarIcon size={13} />
               </div>
               <div>
-                <h4 className="text-xs font-extrabold text-slate-900 leading-tight">
+                <h4 className="text-xs font-extrabold leading-tight text-slate-900">
                   Lịch hôm nay ({todayInterviews.length})
                 </h4>
                 <p className="text-[9px] font-semibold text-slate-500 capitalize">
@@ -427,7 +571,7 @@ export default function InterviewsCalendarView({
       </div>
 
       {/* RIGHT COLUMN: Google Calendar 8 AM - 5 PM Weekly Time-Grid */}
-      <div className="flex-1 bg-white/20 border border-white/70 shadow-xl shadow-blue-500/5 rounded-3xl p-3 space-y-2 overflow-hidden flex flex-col">
+      <div className="flex flex-col flex-1 p-3 space-y-2 overflow-hidden border shadow-xl bg-white/20 border-white/70 shadow-blue-500/5 rounded-3xl">
         {/* Top Header Controls + Horizontal Legend Indicators */}
         <div className="flex items-center justify-between gap-2 pb-0.5">
           <div className="flex items-center gap-2.5">
@@ -458,7 +602,7 @@ export default function InterviewsCalendarView({
               </button>
             </div>
 
-            <h2 className="text-xs font-extrabold text-slate-900 tracking-tight">
+            <h2 className="text-xs font-extrabold tracking-tight text-slate-900">
               {weekRangeTitle}
             </h2>
           </div>
@@ -481,13 +625,13 @@ export default function InterviewsCalendarView({
         </div>
 
         {/* Weekly Time-Grid Container */}
-        <div className="border-2 border-slate-300/80 bg-white/15 rounded-2xl overflow-hidden shadow-md flex flex-col flex-1">
+        <div className="flex flex-col flex-1 overflow-hidden border-2 shadow-md border-slate-300/80 bg-white/15 rounded-2xl">
           {/* Header Row: GMT column + 7 Day Headers with bold border-b & border-r */}
-          <div className="flex border-b-2 border-slate-300/80 bg-white/40 text-center font-extrabold text-xs text-slate-700 py-1">
+          <div className="flex py-1 text-xs font-extrabold text-center border-b-2 border-slate-300/80 bg-white/40 text-slate-700">
             <div className="w-16 shrink-0 text-[10px] text-slate-600 uppercase tracking-wider flex items-center justify-center border-r-2 border-slate-300/80 font-black">
               GMT+07
             </div>
-            <div className="flex-1 grid grid-cols-7">
+            <div className="grid flex-1 grid-cols-7">
               {weekDays.map((day, dIdx) => {
                 const dayStr = formatDate(day.toISOString())
                 const isToday = dayStr === todayISO
@@ -519,10 +663,10 @@ export default function InterviewsCalendarView({
           </div>
 
           {/* Time Grid Rows (8 AM to 5 PM - Single Screen Viewport, No Scrollbar) */}
-          <div className="relative overflow-hidden flex-1">
-            <div className="flex relative" style={{ height: `${hours.length * HOUR_HEIGHT}px` }}>
+          <div className="relative flex-1 overflow-hidden">
+            <div className="relative flex" style={{ height: `${hours.length * HOUR_HEIGHT}px` }}>
               {/* Left Hour Labels Column (Narrow w-16 width) */}
-              <div className="w-16 shrink-0 border-r-2 border-slate-300/80 bg-white/20 select-none">
+              <div className="w-16 border-r-2 select-none shrink-0 border-slate-300/80 bg-white/20">
                 {hours.map((h, hIdx) => {
                   const label = h === 12 ? '12 PM' : h > 12 ? `${h - 12} PM` : `${h} AM`
                   return (
@@ -538,7 +682,7 @@ export default function InterviewsCalendarView({
               </div>
 
               {/* 7 Day Main Columns with Horizontal Hour Grid lines */}
-              <div className="flex-1 grid grid-cols-7 relative">
+              <div className="relative grid flex-1 grid-cols-7">
                 {weekDays.map((weekDay, dIdx) => {
                   const dayISOStr = formatDate(weekDay.toISOString())
 
@@ -561,60 +705,96 @@ export default function InterviewsCalendarView({
                         />
                       ))}
 
-                      {/* Positioned Event Cards */}
-                      {dayEvents.map((event) => {
-                        const start = parseTime(event.startTime)
-                        const end = parseTime(event.endTime)
+                      {/* Positioned Event Clusters (Method 2: Representative Card with +N Badge) */}
+                      {(() => {
+                        const clusters = clusterOverlappingEvents(dayEvents)
+                        return clusters.map((cluster) => {
+                          const primaryEvent = cluster.items[0]
+                          const count = cluster.items.length
 
-                        // Calculate start offset from 8 AM
-                        const startOffsetMinutes = (start.hour - 8) * 60 + start.min
-                        const endOffsetMinutes = (end.hour - 8) * 60 + end.min
-                        let durationMinutes = endOffsetMinutes - startOffsetMinutes
-                        if (durationMinutes <= 0) durationMinutes = 60 // Default 1 hour
+                          const start = parseTime(cluster.startTime)
+                          const end = parseTime(cluster.endTime)
 
-                        const topPx = (startOffsetMinutes / 60) * HOUR_HEIGHT
-                        const heightPx = Math.max((durationMinutes / 60) * HOUR_HEIGHT, 34)
+                          // Calculate start offset from 8 AM
+                          const startOffsetMinutes = (start.hour - 8) * 60 + start.min
+                          const endOffsetMinutes = (end.hour - 8) * 60 + end.min
+                          let durationMinutes = endOffsetMinutes - startOffsetMinutes
+                          if (durationMinutes <= 0) durationMinutes = 60 // Default 1 hour
 
-                        const cand = event.candidateId
-                        const candName =
-                          typeof cand === 'object' ? cand?.fullName || cand?.name : 'Ứng viên'
-                        const jobTitle =
-                          typeof event.jobDescriptionId === 'object'
-                            ? event.jobDescriptionId?.title
-                            : ''
+                          const topPx = (startOffsetMinutes / 60) * HOUR_HEIGHT
+                          const heightPx = Math.max((durationMinutes / 60) * HOUR_HEIGHT, 34)
 
-                        return (
-                          <div
-                            key={event._id}
-                            style={{
-                              top: `${topPx}px`,
-                              height: `${heightPx}px`
-                            }}
-                            onMouseEnter={(e) => {
-                              const rect = e.currentTarget.getBoundingClientRect()
-                              setHoveredInterview({
-                                item: event,
-                                x: rect.left + rect.width / 2,
-                                y: rect.top - 10
-                              })
-                            }}
-                            onMouseLeave={() => setHoveredInterview(null)}
-                            onClick={() => router.push(`/interviews/${event._id}/evaluate`)}
-                            className={`absolute inset-x-1 p-1 px-1.5 rounded-lg text-[10px] font-bold transition-all cursor-pointer overflow-hidden z-10 flex flex-col justify-center gap-0.5 border ${getEventBgByStatus(
-                              event.status
-                            )}`}
-                          >
-                            <div className="flex items-center gap-1 text-[9.5px] font-extrabold truncate leading-tight">
-                              <span>
-                                {event.startTime} - {event.endTime}
-                              </span>
+                          const jobTitle =
+                            typeof primaryEvent.jobDescriptionId === 'object'
+                              ? primaryEvent.jobDescriptionId?.title
+                              : 'Vị trí tuyển dụng'
+
+                          // 1. Single Event (No Overlap)
+                          if (count === 1) {
+                            return (
+                              <div
+                                key={primaryEvent._id}
+                                style={{
+                                  top: `${topPx}px`,
+                                  height: `${heightPx}px`
+                                }}
+                                onMouseEnter={(e) => handleCardMouseEnter(primaryEvent, e)}
+                                onMouseLeave={handleCardMouseLeave}
+                                onClick={() =>
+                                  router.push(`/interviews/${primaryEvent._id}/evaluate`)
+                                }
+                                className={`absolute inset-x-1 p-1 px-1.5 rounded-lg text-[10px] font-bold transition-all cursor-pointer overflow-hidden z-10 flex flex-col justify-center gap-0.5 border ${getEventBgByStatus(
+                                  primaryEvent.status
+                                )}`}
+                              >
+                                <div className="flex items-center gap-1 text-[9.5px] font-extrabold truncate leading-tight">
+                                  <span>
+                                    {primaryEvent.startTime} - {primaryEvent.endTime}
+                                  </span>
+                                </div>
+                                <div className="font-extrabold leading-tight truncate text-slate-900">
+                                  {jobTitle}
+                                </div>
+                              </div>
+                            )
+                          }
+
+                          // 2. Overlapping Grouped Event Card with "+N khác" Badge
+                          return (
+                            <div
+                              key={cluster.id}
+                              style={{
+                                top: `${topPx}px`,
+                                height: `${heightPx}px`
+                              }}
+                              onMouseEnter={(e) => handleCardMouseEnter(primaryEvent, e)}
+                              onMouseLeave={handleCardMouseLeave}
+                              onClick={() => {
+                                setSelectedCluster({
+                                  dateStr: dayISOStr,
+                                  startTime: cluster.startTime,
+                                  endTime: cluster.endTime,
+                                  items: cluster.items
+                                })
+                              }}
+                              className="absolute inset-x-1 p-1 px-1.5 rounded-lg text-[10px] font-bold transition-all cursor-pointer overflow-hidden z-10 flex flex-col justify-center gap-0.5 border-l-4 border-l-blue-600 border border-blue-400/80 bg-gradient-to-r from-blue-500/25 via-indigo-500/20 to-sky-500/15 text-blue-950 hover:bg-blue-500/35 shadow-xs hover:shadow-md hover:scale-[1.01] backdrop-blur-sm group"
+                              title={`Có ${count} buổi phỏng vấn cùng khung giờ. Bấm để xem chi tiết.`}
+                            >
+                              <div className="flex items-center justify-between gap-1 leading-tight">
+                                <span className="text-[9.5px] font-extrabold text-blue-950 truncate">
+                                  {cluster.startTime} - {cluster.endTime}
+                                </span>
+                                <span className="px-1.5 py-0.2 bg-blue-600 group-hover:bg-blue-700 text-white text-[9px] font-black rounded-full shadow-2xs shrink-0 transition-transform group-hover:scale-105">
+                                  +{count - 1} khác
+                                </span>
+                              </div>
+                              <div className="font-extrabold leading-tight truncate text-slate-900">
+                                {jobTitle}
+                              </div>
                             </div>
-                            <div className="truncate font-extrabold text-slate-900 leading-tight">
-                              {jobTitle}
-                            </div>
-                          </div>
-                        )
-                      })}
+                          )
+                        })
+                      })()}
                     </div>
                   )
                 })}
@@ -631,8 +811,21 @@ export default function InterviewsCalendarView({
           formatDate={formatDate}
           getStatusBadge={getStatusBadge}
           getResultBadge={getResultBadge}
+          onMouseEnter={handleTooltipMouseEnter}
+          onMouseLeave={handleTooltipMouseLeave}
         />
       )}
+
+      {/* Grouping Popover Modal for overlapping interviews */}
+      <InterviewGroupPopoverModal
+        isOpen={Boolean(selectedCluster)}
+        onClose={() => setSelectedCluster(null)}
+        dateStr={selectedCluster?.dateStr || ''}
+        cluster={selectedCluster}
+        formatDate={formatDate}
+        getStatusBadge={getStatusBadge}
+        getResultBadge={getResultBadge}
+      />
     </div>
   )
 }

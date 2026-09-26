@@ -21,13 +21,16 @@ import {
   InterviewsFilterToolbar,
   InterviewsListView,
   InterviewsCalendarView,
-  ApproveInterviewCancelModal
+  ApproveInterviewCancelModal,
+  InterviewWorkflowStatusBadge,
+  InterviewResultBadge
 } from './'
 import { RejectCandidateModal } from '@/src/components/common'
 import { InterviewStatCards } from './InterviewStatCards'
 import { TodayScheduleSidebar } from './TodayScheduleSidebar'
 import { DeptScheduleFormModal } from './DeptScheduleFormModal'
 import { HrApproveScheduleModal } from './HrApproveScheduleModal'
+import { useSidebar } from '@/src/providers/SidebarProvider'
 
 /**
  * Pure helper — no closure deps, safe to call inside useMemo.
@@ -97,6 +100,22 @@ export default function InterviewsManager({
     typeof user?.departmentId === 'object' ? user?.departmentId?._id : user?.departmentId
 
   const [viewMode, setViewMode] = useState<'list' | 'calendar'>('list')
+  const { isCollapsed, collapse } = useSidebar()
+
+  const handleViewModeChange = (mode: 'list' | 'calendar') => {
+    setViewMode(mode)
+    if (mode === 'calendar' && !isCollapsed) {
+      collapse()
+    }
+  }
+
+  // Automatically collapse sidebar when calendar view is active to provide maximum space
+  useEffect(() => {
+    if (viewMode === 'calendar' && !isCollapsed) {
+      collapse()
+    }
+  }, [viewMode])
+
   const [searchQuery, setSearchQuery] = useState<string>('')
   const [timeTabFilter, setTimeTabFilter] = useState<'ALL' | 'TODAY' | 'THIS_WEEK' | 'NEXT_WEEK'>(
     'ALL'
@@ -416,68 +435,16 @@ export default function InterviewsManager({
   }
 
   const getStatusBadge = (status: InterviewStatus, confirmationStatus?: string) => {
-    switch (status) {
-      case InterviewStatus.SCHEDULED:
-        if (confirmationStatus === 'WAITING_DEPT_SCHEDULE') {
-          return (
-            <span className="px-2.5 py-0.5 rounded-full text-xs font-bold bg-amber-50 text-amber-700 border border-amber-200">
-              Chờ lên lịch
-            </span>
-          )
-        }
-        if (confirmationStatus === 'WAITING_HR_APPROVAL') {
-          return (
-            <span className="px-2.5 py-0.5 rounded-full text-xs font-bold bg-sky-50 text-sky-700 border border-sky-200">
-              Chờ duyệt
-            </span>
-          )
-        }
-        if (confirmationStatus === 'CONFIRMED') {
-          return (
-            <span className="px-2.5 py-0.5 rounded-full text-xs font-bold bg-emerald-50 text-emerald-700 border border-emerald-200">
-              Xác nhận phỏng vấn
-            </span>
-          )
-        }
-        return (
-          <span className="px-2.5 py-0.5 rounded-full text-xs font-bold bg-indigo-50 text-indigo-600 border border-indigo-100">
-            Đã lên lịch
-          </span>
-        )
-      case InterviewStatus.COMPLETED:
-        return (
-          <span className="px-2.5 py-0.5 rounded-full text-xs font-bold bg-emerald-50 text-emerald-600 border border-emerald-100">
-            Hoàn thành
-          </span>
-        )
-      case InterviewStatus.CANCELLED:
-        return (
-          <span className="px-2.5 py-0.5 rounded-full text-xs font-bold bg-rose-50 text-rose-600 border border-rose-100">
-            Đã hủy
-          </span>
-        )
-      default:
-        return null
-    }
+    return (
+      <InterviewWorkflowStatusBadge
+        status={status}
+        confirmationStatus={confirmationStatus}
+      />
+    )
   }
 
   const getResultBadge = (result: InterviewResult) => {
-    switch (result) {
-      case InterviewResult.PASS:
-        return (
-          <span className="px-2.5 py-0.5 rounded-full text-xs font-bold bg-emerald-100 text-emerald-700">
-            Pass
-          </span>
-        )
-      case InterviewResult.FAIL:
-        return (
-          <span className="px-2.5 py-0.5 rounded-full text-xs font-bold bg-rose-100 text-rose-700">
-            Fail
-          </span>
-        )
-      default:
-        return null
-    }
+    return <InterviewResultBadge result={result} />
   }
 
   return (
@@ -493,7 +460,7 @@ export default function InterviewsManager({
       {/* Toolbar / Filters */}
       <InterviewsFilterToolbar
         viewMode={viewMode}
-        setViewMode={setViewMode}
+        setViewMode={handleViewModeChange}
         searchQuery={searchQuery}
         setSearchQuery={setSearchQuery}
         departmentFilter={departmentFilter}

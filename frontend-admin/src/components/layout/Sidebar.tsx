@@ -20,6 +20,7 @@ import Image from 'next/image'
 import { UserRole } from '@/src/features/users/types/user.types'
 import { useAuth } from '@/src/providers/AuthProvider'
 import { useNotifications } from '@/src/providers/NotificationProvider'
+import { useSidebar } from '@/src/providers/SidebarProvider'
 
 interface NavItem {
   label: string
@@ -60,12 +61,12 @@ const navItems: NavItem[] = [
     label: 'Thông báo',
     href: '/notifications',
     icon: Bell,
-    roles: [UserRole.HR_ADMIN, UserRole.DEPARTMENT_MANAGER],
-  },
+    roles: [UserRole.HR_ADMIN, UserRole.DEPARTMENT_MANAGER]
+  }
 ]
 
 export default function Sidebar() {
-  const [isCollapsed, setIsCollapsed] = useState(false)
+  const { isCollapsed, setIsCollapsed, toggle } = useSidebar()
   const pathname = usePathname()
   const { user } = useAuth()
   const { unreadCount } = useNotifications()
@@ -80,18 +81,30 @@ export default function Sidebar() {
       if (item.href === '/notifications') {
         return {
           ...item,
-          badge: unreadCount > 0 ? unreadCount : undefined,
+          badge: unreadCount > 0 ? unreadCount : undefined
         }
       }
       return item
     })
 
   return (
-    <aside className="p-2 shrink-0 h-screen sticky top-0 flex flex-col z-20">
-      <div
+    <aside className="sticky top-0 z-20 flex flex-col h-screen p-2 shrink-0">
+      {/* <div
         className={`flex flex-col h-full bg-white/70 backdrop-blur-xl border border-white/90 rounded-3xl shadow-lg shadow-[#1261A6]/10 transition-all duration-300 ease-in-out ${
           isCollapsed ? 'w-14' : 'w-52'
         }`}
+      > */}
+      <div
+        className={`flex flex-col h-full backdrop-blur-xl border border-white/90 rounded-3xl shadow-lg shadow-[#1261A6]/10 transition-all duration-300 ease-in-out ${
+          isCollapsed ? 'w-14' : 'w-52'
+        }`}
+        style={{
+          background: `
+  radial-gradient(circle at 20% 12%, rgba(138, 92, 246, 0.08), transparent 45%),
+      radial-gradient(circle at 85% 90%, rgba(6, 182, 212, 0.08), transparent 60%),
+      linear-gradient(135deg, rgba(255, 255, 255, 0.62) 0%, rgba(250, 248, 255, 0.55) 45%, rgba(244, 246, 255, 0.48) 100%)
+`
+        }}
       >
         {/* Logo */}
         <div
@@ -103,7 +116,7 @@ export default function Sidebar() {
             src={isCollapsed ? logomini : logo}
             alt="TalentCore"
             width={isCollapsed ? 32 : 135}
-            className="h-auto object-contain transition-all"
+            className="object-contain h-auto transition-all"
           />
         </div>
 
@@ -141,7 +154,7 @@ export default function Sidebar() {
                       />
                       {!isCollapsed && (
                         <>
-                          <span className="text-xs truncate flex-1">{item.label}</span>
+                          <span className="flex-1 text-xs truncate">{item.label}</span>
                           {item.badge !== undefined && (
                             <span className="text-[10px] font-bold rounded-full px-1.5 py-0.5 leading-none bg-rose-500 text-white">
                               {item.badge}
@@ -185,8 +198,7 @@ export default function Sidebar() {
                 style={
                   pathname.startsWith('/settings')
                     ? {
-                        background:
-                          'linear-gradient(135deg, #3B82F6 0%, #8B5CF6 50%, #06B6D4 100%)'
+                        background: 'linear-gradient(135deg, #3B82F6 0%, #8B5CF6 50%, #06B6D4 100%)'
                       }
                     : undefined
                 }
@@ -208,7 +220,7 @@ export default function Sidebar() {
           {/* Collapse toggle */}
           <button
             type="button"
-            onClick={() => setIsCollapsed(!isCollapsed)}
+            onClick={toggle}
             className={`flex items-center gap-2.5 rounded-xl px-2.5 py-2 transition-all duration-150 text-slate-700 hover:text-slate-900 hover:bg-slate-200/60 font-medium cursor-pointer w-full ${
               isCollapsed ? 'justify-center' : ''
             }`}

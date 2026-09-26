@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { Plus, Zap, Check, AlertTriangle } from "lucide-react";
+import { Plus, Zap } from "lucide-react";
 import {
   Skill,
   PositionWithSkills,
@@ -17,6 +17,7 @@ import EditPositionModal from "./EditPositionModal";
 import DeletePositionModal from "./DeletePositionModal";
 import { useAuth } from "@/src/providers/AuthProvider";
 import { UserRole, Department } from "@/src/features/users/types/user.types";
+import { CustomButton, Toast, useToast } from "@/src/components/common";
 
 interface SkillManagerProps {
   initialPositions: PositionWithSkills[];
@@ -67,15 +68,7 @@ export default function SkillManager({
   // Loading & toast
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
-  const [toast, setToast] = useState<{ message: string; type: "success" | "error" } | null>(null);
-
-  useEffect(() => {
-    if (!toast) return;
-    const t = setTimeout(() => setToast(null), 3000);
-    return () => clearTimeout(t);
-  }, [toast]);
-
-  const showToast = (message: string, type: "success" | "error") => setToast({ message, type });
+  const { toast, showToast, hideToast } = useToast();
 
   // ── Fetch ──────────────────────────────────────────────────────────────
   const fetchPositions = async () => {
@@ -215,68 +208,61 @@ export default function SkillManager({
   const groups = buildDepartmentGroups(scopedPositions);
 
   return (
-    <div className="space-y-5">
-      {/* Toast */}
-      {toast && (
-        <div
-          className={`fixed top-4 right-4 z-50 flex items-center gap-2 px-4 py-3 rounded-xl shadow-lg border transition-all duration-300 animate-in slide-in-from-top-5 ${
-            toast.type === "success"
-              ? "bg-emerald-50 border-emerald-100 text-emerald-800"
-              : "bg-red-50 border-red-100 text-red-800"
-          }`}
-        >
-          {toast.type === "success" ? <Check size={16} /> : <AlertTriangle size={16} />}
-          <span className="text-sm font-semibold">{toast.message}</span>
-        </div>
-      )}
-
+    <div className="space-y-6">
       {/* Header */}
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <h2 className="text-xl font-bold text-gray-900 flex items-center gap-2">
-            <Zap className="text-indigo-600 shrink-0" size={22} />
+          <h2 className="text-xl font-bold text-slate-900 flex items-center gap-2.5">
+            <span className="p-2 rounded-xl bg-blue-50 text-blue-600 border border-blue-100/60 shadow-2xs shrink-0">
+              <Zap size={20} />
+            </span>
             Danh mục kỹ năng
           </h2>
-          <p className="text-sm text-gray-500 mt-0.5">
+          <p className="text-sm text-slate-500 mt-1">
             {isDeptManager
               ? "Quản lý kỹ năng và vị trí thuộc phòng ban của bạn"
-              : "Quản lý kỹ năng theo phòng ban và vị trí"}
+              : "Quản lý kỹ năng theo phòng ban và vị trí chuyên môn"}
           </p>
         </div>
-        <button
+        <CustomButton
           onClick={() => openAddModal("add-skill")}
-          className="inline-flex items-center gap-1.5 px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white font-semibold text-sm rounded-xl transition-all shadow-sm shadow-indigo-100 cursor-pointer self-start sm:self-auto shrink-0"
+          variant="primary"
+          icon={<Plus size={16} />}
+          className="self-start sm:self-auto shrink-0"
         >
-          <Plus size={16} />
           Thêm kỹ năng
-        </button>
+        </CustomButton>
       </div>
 
       {/* Groups */}
       {groups.length === 0 ? (
-        <div className="bg-white border border-gray-100 rounded-2xl p-12 text-center shadow-xs">
-          <Zap className="mx-auto text-gray-300 mb-3" size={40} />
-          <h3 className="text-base font-semibold text-gray-800">Chưa có dữ liệu kỹ năng</h3>
-          <p className="text-sm text-gray-400 mt-1 max-w-sm mx-auto">
+        <div className="flex flex-col items-center justify-center py-16 px-6 text-center bg-white/50 border border-white/70 rounded-3xl backdrop-blur-md shadow-xl shadow-blue-500/5">
+          <div className="p-4 rounded-2xl bg-slate-100/80 text-slate-400 mb-4 shadow-2xs">
+            <Zap size={36} />
+          </div>
+          <h3 className="text-base font-bold text-slate-800">Chưa có dữ liệu kỹ năng</h3>
+          <p className="text-sm text-slate-500 mt-1 max-w-sm mx-auto">
             Hãy tạo vị trí trong phòng ban, sau đó gắn kỹ năng vào từng vị trí.
           </p>
-          <div className="flex items-center justify-center gap-2 mt-4">
-            <button
+          <div className="flex items-center justify-center gap-3 mt-5">
+            <CustomButton
               onClick={() => openAddModal("add-skill")}
-              className="inline-flex items-center gap-1 px-4 py-2 bg-indigo-50 hover:bg-indigo-100 text-indigo-600 font-semibold text-sm rounded-xl transition-colors border border-indigo-100 cursor-pointer"
+              variant="primary"
+              icon={<Plus size={15} />}
             >
-              <Plus size={15} /> Thêm kỹ năng
-            </button>
-            <button
+              Thêm kỹ năng
+            </CustomButton>
+            <CustomButton
               onClick={() => openAddModal("add-position")}
-              className="inline-flex items-center gap-1 px-4 py-2 bg-gray-50 hover:bg-gray-100 text-gray-600 font-semibold text-sm rounded-xl transition-colors border border-gray-200 cursor-pointer"
+              variant="secondary"
+              icon={<Plus size={15} />}
             >
-              <Plus size={15} /> Thêm vị trí
-            </button>
+              Thêm vị trí
+            </CustomButton>
           </div>
         </div>
       ) : (
-        <div className="space-y-3">
+        <div className="space-y-3.5">
           {groups.map((group) => (
             <DepartmentGroup
               key={group.deptId}
@@ -330,6 +316,9 @@ export default function SkillManager({
         positionName={deletingPosition?.name ?? ""}
         isDeleting={isDeleting}
       />
+
+      {/* Standard Toast Notification */}
+      <Toast toast={toast} onClose={hideToast} />
     </div>
   );
 }
