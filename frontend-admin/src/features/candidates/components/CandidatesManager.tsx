@@ -38,7 +38,7 @@ import { CandidateStageBadge, CandidateAiScoreBadge } from './'
 
 // Lazy load the heavy (43KB) CandidateDetailModal on demand
 const CandidateDetailModal = dynamic(() => import('./CandidateDetailModal'), {
-  ssr: false,
+  ssr: false
 })
 
 interface CandidatesManagerProps {
@@ -50,7 +50,7 @@ interface CandidatesManagerProps {
 
 export default function CandidatesManager({
   initialApplications = [],
-  initialDepartments = [],
+  initialDepartments = []
 }: CandidatesManagerProps) {
   const { user } = useAuth()
   const [applications, setApplications] = useState<CandidateApplication[]>(initialApplications)
@@ -112,7 +112,8 @@ export default function CandidatesManager({
   const fetchApplications = async () => {
     setIsLoading(true)
     try {
-      const activeDeptId = isRestrictedDept && userDeptId ? userDeptId : (selectedDepartmentId || undefined)
+      const activeDeptId =
+        isRestrictedDept && userDeptId ? userDeptId : selectedDepartmentId || undefined
       const data = await candidateApi.getCandidates({
         departmentId: activeDeptId,
         search: searchQuery || undefined
@@ -137,7 +138,8 @@ export default function CandidatesManager({
     if (isRestrictedDept && userDeptId) {
       return applications.filter((app) => {
         const job = app.jobDescriptionId
-        const deptId = typeof job?.departmentId === 'object' ? job?.departmentId?._id : job?.departmentId
+        const deptId =
+          typeof job?.departmentId === 'object' ? job?.departmentId?._id : job?.departmentId
         if (deptId) {
           return deptId === userDeptId
         }
@@ -278,7 +280,7 @@ export default function CandidatesManager({
   }
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-3">
       {/* Toast Notification */}
       <Toast toast={toast} onClose={hideToast} position="bottom-right" />
 
@@ -363,8 +365,8 @@ export default function CandidatesManager({
         emptyDescription="Thử điều chỉnh bộ lọc tìm kiếm hoặc vị trí phía trên"
         emptyIcon={<Users className="w-8 h-8 stroke-[1.5]" />}
       >
-        <table className="w-full text-left border-collapse text-xs">
-          <thead className="sticky top-0 z-10 bg-white/80 backdrop-blur-lg border-b border-slate-200/60 shadow-sm">
+        <table className="w-full text-xs text-left border-collapse">
+          <thead className="sticky top-0 z-10 border-b shadow-sm bg-white/80 backdrop-blur-lg border-slate-200/60">
             <tr className="text-[11px] font-semibold text-slate-600 uppercase tracking-wider">
               <th className="px-5 py-3.5">Ứng viên</th>
               <th className="px-4 py-3.5">Vị trí</th>
@@ -381,8 +383,7 @@ export default function CandidatesManager({
               .map((app, idx) => {
                 const candidate = app.candidateId
                 const u = candidate?.userId
-                const name =
-                  u?.name || candidate?.fullName || candidate?.profileName || 'Ứng viên'
+                const name = u?.name || candidate?.fullName || candidate?.profileName || 'Ứng viên'
                 const email = u?.email || candidate?.email || 'Chưa có email'
                 const position = app.jobDescriptionId?.title || 'Vị trí tuyển dụng'
                 const aiScore = app.aiFitScore ?? app.aiEvaluation?.aiFitScore
@@ -413,7 +414,9 @@ export default function CandidatesManager({
                     </td>
 
                     {/* Position */}
-                    <td className="px-4 py-4 font-semibold text-slate-700 text-[13px]">{position}</td>
+                    <td className="px-4 py-4 font-semibold text-slate-700 text-[13px]">
+                      {position}
+                    </td>
 
                     {/* AI Score */}
                     <td className="px-4 py-4 text-center">{getAiScoreBadge(aiScore)}</td>
@@ -424,14 +427,14 @@ export default function CandidatesManager({
                     {/* Person in charge */}
                     <td className="px-4 py-4 font-medium text-slate-600 text-[13px]">
                       {interviewer === 'Chưa phân công' ? (
-                        <span className="text-slate-400 italic">{interviewer}</span>
+                        <span className="italic text-slate-400">{interviewer}</span>
                       ) : (
                         <span className="font-semibold text-slate-800">{interviewer}</span>
                       )}
                     </td>
 
                     {/* Applied Date */}
-                    <td className="px-4 py-4 font-medium text-slate-500 text-xs">{appliedDate}</td>
+                    <td className="px-4 py-4 text-xs font-medium text-slate-500">{appliedDate}</td>
 
                     {/* Actions */}
                     <td className="px-5 py-4 text-center">
@@ -444,15 +447,15 @@ export default function CandidatesManager({
                               label: 'Xem chi tiết',
                               icon: <Eye size={14} />,
                               variant: 'primary',
-                              onClick: () => setDetailApp(app),
+                              onClick: () => setDetailApp(app)
                             },
                             {
                               id: 'reject_candidate',
                               label: 'Từ chối ứng viên',
                               icon: <XCircle size={14} />,
                               variant: 'danger',
-                              onClick: () => setRejectApp(app),
-                            },
+                              onClick: () => setRejectApp(app)
+                            }
                           ]}
                         />
                       </div>
@@ -479,7 +482,8 @@ export default function CandidatesManager({
             typeof rejectApp.candidateId === 'object'
               ? rejectApp.candidateId?.userId?.name ||
                 rejectApp.candidateId?.fullName ||
-                (rejectApp.candidateId?.profileName && rejectApp.candidateId?.profileName !== 'Hồ sơ của tôi'
+                (rejectApp.candidateId?.profileName &&
+                rejectApp.candidateId?.profileName !== 'Hồ sơ của tôi'
                   ? rejectApp.candidateId?.profileName
                   : 'Ứng viên')
               : 'Ứng viên'
@@ -498,4 +502,3 @@ export default function CandidatesManager({
     </div>
   )
 }
-

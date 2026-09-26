@@ -19,7 +19,14 @@ import {
   RotateCcw
 } from 'lucide-react'
 import { JobDescription, JobStatus, JobPriority, Department } from '../types/job-description.types'
-import { CustomSelect, CustomPagination, CustomButton, CustomInput, CustomTableContainer, CustomActionMenu } from '@/src/components/common'
+import {
+  CustomSelect,
+  CustomPagination,
+  CustomButton,
+  CustomInput,
+  CustomTableContainer,
+  CustomActionMenu
+} from '@/src/components/common'
 import JobRequestStatCards from './JobRequestStatCards'
 
 interface JobRequestTableProps {
@@ -189,7 +196,7 @@ export default function JobRequestTable({
   })
 
   return (
-    <div className="space-y-5">
+    <div className="space-y-3">
       {/* Metrics Row - Componentized & Redesigned Glassmorphism Cards */}
       <JobRequestStatCards
         jobs={scopedJobs}
@@ -275,7 +282,7 @@ export default function JobRequestTable({
           variant="primary"
           size="sm"
           icon={<Plus size={15} />}
-          className="ml-auto sm:ml-0 shrink-0 font-bold"
+          className="ml-auto font-bold sm:ml-0 shrink-0"
         >
           Tạo yêu cầu mới
         </CustomButton>
@@ -295,8 +302,8 @@ export default function JobRequestTable({
         emptyDescription="Thử điều chỉnh bộ lọc trạng thái hoặc phòng ban phía trên"
         emptyIcon={<Briefcase className="w-8 h-8 stroke-[1.5]" />}
       >
-        <table className="w-full text-left border-collapse text-xs">
-          <thead className="sticky top-0 z-10 bg-white/80 backdrop-blur-lg border-b border-slate-200/60 shadow-sm">
+        <table className="w-full text-xs text-left border-collapse">
+          <thead className="sticky top-0 z-10 border-b shadow-sm bg-white/80 backdrop-blur-lg border-slate-200/60">
             <tr className="text-[11px] font-semibold text-slate-600 uppercase tracking-wider">
               <th className="px-5 py-3.5">Vị trí tuyển dụng</th>
               <th className="px-4 py-3.5">Phòng ban</th>
@@ -341,10 +348,11 @@ export default function JobRequestTable({
                             {job.title}
                           </span>
                           <span className="text-[11px] text-slate-400 font-medium block truncate mt-0.5">
-                            {(job.minimumSalary === 0 && job.maximumSalary === 0) || (!job.minimumSalary && !job.maximumSalary)
+                            {(job.minimumSalary === 0 && job.maximumSalary === 0) ||
+                            (!job.minimumSalary && !job.maximumSalary)
                               ? 'Thỏa thuận'
-                              : `${(job.minimumSalary ?? 0).toLocaleString('vi-VN')} - ${(job.maximumSalary ?? 0).toLocaleString('vi-VN')} VNĐ`
-                            } · {job.location}
+                              : `${(job.minimumSalary ?? 0).toLocaleString('vi-VN')} - ${(job.maximumSalary ?? 0).toLocaleString('vi-VN')} VNĐ`}{' '}
+                            · {job.location}
                           </span>
                         </div>
                       </div>
@@ -356,7 +364,9 @@ export default function JobRequestTable({
                     </td>
 
                     {/* Headcount */}
-                    <td className="px-4 py-4 text-center font-bold text-slate-800 text-[13px]">{job.headcount}</td>
+                    <td className="px-4 py-4 text-center font-bold text-slate-800 text-[13px]">
+                      {job.headcount}
+                    </td>
 
                     {/* Priority */}
                     <td className="px-4 py-4">
@@ -372,9 +382,7 @@ export default function JobRequestTable({
                       <span
                         className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full border text-[11px] font-bold shadow-2xs ${statusConf.style}`}
                       >
-                        <span
-                          className={`w-1.5 h-1.5 rounded-full ${statusConf.dot} shrink-0`}
-                        />
+                        <span className={`w-1.5 h-1.5 rounded-full ${statusConf.dot} shrink-0`} />
                         {statusConf.label}
                       </span>
                     </td>
@@ -385,9 +393,7 @@ export default function JobRequestTable({
                     </td>
 
                     {/* Created Date */}
-                    <td className="px-4 py-4 text-slate-400 font-medium text-xs">
-                      {createdDate}
-                    </td>
+                    <td className="px-4 py-4 text-xs font-medium text-slate-400">{createdDate}</td>
 
                     {/* Actions Button */}
                     <td className="px-5 py-3.5 text-center">
