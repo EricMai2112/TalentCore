@@ -16,6 +16,7 @@ import {
   InterviewConfirmationStatus,
 } from 'src/modules/interviews/schemas/interview.schema';
 import { NotificationsService } from '../../notifications/services/notifications.service';
+import { EmailService } from '../../email-template/services/email.service';
 import {
   NotificationType,
   NotificationCategory,
@@ -47,6 +48,7 @@ export class ApplicationService {
 
     private readonly aiMatchingProcessor: AiMatchingProcessor,
     private readonly notificationsService: NotificationsService,
+    private readonly emailService: EmailService,
   ) {}
 
   async applyJob(userId: string, jobDescriptionId: string, candidateId: string) {
@@ -557,9 +559,26 @@ export class ApplicationService {
           applicationId: application._id.toString(),
           departmentId,
         });
+
+        // Gửi email từ chối cho ứng viên
+        const candidateEmail = candidateUser?.email;
+        if (candidateEmail) {
+          try {
+            await this.emailService.sendRejectionEmail({
+              toEmail: candidateEmail,
+              candidateName,
+              jobTitle,
+              companyName: 'TalentCore',
+              managerName: authorName || 'Ban Tuyển dụng TalentCore',
+              reason: application.rejectReason,
+            });
+          } catch (emailErr) {
+            this.logger.error('Lỗi khi gửi email từ chối ứng viên:', emailErr);
+          }
+        }
       }
     } catch (notifErr) {
-      this.logger.error('Lỗi khi gửi thông báo từ chối ứng viên:', notifErr);
+      this.logger.error('Lỗi khi gửi thông báo hoặc email từ chối ứng viên:', notifErr);
     }
 
     return this.getApplicationById(applicationId);

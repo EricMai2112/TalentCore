@@ -11,6 +11,7 @@ import { User, UserSchema } from '../users/schemas/user.schema';
 import { OffersService } from './services/offers.service';
 import { OffersController } from './controllers/offers.controller';
 import { NotificationsModule } from '../notifications/notifications.module';
+import { EmailTemplateModule } from '../email-template/email-template.module';
 
 @Module({
   imports: [
@@ -30,6 +31,7 @@ import { NotificationsModule } from '../notifications/notifications.module';
       inject: [ConfigService],
     }),
     NotificationsModule,
+    EmailTemplateModule,
   ],
   controllers: [OffersController],
   providers: [OffersService],

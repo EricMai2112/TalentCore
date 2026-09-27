@@ -14,6 +14,7 @@ import { JobDescription, JobDescriptionDocument } from '../../job-description/sc
 import { Department, DepartmentDocument } from '../../departments/schemas/department.schema';
 import { User, UserDocument, UserRole } from '../../users/schemas/user.schema';
 import { NotificationsService } from '../../notifications/services/notifications.service';
+import { EmailService } from '../../email-template/services/email.service';
 import { CreateOfferDto } from '../dtos/create-offer.dto';
 import { UpdateOfferDto } from '../dtos/update-offer.dto';
 import { RespondOfferDto } from '../dtos/respond-offer.dto';
@@ -37,6 +38,7 @@ export class OffersService {
     @InjectModel(User.name)
     private readonly userModel: Model<UserDocument>,
     private readonly notificationsService: NotificationsService,
+    private readonly emailService: EmailService,
   ) {}
 
   async create(dto: CreateOfferDto, userId: string): Promise<OfferDocument> {
@@ -89,9 +91,10 @@ export class OffersService {
 
     const savedOffer = await offer.save();
 
-    // If sent immediately, dispatch notification to candidate
+    // If sent immediately, dispatch notification and email to candidate
     if (dto.sendImmediately) {
       await this.notifyCandidateForOffer(savedOffer);
+      await this.sendOfferEmailToCandidate(savedOffer);
     }
 
     return savedOffer;
@@ -248,8 +251,10 @@ export class OffersService {
     // Notify candidate
     await this.notifyCandidateForOffer(updatedOffer);
 
-    // [NOTE: Gửi mail AWS SES sẽ thực hiện ở giai đoạn sau theo yêu cầu]
-    this.logger.log(`Offer ${id} marked as SENT. Email dispatch postponed as requested.`);
+    // Gửi email Offer cho ứng viên qua AWS SES
+    await this.sendOfferEmailToCandidate(updatedOffer);
+
+    this.logger.log(`Offer ${id} marked as SENT. Notification & email dispatched.`);
 
     return updatedOffer;
   }
@@ -483,6 +488,78 @@ export class OffersService {
       }
     } catch (err) {
       this.logger.error('Lỗi khi gửi thông báo Offer cho ứng viên / Trưởng phòng:', err);
+    }
+  }
+
+  private async sendOfferEmailToCandidate(offer: OfferDocument) {
+    try {
+      let candidate = await this.candidateModel
+        .findById(offer.candidateId)
+        .populate('userId')
+        .exec();
+
+      if (!candidate || !candidate.userId) {
+        candidate = await this.candidateModel
+          .findOne({ userId: offer.candidateId })
+          .populate('userId')
+          .exec();
+      }
+
+      if ((!candidate || !candidate.userId) && offer.applicationId) {
+        const app = await this.applicationModel
+          .findById(offer.applicationId)
+          .populate({
+            path: 'candidateId',
+            populate: { path: 'userId' },
+          })
+          .exec();
+        if (app && app.candidateId) {
+          candidate = app.candidateId as any;
+        }
+      }
+
+      let candidateEmail: string | undefined;
+      let candidateName = 'Ứng viên';
+
+      if (candidate) {
+        const user = candidate.userId as any;
+        if (user && typeof user === 'object') {
+          candidateEmail = user.email;
+          candidateName = user.name || candidate.profileName || 'Ứng viên';
+        }
+      }
+
+      if (!candidateEmail && offer.candidateId) {
+        const directUser = await this.userModel.findById(offer.candidateId).exec();
+        if (directUser) {
+          candidateEmail = directUser.email;
+          candidateName = directUser.name || 'Ứng viên';
+        }
+      }
+
+      if (!candidateEmail) {
+        this.logger.warn(
+          `Không tìm thấy email của ứng viên để gửi Offer Email (offerId: ${offer._id})`,
+        );
+        return;
+      }
+
+      await this.emailService.sendOfferEmail({
+        toEmail: candidateEmail,
+        candidateName,
+        jobTitle: offer.positionTitle,
+        companyName: 'TalentCore',
+        customSubject: offer.emailSubject,
+        customLetterHtml: offer.offerLetterHtml,
+      });
+
+      this.logger.log(
+        `Đã gửi email Offer cho ứng viên ${candidateEmail} (offerId: ${offer._id})`,
+      );
+    } catch (error: any) {
+      this.logger.error(
+        `Lỗi gửi email Offer cho ứng viên (offerId: ${offer._id}): ${error?.message || error}`,
+      );
     }
   }
 }

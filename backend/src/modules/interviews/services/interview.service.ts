@@ -9,6 +9,7 @@ import { Candidate, CandidateDocument } from '../../candidates/schema/candidate.
 import { User, UserDocument, UserRole } from '../../users/schemas/user.schema';
 import { CreateInterviewDto, UpdateInterviewDto, SaveEvaluationDto } from '../dtos/interview.dto';
 import { NotificationsService } from '../../notifications/services/notifications.service';
+import { EmailService } from '../../email-template/services/email.service';
 
 @Injectable()
 export class InterviewService {
@@ -20,6 +21,7 @@ export class InterviewService {
     @InjectModel(Candidate.name) private candidateModel: Model<CandidateDocument>,
     @InjectModel(User.name) private userModel: Model<UserDocument>,
     private readonly notificationsService: NotificationsService,
+    private readonly emailService: EmailService,
   ) {}
 
   /**
@@ -977,8 +979,45 @@ export class InterviewService {
           interviewId: saved._id.toString(),
         });
       }
+
+      // Gửi Email Thư mời phỏng vấn cho ứng viên
+      const candEmail = candUser?.email;
+      if (candEmail) {
+        let interviewerName = 'Hội đồng phỏng vấn TalentCore';
+        if (interview.interviewerId) {
+          const interviewerDoc = await this.userModel
+            .findById(interview.interviewerId)
+            .select('name')
+            .lean()
+            .exec();
+          if (interviewerDoc && (interviewerDoc as any).name) {
+            interviewerName = (interviewerDoc as any).name;
+          }
+        }
+
+        const interviewType =
+          interview.locationType === LocationType.ONLINE
+            ? 'Trực tuyến (Online)'
+            : 'Trực tiếp tại văn phòng';
+        const meetLink =
+          interview.locationType === LocationType.ONLINE
+            ? (interview.meetingLink || 'Sẽ cập nhật hoặc gửi link trước buổi phỏng vấn')
+            : (interview.offsiteLocation || 'Trụ sở công ty');
+
+        await this.emailService.sendInterviewInvitationEmail({
+          toEmail: candEmail,
+          candidateName: candName,
+          jobTitle,
+          companyName: 'TalentCore',
+          interviewDate: dateFormatted,
+          interviewTime: timeRange,
+          interviewType,
+          meetLink,
+          interviewerName,
+        });
+      }
     } catch (notifErr) {
-      console.error('Lỗi gửi thông báo approveInterviewSchedule:', notifErr);
+      console.error('Lỗi gửi thông báo hoặc email approveInterviewSchedule:', notifErr);
     }
 
     return saved;
@@ -1115,6 +1154,15 @@ export class InterviewService {
     interview.confirmationStatus = InterviewConfirmationStatus.CANCELLED;
     const saved = await interview.save();
 
+    if (interview.applicationId) {
+      await this.applicationModel.findByIdAndUpdate(interview.applicationId, {
+        status: ApplicationStatus.REJECTED,
+        reviewStatus: 'Rejected',
+        rejectReason: (interview as any).cancelReason || 'Hủy lịch phỏng vấn theo yêu cầu ứng viên',
+        rejectedAt: new Date(),
+      }).exec();
+    }
+
     try {
       const application = await this.applicationModel
         .findById(interview.applicationId)
@@ -1125,6 +1173,7 @@ export class InterviewService {
       const candUser = (application?.candidateId as any)?.userId;
       const candName = candUser?.name || (application?.candidateId as any)?.profileName || 'Ứng viên';
       const candUserId = candUser?._id?.toString() || candUser?.toString();
+      const candEmail = candUser?.email;
       const job: any = application?.jobDescriptionId;
       const jobTitle = job?.title || 'Vị trí tuyển dụng';
       const dateFormatted = interview.date ? new Date(interview.date).toLocaleDateString('vi-VN') : '';
@@ -1142,8 +1191,24 @@ export class InterviewService {
         interviewerIds,
         departmentId: deptId,
       });
+
+      // Gửi email từ chối cho ứng viên khi duyệt hủy lịch
+      if (candEmail) {
+        try {
+          await this.emailService.sendRejectionEmail({
+            toEmail: candEmail,
+            candidateName: candName,
+            jobTitle,
+            companyName: 'TalentCore',
+            managerName: 'Ban Tuyển dụng TalentCore',
+            reason: (interview as any).cancelReason || 'Hồ sơ dừng quá trình tuyển dụng sau khi hủy lịch phỏng vấn',
+          });
+        } catch (emailErr) {
+          console.error('Lỗi gửi email từ chối khi duyệt hủy lịch:', emailErr);
+        }
+      }
     } catch (notifErr) {
-      console.error('Lỗi gửi thông báo approveCandidateCancellation:', notifErr);
+      console.error('Lỗi gửi thông báo hoặc email approveCandidateCancellation:', notifErr);
     }
 
     return saved;
