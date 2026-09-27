@@ -14,6 +14,7 @@ import { AiMatchingService } from './services/ai-matching.service';
 import { AiMatchingProcessor } from './processors/ai-matching.processor';
 import { AiMatchingCronService } from './services/ai-matching-cron.service';
 import { NotificationsModule } from '../notifications/notifications.module';
+import { EmailTemplateModule } from '../email-template/email-template.module';
 
 @Module({
     imports: [MongooseModule.forFeature([{name: Application.name, schema: ApplicationSchema},
@@ -31,6 +32,7 @@ import { NotificationsModule } from '../notifications/notifications.module';
       inject: [ConfigService],
     }),
     NotificationsModule,
+    EmailTemplateModule,
 ],
     controllers: [ApplicationController],
     providers: [ApplicationService, AiMatchingService, AiMatchingProcessor, AiMatchingCronService],

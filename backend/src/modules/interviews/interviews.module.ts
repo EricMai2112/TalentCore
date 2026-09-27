@@ -12,6 +12,7 @@ import { InterviewService } from './services/interview.service';
 import { InterviewController } from './controllers/interview.controller';
 
 import { NotificationsModule } from '../notifications/notifications.module';
+import { EmailTemplateModule } from '../email-template/email-template.module';
 
 @Module({
   imports: [
@@ -31,6 +32,7 @@ import { NotificationsModule } from '../notifications/notifications.module';
       inject: [ConfigService],
     }),
     NotificationsModule,
+    EmailTemplateModule,
   ],
   controllers: [InterviewController],
   providers: [InterviewService],
