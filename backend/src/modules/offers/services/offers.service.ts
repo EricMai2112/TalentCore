@@ -331,6 +331,15 @@ export class OffersService {
         departmentId: deptId,
       });
 
+      const candidateUserIdStr = candidate.userId?.toString();
+      await this.notificationsService.notifyCandidateHired({
+        candidateName,
+        jobTitle,
+        candidateUserId: candidateUserIdStr,
+        applicationId: offer.applicationId?.toString(),
+        departmentId: deptId,
+      });
+
       this.logger.log(`Offer ${id} ACCEPTED. Application ${offer.applicationId} updated to HIRED.`);
     } else {
       offer.status = OfferStatus.DECLINED;
@@ -391,8 +400,30 @@ export class OffersService {
 
   private async notifyCandidateForOffer(offer: OfferDocument) {
     try {
-      const candidate = await this.candidateModel.findById(offer.candidateId).exec();
-      if (!candidate || !candidate.userId) return;
+      let candidate = await this.candidateModel
+        .findById(offer.candidateId)
+        .populate('userId')
+        .exec();
+
+      if (!candidate || !candidate.userId) {
+        candidate = await this.candidateModel
+          .findOne({ userId: offer.candidateId })
+          .populate('userId')
+          .exec();
+      }
+
+      if ((!candidate || !candidate.userId) && offer.applicationId) {
+        const app = await this.applicationModel
+          .findById(offer.applicationId)
+          .populate({
+            path: 'candidateId',
+            populate: { path: 'userId' },
+          })
+          .exec();
+        if (app && app.candidateId) {
+          candidate = app.candidateId as any;
+        }
+      }
 
       const expirationDateFormatted = new Date(offer.expirationDate).toLocaleDateString('vi-VN', {
         day: '2-digit',
@@ -400,16 +431,58 @@ export class OffersService {
         year: 'numeric',
       });
 
-      await this.notificationsService.notifyCandidateOfferSent(
-        candidate.userId.toString(),
-        {
+      let candidateUserId: string | undefined;
+      let candidateName = 'Ứng viên';
+
+      if (candidate) {
+        const user = candidate.userId as any;
+        if (user && typeof user === 'object' && user._id) {
+          candidateUserId = user._id.toString();
+          candidateName = user.name || candidate.profileName || 'Ứng viên';
+        } else if (candidate.userId) {
+          candidateUserId = candidate.userId.toString();
+          candidateName = candidate.profileName || 'Ứng viên';
+        }
+      }
+
+      if (!candidateUserId && offer.candidateId) {
+        const directUser = await this.userModel.findById(offer.candidateId).exec();
+        if (directUser) {
+          candidateUserId = directUser._id.toString();
+          candidateName = directUser.name || 'Ứng viên';
+        }
+      }
+
+      if (candidateUserId) {
+        await this.notificationsService.notifyCandidateOfferSent(
+          candidateUserId,
+          {
+            jobTitle: offer.positionTitle,
+            offerId: offer._id.toString(),
+            expirationDateFormatted,
+          },
+        );
+        this.logger.log(`Đã gửi thông báo Offer cho Ứng viên (userId: ${candidateUserId}, offerId: ${offer._id})`);
+      } else {
+        this.logger.warn(`Không tìm thấy userId của ứng viên để gửi thông báo Offer (offerId: ${offer._id})`);
+      }
+
+      if (offer.departmentId) {
+        const salaryFormatted = offer.salary
+          ? `${offer.salary.toLocaleString('vi-VN')} ${offer.currency || 'VND'}`
+          : 'Thỏa thuận';
+
+        await this.notificationsService.notifyDeptOfferSent({
+          candidateName,
           jobTitle: offer.positionTitle,
-          offerId: offer._id.toString(),
+          salaryFormatted,
           expirationDateFormatted,
-        },
-      );
+          offerId: offer._id.toString(),
+          departmentId: offer.departmentId.toString(),
+        });
+      }
     } catch (err) {
-      this.logger.error('Lỗi khi gửi thông báo Offer cho ứng viên:', err);
+      this.logger.error('Lỗi khi gửi thông báo Offer cho ứng viên / Trưởng phòng:', err);
     }
   }
 }

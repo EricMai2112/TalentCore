@@ -58,7 +58,9 @@ export default function CandidateNotificationsView() {
         (n) =>
           n.category === NotificationCategory.INTERVIEW ||
           n.type === NotificationType.INTERVIEW_SCHEDULED ||
-          n.type === NotificationType.INTERVIEW_RESCHEDULED,
+          n.type === NotificationType.INTERVIEW_RESCHEDULED ||
+          n.type === NotificationType.INTERVIEW_CANCEL_REQUESTED ||
+          n.type === NotificationType.INTERVIEW_CANCEL_APPROVED,
       ).length,
     [safeNotifications],
   );
@@ -68,7 +70,9 @@ export default function CandidateNotificationsView() {
       safeNotifications.filter(
         (n) =>
           n.category === NotificationCategory.CANDIDATE ||
-          n.type === NotificationType.STAGE_CHANGED,
+          n.type === NotificationType.STAGE_CHANGED ||
+          n.type === NotificationType.CANDIDATE_REJECTED ||
+          n.type === NotificationType.CANDIDATE_HIRED,
       ).length,
     [safeNotifications],
   );
@@ -78,7 +82,9 @@ export default function CandidateNotificationsView() {
       safeNotifications.filter(
         (n) =>
           n.category === NotificationCategory.OFFER ||
-          n.type === NotificationType.OFFER_SENT,
+          n.type === NotificationType.OFFER_SENT ||
+          n.type === NotificationType.OFFER_ACCEPTED ||
+          n.type === NotificationType.OFFER_DECLINED,
       ).length,
     [safeNotifications],
   );
@@ -90,19 +96,25 @@ export default function CandidateNotificationsView() {
         activeTab === 'interview' &&
         item.category !== NotificationCategory.INTERVIEW &&
         item.type !== NotificationType.INTERVIEW_SCHEDULED &&
-        item.type !== NotificationType.INTERVIEW_RESCHEDULED
+        item.type !== NotificationType.INTERVIEW_RESCHEDULED &&
+        item.type !== NotificationType.INTERVIEW_CANCEL_REQUESTED &&
+        item.type !== NotificationType.INTERVIEW_CANCEL_APPROVED
       )
         return false;
       if (
         activeTab === 'stage' &&
         item.category !== NotificationCategory.CANDIDATE &&
-        item.type !== NotificationType.STAGE_CHANGED
+        item.type !== NotificationType.STAGE_CHANGED &&
+        item.type !== NotificationType.CANDIDATE_REJECTED &&
+        item.type !== NotificationType.CANDIDATE_HIRED
       )
         return false;
       if (
         activeTab === 'offer' &&
         item.category !== NotificationCategory.OFFER &&
-        item.type !== NotificationType.OFFER_SENT
+        item.type !== NotificationType.OFFER_SENT &&
+        item.type !== NotificationType.OFFER_ACCEPTED &&
+        item.type !== NotificationType.OFFER_DECLINED
       )
         return false;
 
@@ -136,10 +148,28 @@ export default function CandidateNotificationsView() {
   };
 
   const getCategoryBadge = (category: NotificationCategory, type: NotificationType) => {
+    if (type === NotificationType.CANDIDATE_HIRED) {
+      return (
+        <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-bold bg-emerald-100 text-emerald-800 border border-emerald-300">
+          <CheckCircle2 size={12} />
+          Trúng tuyển 🎉
+        </span>
+      );
+    }
+    if (type === NotificationType.CANDIDATE_REJECTED) {
+      return (
+        <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-bold bg-rose-50 text-rose-700 border border-rose-200">
+          <AlertCircle size={12} />
+          Kết quả hồ sơ
+        </span>
+      );
+    }
     if (
       category === NotificationCategory.INTERVIEW ||
       type === NotificationType.INTERVIEW_SCHEDULED ||
-      type === NotificationType.INTERVIEW_RESCHEDULED
+      type === NotificationType.INTERVIEW_RESCHEDULED ||
+      type === NotificationType.INTERVIEW_CANCEL_REQUESTED ||
+      type === NotificationType.INTERVIEW_CANCEL_APPROVED
     ) {
       return (
         <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-bold bg-purple-50 text-purple-700 border border-purple-200">
@@ -148,7 +178,12 @@ export default function CandidateNotificationsView() {
         </span>
       );
     }
-    if (category === NotificationCategory.OFFER || type === NotificationType.OFFER_SENT) {
+    if (
+      category === NotificationCategory.OFFER ||
+      type === NotificationType.OFFER_SENT ||
+      type === NotificationType.OFFER_ACCEPTED ||
+      type === NotificationType.OFFER_DECLINED
+    ) {
       return (
         <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-bold bg-amber-50 text-amber-700 border border-amber-200">
           <Gift size={12} />
@@ -173,10 +208,26 @@ export default function CandidateNotificationsView() {
   };
 
   const getCategoryIcon = (category: NotificationCategory, type: NotificationType) => {
+    if (type === NotificationType.CANDIDATE_HIRED) {
+      return (
+        <div className="w-11 h-11 rounded-2xl bg-gradient-to-tr from-emerald-500 to-green-600 text-white flex items-center justify-center shrink-0 shadow-md shadow-emerald-500/25 ring-2 ring-emerald-300">
+          <CheckCircle2 size={22} />
+        </div>
+      );
+    }
+    if (type === NotificationType.CANDIDATE_REJECTED) {
+      return (
+        <div className="w-11 h-11 rounded-2xl bg-gradient-to-tr from-rose-500 to-slate-600 text-white flex items-center justify-center shrink-0 shadow-md shadow-rose-500/20">
+          <AlertCircle size={20} />
+        </div>
+      );
+    }
     if (
       category === NotificationCategory.INTERVIEW ||
       type === NotificationType.INTERVIEW_SCHEDULED ||
-      type === NotificationType.INTERVIEW_RESCHEDULED
+      type === NotificationType.INTERVIEW_RESCHEDULED ||
+      type === NotificationType.INTERVIEW_CANCEL_REQUESTED ||
+      type === NotificationType.INTERVIEW_CANCEL_APPROVED
     ) {
       return (
         <div className="w-11 h-11 rounded-2xl bg-gradient-to-tr from-purple-600 to-indigo-500 text-white flex items-center justify-center shrink-0 shadow-md shadow-purple-500/20">
@@ -184,7 +235,12 @@ export default function CandidateNotificationsView() {
         </div>
       );
     }
-    if (category === NotificationCategory.OFFER || type === NotificationType.OFFER_SENT) {
+    if (
+      category === NotificationCategory.OFFER ||
+      type === NotificationType.OFFER_SENT ||
+      type === NotificationType.OFFER_ACCEPTED ||
+      type === NotificationType.OFFER_DECLINED
+    ) {
       return (
         <div className="w-11 h-11 rounded-2xl bg-gradient-to-tr from-amber-500 to-rose-500 text-white flex items-center justify-center shrink-0 shadow-md shadow-amber-500/20">
           <Gift size={20} />

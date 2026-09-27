@@ -7,7 +7,14 @@ import { JobDescription, JobDescriptionDocument, JobStatus } from 'src/modules/j
 import { PipelineTemplate, PipelineTemplateDocument } from 'src/modules/pipeline-template/schemas/pipeline-template.schema';
 import { AiMatchingProcessor } from '../processors/ai-matching.processor';
 import { AiEvaluation, AiEvaluationDocument } from '../schemas/ai-evaluation.schema';
-import { Interview, InterviewDocument } from 'src/modules/interviews/schemas/interview.schema';
+import {
+  Interview,
+  InterviewDocument,
+  LocationType,
+  InterviewStatus,
+  InterviewResult,
+  InterviewConfirmationStatus,
+} from 'src/modules/interviews/schemas/interview.schema';
 import { NotificationsService } from '../../notifications/services/notifications.service';
 import {
   NotificationType,
@@ -291,6 +298,12 @@ export class ApplicationService {
     return filtered;
   }
 
+  private extractDeptId(rawDept: any): string | undefined {
+    if (!rawDept) return undefined;
+    if (rawDept._id) return rawDept._id.toString();
+    return rawDept.toString();
+  }
+
   async updateApplicationStage(applicationId: string, stageId: string) {
     if (!Types.ObjectId.isValid(applicationId)) {
       throw new BadRequestException('ID đơn ứng tuyển không hợp lệ');
@@ -306,9 +319,10 @@ export class ApplicationService {
 
     const populated = await this.getApplicationById(updated._id.toString());
 
-    // [YÊU CẦU 2]: Kiểm tra nếu chuyển sang vòng department_review / Đánh giá phòng ban -> Thông báo cho Trưởng phòng
     try {
       const job = populated.jobDescriptionId as any;
+      const departmentId = this.extractDeptId(job?.departmentId);
+
       const pipeline = job?.pipelineTemplateId as any;
       let stageName = '';
       if (pipeline && Array.isArray(pipeline.stages)) {
@@ -318,19 +332,66 @@ export class ApplicationService {
         if (foundStage) stageName = foundStage.name;
       }
 
+      if (!stageName && Types.ObjectId.isValid(stageId)) {
+        const pipelineWithStage = await this.pipelineModel
+          .findOne({ 'stages._id': new Types.ObjectId(stageId) })
+          .lean()
+          .exec();
+        if (pipelineWithStage && Array.isArray(pipelineWithStage.stages)) {
+          const found = pipelineWithStage.stages.find(
+            (s: any) => s._id?.toString() === stageId,
+          );
+          if (found) stageName = found.name;
+        }
+      }
+
       const stageLower = (stageName || stageId).toLowerCase();
-      // Nhận diện vòng Đánh giá phòng ban (department_review hoặc tên chứa phòng ban/chuyên môn)
-      if (
+      this.logger.log(`updateApplicationStage: appId=${applicationId}, stageId=${stageId}, stageName="${stageName}", deptId="${departmentId}"`);
+
+      // 1. Nhận diện vòng Đánh giá phòng ban
+      const isDeptReview =
         stageLower.includes('department') ||
         stageLower.includes('phòng ban') ||
         stageLower.includes('chuyên môn') ||
-        stageLower.includes('đánh giá')
-      ) {
-        const candidate = populated.candidateId as any;
-        const user = candidate?.userId as any;
-        const candidateName = user?.name || candidate?.fullName || candidate?.profileName || 'Ứng viên';
-        const jobTitle = job?.title || 'Vị trí tuyển dụng';
-        const departmentId = typeof job?.departmentId === 'object' ? job?.departmentId?._id?.toString() : job?.departmentId?.toString();
+        stageLower.includes('đánh giá') ||
+        stageLower.includes('phỏng vấn');
+
+      const isHired =
+        stageLower.includes('hired') ||
+        stageLower.includes('trúng tuyển') ||
+        stageLower.includes('nhận việc');
+
+      const candidate = populated.candidateId as any;
+      const user = candidate?.userId as any;
+      const candidateName = user?.name || candidate?.fullName || candidate?.profileName || 'Ứng viên';
+      const candidateUserId = user?._id?.toString() || user?.toString() || candidate?.userId?.toString();
+      const jobTitle = job?.title || 'Vị trí tuyển dụng';
+
+      if (isDeptReview && !isHired) {
+        this.logger.log(`Phát hiện chuyển sang vòng Đánh giá phòng ban. Khởi tạo lịch và thông báo Trưởng phòng (departmentId: ${departmentId})...`);
+
+        try {
+          let interview = await this.interviewModel.findOne({ applicationId: populated._id }).exec();
+          if (!interview) {
+            const defaultInterviewer = job?.interviewerId || populated.candidateId;
+            interview = new this.interviewModel({
+              applicationId: populated._id,
+              candidateId: populated.candidateId?._id || populated.candidateId,
+              jobDescriptionId: job?._id || populated.jobDescriptionId,
+              interviewerId: defaultInterviewer || new Types.ObjectId(),
+              locationType: LocationType.ONLINE,
+              status: InterviewStatus.SCHEDULED,
+              result: InterviewResult.PENDING,
+              confirmationStatus: InterviewConfirmationStatus.WAITING_DEPT_SCHEDULE,
+            });
+            await interview.save();
+          } else if (!interview.date || !interview.startTime) {
+            interview.confirmationStatus = InterviewConfirmationStatus.WAITING_DEPT_SCHEDULE;
+            await interview.save();
+          }
+        } catch (invErr) {
+          this.logger.error('Lỗi khởi tạo interview khi chuyển stage:', invErr);
+        }
 
         if (departmentId) {
           await this.notificationsService.notifyDepartmentReview({
@@ -340,16 +401,24 @@ export class ApplicationService {
             departmentId,
             stageName: stageName || 'Đánh giá phòng ban',
           });
+        } else {
+          this.logger.warn(`Không tìm thấy departmentId để gửi notifyDepartmentReview cho đơn ${applicationId}`);
         }
       }
 
-      // Thông báo cho Ứng viên khi hồ sơ được chuyển sang vòng mới
-      const candidate = populated.candidateId as any;
-      const candidateUser = candidate?.userId as any;
-      const candidateUserId = candidateUser?._id?.toString() || candidateUser?.toString();
-      const jobTitle = job?.title || 'Vị trí tuyển dụng';
+      if (isHired) {
+        await this.applicationModel.findByIdAndUpdate(applicationId, {
+          $set: { status: ApplicationStatus.HIRED },
+        }).exec();
 
-      if (candidateUserId && stageName) {
+        await this.notificationsService.notifyCandidateHired({
+          candidateName,
+          jobTitle,
+          candidateUserId,
+          applicationId: populated._id.toString(),
+          departmentId,
+        });
+      } else if (candidateUserId && stageName) {
         await this.notificationsService.notifyCandidateStageChanged(candidateUserId, {
           jobTitle,
           stageName,
@@ -368,7 +437,10 @@ export class ApplicationService {
       .findById(applicationId)
       .populate({
         path: 'jobDescriptionId',
-        populate: { path: 'pipelineTemplateId' },
+        populate: [
+          { path: 'pipelineTemplateId' },
+          { path: 'departmentId' },
+        ],
       })
       .populate({
         path: 'candidateId',
@@ -457,6 +529,39 @@ export class ApplicationService {
     }
 
     await application.save();
+
+    try {
+      const populated = await this.applicationModel
+        .findById(applicationId)
+        .populate({
+          path: 'candidateId',
+          populate: { path: 'userId', select: 'name email phone avatar' },
+        })
+        .populate('jobDescriptionId')
+        .exec();
+
+      if (populated) {
+        const candidate = populated.candidateId as any;
+        const candidateUser = candidate?.userId as any;
+        const candidateUserId = candidateUser?._id?.toString() || candidateUser?.toString();
+        const candidateName = candidateUser?.name || candidate?.fullName || candidate?.profileName || 'Ứng viên';
+        const job = populated.jobDescriptionId as any;
+        const jobTitle = job?.title || 'Vị trí tuyển dụng';
+        const departmentId = this.extractDeptId(job?.departmentId);
+
+        await this.notificationsService.notifyCandidateRejectedByHr({
+          candidateName,
+          jobTitle,
+          reason: application.rejectReason,
+          candidateUserId,
+          applicationId: application._id.toString(),
+          departmentId,
+        });
+      }
+    } catch (notifErr) {
+      this.logger.error('Lỗi khi gửi thông báo từ chối ứng viên:', notifErr);
+    }
+
     return this.getApplicationById(applicationId);
   }
 

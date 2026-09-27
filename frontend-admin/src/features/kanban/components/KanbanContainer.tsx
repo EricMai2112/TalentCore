@@ -412,19 +412,6 @@ export default function KanbanContainer({
 
     try {
       await kanbanApi.updateApplicationStage(appId, targetStageId);
-
-      // Check if targetStage is Department Review / Phỏng vấn chuyên môn / Đánh giá phòng ban
-      const targetStage = activeStages.find((s) => s._id === targetStageId);
-      const stageLower = (targetStage?.name || targetStageId).toLowerCase();
-      if (
-        stageLower.includes("department") ||
-        stageLower.includes("phòng ban") ||
-        stageLower.includes("chuyên môn") ||
-        stageLower.includes("đánh giá")
-      ) {
-        // Automatically request department schedule so interview document is created and visible to Dept Manager
-        await interviewsApi.requestDeptSchedule(appId);
-      }
     } catch (err) {
       console.error("Lỗi cập nhật giai đoạn phỏng vấn:", err);
       // Revert if API fails
