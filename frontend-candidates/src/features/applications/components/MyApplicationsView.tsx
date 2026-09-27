@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { ApplicationStats } from '../types/application.types'
 import { ApplicationTabsNav } from './ApplicationTabsNav'
 import { MyApplicationsContent } from './my-applications/MyApplicationsContent'
@@ -17,6 +17,16 @@ export default function MyApplicationsView() {
     interviewCount: 0,
     offerCount: 0
   })
+
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const params = new URLSearchParams(window.location.search)
+      const tabParam = params.get('tab')
+      if (tabParam === 'offers' || tabParam === 'interviews' || tabParam === 'my_applications') {
+        setActiveTab(tabParam)
+      }
+    }
+  }, [])
 
   return (
     <div className="min-h-screen pb-16 bg-slate-50/60 text-slate-900">

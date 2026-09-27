@@ -93,6 +93,12 @@ export class NotificationsService {
     }
   }
 
+  private extractDeptId(rawDept: any): string | undefined {
+    if (!rawDept) return undefined;
+    if (rawDept._id) return rawDept._id.toString();
+    return rawDept.toString();
+  }
+
   async notifyDepartmentManagers(
     departmentId: string,
     data: {
@@ -113,13 +119,28 @@ export class NotificationsService {
       };
 
       if (departmentId && Types.ObjectId.isValid(departmentId)) {
-        filter.departmentId = new Types.ObjectId(departmentId);
+        filter.$or = [
+          { departmentId: new Types.ObjectId(departmentId) },
+          { departmentId: departmentId },
+        ];
       }
 
-      const managers = await this.userModel.find(filter).exec();
+      let managers = await this.userModel.find(filter).exec();
+
+      // Fallback: nếu không tìm thấy trưởng phòng cụ thể của phòng ban này,
+      // gửi cho bất kỳ Trưởng phòng nào đang hoạt động trong hệ thống
+      if (!managers || managers.length === 0) {
+        this.logger.warn(
+          `Không tìm thấy Trưởng phòng cụ thể cho phòng ban ${departmentId}. Thử tìm Trưởng phòng bất kỳ đang hoạt động...`,
+        );
+        managers = await this.userModel.find({
+          role: UserRole.DEPARTMENT_MANAGER,
+          status: UserStatus.ACTIVE,
+        }).exec();
+      }
 
       if (!managers || managers.length === 0) {
-        this.logger.warn(`Không tìm thấy Trưởng phòng nào cho phòng ban ${departmentId}`);
+        this.logger.warn(`Không tìm thấy tài khoản Trưởng phòng ban (DEPARTMENT_MANAGER) nào hoạt động.`);
         return [];
       }
 
@@ -144,7 +165,6 @@ export class NotificationsService {
     }
   }
 
-
   async notifyHrJdCreatedPending(job: any, departmentName?: string, creatorName?: string) {
     const deptStr = departmentName ? `thuộc phòng ban ${departmentName}` : '';
     const creatorStr = creatorName ? ` bởi ${creatorName}` : '';
@@ -159,7 +179,7 @@ export class NotificationsService {
       metadata: {
         jobId: job._id?.toString(),
         jobTitle: job.title,
-        departmentId: typeof job.departmentId === 'object' ? job.departmentId?._id?.toString() : job.departmentId?.toString(),
+        departmentId: this.extractDeptId(job.departmentId),
         departmentName,
       },
     });
@@ -192,7 +212,7 @@ export class NotificationsService {
   }
 
   async notifyJdApproved(job: any, approverName?: string) {
-    const deptId = typeof job.departmentId === 'object' ? job.departmentId?._id?.toString() : job.departmentId?.toString();
+    const deptId = this.extractDeptId(job.departmentId);
     if (!deptId) return;
 
     const byStr = approverName ? ` bởi ${approverName}` : '';
@@ -211,7 +231,7 @@ export class NotificationsService {
   }
 
   async notifyJdRejected(job: any, rejectorName?: string) {
-    const deptId = typeof job.departmentId === 'object' ? job.departmentId?._id?.toString() : job.departmentId?.toString();
+    const deptId = this.extractDeptId(job.departmentId);
     if (!deptId) return;
 
     const byStr = rejectorName ? ` bởi ${rejectorName}` : '';
@@ -485,7 +505,7 @@ export class NotificationsService {
       type: NotificationType.OFFER_SENT,
       category: NotificationCategory.OFFER,
       priority: NotificationPriority.HIGH,
-      actionUrl: '/user/applications',
+      actionUrl: '/user/applications?tab=offers',
       metadata: {
         offerId: params.offerId,
         jobTitle: params.jobTitle,
@@ -571,6 +591,492 @@ export class NotificationsService {
           candidateName: params.candidateName,
           jobTitle: params.jobTitle,
           declineReason: params.declineReason,
+        },
+      });
+    }
+  }
+
+  /**
+   * 1. Trưởng phòng từ chối hồ sơ ứng viên ở vòng Đánh giá phòng ban (Department Review)
+   */
+  async notifyDeptCvRejected(params: {
+    candidateName: string;
+    jobTitle: string;
+    reason?: string;
+    departmentId?: string;
+    candidateUserId?: string;
+    applicationId?: string;
+  }) {
+    const reasonText = params.reason ? ` Lý do: "${params.reason}".` : '';
+
+    // Báo HR Admins
+    await this.notifyHrAdmins({
+      title: 'Trưởng phòng từ chối hồ sơ ứng viên',
+      message: `Trưởng phòng ban đã từ chối hồ sơ của ứng viên ${params.candidateName} (Vị trí: "${params.jobTitle}").${reasonText}`,
+      type: NotificationType.CANDIDATE_REJECTED,
+      category: NotificationCategory.RECRUITMENT,
+      priority: NotificationPriority.HIGH,
+      actionUrl: '/kanban',
+      metadata: {
+        applicationId: params.applicationId,
+        candidateName: params.candidateName,
+        jobTitle: params.jobTitle,
+        reason: params.reason,
+      },
+    });
+
+    // Báo Ứng viên
+    if (params.candidateUserId) {
+      await this.create({
+        recipientId: params.candidateUserId,
+        title: 'Thông báo kết quả hồ sơ ứng tuyển',
+        message: `Cảm ơn bạn đã ứng tuyển vị trí "${params.jobTitle}". Rất tiếc, hồ sơ của bạn chưa phù hợp với yêu cầu ở vòng đánh giá chuyên môn hiện tại.`,
+        type: NotificationType.CANDIDATE_REJECTED,
+        category: NotificationCategory.CANDIDATE,
+        priority: NotificationPriority.HIGH,
+        actionUrl: '/user/applications',
+        metadata: {
+          applicationId: params.applicationId,
+          jobTitle: params.jobTitle,
+        },
+      });
+    }
+  }
+
+  /**
+   * 3. Ứng viên xác nhận tham gia lịch phỏng vấn
+   */
+  async notifyCandidateInterviewConfirmed(params: {
+    candidateName: string;
+    jobTitle: string;
+    dateFormatted: string;
+    timeRange: string;
+    interviewId: string;
+    interviewerId?: string;
+    interviewerIds?: string[];
+    departmentId?: string;
+  }) {
+    // Báo HR Admins
+    await this.notifyHrAdmins({
+      title: 'Ứng viên đã xác nhận phỏng vấn',
+      message: `Ứng viên ${params.candidateName} (Vị trí: "${params.jobTitle}") đã xác nhận tham gia phỏng vấn vào lúc ${params.timeRange}, ngày ${params.dateFormatted}.`,
+      type: NotificationType.INTERVIEW_CONFIRMATION,
+      category: NotificationCategory.INTERVIEW,
+      priority: NotificationPriority.HIGH,
+      actionUrl: '/interviews',
+      metadata: {
+        interviewId: params.interviewId,
+        candidateName: params.candidateName,
+        jobTitle: params.jobTitle,
+      },
+    });
+
+    // Báo Người phỏng vấn (Interviewer)
+    const interviewerList = new Set<string>();
+    if (params.interviewerId) interviewerList.add(params.interviewerId);
+    if (params.interviewerIds && Array.isArray(params.interviewerIds)) {
+      params.interviewerIds.forEach((id) => id && interviewerList.add(id));
+    }
+
+    for (const invId of interviewerList) {
+      await this.create({
+        recipientId: invId,
+        title: 'Ứng viên đã xác nhận phỏng vấn',
+        message: `Ứng viên ${params.candidateName} (Vị trí: "${params.jobTitle}") đã xác nhận tham gia phỏng vấn vào lúc ${params.timeRange}, ngày ${params.dateFormatted}.`,
+        type: NotificationType.INTERVIEW_CONFIRMATION,
+        category: NotificationCategory.INTERVIEW,
+        priority: NotificationPriority.HIGH,
+        actionUrl: '/interviews',
+        metadata: {
+          interviewId: params.interviewId,
+          candidateName: params.candidateName,
+          jobTitle: params.jobTitle,
+        },
+      });
+    }
+
+    // Báo Trưởng phòng
+    if (params.departmentId) {
+      await this.notifyDepartmentManagers(params.departmentId, {
+        title: 'Ứng viên đã xác nhận phỏng vấn',
+        message: `Ứng viên ${params.candidateName} (Vị trí: "${params.jobTitle}") đã xác nhận tham gia phỏng vấn vào lúc ${params.timeRange}, ngày ${params.dateFormatted}.`,
+        type: NotificationType.INTERVIEW_CONFIRMATION,
+        category: NotificationCategory.INTERVIEW,
+        priority: NotificationPriority.MEDIUM,
+        actionUrl: '/interviews',
+        metadata: {
+          interviewId: params.interviewId,
+          candidateName: params.candidateName,
+          jobTitle: params.jobTitle,
+        },
+      });
+    }
+  }
+
+  /**
+   * 4. Ứng viên gửi yêu cầu hủy lịch phỏng vấn
+   */
+  async notifyInterviewCancellationRequested(params: {
+    candidateName: string;
+    jobTitle: string;
+    dateFormatted: string;
+    timeRange: string;
+    reason: string;
+    interviewId: string;
+    interviewerId?: string;
+    interviewerIds?: string[];
+    departmentId?: string;
+  }) {
+    // Báo HR Admins
+    await this.notifyHrAdmins({
+      title: 'Ứng viên yêu cầu hủy lịch phỏng vấn',
+      message: `Ứng viên ${params.candidateName} (Vị trí: "${params.jobTitle}") yêu cầu hủy buổi phỏng vấn ngày ${params.dateFormatted} (${params.timeRange}). Lý do: "${params.reason}". Vui lòng kiểm tra và duyệt hủy hoặc đổi lịch.`,
+      type: NotificationType.INTERVIEW_CANCEL_REQUESTED,
+      category: NotificationCategory.INTERVIEW,
+      priority: NotificationPriority.URGENT,
+      actionUrl: '/interviews',
+      metadata: {
+        interviewId: params.interviewId,
+        candidateName: params.candidateName,
+        jobTitle: params.jobTitle,
+        reason: params.reason,
+      },
+    });
+
+    // Báo Người phỏng vấn
+    const interviewerList = new Set<string>();
+    if (params.interviewerId) interviewerList.add(params.interviewerId);
+    if (params.interviewerIds && Array.isArray(params.interviewerIds)) {
+      params.interviewerIds.forEach((id) => id && interviewerList.add(id));
+    }
+
+    for (const invId of interviewerList) {
+      await this.create({
+        recipientId: invId,
+        title: 'Ứng viên yêu cầu hủy lịch phỏng vấn',
+        message: `Ứng viên ${params.candidateName} (Vị trí: "${params.jobTitle}") đã yêu cầu hủy lịch phỏng vấn ngày ${params.dateFormatted} (${params.timeRange}). Lý do: "${params.reason}".`,
+        type: NotificationType.INTERVIEW_CANCEL_REQUESTED,
+        category: NotificationCategory.INTERVIEW,
+        priority: NotificationPriority.HIGH,
+        actionUrl: '/interviews',
+        metadata: {
+          interviewId: params.interviewId,
+          candidateName: params.candidateName,
+          jobTitle: params.jobTitle,
+          reason: params.reason,
+        },
+      });
+    }
+  }
+
+  /**
+   * 5. HR duyệt yêu cầu hủy lịch phỏng vấn
+   */
+  async notifyInterviewCancellationApproved(params: {
+    candidateName: string;
+    jobTitle: string;
+    dateFormatted: string;
+    candidateUserId?: string;
+    interviewId: string;
+    interviewerId?: string;
+    interviewerIds?: string[];
+    departmentId?: string;
+  }) {
+    // Báo Ứng viên
+    if (params.candidateUserId) {
+      await this.create({
+        recipientId: params.candidateUserId,
+        title: 'Yêu cầu hủy lịch phỏng vấn đã được chấp thuận',
+        message: `Buổi phỏng vấn vị trí "${params.jobTitle}" vào ngày ${params.dateFormatted} đã được hủy theo yêu cầu của bạn. HR sẽ liên hệ lại nếu có cập nhật mới.`,
+        type: NotificationType.INTERVIEW_CANCEL_APPROVED,
+        category: NotificationCategory.INTERVIEW,
+        priority: NotificationPriority.HIGH,
+        actionUrl: '/user/applications',
+        metadata: {
+          interviewId: params.interviewId,
+          jobTitle: params.jobTitle,
+        },
+      });
+    }
+
+    // Báo Người phỏng vấn
+    const interviewerList = new Set<string>();
+    if (params.interviewerId) interviewerList.add(params.interviewerId);
+    if (params.interviewerIds && Array.isArray(params.interviewerIds)) {
+      params.interviewerIds.forEach((id) => id && interviewerList.add(id));
+    }
+
+    for (const invId of interviewerList) {
+      await this.create({
+        recipientId: invId,
+        title: 'Lịch phỏng vấn đã được hủy',
+        message: `Lịch phỏng vấn với ứng viên ${params.candidateName} (Vị trí: "${params.jobTitle}") vào ngày ${params.dateFormatted} đã được HR hủy chính thức.`,
+        type: NotificationType.INTERVIEW_CANCEL_APPROVED,
+        category: NotificationCategory.INTERVIEW,
+        priority: NotificationPriority.HIGH,
+        actionUrl: '/interviews',
+        metadata: {
+          interviewId: params.interviewId,
+          candidateName: params.candidateName,
+          jobTitle: params.jobTitle,
+        },
+      });
+    }
+
+    // Báo Trưởng phòng
+    if (params.departmentId) {
+      await this.notifyDepartmentManagers(params.departmentId, {
+        title: 'Lịch phỏng vấn đã được hủy',
+        message: `Lịch phỏng vấn với ứng viên ${params.candidateName} (Vị trí: "${params.jobTitle}") vào ngày ${params.dateFormatted} đã được hủy.`,
+        type: NotificationType.INTERVIEW_CANCEL_APPROVED,
+        category: NotificationCategory.INTERVIEW,
+        priority: NotificationPriority.MEDIUM,
+        actionUrl: '/interviews',
+        metadata: {
+          interviewId: params.interviewId,
+          candidateName: params.candidateName,
+          jobTitle: params.jobTitle,
+        },
+      });
+    }
+  }
+
+  /**
+   * 6. HR đổi lịch phỏng vấn -> Thông báo Người phỏng vấn & Trưởng phòng
+   */
+  async notifyInterviewRescheduledStaff(params: {
+    candidateName: string;
+    jobTitle: string;
+    dateFormatted: string;
+    timeRange: string;
+    interviewId: string;
+    interviewerId?: string;
+    interviewerIds?: string[];
+    departmentId?: string;
+  }) {
+    const interviewerList = new Set<string>();
+    if (params.interviewerId) interviewerList.add(params.interviewerId);
+    if (params.interviewerIds && Array.isArray(params.interviewerIds)) {
+      params.interviewerIds.forEach((id) => id && interviewerList.add(id));
+    }
+
+    for (const invId of interviewerList) {
+      await this.create({
+        recipientId: invId,
+        title: 'Lịch phỏng vấn đã thay đổi thời gian',
+        message: `Lịch phỏng vấn ứng viên ${params.candidateName} (Vị trí: "${params.jobTitle}") đã được cập nhật sang lúc ${params.timeRange}, ngày ${params.dateFormatted}. Vui lòng kiểm tra lại lịch trình.`,
+        type: NotificationType.INTERVIEW_RESCHEDULED,
+        category: NotificationCategory.INTERVIEW,
+        priority: NotificationPriority.HIGH,
+        actionUrl: '/interviews',
+        metadata: {
+          interviewId: params.interviewId,
+          candidateName: params.candidateName,
+          jobTitle: params.jobTitle,
+        },
+      });
+    }
+
+    if (params.departmentId) {
+      await this.notifyDepartmentManagers(params.departmentId, {
+        title: 'Lịch phỏng vấn đã thay đổi thời gian',
+        message: `Lịch phỏng vấn ứng viên ${params.candidateName} (Vị trí: "${params.jobTitle}") đã được cập nhật sang lúc ${params.timeRange}, ngày ${params.dateFormatted}.`,
+        type: NotificationType.INTERVIEW_RESCHEDULED,
+        category: NotificationCategory.INTERVIEW,
+        priority: NotificationPriority.MEDIUM,
+        actionUrl: '/interviews',
+        metadata: {
+          interviewId: params.interviewId,
+          candidateName: params.candidateName,
+          jobTitle: params.jobTitle,
+        },
+      });
+    }
+  }
+
+  /**
+   * 7. Người phỏng vấn gửi đánh giá chính thức
+   */
+  async notifyInterviewEvaluationSubmitted(params: {
+    candidateName: string;
+    jobTitle: string;
+    interviewerName: string;
+    recommendationLabel: string;
+    overallScore?: number;
+    interviewId: string;
+    departmentId?: string;
+  }) {
+    const scoreStr = params.overallScore !== undefined ? ` (Điểm: ${params.overallScore}/100)` : '';
+
+    // Báo HR Admins
+    await this.notifyHrAdmins({
+      title: 'Người phỏng vấn đã gửi đánh giá',
+      message: `Người phỏng vấn ${params.interviewerName} đã nộp đánh giá cho ứng viên ${params.candidateName} (Vị trí: "${params.jobTitle}"). Đề xuất: ${params.recommendationLabel}${scoreStr}.`,
+      type: NotificationType.INTERVIEW_EVALUATION_SUBMITTED,
+      category: NotificationCategory.INTERVIEW,
+      priority: NotificationPriority.HIGH,
+      actionUrl: '/interviews',
+      metadata: {
+        interviewId: params.interviewId,
+        candidateName: params.candidateName,
+        jobTitle: params.jobTitle,
+        recommendation: params.recommendationLabel,
+        score: params.overallScore,
+      },
+    });
+
+    // Báo Trưởng phòng
+    if (params.departmentId) {
+      await this.notifyDepartmentManagers(params.departmentId, {
+        title: 'Đã có kết quả đánh giá phỏng vấn',
+        message: `Người phỏng vấn ${params.interviewerName} đã gửi đánh giá cho ứng viên ${params.candidateName} (Vị trí: "${params.jobTitle}"). Đề xuất: ${params.recommendationLabel}${scoreStr}.`,
+        type: NotificationType.INTERVIEW_EVALUATION_SUBMITTED,
+        category: NotificationCategory.INTERVIEW,
+        priority: NotificationPriority.MEDIUM,
+        actionUrl: '/interviews',
+        metadata: {
+          interviewId: params.interviewId,
+          candidateName: params.candidateName,
+          jobTitle: params.jobTitle,
+          recommendation: params.recommendationLabel,
+          score: params.overallScore,
+        },
+      });
+    }
+  }
+
+  /**
+   * 8. HR gửi Offer -> Thông báo Trưởng phòng ban
+   */
+  async notifyDeptOfferSent(params: {
+    candidateName: string;
+    jobTitle: string;
+    salaryFormatted: string;
+    expirationDateFormatted: string;
+    offerId: string;
+    departmentId?: string;
+  }) {
+    if (!params.departmentId) return;
+
+    await this.notifyDepartmentManagers(params.departmentId, {
+      title: 'HR đã gửi Thư mời nhận việc (Offer)',
+      message: `HR đã gửi Lời mời nhận việc cho ứng viên ${params.candidateName} (Vị trí: "${params.jobTitle}"). Mức lương: ${params.salaryFormatted}, Hạn phản hồi: ${params.expirationDateFormatted}.`,
+      type: NotificationType.OFFER_SENT,
+      category: NotificationCategory.OFFER,
+      priority: NotificationPriority.HIGH,
+      actionUrl: '/offers',
+      metadata: {
+        offerId: params.offerId,
+        candidateName: params.candidateName,
+        jobTitle: params.jobTitle,
+      },
+    });
+  }
+
+  /**
+   * 10. HR xác nhận tuyển ứng viên (HIRED / Trúng tuyển)
+   */
+  async notifyCandidateHired(params: {
+    candidateName: string;
+    jobTitle: string;
+    candidateUserId?: string;
+    applicationId?: string;
+    departmentId?: string;
+  }) {
+    // Báo Ứng viên
+    if (params.candidateUserId) {
+      await this.create({
+        recipientId: params.candidateUserId,
+        title: 'Chúc mừng bạn đã chính thức trúng tuyển! 🎉',
+        message: `Chúc mừng bạn! Bạn đã hoàn tất xuất sắc quy trình tuyển dụng và chính thức trúng tuyển vào vị trí "${params.jobTitle}". Bộ phận nhân sự sẽ liên hệ hướng dẫn các bước tiếp theo.`,
+        type: NotificationType.CANDIDATE_HIRED,
+        category: NotificationCategory.CANDIDATE,
+        priority: NotificationPriority.URGENT,
+        actionUrl: '/user/applications',
+        metadata: {
+          applicationId: params.applicationId,
+          jobTitle: params.jobTitle,
+        },
+      });
+    }
+
+    // Báo Trưởng phòng
+    if (params.departmentId) {
+      await this.notifyDepartmentManagers(params.departmentId, {
+        title: 'Ứng viên chính thức trúng tuyển (HIRED)',
+        message: `Ứng viên ${params.candidateName} đã chính thức trúng tuyển vào vị trí "${params.jobTitle}" thuộc phòng ban của bạn.`,
+        type: NotificationType.CANDIDATE_HIRED,
+        category: NotificationCategory.RECRUITMENT,
+        priority: NotificationPriority.HIGH,
+        actionUrl: '/kanban',
+        metadata: {
+          applicationId: params.applicationId,
+          candidateName: params.candidateName,
+          jobTitle: params.jobTitle,
+        },
+      });
+    }
+
+    // Báo HR Admins
+    await this.notifyHrAdmins({
+      title: 'Ứng viên chính thức trúng tuyển (HIRED)',
+      message: `Ứng viên ${params.candidateName} đã chính thức trúng tuyển vị trí "${params.jobTitle}".`,
+      type: NotificationType.CANDIDATE_HIRED,
+      category: NotificationCategory.RECRUITMENT,
+      priority: NotificationPriority.HIGH,
+      actionUrl: '/kanban',
+      metadata: {
+        applicationId: params.applicationId,
+        candidateName: params.candidateName,
+        jobTitle: params.jobTitle,
+      },
+    });
+  }
+
+  /**
+   * 11. HR từ chối ứng viên (Reject Application)
+   */
+  async notifyCandidateRejectedByHr(params: {
+    candidateName: string;
+    jobTitle: string;
+    reason?: string;
+    candidateUserId?: string;
+    applicationId?: string;
+    departmentId?: string;
+  }) {
+    const reasonText = params.reason ? ` Lý do: "${params.reason}".` : '';
+
+    // Báo Ứng viên
+    if (params.candidateUserId) {
+      await this.create({
+        recipientId: params.candidateUserId,
+        title: 'Thông báo kết quả ứng tuyển',
+        message: `Cảm ơn bạn đã dành thời gian ứng tuyển vị trí "${params.jobTitle}". Rất tiếc, hiện tại hồ sơ của bạn chưa phù hợp với yêu cầu tuyển dụng. Chúc bạn thành công trên con đường sự nghiệp!`,
+        type: NotificationType.CANDIDATE_REJECTED,
+        category: NotificationCategory.CANDIDATE,
+        priority: NotificationPriority.HIGH,
+        actionUrl: '/user/applications',
+        metadata: {
+          applicationId: params.applicationId,
+          jobTitle: params.jobTitle,
+        },
+      });
+    }
+
+    // Báo Trưởng phòng nếu có phòng ban
+    if (params.departmentId) {
+      await this.notifyDepartmentManagers(params.departmentId, {
+        title: 'Hồ sơ ứng viên đã bị từ chối',
+        message: `Hồ sơ ứng viên ${params.candidateName} (Vị trí: "${params.jobTitle}") đã được HR xác nhận từ chối.${reasonText}`,
+        type: NotificationType.CANDIDATE_REJECTED,
+        category: NotificationCategory.RECRUITMENT,
+        priority: NotificationPriority.MEDIUM,
+        actionUrl: '/kanban',
+        metadata: {
+          applicationId: params.applicationId,
+          candidateName: params.candidateName,
+          jobTitle: params.jobTitle,
+          reason: params.reason,
         },
       });
     }

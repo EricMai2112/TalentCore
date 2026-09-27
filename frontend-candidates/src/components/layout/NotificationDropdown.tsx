@@ -69,14 +69,32 @@ export default function NotificationDropdown({ isScrolled }: NotificationDropdow
   };
 
   const getCategoryIcon = (category: NotificationCategory, type: NotificationType) => {
-    if (category === NotificationCategory.INTERVIEW || type === NotificationType.INTERVIEW_SCHEDULED || type === NotificationType.INTERVIEW_RESCHEDULED) {
+    if (type === NotificationType.CANDIDATE_HIRED) {
+      return (
+        <div className="w-8 h-8 rounded-xl bg-gradient-to-tr from-emerald-500 to-green-600 text-white flex items-center justify-center shrink-0 shadow-md shadow-emerald-500/25 ring-1 ring-emerald-300">
+          <Sparkles size={16} />
+        </div>
+      );
+    }
+    if (
+      category === NotificationCategory.INTERVIEW ||
+      type === NotificationType.INTERVIEW_SCHEDULED ||
+      type === NotificationType.INTERVIEW_RESCHEDULED ||
+      type === NotificationType.INTERVIEW_CANCEL_REQUESTED ||
+      type === NotificationType.INTERVIEW_CANCEL_APPROVED
+    ) {
       return (
         <div className="w-8 h-8 rounded-xl bg-gradient-to-tr from-purple-600 to-indigo-500 text-white flex items-center justify-center shrink-0 shadow-md shadow-purple-500/20">
           <Calendar size={16} />
         </div>
       );
     }
-    if (category === NotificationCategory.OFFER || type === NotificationType.OFFER_SENT) {
+    if (
+      category === NotificationCategory.OFFER ||
+      type === NotificationType.OFFER_SENT ||
+      type === NotificationType.OFFER_ACCEPTED ||
+      type === NotificationType.OFFER_DECLINED
+    ) {
       return (
         <div className="w-8 h-8 rounded-xl bg-gradient-to-tr from-rose-500 to-amber-500 text-white flex items-center justify-center shrink-0 shadow-md shadow-rose-500/20">
           <Gift size={16} />
@@ -90,7 +108,7 @@ export default function NotificationDropdown({ isScrolled }: NotificationDropdow
         </div>
       );
     }
-    if (category === NotificationCategory.CANDIDATE) {
+    if (category === NotificationCategory.CANDIDATE || type === NotificationType.CANDIDATE_REJECTED) {
       return (
         <div className="w-8 h-8 rounded-xl bg-gradient-to-tr from-emerald-600 to-teal-500 text-white flex items-center justify-center shrink-0 shadow-md shadow-emerald-500/20">
           <FileText size={16} />
