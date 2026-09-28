@@ -26,6 +26,7 @@ import { InterviewWorkflowStatusBadge } from './InterviewWorkflowStatusBadge'
 import { useAuth } from '@/src/providers/AuthProvider'
 import { UserRole } from '@/src/features/users/types/user.types'
 import { CustomActionMenu } from '@/src/components/common'
+import { useRouter } from 'next/navigation'
 
 interface InterviewCardProps {
   item: InterviewItem
@@ -58,6 +59,7 @@ export default function InterviewCard({
   getStatusBadge,
   getResultBadge
 }: InterviewCardProps) {
+  const router = useRouter()
   const { user: currentUser } = useAuth()
   const roleStr = currentUser?.role as string | undefined
   const isHrAdmin = roleStr === UserRole.HR_ADMIN || roleStr === 'HR_ADMIN' || roleStr === 'ADMIN'
@@ -293,7 +295,7 @@ export default function InterviewCard({
                 label: 'Đánh giá phỏng vấn',
                 icon: <MessageSquare size={14} />,
                 variant: 'primary',
-                href: `/interviews/${item._id}/evaluate`
+                onClick: () => router.push(`/interviews/${item._id}/evaluate`)
               }
             ]}
           />

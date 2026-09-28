@@ -3,6 +3,7 @@
 import React, { useState, useEffect, useRef } from 'react'
 import { createPortal } from 'react-dom'
 import { MoreVertical } from 'lucide-react'
+import Link from 'next/link'
 
 export type ActionItemVariant =
   | 'default'
@@ -168,20 +169,35 @@ export default function CustomActionMenu({
                     {item.dividerAbove && <div className="my-1 border-t border-slate-100" />}
 
                     {item.href ? (
-                      <a
-                        href={item.href}
-                        target={item.target}
-                        rel={item.target === '_blank' ? 'noopener noreferrer' : undefined}
-                        onClick={(e) => {
-                          e.stopPropagation()
-                          setIsOpen(false)
-                          if (item.onClick) item.onClick()
-                        }}
-                        className={`w-full flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs font-semibold transition-all cursor-pointer whitespace-nowrap ${variantClass}`}
-                      >
-                        {item.icon && <span className={`${iconClass} shrink-0`}>{item.icon}</span>}
-                        <span className="flex-1 truncate">{item.label}</span>
-                      </a>
+                      item.target === '_blank' || item.href.startsWith('http') || item.href.startsWith('mailto:') ? (
+                        <a
+                          href={item.href}
+                          target={item.target}
+                          rel={item.target === '_blank' ? 'noopener noreferrer' : undefined}
+                          onClick={(e) => {
+                            e.stopPropagation()
+                            setIsOpen(false)
+                            if (item.onClick) item.onClick()
+                          }}
+                          className={`w-full flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs font-semibold transition-all cursor-pointer whitespace-nowrap ${variantClass}`}
+                        >
+                          {item.icon && <span className={`${iconClass} shrink-0`}>{item.icon}</span>}
+                          <span className="flex-1 truncate">{item.label}</span>
+                        </a>
+                      ) : (
+                        <Link
+                          href={item.href}
+                          onClick={(e) => {
+                            e.stopPropagation()
+                            setIsOpen(false)
+                            if (item.onClick) item.onClick()
+                          }}
+                          className={`w-full flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs font-semibold transition-all cursor-pointer whitespace-nowrap ${variantClass}`}
+                        >
+                          {item.icon && <span className={`${iconClass} shrink-0`}>{item.icon}</span>}
+                          <span className="flex-1 truncate">{item.label}</span>
+                        </Link>
+                      )
                     ) : (
                       <button
                         type="button"
