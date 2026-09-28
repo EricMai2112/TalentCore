@@ -2,6 +2,7 @@ import NotificationDropdown from '@/src/components/layout/NotificationDropdown'
 import WeatherWidget from '@/src/components/layout/WeatherWidget'
 import TopbarGreeting from '@/src/components/layout/TopbarGreeting'
 import UserDropdown from '@/src/components/layout/UserDropdown'
+import TopbarReloadButton from '@/src/components/layout/TopbarReloadButton'
 
 export default function Topbar() {
   return (
@@ -12,8 +13,11 @@ export default function Topbar() {
         <TopbarGreeting />
       </div>
 
-      {/* RIGHT: Notifications & User Dropdown */}
-      <div className="flex items-center gap-3">
+      {/* RIGHT: Reload Button, Notifications & User Dropdown */}
+      <div className="flex items-center gap-2.5">
+        {/* Reload button and last updated timestamp (left of notification) */}
+        <TopbarReloadButton />
+
         {/* Real-time Notification Dropdown */}
         <NotificationDropdown />
 

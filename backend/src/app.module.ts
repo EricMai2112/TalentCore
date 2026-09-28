@@ -14,6 +14,7 @@ import { ApplicationsModule } from './modules/applications/applications.module';
 import { InterviewsModule } from './modules/interviews/interviews.module';
 import { NotificationsModule } from './modules/notifications/notifications.module';
 import { OffersModule } from './modules/offers/offers.module';
+import { AnalyticsModule } from './modules/analytics/analytics.module';
 
 @Module({
   imports: [
@@ -38,6 +39,7 @@ import { OffersModule } from './modules/offers/offers.module';
     InterviewsModule,
     NotificationsModule,
     OffersModule,
+    AnalyticsModule,
   ],
   controllers: [],
   providers: [],
