@@ -5,8 +5,8 @@ import {
   ForbiddenException,
   Logger,
 } from '@nestjs/common';
-import { InjectModel } from '@nestjs/mongoose';
-import { Model, Types } from 'mongoose';
+import { InjectModel, InjectConnection } from '@nestjs/mongoose';
+import { Model, Types, Connection } from 'mongoose';
 import { Offer, OfferDocument, OfferStatus } from '../schemas/offer.schema';
 import { Application, ApplicationDocument, ApplicationStatus } from '../../applications/schemas/application.schema';
 import { Candidate, CandidateDocument } from '../../candidates/schema/candidate.schema';
@@ -37,6 +37,8 @@ export class OffersService {
     private readonly departmentModel: Model<DepartmentDocument>,
     @InjectModel(User.name)
     private readonly userModel: Model<UserDocument>,
+    @InjectConnection()
+    private readonly connection: Connection,
     private readonly notificationsService: NotificationsService,
     private readonly emailService: EmailService,
   ) {}
@@ -319,14 +321,41 @@ export class OffersService {
     const deptId = offer.departmentId?.toString();
 
     if (dto.action === 'ACCEPT') {
-      offer.status = OfferStatus.ACCEPTED;
-      offer.respondedAt = new Date();
-      await offer.save();
+      const session = await this.connection.startSession();
+      let useTransaction = true;
+      try {
+        session.startTransaction();
+      } catch {
+        useTransaction = false;
+      }
 
-      // Crucial automation: Update Application status to HIRED
-      await this.applicationModel.findByIdAndUpdate(offer.applicationId, {
-        $set: { status: ApplicationStatus.HIRED },
-      }).exec();
+      try {
+        offer.status = OfferStatus.ACCEPTED;
+        offer.respondedAt = new Date();
+
+        if (useTransaction) {
+          await offer.save({ session });
+          await this.applicationModel.findByIdAndUpdate(
+            offer.applicationId,
+            { $set: { status: ApplicationStatus.HIRED } },
+            { session },
+          ).exec();
+          await session.commitTransaction();
+        } else {
+          await offer.save();
+          await this.applicationModel.findByIdAndUpdate(
+            offer.applicationId,
+            { $set: { status: ApplicationStatus.HIRED } },
+          ).exec();
+        }
+      } catch (error) {
+        if (useTransaction) {
+          await session.abortTransaction();
+        }
+        throw error;
+      } finally {
+        session.endSession();
+      }
 
       // Notify HR and Department Managers
       await this.notificationsService.notifyHrOfferAccepted({

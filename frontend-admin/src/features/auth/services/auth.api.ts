@@ -14,12 +14,23 @@ export interface LoginResponse {
 
 export const authApi = {
   login: async (data: LoginPayload): Promise<LoginResponse> => {
-    return apiClient.post<LoginResponse>("/auth/login", data);
+    const res = await apiClient.post<LoginResponse>("/auth/login", data);
+    if (res?.access_token && typeof document !== "undefined") {
+      // Sync cookie to the frontend Next.js domain so middleware & SSR can access it
+      document.cookie = `accessToken=${res.access_token}; path=/; max-age=86400; SameSite=Lax`;
+    }
+    return res;
   },
   getMe: async (): Promise<User> => {
     return apiClient.get<User>("/auth/me");
   },
-//   logout: async (): Promise<void> => {
-//     await apiClient.post("/auth/logout");
-//   },
-};
+  logout: async (): Promise<void> => {
+    try {
+      await apiClient.post("/auth/logout", {});
+    } finally {
+      if (typeof document !== "undefined") {
+        document.cookie = "accessToken=; path=/; max-age=0; SameSite=Lax";
+      }
+    }
+  },
+};

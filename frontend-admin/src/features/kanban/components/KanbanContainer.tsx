@@ -26,6 +26,8 @@ import KanbanHeaderFilters from "./KanbanHeaderFilters";
 import KanbanColumn from "./KanbanColumn";
 import CandidateKanbanCard from "./CandidateKanbanCard";
 import { RejectCandidateModal } from "@/src/components/common";
+import { useToast } from "@/src/hooks/useToast";
+import Toast from "@/src/components/common/Toast";
 
 // Lazy load heavy CandidateDetailModal on demand
 const CandidateDetailModal = dynamic(
@@ -54,6 +56,7 @@ export default function KanbanContainer({
 }: KanbanContainerProps) {
   const router = useRouter();
   const { user } = useAuth();
+  const { toast, showToast, hideToast } = useToast();
   const isDeptManager = user?.role === UserRole.DEPARTMENT_MANAGER;
 
   const userDeptId = useMemo(() => {
@@ -412,7 +415,7 @@ export default function KanbanContainer({
 
     try {
       await kanbanApi.updateApplicationStage(appId, targetStageId);
-    } catch (err) {
+    } catch (err: any) {
       console.error("Lỗi cập nhật giai đoạn phỏng vấn:", err);
       // Revert if API fails
       setApplications((prev) =>
@@ -420,6 +423,7 @@ export default function KanbanContainer({
           app._id === appId ? { ...app, currentStageId: currentApp.currentStageId } : app
         )
       );
+      showToast(err?.message || "Không thể chuyển giai đoạn ứng viên. Đã hoàn tác lại vị trí.", "error");
     }
   };
 
@@ -704,6 +708,8 @@ export default function KanbanContainer({
           }}
         />
       )}
+
+      {toast && <Toast toast={toast} onClose={hideToast} />}
     </div>
   );
 }
