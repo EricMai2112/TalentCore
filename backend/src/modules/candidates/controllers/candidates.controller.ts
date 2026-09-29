@@ -7,13 +7,9 @@ import {
   Param,
   Patch,
   Post,
-  Req,
-  UnauthorizedException,
   UploadedFile,
   UseInterceptors,
 } from '@nestjs/common';
-import { JwtService } from '@nestjs/jwt';
-import type { Request } from 'express';
 import { CandidateService } from '../services/candidates.service';
 import {
   CreateCandidateProfileDto,
@@ -21,76 +17,71 @@ import {
 } from '../dtos/candidate.dto';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { CvParserService } from '../services/cv-parser.service';
+import { CurrentUser } from '../../auth/decorators/current-user.decorator';
 
 @Controller('candidates')
 export class CandidateController {
   constructor(
     private readonly candidateService: CandidateService,
-    private readonly jwtService: JwtService,
     private readonly cvParserService: CvParserService,
   ) {}
 
-  
-  private getUserIdFromRequest(req: Request): string {
-    const token = req.cookies?.['accessToken'];
-    if (!token) throw new UnauthorizedException('Chưa đăng nhập');
-    try {
-      const payload = this.jwtService.verify(token);
-      return payload.sub;
-    } catch {
-      throw new UnauthorizedException('Token không hợp lệ hoặc đã hết hạn');
-    }
-  }
-
   @Get('profiles')
-  async listProfiles(@Req() req: Request) {
-    const userId = this.getUserIdFromRequest(req);
+  async listProfiles(@CurrentUser('id') userId: string) {
     return this.candidateService.listProfiles(userId);
   }
 
   @Post('profiles')
-  async createProfile(@Req() req: Request, @Body() dto: CreateCandidateProfileDto) {
-    const userId = this.getUserIdFromRequest(req);
+  async createProfile(
+    @CurrentUser('id') userId: string,
+    @Body() dto: CreateCandidateProfileDto,
+  ) {
     return this.candidateService.createProfile(userId, dto);
   }
 
   @Get('profiles/:id')
-  async getProfileById(@Req() req: Request, @Param('id') profileId: string) {
-    const userId = this.getUserIdFromRequest(req);
+  async getProfileById(
+    @CurrentUser('id') userId: string,
+    @Param('id') profileId: string,
+  ) {
     return this.candidateService.getProfileById(userId, profileId);
   }
 
   @Patch('profiles/:id')
   async updateProfileById(
-    @Req() req: Request,
+    @CurrentUser('id') userId: string,
     @Param('id') profileId: string,
     @Body() dto: UpdateCandidateProfileDto,
   ) {
-    const userId = this.getUserIdFromRequest(req);
     return this.candidateService.updateProfile(userId, profileId, dto);
   }
 
   @Post('profiles/:id/set-default')
-  async setDefault(@Req() req: Request, @Param('id') profileId: string) {
-    const userId = this.getUserIdFromRequest(req);
+  async setDefault(
+    @CurrentUser('id') userId: string,
+    @Param('id') profileId: string,
+  ) {
     return this.candidateService.setDefault(userId, profileId);
   }
 
   @Delete('profiles/:id')
-  async deleteProfile(@Req() req: Request, @Param('id') profileId: string) {
-    const userId = this.getUserIdFromRequest(req);
+  async deleteProfile(
+    @CurrentUser('id') userId: string,
+    @Param('id') profileId: string,
+  ) {
     return this.candidateService.deleteProfile(userId, profileId);
   }
 
   @Get('profile')
-  async getMyProfile(@Req() req: Request) {
-    const userId = this.getUserIdFromRequest(req);
+  async getMyProfile(@CurrentUser('id') userId: string) {
     return this.candidateService.getProfileByUserId(userId);
   }
 
   @Patch('profile')
-  async updateProfile(@Req() req: Request, @Body() dto: UpdateCandidateProfileDto) {
-    const userId = this.getUserIdFromRequest(req);
+  async updateProfile(
+    @CurrentUser('id') userId: string,
+    @Body() dto: UpdateCandidateProfileDto,
+  ) {
     const defaultProfile = await this.candidateService.getDefaultProfile(userId);
     return this.candidateService.updateProfile(
       userId,
@@ -98,7 +89,6 @@ export class CandidateController {
       dto,
     );
   }
-
 
   @Post('parse-cv')
   @UseInterceptors(
@@ -118,8 +108,10 @@ export class CandidateController {
       },
     }),
   )
-  async parseCv(@Req() req: Request, @UploadedFile() file: Express.Multer.File) {
-    this.getUserIdFromRequest(req); // auth check only
+  async parseCv(
+    @CurrentUser('id') _userId: string,
+    @UploadedFile() file: Express.Multer.File,
+  ) {
     if (!file?.buffer) {
       throw new BadRequestException('Vui lòng tải lên file hợp lệ.');
     }

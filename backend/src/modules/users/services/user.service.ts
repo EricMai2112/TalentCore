@@ -17,6 +17,14 @@ export class UserService {
         return this.userModel.findOne({ email }).exec();
     }
 
+    async findById(id: string) {
+        return this.userModel.findById(id).exec();
+    }
+
+    async updateUserById(id: string, updates: Partial<User>) {
+        return this.userModel.findByIdAndUpdate(id, { $set: updates }, { returnDocument: 'after' }).exec();
+    }
+
     async createUser(data: Partial<User>) {
         const user = new this.userModel(data);
         return user.save();

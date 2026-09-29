@@ -15,12 +15,23 @@ export const dynamic = "force-dynamic";
  * Server Component (SSR) for Recruitment Kanban Board
  */
 export default async function KanbanPage() {
-  // Pre-fetch initial data server-side
-  const [departments, jobs, applications] = await Promise.all([
-    jobDescriptionApi.getDepartments(),
-    jobDescriptionApi.getJobs(),
-    kanbanApi.getKanbanApplications(),
-  ]);
+  let departments: any[] = [];
+  let jobs: any[] = [];
+  let applications: any[] = [];
+
+  try {
+    const [deptsRes, jobsRes, appsRes] = await Promise.allSettled([
+      jobDescriptionApi.getDepartments(),
+      jobDescriptionApi.getJobs(),
+      kanbanApi.getKanbanApplications(),
+    ]);
+
+    if (deptsRes.status === "fulfilled") departments = deptsRes.value || [];
+    if (jobsRes.status === "fulfilled") jobs = jobsRes.value || [];
+    if (appsRes.status === "fulfilled") applications = appsRes.value || [];
+  } catch (err) {
+    console.error("Lỗi khi tải trước dữ liệu Kanban:", err);
+  }
 
   return (
     <KanbanContainer

@@ -18,7 +18,7 @@ export default async function CreateJobRequestPage() {
   let positions: Position[] = [];
 
   try {
-    const [deptsRes, templatesRes, skillsRes, empsRes, positionsRes] = await Promise.all([
+    const [deptsRes, templatesRes, skillsRes, empsRes, positionsRes] = await Promise.allSettled([
       jobDescriptionApi.getDepartments(),
       jobDescriptionApi.getPipelineTemplates(),
       jobDescriptionApi.getSkills(),
@@ -26,11 +26,11 @@ export default async function CreateJobRequestPage() {
       jobDescriptionApi.getPositions(),
     ]);
 
-    departments = deptsRes;
-    pipelineTemplates = templatesRes;
-    skills = skillsRes;
-    employees = empsRes;
-    positions = positionsRes;
+    if (deptsRes.status === "fulfilled") departments = deptsRes.value;
+    if (templatesRes.status === "fulfilled") pipelineTemplates = templatesRes.value;
+    if (skillsRes.status === "fulfilled") skills = skillsRes.value;
+    if (empsRes.status === "fulfilled") employees = empsRes.value;
+    if (positionsRes.status === "fulfilled") positions = positionsRes.value;
   } catch (err) {
     console.error("Failed to fetch metadata for Create Job Request page:", err);
   }

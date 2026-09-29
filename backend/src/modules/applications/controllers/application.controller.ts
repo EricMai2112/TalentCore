@@ -7,85 +7,39 @@ import {
   Body,
   Param,
   Query,
-  Req,
-  UnauthorizedException,
   UsePipes,
   ValidationPipe,
 } from '@nestjs/common';
-import type { Request } from 'express';
-import { JwtService } from '@nestjs/jwt';
 import { ApplicationService } from '../services/application.service';
 import { ApplyJobDto } from '../dtos/application.dto';
+import { CurrentUser } from '../../auth/decorators/current-user.decorator';
+import { Roles } from '../../auth/decorators/roles.decorator';
+import { UserRole } from '../../users/schemas/user.schema';
 
 @Controller('applications')
 export class ApplicationController {
-  constructor(
-    private readonly applicationService: ApplicationService,
-    private readonly jwtService: JwtService,
-  ) {}
+  constructor(private readonly applicationService: ApplicationService) {}
 
   @Post('apply')
   @UsePipes(new ValidationPipe({ whitelist: true, transform: true }))
-  async applyJob(@Req() req: Request, @Body() dto: ApplyJobDto) {
-    let token = req.cookies?.['accessToken'];
-
-    if (!token && req.headers.authorization) {
-      const parts = req.headers.authorization.split(' ');
-      if (parts.length === 2 && parts[0] === 'Bearer') {
-        token = parts[1];
-      }
-    }
-
-    if (!token) {
-      throw new UnauthorizedException('Chưa đăng nhập');
-    }
-
-    try {
-      const payload = this.jwtService.verify(token);
-      const userId = payload.sub || payload.id || payload._id;
-
-      return await this.applicationService.applyJob(userId, dto.jobDescriptionId, dto.candidateId);
-    } catch (error: any) {
-      if (error?.status && error.status !== 500) {
-        throw error;
-      }
-      throw new UnauthorizedException('Token không hợp lệ hoặc đã hết hạn');
-    }
+  async applyJob(
+    @CurrentUser('id') userId: string,
+    @Body() dto: ApplyJobDto,
+  ) {
+    return this.applicationService.applyJob(userId, dto.jobDescriptionId, dto.candidateId);
   }
 
   @Get('my-applications')
-  async getMyApplications(@Req() req: Request) {
-    let token = req.cookies?.['accessToken'];
-
-    if (!token && req.headers.authorization) {
-      const parts = req.headers.authorization.split(' ');
-      if (parts.length === 2 && parts[0] === 'Bearer') {
-        token = parts[1];
-      }
-    }
-
-    if (!token) {
-      throw new UnauthorizedException('Chưa đăng nhập');
-    }
-
-    try {
-      const payload = this.jwtService.verify(token);
-      const userId = payload.sub || payload.id || payload._id;
-
-      const data = await this.applicationService.getApplicationsByUserId(userId);
-      return {
-        message: 'Lấy danh sách đơn ứng tuyển của tôi thành công',
-        data,
-      };
-    } catch (error: any) {
-      if (error?.status && error.status !== 500) {
-        throw error;
-      }
-      throw new UnauthorizedException('Token không hợp lệ hoặc đã hết hạn');
-    }
+  async getMyApplications(@CurrentUser('id') userId: string) {
+    const data = await this.applicationService.getApplicationsByUserId(userId);
+    return {
+      message: 'Lấy danh sách đơn ứng tuyển của tôi thành công',
+      data,
+    };
   }
 
   @Get('kanban')
+  @Roles(UserRole.HR_ADMIN, UserRole.DEPARTMENT_MANAGER)
   async getKanbanApplications(
     @Query('departmentId') departmentId?: string,
     @Query('jobId') jobId?: string,
@@ -103,6 +57,7 @@ export class ApplicationController {
   }
 
   @Put(':id/stage')
+  @Roles(UserRole.HR_ADMIN, UserRole.DEPARTMENT_MANAGER)
   async updateApplicationStage(
     @Param('id') id: string,
     @Body('stageId') stageId: string,
@@ -115,6 +70,7 @@ export class ApplicationController {
   }
 
   @Post(':id/notes')
+  @Roles(UserRole.HR_ADMIN, UserRole.DEPARTMENT_MANAGER, UserRole.EMPLOYEE)
   async addNote(
     @Param('id') id: string,
     @Body() dto: { authorName: string; authorRole: string; content: string },
@@ -127,6 +83,7 @@ export class ApplicationController {
   }
 
   @Post(':id/reject')
+  @Roles(UserRole.HR_ADMIN, UserRole.DEPARTMENT_MANAGER)
   async rejectApplication(
     @Param('id') id: string,
     @Body() dto: { reason: string; authorName?: string; authorRole?: string },
@@ -144,6 +101,7 @@ export class ApplicationController {
   }
 
   @Delete(':id')
+  @Roles(UserRole.HR_ADMIN)
   async deleteApplication(@Param('id') id: string) {
     const data = await this.applicationService.deleteApplication(id);
     return {
@@ -162,6 +120,7 @@ export class ApplicationController {
   }
 
   @Post(':id/re-evaluate')
+  @Roles(UserRole.HR_ADMIN, UserRole.DEPARTMENT_MANAGER)
   async reEvaluateApplication(@Param('id') id: string) {
     const data = await this.applicationService.reEvaluateApplication(id);
     return {

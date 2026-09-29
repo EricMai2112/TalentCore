@@ -1,4 +1,4 @@
-import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
+import { Injectable, NotFoundException, BadRequestException, Logger } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model, Types } from 'mongoose';
 import { Interview, InterviewDocument, LocationType, InterviewStatus, InterviewResult, InterviewConfirmationStatus } from '../schemas/interview.schema';
@@ -13,6 +13,8 @@ import { EmailService } from '../../email-template/services/email.service';
 
 @Injectable()
 export class InterviewService {
+  private readonly logger = new Logger(InterviewService.name);
+
   constructor(
     @InjectModel(Interview.name) private interviewModel: Model<InterviewDocument>,
     @InjectModel(InterviewEvaluation.name) private evaluationModel: Model<InterviewEvaluationDocument>,
@@ -43,8 +45,9 @@ export class InterviewService {
     const deptSlug = sanitize(departmentName) || 'PhongBan';
     const candSlug = sanitize(candidateName) || 'UngVien';
     const jobSlug = sanitize(jobTitle) || 'ViTri';
+    const uniqueSuffix = Math.random().toString(36).substring(2, 8);
 
-    return `https://meet.jit.si/TalentCore-${deptSlug}-${candSlug}-${jobSlug}`;
+    return `https://meet.jit.si/TalentCore-${deptSlug}-${candSlug}-${jobSlug}-${uniqueSuffix}`;
   }
 
   private extractDeptId(rawDept: any): string | undefined {
@@ -449,7 +452,7 @@ export class InterviewService {
         });
       }
     } catch (notifErr) {
-      console.error('Lỗi gửi thông báo createInterview:', notifErr);
+      this.logger.error('Lỗi gửi thông báo createInterview:', notifErr);
     }
 
     return savedInterview;
@@ -587,7 +590,7 @@ export class InterviewService {
           departmentId: deptId,
         });
       } catch (notifErr) {
-        console.error('Lỗi gửi thông báo updateInterview cho candidate:', notifErr);
+        this.logger.error('Lỗi gửi thông báo updateInterview cho candidate:', notifErr);
       }
     }
 
@@ -731,7 +734,7 @@ export class InterviewService {
         });
       }
     } catch (notifErr) {
-      console.error('Lỗi gửi thông báo requestDeptSchedule:', notifErr);
+      this.logger.error('Lỗi gửi thông báo requestDeptSchedule:', notifErr);
     }
 
     return saved;
@@ -783,7 +786,7 @@ export class InterviewService {
         applicationId: interview.applicationId?.toString(),
       });
     } catch (notifErr) {
-      console.error('Lỗi gửi thông báo rejectDeptCv:', notifErr);
+      this.logger.error('Lỗi gửi thông báo rejectDeptCv:', notifErr);
     }
 
     return saved;
@@ -898,7 +901,7 @@ export class InterviewService {
           });
         }
       } catch (notifErr) {
-        console.error('Lỗi gửi thông báo khi HR chỉnh sửa lịch:', notifErr);
+        this.logger.error('Lỗi gửi thông báo khi HR chỉnh sửa lịch:', notifErr);
       }
     } else {
       // Thông báo cho HR Admin kiểm tra và duyệt lịch
@@ -923,7 +926,7 @@ export class InterviewService {
           interviewId: saved._id.toString(),
         });
       } catch (notifErr) {
-        console.error('Lỗi gửi thông báo submitDeptSchedule:', notifErr);
+        this.logger.error('Lỗi gửi thông báo submitDeptSchedule:', notifErr);
       }
     }
 
@@ -1017,7 +1020,7 @@ export class InterviewService {
         });
       }
     } catch (notifErr) {
-      console.error('Lỗi gửi thông báo hoặc email approveInterviewSchedule:', notifErr);
+      this.logger.error('Lỗi gửi thông báo hoặc email approveInterviewSchedule:', notifErr);
     }
 
     return saved;
@@ -1083,7 +1086,7 @@ export class InterviewService {
         });
       }
     } catch (stageErr) {
-      console.error('Lỗi khi xử lý xác nhận phỏng vấn / chuyển stage:', stageErr);
+      this.logger.error('Lỗi khi xử lý xác nhận phỏng vấn / chuyển stage:', stageErr);
     }
 
     return saved;
@@ -1135,7 +1138,7 @@ export class InterviewService {
         departmentId: deptId,
       });
     } catch (notifErr) {
-      console.error('Lỗi gửi thông báo requestCandidateCancellation:', notifErr);
+      this.logger.error('Lỗi gửi thông báo requestCandidateCancellation:', notifErr);
     }
 
     return saved;
@@ -1204,11 +1207,11 @@ export class InterviewService {
             reason: (interview as any).cancelReason || 'Hồ sơ dừng quá trình tuyển dụng sau khi hủy lịch phỏng vấn',
           });
         } catch (emailErr) {
-          console.error('Lỗi gửi email từ chối khi duyệt hủy lịch:', emailErr);
+          this.logger.error('Lỗi gửi email từ chối khi duyệt hủy lịch:', emailErr);
         }
       }
     } catch (notifErr) {
-      console.error('Lỗi gửi thông báo hoặc email approveCandidateCancellation:', notifErr);
+      this.logger.error('Lỗi gửi thông báo hoặc email approveCandidateCancellation:', notifErr);
     }
 
     return saved;
@@ -1324,7 +1327,7 @@ export class InterviewService {
           departmentId: deptId,
         });
       } catch (notifErr) {
-        console.error('Lỗi gửi thông báo saveEvaluation:', notifErr);
+        this.logger.error('Lỗi gửi thông báo saveEvaluation:', notifErr);
       }
     }
 

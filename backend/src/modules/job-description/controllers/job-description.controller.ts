@@ -16,6 +16,8 @@ import { CreateJobDescriptionDto, UpdateJobDescriptionDto } from '../dtos/job-de
 import { SuggestCriteriaWeightsDto } from '../dtos/suggest-criteria-weights.dto';
 import { GenerateJdContentDto } from '../dtos/generate-jd-content.dto';
 
+import { Public } from '../../auth/decorators/public.decorator';
+
 @Controller('job-descriptions')
 @UsePipes(new ValidationPipe({ whitelist: true }))
 export class JobDescriptionController {
@@ -57,6 +59,7 @@ export class JobDescriptionController {
     };
   }
 
+  @Public()
   @Get('public')
   async findPublicJobs() {
     const jobs = await this.jobDescriptionService.findPublicJobs();
@@ -66,6 +69,7 @@ export class JobDescriptionController {
     };
   }
 
+  @Public()
   @Get(':id')
   async findById(@Param('id') id: string) {
     const job = await this.jobDescriptionService.findById(id);

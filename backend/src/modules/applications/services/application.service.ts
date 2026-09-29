@@ -4,7 +4,7 @@ import { Model, Types } from 'mongoose';
 import { Application, ApplicationDocument, ApplicationStatus } from '../schemas/application.schema';
 import { Candidate, CandidateDocument } from 'src/modules/candidates/schema/candidate.schema';
 import { JobDescription, JobDescriptionDocument, JobStatus } from 'src/modules/job-description/schemas/job-description.schema';
-import { PipelineTemplate, PipelineTemplateDocument } from 'src/modules/pipeline-template/schemas/pipeline-template.schema';
+import { PipelineTemplate, PipelineTemplateDocument, StageType } from 'src/modules/pipeline-template/schemas/pipeline-template.schema';
 import { AiMatchingProcessor } from '../processors/ai-matching.processor';
 import { AiEvaluation, AiEvaluationDocument } from '../schemas/ai-evaluation.schema';
 import {
@@ -166,6 +166,14 @@ export class ApplicationService {
 
     if (params.jobId && Types.ObjectId.isValid(params.jobId)) {
       query.jobDescriptionId = new Types.ObjectId(params.jobId);
+    } else if (params.departmentId && Types.ObjectId.isValid(params.departmentId)) {
+      const jobsInDept = await this.jobModel
+        .find({ departmentId: new Types.ObjectId(params.departmentId) })
+        .select('_id')
+        .lean()
+        .exec();
+      const jobIds = jobsInDept.map((j) => j._id);
+      query.jobDescriptionId = { $in: jobIds };
     }
 
     const applications = await this.applicationModel
@@ -327,11 +335,15 @@ export class ApplicationService {
 
       const pipeline = job?.pipelineTemplateId as any;
       let stageName = '';
+      let stageType: StageType | undefined;
       if (pipeline && Array.isArray(pipeline.stages)) {
         const foundStage = pipeline.stages.find(
           (s: any) => s._id?.toString() === stageId || s.name === stageId,
         );
-        if (foundStage) stageName = foundStage.name;
+        if (foundStage) {
+          stageName = foundStage.name;
+          stageType = foundStage.stageType;
+        }
       }
 
       if (!stageName && Types.ObjectId.isValid(stageId)) {
@@ -343,7 +355,10 @@ export class ApplicationService {
           const found = pipelineWithStage.stages.find(
             (s: any) => s._id?.toString() === stageId,
           );
-          if (found) stageName = found.name;
+          if (found) {
+            stageName = found.name;
+            stageType = found.stageType;
+          }
         }
       }
 
@@ -352,6 +367,8 @@ export class ApplicationService {
 
       // 1. Nhận diện vòng Đánh giá phòng ban
       const isDeptReview =
+        stageType === StageType.DEPARTMENT_REVIEW ||
+        stageType === StageType.INTERVIEW ||
         stageLower.includes('department') ||
         stageLower.includes('phòng ban') ||
         stageLower.includes('chuyên môn') ||
@@ -359,6 +376,7 @@ export class ApplicationService {
         stageLower.includes('phỏng vấn');
 
       const isHired =
+        stageType === StageType.HIRED ||
         stageLower.includes('hired') ||
         stageLower.includes('trúng tuyển') ||
         stageLower.includes('nhận việc');
@@ -588,7 +606,23 @@ export class ApplicationService {
     if (!Types.ObjectId.isValid(applicationId)) {
       throw new BadRequestException('ID đơn ứng tuyển không hợp lệ');
     }
-    await this.applicationModel.findByIdAndDelete(applicationId);
+
+    const application = await this.applicationModel.findById(applicationId);
+    if (!application) {
+      throw new NotFoundException('Không tìm thấy đơn ứng tuyển');
+    }
+
+    if (application.status === ApplicationStatus.HIRED) {
+      throw new BadRequestException('Không thể xóa đơn ứng tuyển của ứng viên đã được nhận việc (HIRED)');
+    }
+
+    // Cascade delete related records
+    await Promise.all([
+      this.interviewModel.deleteMany({ applicationId: application._id }),
+      this.aiEvaluationModel.deleteMany({ applicationId: application._id }),
+      this.applicationModel.findByIdAndDelete(applicationId),
+    ]);
+
     return { success: true };
   }
 

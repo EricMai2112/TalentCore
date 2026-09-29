@@ -6,7 +6,7 @@ import {
 import { InjectModel } from '@nestjs/mongoose';
 import { Model, Types } from 'mongoose';
 import { Candidate, CandidateDocument } from '../schema/candidate.schema';
-import { User, UserDocument } from 'src/modules/users/schemas/user.schema';
+import { UserService } from 'src/modules/users/services/user.service';
 import {
   CreateCandidateProfileDto,
   UpdateCandidateProfileDto,
@@ -17,7 +17,7 @@ export class CandidateService {
   constructor(
     @InjectModel(Candidate.name)
     private candidateModel: Model<CandidateDocument>,
-    @InjectModel(User.name) private userModel: Model<UserDocument>,
+    private readonly userService: UserService,
   ) {}
 
 
@@ -155,7 +155,7 @@ export class CandidateService {
     if (name !== undefined && name !== null) userUpdates.name = name.trim();
     if (phone !== undefined && phone !== null) userUpdates.phone = phone.trim();
     if (Object.keys(userUpdates).length > 0) {
-      await this.userModel.findByIdAndUpdate(userId, { $set: userUpdates });
+      await this.userService.updateUserById(userId, userUpdates);
     }
 
     const updated = await this.candidateModel
