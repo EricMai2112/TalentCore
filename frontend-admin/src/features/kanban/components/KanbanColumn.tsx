@@ -16,6 +16,7 @@ interface KanbanColumnProps {
   onMoveStage?: (appId: string, targetStageId: string) => void;
   onRejectCandidate?: (app: KanbanApplication) => void;
   onCreateOffer?: (app: KanbanApplication) => void;
+  onCreateInterview?: (app: KanbanApplication) => void;
   style?: React.CSSProperties;
   className?: string;
 }
@@ -28,6 +29,7 @@ export default function KanbanColumn({
   onMoveStage,
   onRejectCandidate,
   onCreateOffer,
+  onCreateInterview,
   style,
   className = "w-[335px]",
 }: KanbanColumnProps) {
@@ -89,11 +91,13 @@ export default function KanbanColumn({
                   key={app._id}
                   application={app}
                   stages={stages}
+                  currentColumnStage={stage}
                   stageColor={stageColorHex}
                   onSelect={onSelectCandidate}
                   onMoveStage={onMoveStage}
                   onRejectCandidate={onRejectCandidate}
                   onCreateOffer={onCreateOffer}
+                  onCreateInterview={onCreateInterview}
                 />
               ))
             )}

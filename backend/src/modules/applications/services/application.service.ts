@@ -228,9 +228,31 @@ export class ApplicationService {
       const inv = interviewMap.get(app._id.toString());
       const job = app.jobDescriptionId as any;
       const pipeline = job?.pipelineTemplateId;
-      const currentStage = pipeline?.stages?.find(
+      let currentStage = pipeline?.stages?.find(
         (s: any) => s._id?.toString() === app.currentStageId?.toString(),
       );
+
+      // Nếu ứng viên đã được nhận việc (HIRED), đảm bảo stage được map vào Hired stage
+      if (app.status === ApplicationStatus.HIRED) {
+        const hiredStage = pipeline?.stages?.find(
+          (s: any) => {
+            const st = s.stageType || s.type;
+            const nameLower = (s.name || '').trim().toLowerCase();
+            return (
+              st === StageType.HIRED ||
+              st === 'HIRED' ||
+              nameLower.includes('hired') ||
+              nameLower.includes('trúng tuyển') ||
+              nameLower.includes('nhận việc') ||
+              nameLower.includes('đã tuyển')
+            );
+          },
+        ) || (pipeline?.stages && pipeline.stages[pipeline.stages.length - 1]);
+        if (hiredStage) {
+          currentStage = hiredStage;
+          app.currentStageId = hiredStage._id;
+        }
+      }
 
       return {
         ...app,

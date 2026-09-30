@@ -40,6 +40,11 @@ body {
   overflow-x: hidden;
 }
 
+@utility text-2xs {
+  font-size: 0.6875rem;
+  line-height: 0.95rem;
+}
+
 /* Custom glow utility for a high-tech modern aesthetic */
 .glow-effect {
   position: relative;

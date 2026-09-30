@@ -19,6 +19,7 @@ import { CreateOfferDto } from '../dtos/create-offer.dto';
 import { UpdateOfferDto } from '../dtos/update-offer.dto';
 import { RespondOfferDto } from '../dtos/respond-offer.dto';
 import { QueryOfferDto } from '../dtos/query-offer.dto';
+import { StageType } from '../../pipeline-template/schemas/pipeline-template.schema';
 
 @Injectable()
 export class OffersService {
@@ -333,11 +334,51 @@ export class OffersService {
         offer.status = OfferStatus.ACCEPTED;
         offer.respondedAt = new Date();
 
+        // Automatically resolve Hired stage from the job's pipeline template
+        let hiredStageId: Types.ObjectId | string | undefined;
+        try {
+          const app = await this.applicationModel.findById(offer.applicationId).exec();
+          if (app) {
+            const job = await this.jobDescriptionModel
+              .findById(app.jobDescriptionId)
+              .populate('pipelineTemplateId')
+              .exec();
+
+            const pipeline = job?.pipelineTemplateId as any;
+            if (pipeline && Array.isArray(pipeline.stages) && pipeline.stages.length > 0) {
+              const hiredStage = pipeline.stages.find((s: any) => {
+                const type = s.stageType;
+                const nameLower = (s.name || '').toLowerCase();
+                return (
+                  type === StageType.HIRED ||
+                  nameLower.includes('hired') ||
+                  nameLower.includes('trúng tuyển') ||
+                  nameLower.includes('nhận việc') ||
+                  nameLower.includes('đã tuyển')
+                );
+              }) || pipeline.stages[pipeline.stages.length - 1];
+
+              if (hiredStage?._id) {
+                hiredStageId = hiredStage._id;
+              }
+            }
+          }
+        } catch (findStageErr) {
+          this.logger.error('Lỗi tìm stage Hired cho offer:', findStageErr);
+        }
+
+        const applicationUpdate: any = {
+          status: ApplicationStatus.HIRED,
+        };
+        if (hiredStageId) {
+          applicationUpdate.currentStageId = hiredStageId;
+        }
+
         if (useTransaction) {
           await offer.save({ session });
           await this.applicationModel.findByIdAndUpdate(
             offer.applicationId,
-            { $set: { status: ApplicationStatus.HIRED } },
+            { $set: applicationUpdate },
             { session },
           ).exec();
           await session.commitTransaction();
@@ -345,7 +386,7 @@ export class OffersService {
           await offer.save();
           await this.applicationModel.findByIdAndUpdate(
             offer.applicationId,
-            { $set: { status: ApplicationStatus.HIRED } },
+            { $set: applicationUpdate },
           ).exec();
         }
       } catch (error) {

@@ -139,7 +139,7 @@ export function CandidateOffersView() {
                   {/* Card Header */}
                   <div className="flex items-start justify-between gap-3">
                     <div>
-                      <span className="text-2xs font-bold text-blue-600 uppercase tracking-wider">
+                      <span className="text-[11px] font-bold text-blue-600 uppercase tracking-wider">
                         {dept?.name || 'TalentCore Technology'}
                       </span>
                       <h3 className="text-lg font-bold text-slate-900 mt-0.5 group-hover:text-blue-600 transition-colors">
@@ -152,13 +152,13 @@ export function CandidateOffersView() {
                   {/* Salary & Probation highlight */}
                   <div className="mt-4 p-4 rounded-2xl bg-gradient-to-r from-emerald-50/60 to-blue-50/40 border border-emerald-100 flex items-center justify-between">
                     <div>
-                      <span className="text-2xs text-slate-500 font-semibold uppercase">Mức lương đề nghị</span>
+                      <span className="text-[11px] text-slate-500 font-semibold uppercase">Mức lương đề nghị</span>
                       <p className="text-lg font-extrabold text-emerald-700">
                         {formattedSalary} {offer.currency}
                       </p>
                     </div>
                     <div className="text-right">
-                      <span className="text-2xs text-slate-500 font-semibold uppercase">Thử việc</span>
+                      <span className="text-[11px] text-slate-500 font-semibold uppercase">Thử việc</span>
                       <p className="text-xs font-bold text-slate-700">
                         {offer.probationDurationMonths} tháng ({offer.probationSalaryPercentage}%)
                       </p>
@@ -183,7 +183,7 @@ export function CandidateOffersView() {
 
                 {/* Card Action Footer */}
                 <div className="mt-6 pt-4 border-t border-slate-100 flex items-center justify-between">
-                  <span className="text-2xs text-slate-400">
+                  <span className="text-[11px] text-slate-400">
                     Gửi ngày {offer.sentAt ? new Date(offer.sentAt).toLocaleDateString('vi-VN') : 'Hôm nay'}
                   </span>
 
