@@ -19,6 +19,8 @@ import { Department, JobDescription, PipelineStage, JobStatus } from "@/src/feat
 import { KanbanApplication } from "../types/kanban.types";
 import { kanbanApi } from "../services/kanban.api";
 import { interviewsApi } from "@/src/features/interviews/services/interviews.api";
+import { DeptScheduleFormModal } from "@/src/features/interviews/components/DeptScheduleFormModal";
+import { InterviewItem } from "@/src/features/interviews/types/interview.types";
 import { useAuth } from "@/src/providers/AuthProvider";
 import { UserRole } from "@/src/features/users/types/user.types";
 import dynamic from "next/dynamic";
@@ -91,6 +93,9 @@ export default function KanbanContainer({
   const [selectedCandidateApp, setSelectedCandidateApp] = useState<KanbanApplication | null>(null);
   const [rejectingKanbanApp, setRejectingKanbanApp] = useState<KanbanApplication | null>(null);
   const [activeApplication, setActiveApplication] = useState<KanbanApplication | null>(null);
+  const [selectedDeptScheduleInterview, setSelectedDeptScheduleInterview] = useState<InterviewItem | null>(null);
+  const [isDeptScheduleModalOpen, setIsDeptScheduleModalOpen] = useState(false);
+  const [refreshTrigger, setRefreshTrigger] = useState(0);
 
   // Carousel 4-stages-per-page state
   const [carouselIndex, setCarouselIndex] = useState<number>(0);
@@ -174,7 +179,7 @@ export default function KanbanContainer({
     return () => {
       isSubscribed = false;
     };
-  }, [selectedDepartmentId, selectedJobId, searchQuery]);
+  }, [selectedDepartmentId, selectedJobId, searchQuery, refreshTrigger]);
 
   // Determine active pipeline stages from selected JD's pipeline template
   const activeStages = useMemo(() => {
@@ -355,7 +360,26 @@ export default function KanbanContainer({
 
     filteredApplications.forEach((app) => {
       const firstStageId = activeStages[0]?._id || "";
-      const sId = app.currentStageId || firstStageId;
+      let sId = app.currentStageId || firstStageId;
+
+      // Nếu ứng viên đã ở trạng thái HIRED, ưu tiên đưa vào cột Hired
+      if (app.status === 'HIRED') {
+        const hiredStage = activeStages.find((stg: any) => {
+          const st = stg.stageType || stg.type;
+          const nameLower = (stg.name || '').trim().toLowerCase();
+          return (
+            st === 'HIRED' ||
+            nameLower.includes('hired') ||
+            nameLower.includes('trúng tuyển') ||
+            nameLower.includes('nhận việc') ||
+            nameLower.includes('đã tuyển')
+          );
+        }) || activeStages[activeStages.length - 1];
+        if (hiredStage?._id) {
+          sId = hiredStage._id;
+        }
+      }
+
       if (map.has(sId)) {
         map.get(sId)!.push(app);
       } else {
@@ -455,6 +479,40 @@ export default function KanbanContainer({
     }
 
     await handleMoveStage(appId, targetStageId);
+  };
+
+  // Handle Create Interview Schedule when in Department Review
+  const handleCreateInterview = async (app: KanbanApplication) => {
+    try {
+      let inv = await interviewsApi.getInterviewByApplicationId(app._id);
+      if (!inv) {
+        const created = await interviewsApi.requestDeptSchedule(app._id);
+        if (created?._id) {
+          inv = await interviewsApi.getInterviewById(created._id);
+        }
+      } else if (
+        inv._id &&
+        (typeof inv.candidateId !== "object" || typeof inv.jobDescriptionId !== "object")
+      ) {
+        inv = await interviewsApi.getInterviewById(inv._id);
+      }
+
+      if (inv) {
+        if (typeof inv.candidateId !== "object" && app.candidateId) {
+          inv.candidateId = app.candidateId as any;
+        }
+        if (typeof inv.jobDescriptionId !== "object" && app.jobDescriptionId) {
+          inv.jobDescriptionId = app.jobDescriptionId as any;
+        }
+        setSelectedDeptScheduleInterview(inv);
+        setIsDeptScheduleModalOpen(true);
+      } else {
+        showToast("Không thể khởi tạo dữ liệu phỏng vấn cho ứng viên", "error");
+      }
+    } catch (err: any) {
+      console.error("Lỗi khi mở tạo lịch phỏng vấn:", err);
+      showToast(err?.message || "Không thể tạo lịch phỏng vấn", "error");
+    }
   };
 
   // Handle Reset Filters
@@ -628,6 +686,7 @@ export default function KanbanContainer({
                   onMoveStage={handleMoveStage}
                   onRejectCandidate={(app) => setRejectingKanbanApp(app)}
                   onCreateOffer={(app) => router.push(`/offers/create?applicationId=${app._id}`)}
+                  onCreateInterview={handleCreateInterview}
                   style={{ width: columnWidthStyle }}
                 />
               ))}
@@ -664,6 +723,7 @@ export default function KanbanContainer({
                 onMoveStage={handleMoveStage}
                 onRejectCandidate={(app) => setRejectingKanbanApp(app)}
                 onCreateOffer={(app) => router.push(`/offers/create?applicationId=${app._id}`)}
+                onCreateInterview={handleCreateInterview}
                 style={{ width: columnWidthStyle }}
               />
             ))}
@@ -675,6 +735,10 @@ export default function KanbanContainer({
       <CandidateDetailModal
         application={selectedCandidateApp}
         onClose={() => setSelectedCandidateApp(null)}
+        onOpenDeptScheduleModal={(inv) => {
+          setSelectedDeptScheduleInterview(inv);
+          setIsDeptScheduleModalOpen(true);
+        }}
       />
 
       {/* Quick Reject Modal for Kanban Card */}
@@ -708,6 +772,22 @@ export default function KanbanContainer({
           }}
         />
       )}
+
+      {/* Trưởng phòng / HR Xếp lịch & Chọn Interviewer Modal */}
+      <DeptScheduleFormModal
+        isOpen={isDeptScheduleModalOpen}
+        onClose={() => {
+          setIsDeptScheduleModalOpen(false);
+          setSelectedDeptScheduleInterview(null);
+        }}
+        interview={selectedDeptScheduleInterview}
+        onSuccess={() => {
+          setIsDeptScheduleModalOpen(false);
+          setSelectedDeptScheduleInterview(null);
+          showToast("Đã lưu lịch phỏng vấn thành công!", "success");
+          setRefreshTrigger((k) => k + 1);
+        }}
+      />
 
       {toast && <Toast toast={toast} onClose={hideToast} />}
     </div>

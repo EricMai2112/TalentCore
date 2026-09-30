@@ -2,7 +2,7 @@
 
 import { useMemo } from "react";
 
-import { Calendar, AlertTriangle, Briefcase, ChevronLeft, ChevronRight, CheckCircle2, UserX, FileText } from "lucide-react";
+import { Calendar, AlertTriangle, Briefcase, ChevronLeft, ChevronRight, CheckCircle2, UserX, FileText, CalendarPlus } from "lucide-react";
 import { useSortable } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 import { KanbanApplication } from "../types/kanban.types";
@@ -12,22 +12,26 @@ import { CustomSelect } from "@/src/components/common";
 interface CandidateKanbanCardProps {
   application: KanbanApplication;
   stages?: PipelineStage[];
+  currentColumnStage?: PipelineStage;
   stageColor?: string;
   onSelect?: (app: KanbanApplication) => void;
   onMoveStage?: (appId: string, targetStageId: string) => void;
   onRejectCandidate?: (app: KanbanApplication) => void;
   onCreateOffer?: (app: KanbanApplication) => void;
+  onCreateInterview?: (app: KanbanApplication) => void;
   isOverlay?: boolean;
 }
 
 export default function CandidateKanbanCard({
   application,
   stages = [],
+  currentColumnStage,
   stageColor,
   onSelect,
   onMoveStage,
   onRejectCandidate,
   onCreateOffer,
+  onCreateInterview,
   isOverlay = false,
 }: CandidateKanbanCardProps) {
   const candidate = application.candidateId;
@@ -115,12 +119,51 @@ export default function CandidateKanbanCard({
     return stages[currentStageIndex + 1];
   }, [stages, currentStageIndex]);
 
-  // Check if current stage is Offer stage
+  // Check if candidate is HIRED or card is in Hired stage
+  const isHired = useMemo(() => {
+    if (application.status === "HIRED") return true;
+    const stage = currentColumnStage || stages.find((s) => s._id === application.currentStageId);
+    const stageName = stage?.name?.toLowerCase().trim() || "";
+    const stageType = (stage as any)?.stageType || (stage as any)?.type;
+    return (
+      stageType === "HIRED" ||
+      stageName.includes("hired") ||
+      stageName.includes("trúng tuyển") ||
+      stageName.includes("đã tuyển") ||
+      stageName === "nhận việc" ||
+      stageName === "đã nhận việc"
+    );
+  }, [application.status, currentColumnStage, stages, application.currentStageId]);
+
+  // Check if current stage is Offer stage (Never true when Hired)
   const isOfferStage = useMemo(() => {
-    const currentStage = stages.find((s) => s._id === application.currentStageId);
-    const stageName = currentStage?.name?.toLowerCase() || "";
-    return stageName.includes("đề nghị") || stageName.includes("offer") || stageName.includes("nhận việc");
-  }, [stages, application.currentStageId]);
+    if (isHired || application.status === "HIRED") return false;
+    const stage = currentColumnStage || stages.find((s) => s._id === application.currentStageId);
+    const stageName = stage?.name?.toLowerCase().trim() || "";
+    const stageType = (stage as any)?.stageType || (stage as any)?.type;
+    return (
+      stageType === "OFFER" ||
+      stageName.includes("offer") ||
+      stageName.includes("đề nghị") ||
+      stageName.includes("thư mời")
+    );
+  }, [isHired, application.status, currentColumnStage, stages, application.currentStageId]);
+
+  // Check if current stage is Department Review stage (Never true for other stages)
+  const isDeptReviewStage = useMemo(() => {
+    if (isRejected || isInterviewCancelled || isHired || application.status === "HIRED") return false;
+    const stage = currentColumnStage || stages.find((s) => s._id === application.currentStageId);
+    const stageName = stage?.name?.toLowerCase().trim() || "";
+    const stageType = (stage as any)?.stageType || (stage as any)?.type;
+    return (
+      stageType === "DEPARTMENT_REVIEW" ||
+      stageName.includes("department review") ||
+      stageName.includes("department") ||
+      stageName.includes("đánh giá phòng ban") ||
+      stageName.includes("phòng ban") ||
+      stageName.includes("chuyên môn")
+    );
+  }, [isRejected, isInterviewCancelled, isHired, application.status, currentColumnStage, stages, application.currentStageId]);
 
   // Format applied date
   const formattedDate = useMemo(() => {
@@ -322,8 +365,8 @@ export default function CandidateKanbanCard({
           </div>
         </div>
 
-        {/* Offer Action Button when in Offer Stage */}
-        {isOfferStage && onCreateOffer && !isRejected && (
+        {/* Offer Action Button when in Offer Stage (Hidden if Hired or Rejected) */}
+        {isOfferStage && onCreateOffer && !isRejected && !isHired && (
           <button
             type="button"
             onClick={(e) => {
@@ -334,6 +377,21 @@ export default function CandidateKanbanCard({
           >
             <FileText size={13} className="text-emerald-600" />
             Soạn Đề Nghị Nhận Việc (Offer)
+          </button>
+        )}
+
+        {/* Department Review Action Button: Tạo Lịch Phỏng Vấn (Only in Department Review stage) */}
+        {isDeptReviewStage && onCreateInterview && !isRejected && !isHired && (
+          <button
+            type="button"
+            onClick={(e) => {
+              e.stopPropagation();
+              onCreateInterview(application);
+            }}
+            className="w-full py-1.5 px-3 rounded-xl bg-indigo-50 hover:bg-indigo-100 text-indigo-700 border border-indigo-200/90 font-bold text-xs flex items-center justify-center gap-1.5 transition-colors shadow-2xs cursor-pointer"
+          >
+            <CalendarPlus size={13} className="text-indigo-600" />
+            Tạo Lịch Phỏng Vấn
           </button>
         )}
 
