@@ -1,6 +1,6 @@
 'use client'
 
-import React, { useState, useEffect, useCallback } from 'react'
+import React, { useState, useMemo } from 'react'
 import { useRouter } from 'next/navigation'
 import {
   Plus,
@@ -31,7 +31,9 @@ import {
 import { OfferStatCards } from './OfferStatCards'
 import { OfferDetailModal } from './OfferDetailModal'
 import { OfferItem, OfferStatus } from '../types/offer.types'
-import { offersApi } from '../services/offers.api'
+import { useQueryClient } from '@tanstack/react-query'
+import { useOffersQuery, offerKeys } from '../hooks/useOffersQuery'
+import { useSendOfferMutation, useWithdrawOfferMutation } from '../hooks/useOfferMutations'
 import { Department } from '@/src/features/departments/types/department.types'
 
 interface OffersManagerProps {
@@ -50,9 +52,6 @@ export const OffersManager: React.FC<OffersManagerProps> = ({
   const router = useRouter()
   const { toast, showToast, hideToast } = useToast()
 
-  const [offers, setOffers] = useState<OfferItem[]>(initialOffers)
-  const [total, setTotal] = useState<number>(initialTotal)
-  const [loading, setLoading] = useState(false)
   const [search, setSearch] = useState('')
   const [selectedStatus, setSelectedStatus] = useState<string>('ALL')
   const [selectedDepartment, setSelectedDepartment] = useState<string>('ALL')
@@ -66,40 +65,41 @@ export const OffersManager: React.FC<OffersManagerProps> = ({
   const [selectedOfferForDetail, setSelectedOfferForDetail] = useState<OfferItem | null>(null)
   const [isDetailModalOpen, setIsDetailModalOpen] = useState(false)
 
-  // Fetch offers
-  const fetchOffers = useCallback(async () => {
-    try {
-      setLoading(true)
-      const res = await offersApi.getOffers({
-        page: currentPage,
-        limit: pageSize,
-        status: selectedStatus === 'ALL' ? undefined : selectedStatus,
-        departmentId: selectedDepartment === 'ALL' ? undefined : selectedDepartment,
-        search: search ? search.trim() : undefined
-      })
+  // TanStack Query for Offers
+  const queryParams = React.useMemo(
+    () => ({
+      page: currentPage,
+      limit: pageSize,
+      status: selectedStatus === 'ALL' ? undefined : selectedStatus,
+      departmentId: selectedDepartment === 'ALL' ? undefined : selectedDepartment,
+      search: search ? search.trim() : undefined
+    }),
+    [currentPage, selectedStatus, selectedDepartment, search]
+  )
 
-      setOffers(res.items)
-      setTotal(res.total)
-    } catch (err: any) {
-      console.error('Failed to load offers:', err)
-      showToast(err.message || 'Không thể tải danh sách đề nghị nhận việc', 'error')
-    } finally {
-      setLoading(false)
+  const initialData = React.useMemo(() => {
+    if (initialOffers.length > 0) {
+      return { items: initialOffers, total: initialTotal }
     }
-  }, [currentPage, selectedStatus, selectedDepartment, search])
+    return undefined
+  }, [initialOffers, initialTotal])
 
-  // Refetch when filters or page changes (skip initial load if initialOffers provided)
-  const isFirstRender = React.useRef(true)
-  useEffect(() => {
-    if (isFirstRender.current) {
-      isFirstRender.current = false
-      if (initialOffers.length === 0) {
-        fetchOffers()
-      }
-      return
-    }
-    fetchOffers()
-  }, [fetchOffers])
+  const { data, isLoading, isFetching } = useOffersQuery({
+    params: queryParams,
+    initialData
+  })
+
+  const offers = data?.items || []
+  const total = data?.total || 0
+  const loading = isLoading || isFetching
+
+  const queryClient = useQueryClient()
+  const refetchOffers = () => {
+    queryClient.invalidateQueries({ queryKey: offerKeys.all })
+  }
+
+  const sendOfferMutation = useSendOfferMutation()
+  const withdrawOfferMutation = useWithdrawOfferMutation()
 
   const handleResetFilters = () => {
     setSearch('')
@@ -115,9 +115,8 @@ export const OffersManager: React.FC<OffersManagerProps> = ({
 
   const handleSendOffer = async (offer: OfferItem) => {
     try {
-      await offersApi.sendOffer(offer._id)
+      await sendOfferMutation.mutateAsync(offer._id)
       showToast('Đã gửi đề nghị nhận việc đến ứng viên!', 'success')
-      fetchOffers()
     } catch (err: any) {
       showToast(err.message || 'Lỗi khi gửi đề nghị nhận việc', 'error')
     }
@@ -125,9 +124,8 @@ export const OffersManager: React.FC<OffersManagerProps> = ({
 
   const handleWithdrawOffer = async (offer: OfferItem) => {
     try {
-      await offersApi.withdrawOffer(offer._id)
+      await withdrawOfferMutation.mutateAsync(offer._id)
       showToast('Đã thu hồi đề nghị nhận việc thành công', 'success')
-      fetchOffers()
     } catch (err: any) {
       showToast(err.message || 'Lỗi khi thu hồi đề nghị', 'error')
     }
@@ -417,7 +415,7 @@ export const OffersManager: React.FC<OffersManagerProps> = ({
           setSelectedOfferForDetail(null)
         }}
         offer={selectedOfferForDetail}
-        onOfferUpdated={fetchOffers}
+        onOfferUpdated={refetchOffers}
       />
     </div>
   )

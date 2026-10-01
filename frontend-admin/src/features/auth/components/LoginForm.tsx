@@ -2,68 +2,78 @@
 
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
+import { useForm } from 'react-hook-form'
+import { zodResolver } from '@hookform/resolvers/zod'
 import { Eye, EyeOff, AlertTriangle, Lock, Mail, ArrowRight } from 'lucide-react'
 import { authApi } from '../services/auth.api'
 import { useAuth } from '@/src/providers/AuthProvider'
 import { GlassInput } from '@/src/components/common/glass'
+import { loginSchema, LoginFormData } from '../schemas/login.schema'
 
 export default function LoginForm() {
   const router = useRouter()
   const { setUser } = useAuth()
-
   const [showPassword, setShowPassword] = useState(false)
-  const [email, setEmail] = useState('')
-  const [password, setPassword] = useState('')
-  const [rememberMe, setRememberMe] = useState(true)
-  const [isLoading, setIsLoading] = useState(false)
-  const [error, setError] = useState<string | null>(null)
+  const [serverError, setServerError] = useState<string | null>(null)
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault()
-    setIsLoading(true)
-    setError(null)
+  const {
+    register,
+    handleSubmit,
+    formState: { errors, isSubmitting },
+  } = useForm<LoginFormData>({
+    resolver: zodResolver(loginSchema),
+    defaultValues: {
+      email: '',
+      password: '',
+      rememberMe: true,
+    },
+  });
+
+  const onSubmit = async (data: LoginFormData) => {
+    setServerError(null)
     try {
-      const res = await authApi.login({ email, password })
+      const res = await authApi.login({
+        email: data.email,
+        password: data.password,
+      })
       setUser(res.user)
       router.push('/dashboard')
     } catch (err: any) {
-      setError(err.message || 'Đăng nhập thất bại. Vui lòng kiểm tra lại thông tin!')
-    } finally {
-      setIsLoading(false)
+      setServerError(err.message || 'Đăng nhập thất bại. Vui lòng kiểm tra lại thông tin!')
     }
   }
 
   return (
     <>
-      {/* Glass Error Alert */}
-      {error && (
+      {/* Glass Error Alert for Server Authentication Failure */}
+      {serverError && (
         <div className="mb-5 flex items-start gap-2.5 bg-rose-500/15 backdrop-blur-md border border-rose-500/30 text-rose-700 p-3.5 rounded-2xl text-xs font-bold animate-in fade-in duration-200">
           <AlertTriangle size={16} className="shrink-0 mt-0.5 text-rose-600" />
-          <span>{error}</span>
+          <span>{serverError}</span>
         </div>
       )}
 
-      <form onSubmit={handleSubmit} className="space-y-4">
-        {/* Email Input using GlassInput component with Icon */}
+      <form onSubmit={handleSubmit(onSubmit)} className="space-y-4" noValidate>
+        {/* Email Input using React Hook Form + Zod */}
         <GlassInput
           label="Email"
           type="email"
           required
-          value={email}
-          onChange={(e) => setEmail(e.target.value)}
           placeholder="admin@gmail.com"
           icon={<Mail size={18} className="text-[#3B82F6]" />}
+          error={errors.email?.message}
+          {...register('email')}
         />
 
-        {/* Password Input using GlassInput component with Icon */}
+        {/* Password Input using React Hook Form + Zod */}
         <GlassInput
           label="Mật khẩu"
           type={showPassword ? 'text' : 'password'}
           required
-          value={password}
-          onChange={(e) => setPassword(e.target.value)}
           placeholder="••••••••"
           icon={<Lock size={18} className="text-[#3B82F6]" />}
+          error={errors.password?.message}
+          {...register('password')}
           rightElement={
             <button
               type="button"
@@ -81,9 +91,8 @@ export default function LoginForm() {
           <label className="flex items-center gap-2 cursor-pointer select-none">
             <input
               type="checkbox"
-              checked={rememberMe}
-              onChange={(e) => setRememberMe(e.target.checked)}
               className="w-4 h-4 rounded-md text-[#3B82F6] focus:ring-[#3B82F6] border-slate-300 accent-[#3B82F6] cursor-pointer"
+              {...register('rememberMe')}
             />
             <span className="text-xs font-semibold text-[#334155]">Ghi nhớ đăng nhập</span>
           </label>
@@ -100,13 +109,13 @@ export default function LoginForm() {
           </a>
         </div>
 
-        {/* Submit Button */}
+        {/* Submit Button with Loading State */}
         <button
           type="submit"
-          disabled={isLoading}
+          disabled={isSubmitting}
           className="w-full py-3.5 px-4 bg-gradient-to-r from-[#8B5CF6] via-[#3B82F6] to-[#06B6D4] hover:opacity-95 hover:shadow-lg hover:shadow-purple-500/25 text-white text-sm font-bold rounded-2xl transition-all duration-200 active:scale-[0.98] disabled:opacity-60 disabled:cursor-not-allowed disabled:transform-none disabled:shadow-none cursor-pointer flex items-center justify-center gap-2 group border border-white/30 mt-3"
         >
-          {isLoading ? (
+          {isSubmitting ? (
             <>
               <svg
                 className="animate-spin h-4 w-4 text-white"

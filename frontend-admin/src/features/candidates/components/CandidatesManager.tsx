@@ -17,8 +17,9 @@ import {
 } from 'lucide-react'
 import dynamic from 'next/dynamic'
 import { CandidateApplication } from '../types/candidate.types'
-import { candidateApi } from '../services/candidate.api'
-import { departmentApi } from '@/src/features/departments/services/department.api'
+import { useCandidatesQuery } from '../hooks/useCandidatesQuery'
+import { useDepartmentsQuery } from '@/src/features/departments/hooks/useDepartmentsQuery'
+import { useQueryClient } from '@tanstack/react-query'
 import { Department } from '@/src/features/departments/types/department.types'
 import { useAuth } from '@/src/providers/AuthProvider'
 import { UserRole } from '@/src/features/users/types/user.types'
@@ -53,11 +54,20 @@ export default function CandidatesManager({
   initialDepartments = []
 }: CandidatesManagerProps) {
   const { user } = useAuth()
-  const [applications, setApplications] = useState<CandidateApplication[]>(initialApplications)
-  const [departments, setDepartments] = useState<Department[]>(initialDepartments)
-  // Start as not loading when initial data is provided via SSR
-  const [isLoading, setIsLoading] = useState(initialApplications.length === 0)
+  const queryClient = useQueryClient()
+  const { data: deptData } = useDepartmentsQuery({ initialData: initialDepartments })
+  const departments = deptData || initialDepartments
+
   const { toast, showToast, hideToast } = useToast()
+
+  // Check if logged in user is Employee or Department Manager
+  const isRestrictedDept =
+    user?.role === UserRole.EMPLOYEE || user?.role === UserRole.DEPARTMENT_MANAGER
+
+  const userDeptId = useMemo(() => {
+    if (!user?.departmentId) return ''
+    return typeof user.departmentId === 'object' ? user.departmentId._id : user.departmentId
+  }, [user])
 
   // Filters
   const [searchQuery, setSearchQuery] = useState('')
@@ -78,29 +88,6 @@ export default function CandidatesManager({
   const [detailApp, setDetailApp] = useState<CandidateApplication | null>(null)
   const [rejectApp, setRejectApp] = useState<CandidateApplication | null>(null)
 
-  // Check if logged in user is Employee or Department Manager
-  const isRestrictedDept =
-    user?.role === UserRole.EMPLOYEE || user?.role === UserRole.DEPARTMENT_MANAGER
-
-  const userDeptId = useMemo(() => {
-    if (!user?.departmentId) return ''
-    return typeof user.departmentId === 'object' ? user.departmentId._id : user.departmentId
-  }, [user])
-
-  // Fetch departments only if not provided via SSR
-  useEffect(() => {
-    if (initialDepartments.length > 0) return // Skip — already hydrated from SSR
-    const fetchDepartments = async () => {
-      try {
-        const list = await departmentApi.getAll()
-        setDepartments(list || [])
-      } catch (err) {
-        console.error('Lỗi khi lấy danh sách phòng ban:', err)
-      }
-    }
-    fetchDepartments()
-  }, []) // eslint-disable-line react-hooks/exhaustive-deps
-
   // Initialize department filter for restricted roles
   useEffect(() => {
     if (isRestrictedDept && userDeptId) {
@@ -108,30 +95,33 @@ export default function CandidatesManager({
     }
   }, [isRestrictedDept, userDeptId])
 
-  // Load candidate applications — re-fetch when department filter changes (client-side filter change)
-  const fetchApplications = async () => {
-    setIsLoading(true)
-    try {
-      const activeDeptId =
-        isRestrictedDept && userDeptId ? userDeptId : selectedDepartmentId || undefined
-      const data = await candidateApi.getCandidates({
-        departmentId: activeDeptId,
-        search: searchQuery || undefined
-      })
-      setApplications(data || [])
-    } catch (err) {
-      console.error('Lỗi lấy danh sách ứng viên:', err)
-      showToast('Không thể tải danh sách ứng viên', 'error')
-    } finally {
-      setIsLoading(false)
-    }
-  }
+  const activeDeptId = isRestrictedDept && userDeptId ? userDeptId : selectedDepartmentId || undefined
+  const queryParams = useMemo(
+    () => ({
+      departmentId: activeDeptId,
+      search: searchQuery ? searchQuery.trim() : undefined
+    }),
+    [activeDeptId, searchQuery]
+  )
 
-  useEffect(() => {
-    // Skip initial fetch if data was already provided via SSR
-    if (initialApplications.length > 0 && selectedDepartmentId === '' && !isRestrictedDept) return
-    fetchApplications()
-  }, [selectedDepartmentId, isRestrictedDept, userDeptId]) // eslint-disable-line react-hooks/exhaustive-deps
+  const initialData = useMemo(() => {
+    if (initialApplications.length > 0 && !selectedDepartmentId) {
+      return initialApplications
+    }
+    return undefined
+  }, [initialApplications, selectedDepartmentId])
+
+  const { data: appData, isLoading: isQueryLoading, isFetching } = useCandidatesQuery({
+    params: queryParams,
+    initialData
+  })
+
+  const applications = appData || []
+  const isLoading = isQueryLoading || isFetching
+
+  const refetchApplications = () => {
+    queryClient.invalidateQueries({ queryKey: ['candidates'] })
+  }
 
   // Scope applications strictly for restricted department roles (e.g. Department Manager)
   const scopedApplications = useMemo(() => {
@@ -494,7 +484,7 @@ export default function CandidatesManager({
               : 'Vị trí tuyển dụng'
           }
           onSuccess={() => {
-            setApplications((prev) => prev.filter((item) => item._id !== rejectApp._id))
+            refetchApplications()
             showToast('Đã từ chối ứng viên thành công', 'success')
           }}
         />

@@ -5,7 +5,11 @@ import { useRouter } from "next/navigation";
 import dynamic from "next/dynamic";
 import JobRequestTable from "./JobRequestTable";
 import DeleteConfirmModal from "./DeleteConfirmModal";
-import { jobDescriptionApi } from "../services/job-description.api";
+import { useJobDescriptionsQuery } from "../hooks/useJobDescriptionsQuery";
+import {
+  useDeleteJobDescriptionMutation,
+  useUpdateJobDescriptionMutation,
+} from "../hooks/useJobDescriptionMutations";
 import {
   JobDescription,
   Department,
@@ -53,7 +57,14 @@ export default function JobRequestManager({
   const isDeptManager = currentUser?.role === UserRole.DEPARTMENT_MANAGER;
   const userDeptId = getDeptIdStr(currentUser?.departmentId);
 
-  const [jobs, setJobs] = useState<JobDescription[]>(initialJobs);
+  const { data: jobsData, isLoading } = useJobDescriptionsQuery({
+    initialData: initialJobs.length > 0 ? initialJobs : undefined
+  });
+  const jobs = jobsData || [];
+
+  const updateMutation = useUpdateJobDescriptionMutation();
+  const deleteMutation = useDeleteJobDescriptionMutation();
+
   const [activeJob, setActiveJob] = useState<JobDescription | null>(null);
 
   // Popup Modal States for Delete and Review
@@ -93,14 +104,13 @@ export default function JobRequestManager({
 
   // Promote approved requisition to JD_CREATED status
   const handlePromote = async (job: JobDescription) => {
-    const previousJobs = jobs
-    // Optimistic update — reflect change instantly in UI
-    setJobs((prev) => prev.map((j) => j._id === job._id ? { ...j, status: JobStatus.JD_CREATED } : j))
     try {
-      await jobDescriptionApi.updateJob(job._id, { status: JobStatus.JD_CREATED });
+      await updateMutation.mutateAsync({
+        id: job._id,
+        data: { status: JobStatus.JD_CREATED }
+      });
       showToast("Đã chuyển yêu cầu tuyển dụng thành Job thành công!", "success");
     } catch (err: any) {
-      setJobs(previousJobs) // rollback on error
       console.error("Lỗi khi chuyển trạng thái thành Job:", err);
       showToast(err.message || "Lỗi khi chuyển trạng thái thành Job", "error");
     }
@@ -108,14 +118,13 @@ export default function JobRequestManager({
 
   // Complete requisition
   const handleComplete = async (job: JobDescription) => {
-    const previousJobs = jobs
-    // Optimistic update
-    setJobs((prev) => prev.map((j) => j._id === job._id ? { ...j, status: JobStatus.COMPLETED } : j))
     try {
-      await jobDescriptionApi.updateJob(job._id, { status: JobStatus.COMPLETED });
+      await updateMutation.mutateAsync({
+        id: job._id,
+        data: { status: JobStatus.COMPLETED }
+      });
       showToast("Đã chuyển trạng thái yêu cầu sang Hoàn thành thành công!", "success");
     } catch (err: any) {
-      setJobs(previousJobs) // rollback on error
       console.error("Lỗi khi chuyển trạng thái Hoàn thành:", err);
       showToast(err.message || "Lỗi khi chuyển trạng thái Hoàn thành", "error");
     }
@@ -124,12 +133,12 @@ export default function JobRequestManager({
   // Handle review approval/rejection submission
   const handleReviewSubmit = async (status: JobStatus, note: string) => {
     if (!activeJob) return;
-    const previousJobs = jobs
     setIsSubmittingReview(true);
     try {
-      await jobDescriptionApi.updateJob(activeJob._id, { status, note });
-      // Optimistic update after successful API call
-      setJobs((prev) => prev.map((j) => j._id === activeJob._id ? { ...j, status, note } : j))
+      await updateMutation.mutateAsync({
+        id: activeJob._id,
+        data: { status, note }
+      });
       setIsReviewOpen(false);
       showToast(
         status === JobStatus.APPROVED
@@ -138,7 +147,6 @@ export default function JobRequestManager({
         "success"
       );
     } catch (err: any) {
-      setJobs(previousJobs) // rollback on error
       console.error("Lỗi xét duyệt:", err);
       showToast(err.message || "Lỗi khi lưu quyết định xét duyệt", "error");
       throw err;
@@ -152,8 +160,7 @@ export default function JobRequestManager({
     if (!activeJob) return;
     setIsDeleting(true);
     try {
-      await jobDescriptionApi.deleteJob(activeJob._id);
-      setJobs(jobs.filter((j) => j._id !== activeJob._id));
+      await deleteMutation.mutateAsync(activeJob._id);
       setIsDeleteOpen(false);
       showToast("Xóa yêu cầu tuyển dụng thành công!", "success");
     } catch (err: any) {

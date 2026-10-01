@@ -2,23 +2,21 @@
 
 import React, { useState, useEffect, useMemo, useRef } from 'react'
 import { useRouter } from 'next/navigation'
+import { useForm } from 'react-hook-form'
+import { zodResolver } from '@hookform/resolvers/zod'
 import {
   ArrowLeft,
   FileText,
   Send,
-  Building2,
   User,
   DollarSign,
-  Calendar,
   MapPin,
   Briefcase,
   Mail,
   Phone,
   CheckCircle2,
-  Clock,
   X,
-  Search,
-  Edit3
+  Search
 } from 'lucide-react'
 import {
   CustomInput,
@@ -33,6 +31,7 @@ import {
 import { offersApi } from '../services/offers.api'
 import { ContractType, OfferItem } from '../types/offer.types'
 import { Department } from '@/src/features/departments/types/department.types'
+import { offerSchema, OfferFormData } from '../schemas/offer.schema'
 
 interface CreateOfferPageContentProps {
   initialOfferId?: string
@@ -41,6 +40,12 @@ interface CreateOfferPageContentProps {
   initialApplications?: any[]
   initialDepartments?: Department[]
 }
+
+const DEFAULT_BENEFITS = `- Bảo hiểm sức khỏe toàn diện PTI
+- Thưởng lương tháng 13 & thưởng hiệu quả kinh doanh
+- Xét tăng lương định kỳ 2 lần/năm
+- Phụ cấp ăn trưa, gửi xe và teambuilding hàng quý
+- Trang bị máy tính làm việc hiệu năng cao (MacBook / Dell XPS)`
 
 export default function CreateOfferPageContent({
   initialOfferId,
@@ -55,39 +60,57 @@ export default function CreateOfferPageContent({
   const isEditMode = Boolean(initialOfferId || initialOffer?._id)
   const targetOfferId = initialOfferId || initialOffer?._id
 
-  // Unsaved changes state
-  const [isDirty, setIsDirty] = useState(false)
+  // Form Management with React Hook Form & Zod
+  const {
+    register,
+    handleSubmit,
+    setValue,
+    watch,
+    reset,
+    formState: { errors, isDirty }
+  } = useForm<OfferFormData>({
+    resolver: zodResolver(offerSchema),
+    defaultValues: {
+      applicationId: initialApplicationId || '',
+      positionTitle: '',
+      contractType: ContractType.FULL_TIME,
+      workLocation: 'Văn phòng chính - Tầng 8, Tòa nhà TalentCore, TP. Hồ Chí Minh',
+      salary: '20000000',
+      currency: 'VND',
+      probationDurationMonths: '2',
+      probationSalaryPercentage: '85',
+      startDate: '',
+      expirationDate: '',
+      benefits: DEFAULT_BENEFITS,
+      notes: '',
+      emailSubject: '',
+      offerLetterHtml: ''
+    }
+  })
+
+  // Watch form fields
+  const selectedApplicationId = watch('applicationId')
+  const positionTitle = watch('positionTitle')
+  const contractType = watch('contractType')
+  const workLocation = watch('workLocation')
+  const salary = watch('salary')
+  const currency = watch('currency')
+  const probationDurationMonths = watch('probationDurationMonths')
+  const probationSalaryPercentage = watch('probationSalaryPercentage')
+  const startDate = watch('startDate')
+  const expirationDate = watch('expirationDate')
+  const benefits = watch('benefits') || ''
+  const notes = watch('notes') || ''
+  const emailSubject = watch('emailSubject') || ''
+  const offerLetterHtml = watch('offerLetterHtml') || ''
+
+  // Unsaved changes modal state
   const [isUnsavedModalOpen, setIsUnsavedModalOpen] = useState(false)
   const pendingNavigationUrlRef = useRef<string>('/offers')
 
-  const [selectedApplicationId, setSelectedApplicationId] = useState<string>(
-    initialApplicationId || ''
-  )
   const [candidateSearchText, setCandidateSearchText] = useState('')
   const [isCandidateDropdownOpen, setIsCandidateDropdownOpen] = useState(false)
   const candidateInputRef = useRef<HTMLDivElement>(null)
-
-  const [positionTitle, setPositionTitle] = useState('')
-  const [contractType, setContractType] = useState<ContractType>(ContractType.FULL_TIME)
-  const [workLocation, setWorkLocation] = useState(
-    'Văn phòng chính - Tầng 8, Tòa nhà TalentCore, TP. Hồ Chí Minh'
-  )
-  const [salary, setSalary] = useState<string>('20000000')
-  const [currency] = useState('VND')
-  const [probationDurationMonths, setProbationDurationMonths] = useState('2')
-  const [probationSalaryPercentage, setProbationSalaryPercentage] = useState('85')
-  const [startDate, setStartDate] = useState<string>('')
-  const [expirationDate, setExpirationDate] = useState<string>('')
-  const [benefits, setBenefits] = useState<string>(
-    `- Bảo hiểm sức khỏe toàn diện PTI
-- Thưởng lương tháng 13 & thưởng hiệu quả kinh doanh
-- Xét tăng lương định kỳ 2 lần/năm
-- Phụ cấp ăn trưa, gửi xe và teambuilding hàng quý
-- Trang bị máy tính làm việc hiệu năng cao (MacBook / Dell XPS)`
-  )
-  const [notes, setNotes] = useState('')
-  const [emailSubject, setEmailSubject] = useState('')
-  const [offerLetterHtml, setOfferLetterHtml] = useState('')
   const [submitting, setSubmitting] = useState(false)
 
   // Populate data if in edit mode
@@ -97,25 +120,28 @@ export default function CreateOfferPageContent({
         typeof offer.applicationId === 'object'
           ? (offer.applicationId as any)._id || (offer.applicationId as any).id
           : offer.applicationId
-      setSelectedApplicationId(appId)
-      setPositionTitle(offer.positionTitle || '')
-      setContractType(offer.contractType || ContractType.FULL_TIME)
-      setWorkLocation(offer.workLocation || '')
-      setSalary(String(offer.salary || ''))
-      setProbationDurationMonths(String(offer.probationDurationMonths || '2'))
-      setProbationSalaryPercentage(String(offer.probationSalaryPercentage || '85'))
-      if (offer.startDate) {
-        setStartDate(offer.startDate.split('T')[0])
-      }
-      if (offer.expirationDate) {
-        setExpirationDate(offer.expirationDate.split('T')[0])
-      }
-      if (offer.benefits && offer.benefits.length > 0) {
-        setBenefits(offer.benefits.map((b) => (b.startsWith('-') ? b : `- ${b}`)).join('\n'))
-      }
-      setNotes(offer.notes || '')
-      setEmailSubject(offer.emailSubject || '')
-      setOfferLetterHtml(offer.offerLetterHtml || '')
+
+      const benefitsStr =
+        offer.benefits && offer.benefits.length > 0
+          ? offer.benefits.map((b) => (b.startsWith('-') ? b : `- ${b}`)).join('\n')
+          : DEFAULT_BENEFITS
+
+      reset({
+        applicationId: appId || '',
+        positionTitle: offer.positionTitle || '',
+        contractType: offer.contractType || ContractType.FULL_TIME,
+        workLocation: offer.workLocation || '',
+        salary: String(offer.salary || '20000000'),
+        currency: offer.currency || 'VND',
+        probationDurationMonths: String(offer.probationDurationMonths ?? '2'),
+        probationSalaryPercentage: String(offer.probationSalaryPercentage ?? '85'),
+        startDate: offer.startDate ? offer.startDate.split('T')[0] : '',
+        expirationDate: offer.expirationDate ? offer.expirationDate.split('T')[0] : '',
+        benefits: benefitsStr,
+        notes: offer.notes || '',
+        emailSubject: offer.emailSubject || '',
+        offerLetterHtml: offer.offerLetterHtml || ''
+      })
 
       const cand = offer.candidateId
       const name = cand?.userId?.name || cand?.profileName || 'Ứng viên'
@@ -138,7 +164,7 @@ export default function CreateOfferPageContent({
       }
       fetchOffer()
     }
-  }, [initialOffer, initialOfferId])
+  }, [initialOffer, initialOfferId, reset])
 
   // Set default dates if in create mode
   useEffect(() => {
@@ -149,9 +175,9 @@ export default function CreateOfferPageContent({
     const inThreeDays = new Date(today)
     inThreeDays.setDate(today.getDate() + 3)
 
-    setStartDate(inTwoWeeks.toISOString().split('T')[0])
-    setExpirationDate(inThreeDays.toISOString().split('T')[0])
-  }, [isEditMode])
+    setValue('startDate', inTwoWeeks.toISOString().split('T')[0], { shouldDirty: false })
+    setValue('expirationDate', inThreeDays.toISOString().split('T')[0], { shouldDirty: false })
+  }, [isEditMode, setValue])
 
   // Determine selected application
   const selectedApp = useMemo(() => {
@@ -211,9 +237,9 @@ export default function CreateOfferPageContent({
   // Auto set position title when job title changes in create mode
   useEffect(() => {
     if (!isEditMode && jobTitle && !positionTitle) {
-      setPositionTitle(jobTitle)
+      setValue('positionTitle', jobTitle)
     }
-  }, [isEditMode, jobTitle, positionTitle])
+  }, [isEditMode, jobTitle, positionTitle, setValue])
 
   // Synchronize candidate input text when selectedApp is found
   useEffect(() => {
@@ -303,7 +329,8 @@ export default function CreateOfferPageContent({
   }, [])
 
   const handleSelectCandidate = (app: any) => {
-    setSelectedApplicationId(app._id || app.id)
+    const appId = app._id || app.id
+    setValue('applicationId', appId, { shouldValidate: true, shouldDirty: true })
     const name =
       app.candidateName ||
       app.candidateId?.userId?.name ||
@@ -312,7 +339,6 @@ export default function CreateOfferPageContent({
     const title = app.jobTitle || app.jobDescriptionId?.title || ''
     setCandidateSearchText(title ? `${name} — ${title}` : name)
     setIsCandidateDropdownOpen(false)
-    setIsDirty(true)
   }
 
   const handleBackOrCancelClick = () => {
@@ -324,8 +350,8 @@ export default function CreateOfferPageContent({
     }
   }
 
-  // Generate Letter Subject & HTML Template
-  const generateTemplate = () => {
+  // Auto-generate template whenever essential fields change
+  useEffect(() => {
     const formattedSalary = Number(salary || 0).toLocaleString('vi-VN')
     const formattedProbationSalary = Math.round(
       (Number(salary || 0) * Number(probationSalaryPercentage || 85)) / 100
@@ -411,77 +437,59 @@ export default function CreateOfferPageContent({
 </div>
     `.trim()
 
-    setEmailSubject(subject)
-    setOfferLetterHtml(html)
-  }
-
-  // Auto-generate template whenever essential fields change
-  useEffect(() => {
-    generateTemplate()
+    setValue('emailSubject', subject, { shouldDirty: false })
+    setValue('offerLetterHtml', html, { shouldDirty: false })
   }, [
     candidateName,
     positionTitle,
+    jobTitle,
+    departmentName,
     salary,
     startDate,
     expirationDate,
     benefits,
     workLocation,
     probationDurationMonths,
-    probationSalaryPercentage
+    probationSalaryPercentage,
+    setValue
   ])
 
-  const handleSubmit = async (sendImmediately: boolean) => {
+  const onSave = async (formData: OfferFormData, sendImmediately: boolean) => {
     if (!selectedApp && !isEditMode) {
       showToast('Vui lòng chọn hồ sơ ứng viên nhận offer', 'error')
-      return
-    }
-    if (!positionTitle) {
-      showToast('Vui lòng nhập vị trí công việc chính thức', 'error')
-      return
-    }
-    if (!salary || Number(salary) <= 0) {
-      showToast('Vui lòng nhập mức lương hợp lệ', 'error')
-      return
-    }
-    if (!startDate) {
-      showToast('Vui lòng chọn ngày bắt đầu làm việc', 'error')
-      return
-    }
-    if (!expirationDate) {
-      showToast('Vui lòng chọn hạn chót phản hồi offer', 'error')
       return
     }
 
     try {
       setSubmitting(true)
 
-      const benefitsArray = benefits
+      const benefitsArray = (formData.benefits || '')
         .split('\n')
         .map((b) => b.trim())
         .filter(Boolean)
 
       if (isEditMode && targetOfferId) {
         await offersApi.updateOffer(targetOfferId, {
-          positionTitle,
-          contractType,
-          workLocation,
-          salary: Number(salary),
-          currency,
-          probationDurationMonths: Number(probationDurationMonths),
-          probationSalaryPercentage: Number(probationSalaryPercentage),
-          startDate: new Date(startDate).toISOString(),
-          expirationDate: new Date(expirationDate).toISOString(),
+          positionTitle: formData.positionTitle,
+          contractType: formData.contractType,
+          workLocation: formData.workLocation,
+          salary: Number(formData.salary),
+          currency: formData.currency,
+          probationDurationMonths: Number(formData.probationDurationMonths),
+          probationSalaryPercentage: Number(formData.probationSalaryPercentage),
+          startDate: new Date(formData.startDate).toISOString(),
+          expirationDate: new Date(formData.expirationDate).toISOString(),
           benefits: benefitsArray,
-          notes,
-          emailSubject: emailSubject || `Thư mời nhận việc vị trí ${positionTitle}`,
-          offerLetterHtml
+          notes: formData.notes,
+          emailSubject: formData.emailSubject || `Thư mời nhận việc vị trí ${formData.positionTitle}`,
+          offerLetterHtml: formData.offerLetterHtml
         })
 
         if (sendImmediately) {
           await offersApi.sendOffer(targetOfferId)
         }
 
-        setIsDirty(false)
+        reset(formData)
         showToast(
           sendImmediately
             ? 'Đã cập nhật và gửi đề nghị thành công đến ứng viên!'
@@ -511,23 +519,23 @@ export default function CreateOfferPageContent({
           candidateId,
           jobDescriptionId,
           departmentId: departmentId || '660000000000000000000000',
-          positionTitle,
-          contractType,
-          workLocation,
-          salary: Number(salary),
-          currency,
-          probationDurationMonths: Number(probationDurationMonths),
-          probationSalaryPercentage: Number(probationSalaryPercentage),
-          startDate: new Date(startDate).toISOString(),
-          expirationDate: new Date(expirationDate).toISOString(),
+          positionTitle: formData.positionTitle,
+          contractType: formData.contractType,
+          workLocation: formData.workLocation,
+          salary: Number(formData.salary),
+          currency: formData.currency,
+          probationDurationMonths: Number(formData.probationDurationMonths),
+          probationSalaryPercentage: Number(formData.probationSalaryPercentage),
+          startDate: new Date(formData.startDate).toISOString(),
+          expirationDate: new Date(formData.expirationDate).toISOString(),
           benefits: benefitsArray,
-          notes,
-          emailSubject: emailSubject || `Thư mời nhận việc vị trí ${positionTitle}`,
-          offerLetterHtml,
+          notes: formData.notes,
+          emailSubject: formData.emailSubject || `Thư mời nhận việc vị trí ${formData.positionTitle}`,
+          offerLetterHtml: formData.offerLetterHtml || '',
           sendImmediately
         })
 
-        setIsDirty(false)
+        reset(formData)
         showToast(
           sendImmediately
             ? 'Đã gửi lời mời nhận việc thành công đến ứng viên!'
@@ -536,7 +544,6 @@ export default function CreateOfferPageContent({
         )
       }
 
-      // Redirect back to offers management page after short delay
       setTimeout(() => {
         router.push('/offers')
       }, 1000)
@@ -544,6 +551,13 @@ export default function CreateOfferPageContent({
       showToast(err.message || 'Lỗi khi lưu đề nghị nhận việc', 'error')
     } finally {
       setSubmitting(false)
+    }
+  }
+
+  const onInvalid = (errs: any) => {
+    const firstKey = Object.keys(errs)[0]
+    if (firstKey && errs[firstKey]?.message) {
+      showToast(errs[firstKey].message, 'error')
     }
   }
 
@@ -589,7 +603,7 @@ export default function CreateOfferPageContent({
             type="button"
             variant="outline"
             size="sm"
-            onClick={() => handleSubmit(false)}
+            onClick={handleSubmit((data) => onSave(data, false), onInvalid)}
             disabled={submitting}
           >
             {isEditMode ? 'Lưu thay đổi' : 'Lưu bản nháp'}
@@ -598,7 +612,7 @@ export default function CreateOfferPageContent({
             type="button"
             variant="primary"
             size="sm"
-            onClick={() => handleSubmit(true)}
+            onClick={handleSubmit((data) => onSave(data, true), onInvalid)}
             disabled={submitting}
             icon={Send}
           >
@@ -628,12 +642,12 @@ export default function CreateOfferPageContent({
                 label="Chọn hồ sơ ứng viên nhận Offer"
                 required
                 value={candidateSearchText}
+                error={errors.applicationId?.message}
                 onChange={(e) => {
                   setCandidateSearchText(e.target.value)
                   setIsCandidateDropdownOpen(true)
-                  setIsDirty(true)
                   if (!e.target.value) {
-                    setSelectedApplicationId('')
+                    setValue('applicationId', '', { shouldValidate: true })
                   }
                 }}
                 onFocus={() => setIsCandidateDropdownOpen(true)}
@@ -645,9 +659,8 @@ export default function CreateOfferPageContent({
                       type="button"
                       onClick={() => {
                         setCandidateSearchText('')
-                        setSelectedApplicationId('')
+                        setValue('applicationId', '', { shouldValidate: true })
                         setIsCandidateDropdownOpen(true)
-                        setIsDirty(true)
                       }}
                       className="text-slate-400 hover:text-slate-600 p-1 cursor-pointer"
                       title="Xóa lựa chọn"
@@ -759,11 +772,8 @@ export default function CreateOfferPageContent({
                 <CustomInput
                   label="Vị trí công tác chính thức"
                   required
-                  value={positionTitle}
-                  onChange={(e) => {
-                    setPositionTitle(e.target.value)
-                    setIsDirty(true)
-                  }}
+                  {...register('positionTitle')}
+                  error={errors.positionTitle?.message}
                   placeholder="Ví dụ: Senior Frontend Developer"
                 />
               </div>
@@ -779,9 +789,9 @@ export default function CreateOfferPageContent({
                   ]}
                   value={contractType}
                   onChange={(val) => {
-                    setContractType(val as ContractType)
-                    setIsDirty(true)
+                    setValue('contractType', val as ContractType, { shouldValidate: true })
                   }}
+                  error={errors.contractType?.message}
                 />
               </div>
 
@@ -789,11 +799,8 @@ export default function CreateOfferPageContent({
                 <CustomInput
                   label="Địa điểm làm việc"
                   required
-                  value={workLocation}
-                  onChange={(e) => {
-                    setWorkLocation(e.target.value)
-                    setIsDirty(true)
-                  }}
+                  {...register('workLocation')}
+                  error={errors.workLocation?.message}
                   placeholder="Địa chỉ làm việc chính thức của ứng viên"
                   icon={<MapPin className="w-4 h-4 text-slate-400" />}
                 />
@@ -804,11 +811,8 @@ export default function CreateOfferPageContent({
                   label="Mức lương chính thức (VND/tháng)"
                   required
                   type="number"
-                  value={salary}
-                  onChange={(e) => {
-                    setSalary(e.target.value)
-                    setIsDirty(true)
-                  }}
+                  {...register('salary')}
+                  error={errors.salary?.message}
                   placeholder="20000000"
                   icon={<DollarSign className="w-4 h-4 text-slate-400" />}
                   helperText={`Đọc: ${Number(salary || 0).toLocaleString('vi-VN')} ${currency} (Gross)`}
@@ -820,11 +824,8 @@ export default function CreateOfferPageContent({
                   <CustomInput
                     label="Thử việc (Tháng)"
                     type="number"
-                    value={probationDurationMonths}
-                    onChange={(e) => {
-                      setProbationDurationMonths(e.target.value)
-                      setIsDirty(true)
-                    }}
+                    {...register('probationDurationMonths')}
+                    error={errors.probationDurationMonths?.message}
                     placeholder="2"
                   />
                 </div>
@@ -832,11 +833,8 @@ export default function CreateOfferPageContent({
                   <CustomInput
                     label="% Lương thử việc"
                     type="number"
-                    value={probationSalaryPercentage}
-                    onChange={(e) => {
-                      setProbationSalaryPercentage(e.target.value)
-                      setIsDirty(true)
-                    }}
+                    {...register('probationSalaryPercentage')}
+                    error={errors.probationSalaryPercentage?.message}
                     placeholder="85"
                   />
                 </div>
@@ -848,9 +846,9 @@ export default function CreateOfferPageContent({
                   required
                   value={startDate}
                   onChange={(date) => {
-                    setStartDate(date)
-                    setIsDirty(true)
+                    setValue('startDate', date, { shouldValidate: true })
                   }}
+                  error={errors.startDate?.message}
                   placeholder="Chọn ngày bắt đầu"
                 />
               </div>
@@ -861,9 +859,9 @@ export default function CreateOfferPageContent({
                   required
                   value={expirationDate}
                   onChange={(date) => {
-                    setExpirationDate(date)
-                    setIsDirty(true)
+                    setValue('expirationDate', date, { shouldValidate: true })
                   }}
+                  error={errors.expirationDate?.message}
                   placeholder="Chọn hạn chót phản hồi"
                 />
               </div>
@@ -886,11 +884,8 @@ export default function CreateOfferPageContent({
                 <CustomTextarea
                   label="Quyền lợi & Chế độ đãi ngộ (Mỗi dòng một quyền lợi)"
                   rows={5}
-                  value={benefits}
-                  onChange={(e) => {
-                    setBenefits(e.target.value)
-                    setIsDirty(true)
-                  }}
+                  {...register('benefits')}
+                  error={errors.benefits?.message}
                   placeholder="Nhập danh sách quyền lợi (thưởng, bảo hiểm, đào tạo...)"
                 />
               </div>
@@ -898,11 +893,8 @@ export default function CreateOfferPageContent({
               <div>
                 <CustomInput
                   label="Ghi chú nội bộ (Chỉ HR & Ban quản lý xem, không gửi ứng viên)"
-                  value={notes}
-                  onChange={(e) => {
-                    setNotes(e.target.value)
-                    setIsDirty(true)
-                  }}
+                  {...register('notes')}
+                  error={errors.notes?.message}
                   placeholder="Ghi chú thêm về thỏa thuận lương hoặc đề xuất của phòng ban..."
                 />
               </div>
@@ -925,11 +917,8 @@ export default function CreateOfferPageContent({
             <div>
               <CustomInput
                 label="Tiêu đề email thư mời"
-                value={emailSubject}
-                onChange={(e) => {
-                  setEmailSubject(e.target.value)
-                  setIsDirty(true)
-                }}
+                {...register('emailSubject')}
+                error={errors.emailSubject?.message}
                 placeholder="Tiêu đề email gửi đến ứng viên"
               />
             </div>
@@ -951,7 +940,6 @@ export default function CreateOfferPageContent({
         onClose={() => setIsUnsavedModalOpen(false)}
         onCancel={() => setIsUnsavedModalOpen(false)}
         onConfirm={() => {
-          setIsDirty(false)
           setIsUnsavedModalOpen(false)
           router.push(pendingNavigationUrlRef.current || '/offers')
         }}

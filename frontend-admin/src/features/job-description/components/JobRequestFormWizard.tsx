@@ -49,6 +49,11 @@ import { useAuth } from '@/src/providers/AuthProvider'
 import { UserRole } from '@/src/features/users/types/user.types'
 import UnsavedChangesModal from './UnsavedChangesModal'
 import CriteriaBenchmarkHint from './CriteriaBenchmarkHint'
+import {
+  jobRequestStep1Schema,
+  jobRequestStep2Schema,
+  jobRequestFullSchema
+} from '../schemas/job-request.schema'
 
 interface JobRequestFormWizardProps {
   mode: 'create' | 'edit'
@@ -660,30 +665,39 @@ export default function JobRequestFormWizard({
     setError(null)
   }
 
-  // Form step navigation & validation
+  // Form step navigation & validation with Zod schemas
   const handleNextStep = (e?: React.MouseEvent) => {
     if (e) e.preventDefault()
     setError(null)
     if (step === 1) {
-      if (!title.trim()) return setError('Tên vị trí không được để trống')
-      if (!departmentId) return setError('Hãy chọn một phòng ban')
-      if (!location.trim()) return setError('Địa điểm không được để trống')
-      if (minimumSalary === '' || maximumSalary === '') return setError('Vui lòng nhập mức lương')
-      if (Number(minimumSalary) > Number(maximumSalary))
-        return setError('Lương tối thiểu không được lớn hơn lương tối đa')
-      if (criteria.length === 0) return setError('Thêm ít nhất một tiêu chí đánh giá cho công việc')
-
-      const sumWeights = criteria.reduce((sum, c) => sum + (Number(c.weight) || 0), 0)
-      if (Math.abs(sumWeights - 100) > 0.01) {
-        return setError(
-          `Tổng trọng số tất cả các tiêu chí phải bằng đúng 100% (Hiện tại: ${sumWeights}%)`
-        )
+      const result = jobRequestStep1Schema.safeParse({
+        title,
+        departmentId,
+        positionId,
+        location,
+        employmentType,
+        minimumSalary,
+        maximumSalary,
+        headcount,
+        priority,
+        experienceLevel,
+        applicationDeadline,
+        requiredSkills: selectedSkills,
+        criteria
+      })
+      if (!result.success) {
+        return setError(result.error.issues[0]?.message || 'Thông tin bước 1 chưa hợp lệ')
       }
       setStep(2)
     } else if (step === 2) {
-      if (!description.trim()) return setError('Mô tả công việc không được để trống')
-      if (!requirements.trim()) return setError('Yêu cầu công việc không được để trống')
-      if (!benefits.trim()) return setError('Quyền lợi không được để trống')
+      const result = jobRequestStep2Schema.safeParse({
+        description,
+        requirements,
+        benefits
+      })
+      if (!result.success) {
+        return setError(result.error.issues[0]?.message || 'Thông tin bước 2 chưa hợp lệ')
+      }
       setStep(3)
     }
   }
@@ -736,56 +750,52 @@ export default function JobRequestFormWizard({
   const executeSave = async () => {
     setError(null)
 
-    // Validate Step 1
-    if (!title.trim()) {
-      setStep(1)
-      return setError('Tên vị trí không được để trống')
-    }
-    if (!departmentId) {
-      setStep(1)
-      return setError('Hãy chọn một phòng ban')
-    }
-    if (!location.trim()) {
-      setStep(1)
-      return setError('Địa điểm không được để trống')
-    }
-    if (minimumSalary === '' || maximumSalary === '') {
-      setStep(1)
-      return setError('Vui lòng nhập mức lương')
-    }
-    if (Number(minimumSalary) > Number(maximumSalary)) {
-      setStep(1)
-      return setError('Lương tối thiểu không được lớn hơn lương tối đa')
-    }
-    if (criteria.length === 0) {
-      setStep(1)
-      return setError('Thêm ít nhất một tiêu chí đánh giá cho công việc')
-    }
+    const validation = jobRequestFullSchema.safeParse({
+      title,
+      departmentId,
+      positionId: positionId || undefined,
+      location,
+      employmentType,
+      minimumSalary,
+      maximumSalary,
+      headcount,
+      priority,
+      experienceLevel,
+      applicationDeadline,
+      requiredSkills: selectedSkills,
+      criteria,
+      description,
+      requirements,
+      benefits,
+      pipelineTemplateId: selectedPipelineTemplateId,
+      status
+    })
 
-    const sumWeights = criteria.reduce((sum, c) => sum + (Number(c.weight) || 0), 0)
-    if (Math.abs(sumWeights - 100) > 0.01) {
-      setStep(1)
-      return setError(`Tổng trọng số tất cả các tiêu chí phải bằng đúng 100% (Hiện tại: ${sumWeights}%)`)
-    }
-
-    // Validate Step 2
-    if (!description.trim()) {
-      setStep(2)
-      return setError('Mô tả công việc không được để trống')
-    }
-    if (!requirements.trim()) {
-      setStep(2)
-      return setError('Yêu cầu công việc không được để trống')
-    }
-    if (!benefits.trim()) {
-      setStep(2)
-      return setError('Quyền lợi không được để trống')
-    }
-
-    // Validate Step 3
-    if (!selectedPipelineTemplateId) {
-      setStep(3)
-      return setError('Vui lòng chọn mẫu Quy trình phỏng vấn')
+    if (!validation.success) {
+      const issue = validation.error.issues[0]
+      const path = issue.path[0] as string
+      if (
+        [
+          'title',
+          'departmentId',
+          'positionId',
+          'location',
+          'employmentType',
+          'minimumSalary',
+          'maximumSalary',
+          'headcount',
+          'priority',
+          'experienceLevel',
+          'criteria'
+        ].includes(path)
+      ) {
+        setStep(1)
+      } else if (['description', 'requirements', 'benefits'].includes(path)) {
+        setStep(2)
+      } else {
+        setStep(3)
+      }
+      return setError(issue.message)
     }
 
     const payload = {
