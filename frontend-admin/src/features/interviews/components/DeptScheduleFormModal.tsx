@@ -2,12 +2,18 @@
 
 import { useState, useEffect, useMemo } from "react";
 import { createPortal } from "react-dom";
+import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
 import { X, Calendar, Clock, Video, MapPin, UserCheck, Loader2 } from "lucide-react";
 import { InterviewItem, LocationType } from "../types/interview.types";
 import { interviewsApi } from "../services/interviews.api";
-import { userApi } from "@/src/features/users/services/user.api";
 import { User, UserRole, USER_ROLE_LABEL } from "@/src/features/users/types/user.types";
+import { useEmployeesQuery } from "@/src/features/users/hooks/useEmployeesQuery";
 import { useAuth } from "@/src/providers/AuthProvider";
+import {
+  interviewScheduleSchema,
+  InterviewScheduleFormData,
+} from "../schemas/interview-schedule.schema";
 import {
   CustomDatePicker,
   CustomTimePicker,
@@ -33,26 +39,13 @@ export function DeptScheduleFormModal({
   const isHrAdmin =
     currentUser?.role === UserRole.HR_ADMIN || (currentUser?.role as string) === "ADMIN";
 
-  const [date, setDate] = useState("");
-  const [startTime, setStartTime] = useState("09:00");
-  const [endTime, setEndTime] = useState("10:00");
-  const [locationType, setLocationType] = useState<LocationType>(LocationType.ONLINE);
-  const [meetingLink, setMeetingLink] = useState("");
-  const [offsiteLocation, setOffsiteLocation] = useState("");
-  const [selectedInterviewerId, setSelectedInterviewerId] = useState("");
-
-  const [staffList, setStaffList] = useState<User[]>([]);
-  const [isLoadingStaff, setIsLoadingStaff] = useState(false);
-  const [isSubmitting, setIsSubmitting] = useState(false);
+  const { data: staffList = [], isLoading: isLoadingStaff } = useEmployeesQuery({ enabled: isOpen });
+  const [topError, setTopError] = useState("");
   const [isMounted, setIsMounted] = useState(false);
 
   useEffect(() => {
     setIsMounted(true);
   }, []);
-
-  // Errors state for validation
-  const [errors, setErrors] = useState<Record<string, string>>({});
-  const [topError, setTopError] = useState("");
 
   // Extract Info
   const cand = interview?.candidateId;
@@ -82,83 +75,84 @@ export function DeptScheduleFormModal({
     return `https://meet.jit.si/TalentCore-${dSlug}-${cSlug}-${jSlug}`;
   };
 
-  // Load all staff employees
-  useEffect(() => {
-    if (!isOpen) return;
-    const fetchStaff = async () => {
-      try {
-        setIsLoadingStaff(true);
-        const data = await userApi.getEmployees();
-        setStaffList(data);
-      } catch (err) {
-        console.error("Lỗi khi tải danh sách nhân sự:", err);
-      } finally {
-        setIsLoadingStaff(false);
-      }
-    };
-    fetchStaff();
-  }, [isOpen]);
+  // React Hook Form setup with Zod validation schema
+  const {
+    register,
+    handleSubmit,
+    setValue,
+    watch,
+    reset,
+    formState: { errors, isSubmitting },
+  } = useForm<InterviewScheduleFormData>({
+    resolver: zodResolver(interviewScheduleSchema),
+    defaultValues: {
+      date: new Date().toISOString().split("T")[0],
+      startTime: "09:00",
+      endTime: "10:00",
+      locationType: LocationType.ONLINE,
+      meetingLink: "",
+      offsiteLocation: "Tầng 1, Tòa nhà Landmark 81, Nguyễn Hữu Cảnh, HCM",
+      interviewerId: "",
+    },
+  });
+
+  const locationType = watch("locationType");
+  const date = watch("date");
+  const startTime = watch("startTime");
+  const endTime = watch("endTime");
+  const meetingLink = watch("meetingLink");
+  const offsiteLocation = watch("offsiteLocation");
+  const selectedInterviewerId = watch("interviewerId");
 
   // Populate form on interview change
   useEffect(() => {
     if (interview && isOpen) {
-      setErrors({});
       setTopError("");
 
+      let defaultDate = new Date().toISOString().split("T")[0];
       if (interview.date) {
         const d = new Date(interview.date);
         if (!isNaN(d.getTime())) {
-          setDate(d.toISOString().split("T")[0]);
+          defaultDate = d.toISOString().split("T")[0];
         }
-      } else {
-        setDate(new Date().toISOString().split("T")[0]);
       }
-
-      if (interview.startTime) setStartTime(interview.startTime);
-      if (interview.endTime) setEndTime(interview.endTime);
 
       const locType = interview.locationType || LocationType.ONLINE;
-      setLocationType(locType);
-
-      if (locType === LocationType.ONLINE) {
-        const autoUrl = interview.meetingLink || generateJitsiUrl(deptName, candName, jobTitle);
-        setMeetingLink(autoUrl);
-        setOffsiteLocation("Tầng 1, Tòa nhà Landmark 81, Nguyễn Hữu Cảnh, HCM");
-      } else {
-        setOffsiteLocation(interview.offsiteLocation || "Tầng 1, Tòa nhà Landmark 81, Nguyễn Hữu Cảnh, HCM");
-        setMeetingLink(generateJitsiUrl(deptName, candName, jobTitle));
-      }
+      const autoUrl = interview.meetingLink || generateJitsiUrl(deptName, candName, jobTitle);
+      const autoOffsite = interview.offsiteLocation || "Tầng 1, Tòa nhà Landmark 81, Nguyễn Hữu Cảnh, HCM";
 
       const existingInterviewerId =
         typeof interview.interviewerId === "object"
           ? interview.interviewerId?._id
-          : interview.interviewerId;
+          : interview.interviewerId || "";
 
-      if (existingInterviewerId) {
-        setSelectedInterviewerId(existingInterviewerId);
-      } else {
-        setSelectedInterviewerId("");
-      }
+      reset({
+        date: defaultDate,
+        startTime: interview.startTime || "09:00",
+        endTime: interview.endTime || "10:00",
+        locationType: locType,
+        meetingLink: locType === LocationType.ONLINE ? autoUrl : "",
+        offsiteLocation: locType === LocationType.OFFSITE ? autoOffsite : "Tầng 1, Tòa nhà Landmark 81, Nguyễn Hữu Cảnh, HCM",
+        interviewerId: existingInterviewerId,
+      });
     }
-  }, [interview, isOpen]);
+  }, [interview, isOpen, deptName, candName, jobTitle, reset]);
 
   // Handle Location Type change
   const handleLocationTypeChange = (type: LocationType) => {
-    setLocationType(type);
-    setErrors((prev) => ({ ...prev, location: "" }));
-
+    setValue("locationType", type, { shouldValidate: true });
     if (type === LocationType.ONLINE) {
       if (!meetingLink) {
-        setMeetingLink(generateJitsiUrl(deptName, candName, jobTitle));
+        setValue("meetingLink", generateJitsiUrl(deptName, candName, jobTitle), { shouldValidate: true });
       }
     } else {
       if (!offsiteLocation) {
-        setOffsiteLocation("Tầng 1, Tòa nhà Landmark 81, Nguyễn Hữu Cảnh, HCM");
+        setValue("offsiteLocation", "Tầng 1, Tòa nhà Landmark 81, Nguyễn Hữu Cảnh, HCM", { shouldValidate: true });
       }
     }
   };
 
-  // Filter department staff (including Department Manager and all members of department)
+  // Filter department staff
   const filteredStaffOptions: CustomSelectOption[] = useMemo(() => {
     let list = staffList;
     if (deptId) {
@@ -180,63 +174,18 @@ export function DeptScheduleFormModal({
 
   if (!isOpen || !interview || !isMounted) return null;
 
-  // Validation function
-  const validateForm = () => {
-    const newErrors: Record<string, string> = {};
-
-    if (!date) {
-      newErrors.date = "Vui lòng chọn ngày phỏng vấn";
-    }
-
-    if (!startTime) {
-      newErrors.startTime = "Vui lòng chọn giờ bắt đầu";
-    }
-
-    if (!endTime) {
-      newErrors.endTime = "Vui lòng chọn giờ kết thúc";
-    } else if (startTime && endTime <= startTime) {
-      newErrors.endTime = "Giờ kết thúc phải lớn hơn giờ bắt đầu";
-    }
-
-    if (locationType === LocationType.ONLINE) {
-      if (!meetingLink.trim()) {
-        newErrors.location = "Vui lòng nhập link phỏng vấn online";
-      }
-    } else {
-      if (!offsiteLocation.trim()) {
-        newErrors.location = "Vui lòng nhập địa chỉ phỏng vấn trực tiếp";
-      }
-    }
-
-    if (!selectedInterviewerId) {
-      newErrors.interviewer = "Vui lòng chọn Người phỏng vấn thuộc phòng ban";
-    }
-
-    setErrors(newErrors);
-    return Object.keys(newErrors).length === 0;
-  };
-
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const onSubmit = async (data: InterviewScheduleFormData) => {
     setTopError("");
-
-    if (!validateForm()) {
-      setTopError("Vui lòng điền đầy đủ các thông tin bắt buộc.");
-      return;
-    }
-
     try {
-      setIsSubmitting(true);
-
       await interviewsApi.submitDeptSchedule(interview._id, {
-        date,
-        startTime,
-        endTime,
-        locationType,
-        meetingLink: locationType === LocationType.ONLINE ? meetingLink.trim() : undefined,
-        offsiteLocation: locationType === LocationType.OFFSITE ? offsiteLocation.trim() : undefined,
-        interviewerId: selectedInterviewerId,
-        interviewerIds: [selectedInterviewerId],
+        date: data.date,
+        startTime: data.startTime,
+        endTime: data.endTime,
+        locationType: data.locationType,
+        meetingLink: data.locationType === LocationType.ONLINE ? data.meetingLink?.trim() : undefined,
+        offsiteLocation: data.locationType === LocationType.OFFSITE ? data.offsiteLocation?.trim() : undefined,
+        interviewerId: data.interviewerId,
+        interviewerIds: [data.interviewerId],
         isHrAdmin: !!isHrAdmin,
         byHr: !!isHrAdmin,
       });
@@ -246,8 +195,6 @@ export function DeptScheduleFormModal({
     } catch (err: any) {
       console.error("Lỗi khi gửi lịch phỏng vấn:", err);
       setTopError(err?.message || "Có lỗi xảy ra khi gửi lịch phỏng vấn. Vui lòng thử lại!");
-    } finally {
-      setIsSubmitting(false);
     }
   };
 
@@ -279,8 +226,8 @@ export function DeptScheduleFormModal({
           </button>
         </div>
 
-        {/* Form Body */}
-        <form onSubmit={handleSubmit} className="p-6 space-y-4 overflow-y-auto">
+        {/* Form Body with React Hook Form + Zod */}
+        <form onSubmit={handleSubmit(onSubmit)} className="p-6 space-y-4 overflow-y-auto" noValidate>
           {topError && (
             <div className="p-3 bg-rose-50 text-rose-700 border border-rose-200 rounded-2xl text-xs font-bold">
               {topError}
@@ -293,10 +240,9 @@ export function DeptScheduleFormModal({
             required
             value={date}
             onChange={(val) => {
-              setDate(val);
-              setErrors((prev) => ({ ...prev, date: "" }));
+              setValue("date", val, { shouldValidate: true });
             }}
-            error={errors.date}
+            error={errors.date?.message}
           />
 
           {/* Khung giờ Phỏng vấn */}
@@ -306,10 +252,9 @@ export function DeptScheduleFormModal({
               required
               value={startTime}
               onChange={(val) => {
-                setStartTime(val);
-                setErrors((prev) => ({ ...prev, startTime: "" }));
+                setValue("startTime", val, { shouldValidate: true });
               }}
-              error={errors.startTime}
+              error={errors.startTime?.message}
             />
 
             <CustomTimePicker
@@ -317,10 +262,9 @@ export function DeptScheduleFormModal({
               required
               value={endTime}
               onChange={(val) => {
-                setEndTime(val);
-                setErrors((prev) => ({ ...prev, endTime: "" }));
+                setValue("endTime", val, { shouldValidate: true });
               }}
-              error={errors.endTime}
+              error={errors.endTime?.message}
             />
           </div>
 
@@ -366,12 +310,9 @@ export function DeptScheduleFormModal({
               placeholder="https://meet.jit.si/..."
               value={meetingLink}
               disabled={true}
-              onChange={(e) => {
-                setMeetingLink(e.target.value);
-                setErrors((prev) => ({ ...prev, location: "" }));
-              }}
-              error={errors.location}
+              error={errors.meetingLink?.message}
               icon={<Video size={16} />}
+              {...register("meetingLink")}
             />
           ) : (
             <CustomInput
@@ -381,12 +322,9 @@ export function DeptScheduleFormModal({
               placeholder="Tầng 1, Tòa nhà Landmark 81, Nguyễn Hữu Cảnh, HCM"
               value={offsiteLocation}
               disabled={false}
-              onChange={(e) => {
-                setOffsiteLocation(e.target.value);
-                setErrors((prev) => ({ ...prev, location: "" }));
-              }}
-              error={errors.location}
+              error={errors.offsiteLocation?.message}
               icon={<MapPin size={16} />}
+              {...register("offsiteLocation")}
             />
           )}
 
@@ -397,11 +335,10 @@ export function DeptScheduleFormModal({
             placeholder={isLoadingStaff ? "Đang tải danh sách nhân sự..." : "-- Chọn người phỏng vấn --"}
             value={selectedInterviewerId}
             onChange={(val) => {
-              setSelectedInterviewerId(val);
-              setErrors((prev) => ({ ...prev, interviewer: "" }));
+              setValue("interviewerId", val, { shouldValidate: true });
             }}
             options={filteredStaffOptions}
-            error={errors.interviewer}
+            error={errors.interviewerId?.message}
             icon={<UserCheck size={16} />}
             disabled={isLoadingStaff}
           />
@@ -431,4 +368,3 @@ export function DeptScheduleFormModal({
 
   return createPortal(modalContent, document.body);
 }
-

@@ -4,8 +4,9 @@ import { useState, useEffect, useMemo } from 'react'
 import dynamic from 'next/dynamic'
 import { Loader2, Calendar as CalendarIcon } from 'lucide-react'
 import { InterviewItem, InterviewStatus, InterviewResult } from '../types/interview.types'
-import { interviewsApi } from '../services/interviews.api'
-import { departmentApi } from '@/src/features/departments/services/department.api'
+import { useInterviewsQuery } from '../hooks/useInterviewsQuery'
+import { useDepartmentsQuery } from '@/src/features/departments/hooks/useDepartmentsQuery'
+import { useQueryClient } from '@tanstack/react-query'
 import { Department } from '@/src/features/departments/types/department.types'
 import { candidateApi } from '@/src/features/candidates/services/candidate.api'
 import { useAuth } from '@/src/providers/AuthProvider'
@@ -143,11 +144,20 @@ export default function InterviewsManager({
     setPositionFilter('ALL')
   }
 
-  const [departments, setDepartments] = useState<Department[]>(initialDepartments)
-  const [interviews, setInterviews] = useState<InterviewItem[]>(initialInterviews)
+  const queryClient = useQueryClient()
+  const { data: deptData } = useDepartmentsQuery({ initialData: initialDepartments })
+  const departments = deptData || initialDepartments
+
+  const { data: interviewData, isLoading } = useInterviewsQuery({
+    initialData: initialInterviews.length > 0 ? initialInterviews : undefined
+  })
+  const interviews = interviewData || []
+
   const [candidateApplications, setCandidateApplications] = useState<any[]>(initialApplications)
-  // Start as not loading when initial data is provided via SSR
-  const [isLoading, setIsLoading] = useState<boolean>(initialInterviews.length === 0)
+
+  const refetchInterviews = () => {
+    queryClient.invalidateQueries({ queryKey: ['interviews'] })
+  }
 
   // Calendar Month Navigation
   const [currentMonthDate, setCurrentMonthDate] = useState<Date>(new Date()) // Default Current Month
@@ -226,20 +236,10 @@ export default function InterviewsManager({
   // Active dropdown action ID
   const [activeMenuId, setActiveMenuId] = useState<string | null>(null)
 
-  // Load department list and candidate applications — skipped if provided via SSR
+  // Load candidate applications if not hydrated from SSR
   useEffect(() => {
-    if (initialDepartments.length > 0 && initialApplications.length > 0) return // Already hydrated from SSR
-    const loadDepartments = async () => {
-      if (initialDepartments.length > 0) return
-      try {
-        const list = await departmentApi.getAll()
-        setDepartments(list)
-      } catch (err) {
-        console.error('Lỗi khi lấy danh sách phòng ban:', err)
-      }
-    }
+    if (initialApplications.length > 0) return
     const loadApplications = async () => {
-      if (initialApplications.length > 0) return
       try {
         const apps = await candidateApi.getCandidates()
         setCandidateApplications(apps || [])
@@ -247,9 +247,8 @@ export default function InterviewsManager({
         console.error('Lỗi khi lấy danh sách ứng viên:', err)
       }
     }
-    loadDepartments()
     loadApplications()
-  }, []) // eslint-disable-line react-hooks/exhaustive-deps
+  }, [initialApplications])
 
   // Lock department filter if user is Department Manager or Employee
   useEffect(() => {
@@ -257,30 +256,6 @@ export default function InterviewsManager({
       setDepartmentFilter(userDeptId)
     }
   }, [userDeptId, isDeptManager, isEmployee])
-
-  const fetchInterviews = async () => {
-    setIsLoading(true)
-    try {
-      const data = await interviewsApi.getInterviews()
-      setInterviews(data)
-      if (selectedDetailInterview) {
-        const updated = data.find((i) => i._id === selectedDetailInterview._id)
-        if (updated) {
-          setSelectedDetailInterview(updated)
-        }
-      }
-    } catch (err) {
-      console.error('Lỗi khi lấy danh sách phỏng vấn:', err)
-    } finally {
-      setIsLoading(false)
-    }
-  }
-
-  useEffect(() => {
-    // Skip initial fetch if data was already provided via SSR
-    if (initialInterviews.length > 0) return
-    fetchInterviews()
-  }, []) // eslint-disable-line react-hooks/exhaustive-deps
 
   // Dynamic positions options based on current interviews & active department filter
   const availablePositions = useMemo(
@@ -544,7 +519,7 @@ export default function InterviewsManager({
         isOpen={isDeptScheduleModalOpen}
         onClose={() => setIsDeptScheduleModalOpen(false)}
         interview={selectedDeptScheduleInterview}
-        onSuccess={fetchInterviews}
+        onSuccess={refetchInterviews}
       />
 
       {/* HR Duyệt lịch xem trước Modal */}
@@ -552,7 +527,7 @@ export default function InterviewsManager({
         isOpen={isHrApproveModalOpen}
         onClose={() => setIsHrApproveModalOpen(false)}
         interview={selectedHrApproveInterview}
-        onSuccess={fetchInterviews}
+        onSuccess={refetchInterviews}
       />
 
       {/* Modal Từ chối CV của Trưởng phòng */}
@@ -566,7 +541,7 @@ export default function InterviewsManager({
           'Ứng viên'
         }
         jobTitle={selectedRejectDeptCvInterview?.jobDescriptionId?.title || 'Vị trí tuyển dụng'}
-        onSuccess={fetchInterviews}
+        onSuccess={refetchInterviews}
       />
 
       {/* Modal HR Duyệt hủy lịch phỏng vấn */}
@@ -574,7 +549,7 @@ export default function InterviewsManager({
         isOpen={isApproveCancelModalOpen}
         onClose={() => setIsApproveCancelModalOpen(false)}
         interview={selectedApproveCancelInterview}
-        onSuccess={fetchInterviews}
+        onSuccess={refetchInterviews}
       />
 
       {/* Candidate Detail Modal */}

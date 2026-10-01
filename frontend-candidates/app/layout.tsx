@@ -3,6 +3,7 @@ import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 import Header from "@/src/components/layout/Header";
 import Footer from "@/src/components/layout/Footer";
+import { QueryProvider } from "@/src/providers/QueryProvider";
 import { AuthProvider } from "@/src/providers/AuthProvider";
 import { NotificationProvider } from "@/src/providers/NotificationProvider";
 import { Toaster } from "react-hot-toast";
@@ -34,16 +35,18 @@ export default function RootLayout({
       className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
     >
       <body className="min-h-full flex flex-col bg-slate-950 text-slate-100 selection:bg-blue-600/30">
-        <AuthProvider>
-          <NotificationProvider>
-            <Header />
-            <main className="flex flex-col flex-1">
-              <ToastContainer />
-              {children}
-            </main>
-            <Footer />
-          </NotificationProvider>
-        </AuthProvider>
+        <QueryProvider>
+          <AuthProvider>
+            <NotificationProvider>
+              <Header />
+              <main className="flex flex-col flex-1">
+                <ToastContainer />
+                {children}
+              </main>
+              <Footer />
+            </NotificationProvider>
+          </AuthProvider>
+        </QueryProvider>
       </body>
     </html>
   );
