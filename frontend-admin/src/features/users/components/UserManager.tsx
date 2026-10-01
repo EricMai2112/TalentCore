@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import dynamic from 'next/dynamic'
-import { Plus, Users, Search } from 'lucide-react'
+import { Plus, Users, Search, RotateCcw } from 'lucide-react'
 import {
   User,
   Department,
@@ -14,7 +14,14 @@ import {
 import { userApi } from '../services/user.api'
 import UserRow from './UserRow'
 import { useAuth } from '@/src/providers/AuthProvider'
-import { CustomButton, CustomInput, CustomTableContainer, Toast, useToast } from '@/src/components/common'
+import {
+  CustomButton,
+  CustomInput,
+  CustomSelect,
+  CustomTableContainer,
+  Toast,
+  useToast
+} from '@/src/components/common'
 
 // Lazy load user modals on demand
 const CreateUserModal = dynamic(() => import('./CreateUserModal'), { ssr: false })
@@ -41,6 +48,9 @@ export default function UserManager({ initialUsers, initialDepartments }: UserMa
   const [users, setUsers] = useState<User[]>(initialUsers)
   const [departments] = useState<Department[]>(initialDepartments)
   const [searchQuery, setSearchQuery] = useState('')
+  const [selectedDept, setSelectedDept] = useState('all')
+  const [selectedRole, setSelectedRole] = useState('all')
+  const [selectedStatus, setSelectedStatus] = useState('all')
 
   // Pagination state
   const [currentPage, setCurrentPage] = useState(1)
@@ -52,7 +62,14 @@ export default function UserManager({ initialUsers, initialDepartments }: UserMa
 
   useEffect(() => {
     setCurrentPage(1)
-  }, [searchQuery])
+  }, [searchQuery, selectedDept, selectedRole, selectedStatus])
+
+  const handleResetFilters = () => {
+    setSearchQuery('')
+    setSelectedDept('all')
+    setSelectedRole('all')
+    setSelectedStatus('all')
+  }
 
   // Modal states
   const [isCreateOpen, setIsCreateOpen] = useState(false)
@@ -143,54 +160,102 @@ export default function UserManager({ initialUsers, initialDepartments }: UserMa
 
   const filtered = scopedUsers.filter((u) => {
     const q = searchQuery.toLowerCase().trim()
-    if (!q) return true
     const deptIdStr = getDeptIdStr(u.departmentId)
-    return (
+    const matchSearch =
+      !q ||
       u.name.toLowerCase().includes(q) ||
       u.email.toLowerCase().includes(q) ||
       (deptMap.get(deptIdStr)?.toLowerCase().includes(q) ?? false)
-    )
+
+    const matchDept = selectedDept === 'all' || deptIdStr === selectedDept
+    const matchRole = selectedRole === 'all' || u.role === selectedRole
+    const matchStatus = selectedStatus === 'all' || u.status === selectedStatus
+
+    return matchSearch && matchDept && matchRole && matchStatus
   })
 
   const paginatedUsers = filtered.slice((currentPage - 1) * pageSize, currentPage * pageSize)
 
   return (
-    <div className="space-y-5">
+    <div className="space-y-3">
       {/* Toast Alert */}
       <Toast toast={toast} onClose={hideToast} position="top-right" />
 
-      {/* Header section */}
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-        <div>
-          <h2 className="text-xl font-bold text-slate-900 flex items-center gap-2">
-            <Users className="text-[#1261A6] shrink-0" size={22} />
-            {isDeptManager ? 'Thành viên phòng ban' : 'Quản lý người dùng'}
-          </h2>
-          <p className="text-sm text-slate-500 mt-0.5">
-            {isDeptManager
-              ? 'Danh sách nhân viên thuộc phòng ban của bạn'
-              : 'Quản lý danh sách tài khoản, phân quyền và thông tin người dùng'}
-          </p>
+      {/* Header toolbar: Search, Filters & Action button aligned space-between */}
+      <div className="flex flex-col justify-between gap-3 xl:flex-row xl:items-center">
+        <div className="flex flex-wrap items-center gap-2.5 flex-1">
+          <div className="w-full sm:w-60">
+            <CustomInput
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              placeholder="Tìm theo tên, email..."
+              icon={<Search size={15} />}
+              className="!py-1.5 !rounded-xl text-xs"
+            />
+          </div>
+
+          {!isDeptManager && (
+            <CustomSelect
+              value={selectedDept}
+              onChange={(val) => setSelectedDept(val)}
+              size="sm"
+              className="w-full sm:w-auto"
+              placeholder="Tất cả phòng ban"
+              options={[
+                { value: 'all', label: 'Tất cả phòng ban' },
+                ...departments.map((d) => ({ value: d._id, label: d.name }))
+              ]}
+            />
+          )}
+
+          <CustomSelect
+            value={selectedRole}
+            onChange={(val) => setSelectedRole(val)}
+            size="sm"
+            className="w-full sm:w-auto"
+            placeholder="Tất cả vai trò"
+            options={[
+              { value: 'all', label: 'Tất cả vai trò' },
+              { value: UserRole.HR_ADMIN, label: 'HR Admin' },
+              { value: UserRole.DEPARTMENT_MANAGER, label: 'Trưởng phòng' },
+              { value: UserRole.EMPLOYEE, label: 'Nhân viên' }
+            ]}
+          />
+
+          <CustomSelect
+            value={selectedStatus}
+            onChange={(val) => setSelectedStatus(val)}
+            size="sm"
+            className="w-full sm:w-auto"
+            placeholder="Tất cả trạng thái"
+            options={[
+              { value: 'all', label: 'Tất cả trạng thái' },
+              { value: UserStatus.ACTIVE, label: 'Hoạt động' },
+              { value: UserStatus.LOCKED, label: 'Đã khóa' }
+            ]}
+          />
+
+          {/* Reset Filters Button */}
+          <button
+            type="button"
+            onClick={handleResetFilters}
+            className="px-3 py-1.5 rounded-xl border border-white/80 bg-white/60 hover:bg-white text-slate-600 hover:text-rose-600 text-xs font-semibold flex items-center gap-1.5 shadow-2xs transition-all cursor-pointer shrink-0"
+            title="Đặt lại tất cả bộ lọc"
+          >
+            <RotateCcw size={14} />
+            <span>Đặt lại</span>
+          </button>
         </div>
+
         <CustomButton
           onClick={() => setIsCreateOpen(true)}
           variant="primary"
-          icon={<Plus size={16} />}
-          className="self-start sm:self-auto shrink-0"
+          size="sm"
+          icon={<Plus size={15} />}
+          className="self-start font-bold shrink-0 xl:self-auto"
         >
           Thêm người dùng
         </CustomButton>
-      </div>
-
-      {/* Search bar */}
-      <div className="w-full sm:max-w-xs">
-        <CustomInput
-          value={searchQuery}
-          onChange={(e) => setSearchQuery(e.target.value)}
-          placeholder="Tìm theo tên, email..."
-          icon={<Search size={15} />}
-          className="!py-1.5 !rounded-xl text-xs"
-        />
       </div>
 
       {/* Reusable Table Container */}
@@ -200,15 +265,24 @@ export default function UserManager({ initialUsers, initialDepartments }: UserMa
           totalPages: Math.ceil(filtered.length / pageSize),
           totalItems: filtered.length,
           pageSize,
-          onPageChange: setCurrentPage,
+          onPageChange: setCurrentPage
         }}
         isEmpty={filtered.length === 0}
         emptyTitle="Không tìm thấy người dùng nào"
-        emptyDescription={searchQuery ? 'Thử tìm với từ khoá khác.' : isDeptManager ? 'Chưa có nhân viên nào thuộc phòng ban của bạn.' : 'Tạo tài khoản nhân viên đầu tiên để bắt đầu quản lý quy trình tuyển dụng.'}
+        emptyDescription={
+          searchQuery ||
+          selectedDept !== 'all' ||
+          selectedRole !== 'all' ||
+          selectedStatus !== 'all'
+            ? 'Thử điều chỉnh bộ lọc hoặc từ khóa tìm kiếm phía trên.'
+            : isDeptManager
+              ? 'Chưa có nhân viên nào thuộc phòng ban của bạn.'
+              : 'Tạo tài khoản nhân viên đầu tiên để bắt đầu quản lý quy trình tuyển dụng.'
+        }
         emptyIcon={<Users className="w-8 h-8 stroke-[1.5]" />}
       >
         <table className="w-full min-w-[640px] text-left border-collapse text-xs">
-          <thead className="sticky top-0 z-10 bg-white/80 backdrop-blur-lg border-b border-slate-200/60 shadow-sm">
+          <thead className="sticky top-0 z-10 border-b shadow-sm bg-white/80 backdrop-blur-lg border-slate-200/60">
             <tr className="text-[11px] font-semibold text-slate-600 uppercase tracking-wider">
               {['Người dùng', 'Email', 'Vai trò', 'Phòng ban', 'Trạng thái', 'Thao tác'].map(
                 (h) => (

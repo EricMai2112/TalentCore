@@ -948,7 +948,7 @@ export default function JobRequestFormWizard({
           {step === 1 && (
             <div className="space-y-6 duration-200 animate-in fade-in">
               {/* Card 1: Thông tin Vị trí & Điều kiện làm việc */}
-              <div className="p-6 space-y-6 border shadow-sm bg-white/70 backdrop-blur-xl border-white/80 rounded-3xl sm:p-7">
+              <div className="relative z-20 p-6 space-y-6 border shadow-sm bg-white/70 backdrop-blur-xl border-white/80 rounded-3xl sm:p-7">
                 <div className="flex items-center gap-3.5 pb-4 border-b border-slate-200/60">
                   <div className="p-2.5 bg-blue-50 text-blue-600 border border-blue-100 rounded-2xl shrink-0">
                     <Briefcase size={20} />
@@ -1108,7 +1108,7 @@ export default function JobRequestFormWizard({
               </div>
 
               {/* Card 2: Skills Tags Bar */}
-              <div className="p-6 space-y-4 border shadow-sm bg-white/70 backdrop-blur-xl border-white/80 rounded-3xl sm:p-7">
+              <div className="relative z-10 p-6 space-y-4 border shadow-sm bg-white/70 backdrop-blur-xl border-white/80 rounded-3xl sm:p-7">
                 <div className="flex items-center gap-3.5 pb-4 border-b border-slate-200/60">
                   <div className="p-2.5 bg-indigo-50 text-indigo-600 border border-indigo-100 rounded-2xl shrink-0">
                     <Layers size={20} />
@@ -1159,7 +1159,7 @@ export default function JobRequestFormWizard({
               </div>
 
               {/* Card 3: AI Criteria Weighting Manager */}
-              <div className="p-6 space-y-5 border shadow-sm bg-white/70 backdrop-blur-xl border-white/80 rounded-3xl sm:p-7">
+              <div className="relative z-0 p-6 space-y-5 border shadow-sm bg-white/70 backdrop-blur-xl border-white/80 rounded-3xl sm:p-7">
                 <div className="flex flex-wrap items-center justify-between gap-4 pb-4 border-b border-slate-200/60">
                   <div className="flex items-center gap-3.5">
                     <div className="p-2.5 bg-purple-50 text-purple-600 border border-purple-100 rounded-2xl shrink-0">

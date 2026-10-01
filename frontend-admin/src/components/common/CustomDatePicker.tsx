@@ -1,19 +1,20 @@
-"use client";
+'use client'
 
-import { useState, useRef, useEffect } from "react";
-import { Calendar as CalendarIcon, ChevronLeft, ChevronRight, ChevronDown } from "lucide-react";
+import { useState, useRef, useEffect } from 'react'
+import { createPortal } from 'react-dom'
+import { Calendar as CalendarIcon, ChevronLeft, ChevronRight, ChevronDown } from 'lucide-react'
 
 export interface CustomDatePickerProps {
-  label?: string;
-  required?: boolean;
-  error?: string;
-  helperText?: string;
-  value: string; // ISO date string YYYY-MM-DD
-  onChange: (value: string) => void;
-  placeholder?: string;
-  disabled?: boolean;
-  minDate?: string;
-  className?: string;
+  label?: string
+  required?: boolean
+  error?: string
+  helperText?: string
+  value: string // ISO date string YYYY-MM-DD
+  onChange: (value: string) => void
+  placeholder?: string
+  disabled?: boolean
+  minDate?: string
+  className?: string
 }
 
 export default function CustomDatePicker({
@@ -23,138 +24,295 @@ export default function CustomDatePicker({
   helperText,
   value,
   onChange,
-  placeholder = "dd/mm/yyyy",
+  placeholder = 'dd/mm/yyyy',
   disabled = false,
   minDate,
-  className = "",
+  className = ''
 }: CustomDatePickerProps) {
-  const [isOpen, setIsOpen] = useState(false);
-  const containerRef = useRef<HTMLDivElement>(null);
+  const [isOpen, setIsOpen] = useState(false)
+  const [mounted, setMounted] = useState(false)
+  const containerRef = useRef<HTMLDivElement>(null)
+  const buttonRef = useRef<HTMLButtonElement>(null)
+  const dropdownRef = useRef<HTMLDivElement>(null)
+  const [panelStyle, setPanelStyle] = useState<React.CSSProperties>({})
+
+  useEffect(() => {
+    setMounted(true)
+  }, [])
 
   // Parse initial date or default to current date
   const parseDate = (valStr: string) => {
-    if (!valStr) return new Date();
-    const parts = valStr.split("-");
+    if (!valStr) return new Date()
+    const parts = valStr.split('-')
     if (parts.length === 3) {
-      return new Date(parseInt(parts[0]), parseInt(parts[1]) - 1, parseInt(parts[2]));
+      return new Date(parseInt(parts[0]), parseInt(parts[1]) - 1, parseInt(parts[2]))
     }
-    return new Date();
-  };
+    return new Date()
+  }
 
-  const selectedDate = value ? parseDate(value) : null;
-  const [viewDate, setViewDate] = useState<Date>(selectedDate || new Date());
+  const selectedDate = value ? parseDate(value) : null
+  const [viewDate, setViewDate] = useState<Date>(selectedDate || new Date())
 
   // Keep viewDate synchronized when value changes
   useEffect(() => {
     if (value) {
-      setViewDate(parseDate(value));
+      setViewDate(parseDate(value))
     }
-  }, [value]);
+  }, [value])
 
-  // Click outside listener
+  const updatePosition = () => {
+    if (!buttonRef.current) return
+    const rect = buttonRef.current.getBoundingClientRect()
+    const dropdownHeight = dropdownRef.current ? dropdownRef.current.offsetHeight : 340
+    const spaceBelow = window.innerHeight - rect.bottom
+    const spaceAbove = rect.top
+    const placeAbove = spaceBelow < dropdownHeight && spaceAbove > spaceBelow
+
+    const panelWidth = 320 // w-80
+    let left = rect.left
+    if (left + panelWidth > window.innerWidth - 16) {
+      left = Math.max(16, window.innerWidth - panelWidth - 16)
+    }
+
+    const style: React.CSSProperties = {
+      position: 'fixed',
+      left: `${left}px`,
+      width: '320px',
+      zIndex: 99999
+    }
+
+    if (placeAbove) {
+      style.bottom = `${window.innerHeight - rect.top + 6}px`
+      style.top = 'auto'
+    } else {
+      style.top = `${rect.bottom + 6}px`
+      style.bottom = 'auto'
+    }
+
+    setPanelStyle(style)
+  }
+
+  // Positioning, outside click, and keyboard handling
   useEffect(() => {
-    const handleClickOutside = (e: MouseEvent) => {
-      if (containerRef.current && !containerRef.current.contains(e.target as Node)) {
-        setIsOpen(false);
+    if (!isOpen) return
+
+    updatePosition()
+    const timer = requestAnimationFrame(updatePosition)
+
+    const handleScrollOrResize = (e: Event) => {
+      if (dropdownRef.current && dropdownRef.current.contains(e.target as Node)) {
+        return
       }
-    };
-    document.addEventListener("mousedown", handleClickOutside);
-    return () => document.removeEventListener("mousedown", handleClickOutside);
-  }, []);
-
-  // Escape key handler
-  useEffect(() => {
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === "Escape") setIsOpen(false);
-    };
-    if (isOpen) {
-      document.addEventListener("keydown", handleKeyDown);
+      updatePosition()
     }
-    return () => document.removeEventListener("keydown", handleKeyDown);
-  }, [isOpen]);
 
-  const year = viewDate.getFullYear();
-  const month = viewDate.getMonth();
+    const handleClickOutside = (e: MouseEvent) => {
+      const target = e.target as Node
+      const isInsideButton = buttonRef.current && buttonRef.current.contains(target)
+      const isInsideDropdown = dropdownRef.current && dropdownRef.current.contains(target)
+      if (!isInsideButton && !isInsideDropdown) {
+        setIsOpen(false)
+      }
+    }
+
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') setIsOpen(false)
+    }
+
+    window.addEventListener('scroll', handleScrollOrResize, true)
+    window.addEventListener('resize', handleScrollOrResize)
+    document.addEventListener('mousedown', handleClickOutside)
+    document.addEventListener('keydown', handleKeyDown)
+
+    return () => {
+      cancelAnimationFrame(timer)
+      window.removeEventListener('scroll', handleScrollOrResize, true)
+      window.removeEventListener('resize', handleScrollOrResize)
+      document.removeEventListener('mousedown', handleClickOutside)
+      document.removeEventListener('keydown', handleKeyDown)
+    }
+  }, [isOpen])
+
+  const year = viewDate.getFullYear()
+  const month = viewDate.getMonth()
 
   // Navigation handlers
   const handlePrevMonth = (e: React.MouseEvent) => {
-    e.stopPropagation();
-    setViewDate(new Date(year, month - 1, 1));
-  };
+    e.stopPropagation()
+    setViewDate(new Date(year, month - 1, 1))
+  }
 
   const handleNextMonth = (e: React.MouseEvent) => {
-    e.stopPropagation();
-    setViewDate(new Date(year, month + 1, 1));
-  };
+    e.stopPropagation()
+    setViewDate(new Date(year, month + 1, 1))
+  }
 
   // Generate calendar grid (42 days)
-  const firstDayOfMonth = new Date(year, month, 1);
-  const lastDayOfMonth = new Date(year, month + 1, 0);
+  const firstDayOfMonth = new Date(year, month, 1)
+  const lastDayOfMonth = new Date(year, month + 1, 0)
 
   // Day of week index: 0 = Mon, 1 = Tue, ..., 6 = Sun
-  let startingDayOfWeek = firstDayOfMonth.getDay() - 1;
-  if (startingDayOfWeek === -1) startingDayOfWeek = 6;
+  let startingDayOfWeek = firstDayOfMonth.getDay() - 1
+  if (startingDayOfWeek === -1) startingDayOfWeek = 6
 
-  const daysInMonth = lastDayOfMonth.getDate();
-  const daysInPrevMonth = new Date(year, month, 0).getDate();
+  const daysInMonth = lastDayOfMonth.getDate()
+  const daysInPrevMonth = new Date(year, month, 0).getDate()
 
-  const calendarDays: { day: number; monthOffset: number; dateStr: string }[] = [];
+  const calendarDays: { day: number; monthOffset: number; dateStr: string }[] = []
 
   // Previous month padded days
   for (let i = startingDayOfWeek - 1; i >= 0; i--) {
-    const d = daysInPrevMonth - i;
-    const prevDate = new Date(year, month - 1, d);
-    const dateStr = formatDateStr(prevDate);
-    calendarDays.push({ day: d, monthOffset: -1, dateStr });
+    const d = daysInPrevMonth - i
+    const prevDate = new Date(year, month - 1, d)
+    const dateStr = formatDateStr(prevDate)
+    calendarDays.push({ day: d, monthOffset: -1, dateStr })
   }
 
   // Current month days
   for (let d = 1; d <= daysInMonth; d++) {
-    const currDate = new Date(year, month, d);
-    const dateStr = formatDateStr(currDate);
-    calendarDays.push({ day: d, monthOffset: 0, dateStr });
+    const currDate = new Date(year, month, d)
+    const dateStr = formatDateStr(currDate)
+    calendarDays.push({ day: d, monthOffset: 0, dateStr })
   }
 
   // Next month padded days
-  const remainingCells = 42 - calendarDays.length;
+  const remainingCells = 42 - calendarDays.length
   for (let d = 1; d <= remainingCells; d++) {
-    const nextDate = new Date(year, month + 1, d);
-    const dateStr = formatDateStr(nextDate);
-    calendarDays.push({ day: d, monthOffset: 1, dateStr });
+    const nextDate = new Date(year, month + 1, d)
+    const dateStr = formatDateStr(nextDate)
+    calendarDays.push({ day: d, monthOffset: 1, dateStr })
   }
 
   function formatDateStr(d: Date) {
-    const yyyy = d.getFullYear();
-    const mm = String(d.getMonth() + 1).padStart(2, "0");
-    const dd = String(d.getDate()).padStart(2, "0");
-    return `${yyyy}-${mm}-${dd}`;
+    const yyyy = d.getFullYear()
+    const mm = String(d.getMonth() + 1).padStart(2, '0')
+    const dd = String(d.getDate()).padStart(2, '0')
+    return `${yyyy}-${mm}-${dd}`
   }
 
   function formatDisplayDate(valStr: string) {
-    if (!valStr) return "";
-    const parts = valStr.split("-");
+    if (!valStr) return ''
+    const parts = valStr.split('-')
     if (parts.length === 3) {
-      return `${parts[2]}/${parts[1]}/${parts[0]}`;
+      return `${parts[2]}/${parts[1]}/${parts[0]}`
     }
-    return valStr;
+    return valStr
   }
 
-  const todayStr = formatDateStr(new Date());
+  const todayStr = formatDateStr(new Date())
 
   const handleSelectDay = (dateStr: string) => {
-    onChange(dateStr);
-    setIsOpen(false);
-  };
+    onChange(dateStr)
+    setIsOpen(false)
+  }
 
   const monthNamesVi = [
-    "Tháng 1", "Tháng 2", "Tháng 3", "Tháng 4", "Tháng 5", "Tháng 6",
-    "Tháng 7", "Tháng 8", "Tháng 9", "Tháng 10", "Tháng 11", "Tháng 12"
-  ];
+    'Tháng 1',
+    'Tháng 2',
+    'Tháng 3',
+    'Tháng 4',
+    'Tháng 5',
+    'Tháng 6',
+    'Tháng 7',
+    'Tháng 8',
+    'Tháng 9',
+    'Tháng 10',
+    'Tháng 11',
+    'Tháng 12'
+  ]
+
+  const calendarDropdown = isOpen && !disabled && (
+    <div
+      ref={dropdownRef}
+      style={panelStyle}
+      className="p-4 border shadow-xl bg-white/95 border-white/80 rounded-2xl shadow-blue-500/10 animate-in fade-in zoom-in-95 duration-150"
+    >
+      {/* Header Month Navigation */}
+      <div className="flex items-center justify-between pb-3 mb-3 border-b border-slate-200/60">
+        <button
+          type="button"
+          onClick={handlePrevMonth}
+          className="p-1.5 rounded-xl border border-slate-200/80 hover:bg-[#3B82F6]/10 text-[#3B82F6] transition-colors cursor-pointer"
+        >
+          <ChevronLeft size={16} />
+        </button>
+
+        <span className="text-xs font-bold sm:text-sm text-slate-900">
+          {monthNamesVi[month]} {year}
+        </span>
+
+        <button
+          type="button"
+          onClick={handleNextMonth}
+          className="p-1.5 rounded-xl border border-slate-200/80 hover:bg-[#3B82F6]/10 text-[#3B82F6] transition-colors cursor-pointer"
+        >
+          <ChevronRight size={16} />
+        </button>
+      </div>
+
+      {/* Weekday Labels */}
+      <div className="grid grid-cols-7 gap-1 mb-2 text-center">
+        {['T2', 'T3', 'T4', 'T5', 'T6', 'T7', 'CN'].map((dayLabel) => (
+          <span key={dayLabel} className="text-[11px] font-bold text-slate-400 uppercase">
+            {dayLabel}
+          </span>
+        ))}
+      </div>
+
+      {/* Day Grid */}
+      <div className="grid grid-cols-7 gap-1 text-center">
+        {calendarDays.map((cell, idx) => {
+          const isSelected = cell.dateStr === value
+          const isToday = cell.dateStr === todayStr
+          const isOtherMonth = cell.monthOffset !== 0
+          const isDisabled = minDate ? cell.dateStr < minDate : false
+
+          return (
+            <button
+              key={idx}
+              type="button"
+              disabled={isDisabled}
+              onClick={() => handleSelectDay(cell.dateStr)}
+              className={`h-9 w-full rounded-xl text-xs font-bold transition-all flex items-center justify-center cursor-pointer ${
+                isSelected
+                  ? 'bg-[#3B82F6] text-white shadow-md shadow-[#3B82F6]/30'
+                  : isToday
+                    ? 'bg-[#3B82F6]/10 text-[#3B82F6] border border-[#3B82F6]/30 font-extrabold'
+                    : isOtherMonth
+                      ? 'text-slate-300 hover:bg-slate-50'
+                      : 'text-slate-800 hover:bg-slate-100/80'
+              } ${isDisabled ? 'opacity-30 cursor-not-allowed' : ''}`}
+            >
+              {cell.day}
+            </button>
+          )
+        })}
+      </div>
+
+      {/* Footer Quick Action */}
+      <div className="mt-3 pt-2.5 border-t border-slate-200/60 flex items-center justify-between">
+        <button
+          type="button"
+          onClick={() => handleSelectDay(todayStr)}
+          className="text-xs font-bold text-[#3B82F6] hover:underline transition-colors cursor-pointer"
+        >
+          Hôm nay ({formatDisplayDate(todayStr)})
+        </button>
+        <button
+          type="button"
+          onClick={() => setIsOpen(false)}
+          className="text-xs font-semibold transition-colors cursor-pointer text-slate-500 hover:text-slate-700"
+        >
+          Đóng
+        </button>
+      </div>
+    </div>
+  )
 
   return (
     <div className={`space-y-1.5 relative w-full ${className}`} ref={containerRef}>
       {label && (
-        <label className="text-xs font-semibold text-slate-700 uppercase tracking-wider block">
+        <label className="block text-xs font-semibold tracking-wider uppercase text-slate-700">
           {label} {required && <span className="text-rose-500">*</span>}
         </label>
       )}
@@ -162,115 +320,31 @@ export default function CustomDatePicker({
       <div className="relative">
         {/* Trigger Button */}
         <button
+          ref={buttonRef}
           type="button"
           disabled={disabled}
           onClick={() => setIsOpen((prev) => !prev)}
           className={`w-full flex items-center justify-between px-3.5 py-2.5 rounded-2xl text-xs sm:text-sm font-semibold border transition-all shadow-2xs outline-none ${
             disabled
-              ? "bg-slate-100/70 text-slate-400 border-slate-200/80 cursor-not-allowed opacity-75"
+              ? 'bg-slate-100/70 text-slate-400 border-slate-200/80 cursor-not-allowed opacity-75'
               : isOpen
-              ? "bg-white text-slate-900 border-[#3B82F6] ring-4 ring-[#3B82F6]/15 shadow-sm"
-              : "bg-white/80 backdrop-blur-md text-slate-800 border-slate-200/90 hover:bg-white hover:border-[#3B82F6]/60 focus:bg-white"
-          } ${error ? "border-rose-400 ring-4 ring-rose-500/10" : ""} cursor-pointer`}
+                ? 'bg-white text-slate-900 border-[#3B82F6] ring-4 ring-[#3B82F6]/15 shadow-sm'
+                : 'bg-white/80 backdrop-blur-md text-slate-800 border-slate-200/90 hover:bg-white hover:border-[#3B82F6]/60 focus:bg-white'
+          } ${error ? 'border-rose-400 ring-4 ring-rose-500/10' : ''} cursor-pointer`}
         >
           <div className="flex items-center gap-2.5">
             <CalendarIcon size={18} className="text-[#3B82F6] shrink-0" />
-            <span className={value ? "text-slate-900 font-bold" : "text-slate-400 font-normal"}>
+            <span className={value ? 'text-slate-900 font-bold' : 'text-slate-400 font-normal'}>
               {value ? formatDisplayDate(value) : placeholder}
             </span>
           </div>
           <ChevronDown
             size={18}
             className={`text-[#3B82F6] transition-transform duration-200 ${
-              isOpen ? "rotate-180" : ""
+              isOpen ? 'rotate-180' : ''
             }`}
           />
         </button>
-
-        {/* Calendar Dropdown Panel */}
-        {isOpen && !disabled && (
-          <div className="absolute left-0 top-full mt-2 w-80 z-50 bg-white/95 border border-white/80 rounded-2xl shadow-xl shadow-blue-500/10 p-4 animate-in fade-in zoom-in-95 duration-150">
-            {/* Header Month Navigation */}
-            <div className="flex items-center justify-between mb-3 pb-3 border-b border-slate-200/60">
-              <button
-                type="button"
-                onClick={handlePrevMonth}
-                className="p-1.5 rounded-xl border border-slate-200/80 hover:bg-[#3B82F6]/10 text-[#3B82F6] transition-colors cursor-pointer"
-              >
-                <ChevronLeft size={16} />
-              </button>
-
-              <span className="text-xs sm:text-sm font-bold text-slate-900">
-                {monthNamesVi[month]} {year}
-              </span>
-
-              <button
-                type="button"
-                onClick={handleNextMonth}
-                className="p-1.5 rounded-xl border border-slate-200/80 hover:bg-[#3B82F6]/10 text-[#3B82F6] transition-colors cursor-pointer"
-              >
-                <ChevronRight size={16} />
-              </button>
-            </div>
-
-            {/* Weekday Labels */}
-            <div className="grid grid-cols-7 gap-1 text-center mb-2">
-              {["T2", "T3", "T4", "T5", "T6", "T7", "CN"].map((dayLabel) => (
-                <span key={dayLabel} className="text-[11px] font-bold text-slate-400 uppercase">
-                  {dayLabel}
-                </span>
-              ))}
-            </div>
-
-            {/* Day Grid */}
-            <div className="grid grid-cols-7 gap-1 text-center">
-              {calendarDays.map((cell, idx) => {
-                const isSelected = cell.dateStr === value;
-                const isToday = cell.dateStr === todayStr;
-                const isOtherMonth = cell.monthOffset !== 0;
-                const isDisabled = minDate ? cell.dateStr < minDate : false;
-
-                return (
-                  <button
-                    key={idx}
-                    type="button"
-                    disabled={isDisabled}
-                    onClick={() => handleSelectDay(cell.dateStr)}
-                    className={`h-9 w-full rounded-xl text-xs font-bold transition-all flex items-center justify-center cursor-pointer ${
-                      isSelected
-                        ? "bg-[#3B82F6] text-white shadow-md shadow-[#3B82F6]/30"
-                        : isToday
-                        ? "bg-[#3B82F6]/10 text-[#3B82F6] border border-[#3B82F6]/30 font-extrabold"
-                        : isOtherMonth
-                        ? "text-slate-300 hover:bg-slate-50"
-                        : "text-slate-800 hover:bg-slate-100/80"
-                    } ${isDisabled ? "opacity-30 cursor-not-allowed" : ""}`}
-                  >
-                    {cell.day}
-                  </button>
-                );
-              })}
-            </div>
-
-            {/* Footer Quick Action */}
-            <div className="mt-3 pt-2.5 border-t border-slate-200/60 flex items-center justify-between">
-              <button
-                type="button"
-                onClick={() => handleSelectDay(todayStr)}
-                className="text-xs font-bold text-[#3B82F6] hover:underline transition-colors cursor-pointer"
-              >
-                Hôm nay ({formatDisplayDate(todayStr)})
-              </button>
-              <button
-                type="button"
-                onClick={() => setIsOpen(false)}
-                className="text-xs font-semibold text-slate-500 hover:text-slate-700 transition-colors cursor-pointer"
-              >
-                Đóng
-              </button>
-            </div>
-          </div>
-        )}
       </div>
 
       {error ? (
@@ -278,6 +352,8 @@ export default function CustomDatePicker({
       ) : helperText ? (
         <p className="text-[11px] font-medium text-slate-400">{helperText}</p>
       ) : null}
+
+      {mounted && calendarDropdown && createPortal(calendarDropdown, document.body)}
     </div>
-  );
+  )
 }

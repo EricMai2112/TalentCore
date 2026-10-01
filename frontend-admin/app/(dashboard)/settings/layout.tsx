@@ -8,10 +8,25 @@ import { useAuth } from '@/src/providers/AuthProvider'
 import { UserRole } from '@/src/features/users/types/user.types'
 
 const allTabs = [
-  { label: 'Người dùng', href: '/settings/users', icon: Users, roles: [UserRole.HR_ADMIN, UserRole.DEPARTMENT_MANAGER] },
-  { label: 'Phòng ban', href: '/settings/departments', icon: Building2, roles: [UserRole.HR_ADMIN] },
+  {
+    label: 'Người dùng',
+    href: '/settings/users',
+    icon: Users,
+    roles: [UserRole.HR_ADMIN, UserRole.DEPARTMENT_MANAGER]
+  },
+  {
+    label: 'Phòng ban',
+    href: '/settings/departments',
+    icon: Building2,
+    roles: [UserRole.HR_ADMIN]
+  },
   { label: 'Pipeline', href: '/settings/pipeline', icon: GitBranch, roles: [UserRole.HR_ADMIN] },
-  { label: 'Kỹ năng', href: '/settings/skills', icon: Zap, roles: [UserRole.HR_ADMIN, UserRole.DEPARTMENT_MANAGER] },
+  {
+    label: 'Kỹ năng',
+    href: '/settings/skills',
+    icon: Zap,
+    roles: [UserRole.HR_ADMIN, UserRole.DEPARTMENT_MANAGER]
+  },
   { label: 'Email & AI', href: '/settings/email-ai', icon: Mail, roles: [UserRole.HR_ADMIN] }
 ]
 
@@ -23,12 +38,14 @@ export default function SettingsLayout({ children }: { children: React.ReactNode
   const isDeptManager = user?.role === UserRole.DEPARTMENT_MANAGER
 
   // Filter tabs visible to current user's role
-  const visibleTabs = allTabs.filter(tab => !user || tab.roles.includes(user.role))
+  const visibleTabs = allTabs.filter((tab) => !user || tab.roles.includes(user.role))
 
   // Redirect DEPARTMENT_MANAGER away from hidden settings tabs if accessed directly via URL
   useEffect(() => {
     if (isDeptManager) {
-      const isAllowed = visibleTabs.some(tab => pathname === tab.href || pathname.startsWith(tab.href + '/'))
+      const isAllowed = visibleTabs.some(
+        (tab) => pathname === tab.href || pathname.startsWith(tab.href + '/')
+      )
       if (!isAllowed) {
         router.replace('/settings/users')
       }
@@ -36,51 +53,41 @@ export default function SettingsLayout({ children }: { children: React.ReactNode
   }, [isDeptManager, pathname, visibleTabs, router])
 
   return (
-    <div className="min-h-full">
-      {/* Page Header */}
-      <div className="mb-6">
-        <h1 className="text-2xl font-bold text-slate-900">Trung tâm Quản trị & Thiết lập</h1>
-        <p className="mt-1 text-sm text-slate-500">
-          {isDeptManager
-            ? 'Quản lý danh sách nhân viên và danh mục kỹ năng thuộc phòng ban'
-            : 'Quản lý nhân viên, phòng ban, quy trình tuyển dụng, kỹ năng và mẫu email'}
-        </p>
+    <div className="space-y-3">
+      {/* Settings Navigation Tabs - Sleek Segmented Pill Bar */}
+      <div className="flex items-center overflow-x-auto pb-0.5 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+        <nav
+          className="inline-flex items-center gap-1.5 p-1.5 bg-white/60 backdrop-blur-xl border border-white/80 rounded-2xl shadow-xs"
+          aria-label="Settings tabs"
+        >
+          {visibleTabs.map((tab) => {
+            const isActive = pathname === tab.href || pathname.startsWith(tab.href + '/')
+            const Icon = tab.icon
+
+            return (
+              <Link
+                key={tab.href}
+                href={tab.href}
+                className={`
+                  flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-bold
+                  transition-all duration-200 whitespace-nowrap cursor-pointer select-none
+                  ${
+                    isActive
+                      ? 'bg-[#3B82F6] text-white shadow-sm shadow-blue-500/25 border border-white/20'
+                      : 'text-slate-600 hover:text-slate-900 hover:bg-white/60 border border-transparent'
+                  }
+                `}
+              >
+                <Icon size={16} className={isActive ? 'text-white' : 'text-slate-500'} />
+                <span>{tab.label}</span>
+              </Link>
+            )
+          })}
+        </nav>
       </div>
 
-      {/* Tab Navigation */}
-      <div className="bg-white/40 backdrop-blur-xl rounded-3xl shadow-xs border border-white/70">
-        {/* Tabs */}
-        <div className="border-b border-slate-200/60 bg-white/50 backdrop-blur-md px-4 overflow-x-auto rounded-t-3xl">
-          <nav className="flex gap-1 min-w-max sm:min-w-0" aria-label="Settings tabs">
-            {visibleTabs.map((tab) => {
-              const isActive = pathname === tab.href || pathname.startsWith(tab.href + '/')
-              const Icon = tab.icon
-
-              return (
-                <Link
-                  key={tab.href}
-                  href={tab.href}
-                  className={`
-                    flex items-center gap-2 px-4 py-3.5 text-sm font-bold
-                    border-b-2 transition-all duration-150 whitespace-nowrap
-                    ${
-                      isActive
-                        ? 'border-[#3B82F6] text-[#3B82F6]'
-                        : 'border-transparent text-slate-500 hover:text-slate-900 hover:border-slate-300'
-                    }
-                  `}
-                >
-                  <Icon size={15} className="shrink-0" />
-                  <span>{tab.label}</span>
-                </Link>
-              )
-            })}
-          </nav>
-        </div>
-
-        {/* Tab Content */}
-        <div className="p-6">{children}</div>
-      </div>
+      {/* Tab Content directly on page */}
+      <div>{children}</div>
     </div>
   )
 }
