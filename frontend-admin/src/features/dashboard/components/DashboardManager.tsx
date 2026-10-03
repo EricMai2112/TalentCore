@@ -7,7 +7,7 @@ import TimelineTrendChart from './TimelineTrendChart';
 import RecruitmentFunnelChart from './RecruitmentFunnelChart';
 import DepartmentProgressList from './DepartmentProgressList';
 import OfferDonutChart from './OfferDonutChart';
-import AiInsightsPanel from './AiInsightsPanel';
+import HiringVelocityPanel from './HiringVelocityPanel';
 import RecentActivityFeed from './RecentActivityFeed';
 import {
   KpiSkeleton,
@@ -74,14 +74,14 @@ export default function DashboardManager() {
           </div>
         </div>
 
-        {/* CỘT 3: AI & Vận hành Realtime (4 / 12 Cột) */}
+        {/* CỘT 3: Hiệu suất & Vận hành Realtime (4 / 12 Cột) */}
         <div className="col-span-12 lg:col-span-4 flex flex-col gap-2.5 h-full min-h-0">
-          {/* AI Talent Intelligence */}
+          {/* Hiệu suất Tuyển dụng & SLA */}
           <div className="flex-[0.95] min-h-0">
             {isLoading ? (
               <BoxSkeleton className="h-full" />
             ) : (
-              data && <AiInsightsPanel aiInsights={data.aiInsights} />
+              data && <HiringVelocityPanel velocity={data.velocity} />
             )}
           </div>
 

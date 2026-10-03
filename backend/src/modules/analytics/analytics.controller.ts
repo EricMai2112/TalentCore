@@ -65,6 +65,15 @@ export class AnalyticsController {
     };
   }
 
+  @Get('hiring-velocity')
+  async getHiringVelocity() {
+    const data = await this.analyticsService.getHiringVelocityMetrics();
+    return {
+      message: 'Lấy dữ liệu hiệu suất tuyển dụng & chỉ số SLA thành công',
+      data,
+    };
+  }
+
   /**
    * ?limit=5  — số bản ghi mỗi loại (mặc định 5, tối đa 20)
    */
@@ -90,14 +99,14 @@ export class AnalyticsController {
   ) {
     const safeMonths = Math.min(Math.max(1, months), 24);
 
-    const [kpis, funnel, departmentFulfillment, offers, trends, aiInsights, activities] = await Promise.all([
+    const [kpis, funnel, departmentFulfillment, offers, trends, activities, velocity] = await Promise.all([
       this.analyticsService.getOverviewKpis(),
       this.analyticsService.getRecruitmentFunnel(),
       this.analyticsService.getDepartmentFulfillment(),
       this.analyticsService.getOfferBreakdown(),
       this.analyticsService.getApplicationTrends(safeMonths),
-      this.analyticsService.getAiTalentQuality(),
       this.analyticsService.getRecentActivities(limit),
+      this.analyticsService.getHiringVelocityMetrics(),
     ]);
 
     return {
@@ -108,8 +117,8 @@ export class AnalyticsController {
         departmentFulfillment,
         offers,
         trends,
-        aiInsights,
         activities,
+        velocity,
       },
     };
   }

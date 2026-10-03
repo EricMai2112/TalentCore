@@ -114,23 +114,6 @@ export interface ApplicationTrends {
   data: TrendMonth[];
 }
 
-// ─── AI INSIGHTS ─────────────────────────────────────────────────────────────
-export interface AiDistributionItem {
-  label: string;
-  count: number;
-  color: string;
-  percentage: number;
-}
-
-export interface AiInsights {
-  isEmpty: boolean;
-  totalEvaluations: number;
-  avgFitScore: number | null;
-  avgEvidenceScore: number | null;
-  distribution: AiDistributionItem[];
-  topStrengths: { label: string; count: number }[];
-  topGaps: { label: string; count: number }[];
-}
 
 // ─── ACTIVITIES ──────────────────────────────────────────────────────────────
 export interface RecentApplication {
@@ -178,6 +161,33 @@ export interface RecentActivities {
   offers: RecentOffer[];
 }
 
+// ─── HIRING VELOCITY & SLA ───────────────────────────────────────────────────
+export interface HiringVelocityMetrics {
+  timeToHire: {
+    avgDays: number | null;
+    targetDays: number;
+    status: 'EXCELLENT' | 'GOOD' | 'WARNING';
+    sampleSize: number;
+    isEmpty: boolean;
+  };
+  interviewPassRate: {
+    rate: number;
+    totalDecided: number;
+    passedCount: number;
+    failedCount: number;
+  };
+  offerAcceptanceRate: {
+    rate: number;
+    totalDecided: number;
+    acceptedCount: number;
+    targetRate: number;
+  };
+  screeningSpeed: {
+    avgDays: number;
+    targetDays: number;
+  };
+}
+
 // ─── COMBINED ────────────────────────────────────────────────────────────────
 export interface DashboardData {
   kpis: OverviewKpis;
@@ -185,6 +195,6 @@ export interface DashboardData {
   departmentFulfillment: DepartmentFulfillment[];
   offers: OfferBreakdown;
   trends: ApplicationTrends;
-  aiInsights: AiInsights;
+  velocity: HiringVelocityMetrics;
   activities: RecentActivities;
 }

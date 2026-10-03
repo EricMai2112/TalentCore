@@ -4,9 +4,6 @@ import React, { useState } from 'react'
 import { Zap, UserPlus, Calendar, FileText, ArrowRight } from 'lucide-react'
 import {
   RecentActivities,
-  RecentApplication,
-  RecentInterview,
-  RecentOffer,
   PendingActions
 } from '../types/dashboard.types'
 import { EmptyState } from './DashboardSkeletons'
@@ -24,8 +21,14 @@ function timeAgo(dateStr: string | undefined): string {
   return `${Math.floor(hrs / 24)}d`
 }
 
+function cleanCandidateName(name?: string, fallback = 'Ứng viên'): string {
+  if (!name || name.trim() === 'Hồ sơ của tôi' || !name.trim()) return fallback;
+  return name.trim();
+}
+
 function getInitials(name: string) {
-  return name
+  const clean = cleanCandidateName(name);
+  return clean
     .split(' ')
     .filter(Boolean)
     .slice(-2)
@@ -168,10 +171,10 @@ export default function RecentActivityFeed({ activities, pendingActions }: Props
                 key={app.id}
                 className="flex items-center gap-2 p-1.5 rounded-lg hover:bg-white/60 transition-colors"
               >
-                <MiniAvatar name={app.candidateName} idx={i} />
+                <MiniAvatar name={cleanCandidateName(app.candidateName)} idx={i} />
                 <div className="flex-1 min-w-0">
                   <p className="text-[11px] font-bold text-slate-800 truncate leading-tight">
-                    {app.candidateName}
+                    {cleanCandidateName(app.candidateName)}
                   </p>
                   <p className="text-[9.5px] text-slate-400 truncate leading-tight">
                     {app.jobTitle}
@@ -194,10 +197,10 @@ export default function RecentActivityFeed({ activities, pendingActions }: Props
                 key={int.id}
                 className="flex items-center gap-2 p-1.5 rounded-lg hover:bg-white/60 transition-colors"
               >
-                <MiniAvatar name={int.candidateName} idx={i} />
+                <MiniAvatar name={cleanCandidateName(int.candidateName)} idx={i} />
                 <div className="flex-1 min-w-0">
                   <p className="text-[11px] font-bold text-slate-800 truncate leading-tight">
-                    {int.candidateName}
+                    {cleanCandidateName(int.candidateName)}
                   </p>
                   <p className="text-[9.5px] text-slate-400 truncate leading-tight">
                     {int.startTime ? `${int.startTime} · ` : ''}
@@ -223,10 +226,10 @@ export default function RecentActivityFeed({ activities, pendingActions }: Props
                 key={off.id}
                 className="flex items-center gap-2 p-1.5 rounded-lg hover:bg-white/60 transition-colors"
               >
-                <MiniAvatar name={off.candidateName} idx={i} />
+                <MiniAvatar name={cleanCandidateName(off.candidateName)} idx={i} />
                 <div className="flex-1 min-w-0">
                   <p className="text-[11px] font-bold text-slate-800 truncate leading-tight">
-                    {off.candidateName}
+                    {cleanCandidateName(off.candidateName)}
                   </p>
                   <p className="text-[9.5px] text-slate-400 truncate leading-tight">
                     {off.positionTitle}

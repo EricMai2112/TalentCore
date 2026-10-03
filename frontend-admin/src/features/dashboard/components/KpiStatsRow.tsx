@@ -103,7 +103,7 @@ export default function KpiStatsRow({ kpis }: Props) {
       icon: <Clock size={17} className="stroke-[2.2]" />,
       iconBg: 'bg-teal-100/90 text-teal-600 border-teal-200/70',
       blobGradient: 'from-teal-500/50 via-cyan-400/30 to-transparent',
-      label: 'Time-to-Hire TB',
+      label: 'Thời gian tuyển TB',
       value: timeToHire.isEmpty || timeToHire.avgDays === null ? '—' : timeToHire.avgDays,
       unit: timeToHire.isEmpty ? '' : 'ngày',
       tooltip: timeToHire.isEmpty
