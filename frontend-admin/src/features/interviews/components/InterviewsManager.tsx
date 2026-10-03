@@ -167,6 +167,7 @@ export default function InterviewsManager({
     item: InterviewItem
     x: number
     y: number
+    clusterItems?: InterviewItem[]
   } | null>(null)
 
   // State cho Modal Xem chi tiết ứng viên
