@@ -15,12 +15,14 @@ interface InterviewsCalendarViewProps {
     item: InterviewItem
     x: number
     y: number
+    clusterItems?: InterviewItem[]
   } | null
   setHoveredInterview: React.Dispatch<
     React.SetStateAction<{
       item: InterviewItem
       x: number
       y: number
+      clusterItems?: InterviewItem[]
     } | null>
   >
   onOpenStatusModal?: (interview: InterviewItem) => void
@@ -56,7 +58,11 @@ export default function InterviewsCalendarView({
   // Smooth Interactive Hover Tooltip Timeout Ref
   const hoverTimeoutRef = useRef<NodeJS.Timeout | null>(null)
 
-  const handleCardMouseEnter = (item: InterviewItem, e: React.MouseEvent<HTMLDivElement>) => {
+  const handleCardMouseEnter = (
+    item: InterviewItem,
+    clusterItems: InterviewItem[],
+    e: React.MouseEvent<HTMLDivElement>
+  ) => {
     if (hoverTimeoutRef.current) {
       clearTimeout(hoverTimeoutRef.current)
       hoverTimeoutRef.current = null
@@ -65,7 +71,8 @@ export default function InterviewsCalendarView({
     setHoveredInterview({
       item,
       x: rect.left + rect.width / 2,
-      y: rect.top - 10
+      y: rect.top - 10,
+      clusterItems
     })
   }
 
@@ -186,17 +193,20 @@ export default function InterviewsCalendarView({
     )
   }
 
-  // Translucent glass styling for weekly event chips
+  // Google Calendar styling for event cards
   const getEventBgByStatus = (status: InterviewStatus) => {
     switch (status) {
       case InterviewStatus.SCHEDULED:
-        return 'bg-blue-500/25 border-l-4 border-[#3B82F6] text-blue-950 hover:bg-blue-500/35 shadow-sm backdrop-blur-sm'
+      case InterviewStatus.UPCOMING:
+        return 'bg-[#0284c7] hover:bg-[#0369a1] text-white border-2 border-white'
+      case InterviewStatus.IN_PROGRESS:
+        return 'bg-[#2563eb] hover:bg-[#1d4ed8] text-white border-2 border-white'
       case InterviewStatus.COMPLETED:
-        return 'bg-emerald-500/25 border-l-4 border-emerald-600 text-emerald-950 hover:bg-emerald-500/35 shadow-sm backdrop-blur-sm'
+        return 'bg-[#059669] hover:bg-[#047857] text-white border-2 border-white'
       case InterviewStatus.CANCELLED:
-        return 'bg-rose-500/25 border-l-4 border-rose-500 text-rose-950 hover:bg-rose-500/35 shadow-sm backdrop-blur-sm'
+        return 'bg-[#e11d48] hover:bg-[#be123c] text-white border-2 border-white opacity-85'
       default:
-        return 'bg-slate-500/20 border-l-4 border-slate-400 text-slate-900 shadow-sm backdrop-blur-sm'
+        return 'bg-[#0284c7] hover:bg-[#0369a1] text-white border-2 border-white'
     }
   }
 
@@ -225,69 +235,139 @@ export default function InterviewsCalendarView({
     return h * 60 + m
   }
 
-  // Helper to cluster overlapping interviews into groups (Method 2: Representative Card with +N Badge)
-  interface EventCluster {
-    id: string
-    startTime: string
-    endTime: string
-    startMin: number
-    endMin: number
-    items: InterviewItem[]
+  // Google Calendar Interval Overlap & Multi-Column Layout Algorithm
+  interface PositionedEvent {
+    event: InterviewItem
+    colIndex: number
+    totalCols: number
+    topPx: number
+    heightPx: number
+    leftPct: number
+    widthPct: number
+    clusterItems: InterviewItem[]
   }
 
-  const clusterOverlappingEvents = (events: InterviewItem[]): EventCluster[] => {
-    if (events.length === 0) return []
+  const computeDayEventLayouts = (events: InterviewItem[]): PositionedEvent[] => {
+    if (!events || events.length === 0) return []
 
+    // 1. Sort events: earlier start time first; if equal, longer duration first
     const sorted = [...events].sort((a, b) => {
       const sA = timeToMinutes(a.startTime)
       const sB = timeToMinutes(b.startTime)
       if (sA !== sB) return sA - sB
-      return timeToMinutes(a.endTime) - timeToMinutes(b.endTime)
+      const eA = timeToMinutes(a.endTime)
+      const eB = timeToMinutes(b.endTime)
+      const durA = (eA > sA ? eA : sA + 60) - sA
+      const durB = (eB > sB ? eB : sB + 60) - sB
+      return durB - durA
     })
 
-    const clusters: EventCluster[] = []
-    let current: EventCluster | null = null
+    // 2. Group into overlapping clusters (connected components)
+    interface OverlapCluster {
+      items: {
+        event: InterviewItem
+        startMin: number
+        endMin: number
+      }[]
+      maxEndMin: number
+    }
+
+    const clusters: OverlapCluster[] = []
+    let currentCluster: OverlapCluster | null = null
 
     for (const event of sorted) {
       const sMin = timeToMinutes(event.startTime)
       let eMin = timeToMinutes(event.endTime)
-      if (eMin <= sMin) eMin = sMin + 60
+      if (eMin <= sMin) eMin = sMin + 60 // fallback duration: 60 mins
 
-      if (!current) {
-        current = {
-          id: event._id,
-          startTime: event.startTime,
-          endTime: event.endTime,
-          startMin: sMin,
-          endMin: eMin,
-          items: [event]
+      if (!currentCluster) {
+        currentCluster = {
+          items: [{ event, startMin: sMin, endMin: eMin }],
+          maxEndMin: eMin
         }
       } else {
-        if (sMin < current.endMin) {
-          current.items.push(event)
-          if (eMin > current.endMin) {
-            current.endMin = eMin
-            current.endTime = event.endTime
+        if (sMin < currentCluster.maxEndMin) {
+          // Overlaps with current cluster
+          currentCluster.items.push({ event, startMin: sMin, endMin: eMin })
+          if (eMin > currentCluster.maxEndMin) {
+            currentCluster.maxEndMin = eMin
           }
         } else {
-          clusters.push(current)
-          current = {
-            id: event._id,
-            startTime: event.startTime,
-            endTime: event.endTime,
-            startMin: sMin,
-            endMin: eMin,
-            items: [event]
+          clusters.push(currentCluster)
+          currentCluster = {
+            items: [{ event, startMin: sMin, endMin: eMin }],
+            maxEndMin: eMin
           }
         }
       }
     }
-
-    if (current) {
-      clusters.push(current)
+    if (currentCluster) {
+      clusters.push(currentCluster)
     }
 
-    return clusters
+    // 3. For each cluster, assign columns using greedy interval graph coloring
+    const positionedEvents: PositionedEvent[] = []
+
+    for (const cluster of clusters) {
+      const columns: number[] = [] // stores last endMin for each column
+      const clusterAssigned: {
+        event: InterviewItem
+        startMin: number
+        endMin: number
+        colIndex: number
+      }[] = []
+
+      for (const item of cluster.items) {
+        let assignedCol = -1
+        for (let c = 0; c < columns.length; c++) {
+          if (columns[c] <= item.startMin) {
+            assignedCol = c
+            columns[c] = item.endMin
+            break
+          }
+        }
+        if (assignedCol === -1) {
+          assignedCol = columns.length
+          columns.push(item.endMin)
+        }
+        clusterAssigned.push({
+          ...item,
+          colIndex: assignedCol
+        })
+      }
+
+      const totalCols = Math.max(columns.length, 1)
+      const clusterAllEvents = cluster.items.map((i) => i.event)
+
+      for (const item of clusterAssigned) {
+        const start = parseTime(item.event.startTime)
+        const end = parseTime(item.event.endTime)
+
+        const startOffsetMinutes = (start.hour - 8) * 60 + start.min
+        const endOffsetMinutes = (end.hour - 8) * 60 + end.min
+        let durationMinutes = endOffsetMinutes - startOffsetMinutes
+        if (durationMinutes <= 0) durationMinutes = 60
+
+        const topPx = Math.max(0, (startOffsetMinutes / 60) * HOUR_HEIGHT)
+        const heightPx = Math.max((durationMinutes / 60) * HOUR_HEIGHT, 28)
+
+        const widthPct = 100 / totalCols
+        const leftPct = item.colIndex * widthPct
+
+        positionedEvents.push({
+          event: item.event,
+          colIndex: item.colIndex,
+          totalCols,
+          topPx,
+          heightPx,
+          leftPct,
+          widthPct,
+          clusterItems: clusterAllEvents
+        })
+      }
+    }
+
+    return positionedEvents
   }
 
   // Helper to calculate rank relative to current time:
@@ -327,8 +407,7 @@ export default function InterviewsCalendarView({
     if (
       item.confirmationStatus === 'WAITING_DEPT_SCHEDULE' ||
       item.confirmationStatus === 'WAITING_HR_APPROVAL' ||
-      item.confirmationStatus === 'REJECTED' ||
-      item.status === InterviewStatus.CANCELLED
+      item.confirmationStatus === 'REJECTED'
     ) {
       return false
     }
@@ -337,7 +416,12 @@ export default function InterviewsCalendarView({
 
   // Filter today's interviews, sort by User Priority Rules, and limit to MAX 5 items
   const todayInterviews = interviews
-    .filter((inv) => isOfficialSchedule(inv) && formatDate(inv.date) === todayISO)
+    .filter(
+      (inv) =>
+        isOfficialSchedule(inv) &&
+        inv.status !== InterviewStatus.CANCELLED &&
+        formatDate(inv.date) === todayISO
+    )
     .sort((a, b) => {
       const rankA = getInterviewTimeRank(a)
       const rankB = getInterviewTimeRank(b)
@@ -610,15 +694,15 @@ export default function InterviewsCalendarView({
           {/* Horizontal Legend Indicators Bar */}
           <div className="flex items-center gap-3 text-[10px] font-extrabold text-slate-700 bg-white/40 px-2.5 py-1 rounded-lg border border-white/70 shadow-2xs">
             <div className="flex items-center gap-1.5">
-              <span className="w-2 h-2 rounded-full bg-[#3B82F6]" />
+              <span className="w-2 h-2 rounded-full bg-[#0284c7]" />
               <span>Đã lên lịch</span>
             </div>
             <div className="flex items-center gap-1.5">
-              <span className="w-2 h-2 rounded-full bg-emerald-600" />
+              <span className="w-2 h-2 rounded-full bg-[#059669]" />
               <span>Hoàn thành</span>
             </div>
             <div className="flex items-center gap-1.5">
-              <span className="w-2 h-2 rounded-full bg-rose-500" />
+              <span className="w-2 h-2 rounded-full bg-[#e11d48]" />
               <span>Đã hủy</span>
             </div>
           </div>
@@ -705,92 +789,124 @@ export default function InterviewsCalendarView({
                         />
                       ))}
 
-                      {/* Positioned Event Clusters (Method 2: Representative Card with +N Badge) */}
+                      {/* Google Calendar Multi-Column Overlapping Event Cards */}
                       {(() => {
-                        const clusters = clusterOverlappingEvents(dayEvents)
-                        return clusters.map((cluster) => {
-                          const primaryEvent = cluster.items[0]
-                          const count = cluster.items.length
-
-                          const start = parseTime(cluster.startTime)
-                          const end = parseTime(cluster.endTime)
-
-                          // Calculate start offset from 8 AM
-                          const startOffsetMinutes = (start.hour - 8) * 60 + start.min
-                          const endOffsetMinutes = (end.hour - 8) * 60 + end.min
-                          let durationMinutes = endOffsetMinutes - startOffsetMinutes
-                          if (durationMinutes <= 0) durationMinutes = 60 // Default 1 hour
-
-                          const topPx = (startOffsetMinutes / 60) * HOUR_HEIGHT
-                          const heightPx = Math.max((durationMinutes / 60) * HOUR_HEIGHT, 34)
+                        const positionedEvents = computeDayEventLayouts(dayEvents)
+                        return positionedEvents.map((item) => {
+                          const {
+                            event,
+                            totalCols,
+                            topPx,
+                            heightPx,
+                            leftPct,
+                            widthPct,
+                            clusterItems
+                          } = item
 
                           const jobTitle =
-                            typeof primaryEvent.jobDescriptionId === 'object'
-                              ? primaryEvent.jobDescriptionId?.title
+                            typeof event.jobDescriptionId === 'object'
+                              ? event.jobDescriptionId?.title
                               : 'Vị trí tuyển dụng'
 
-                          // 1. Single Event (No Overlap)
-                          if (count === 1) {
-                            return (
-                              <div
-                                key={primaryEvent._id}
-                                style={{
-                                  top: `${topPx}px`,
-                                  height: `${heightPx}px`
-                                }}
-                                onMouseEnter={(e) => handleCardMouseEnter(primaryEvent, e)}
-                                onMouseLeave={handleCardMouseLeave}
-                                onClick={() =>
-                                  router.push(`/interviews/${primaryEvent._id}/evaluate`)
-                                }
-                                className={`absolute inset-x-1 p-1 px-1.5 rounded-lg text-[10px] font-bold transition-all cursor-pointer overflow-hidden z-10 flex flex-col justify-center gap-0.5 border ${getEventBgByStatus(
-                                  primaryEvent.status
-                                )}`}
-                              >
-                                <div className="flex items-center gap-1 text-[9.5px] font-extrabold truncate leading-tight">
-                                  <span>
-                                    {primaryEvent.startTime} - {primaryEvent.endTime}
-                                  </span>
-                                </div>
-                                <div className="font-extrabold leading-tight truncate text-slate-900">
-                                  {jobTitle}
-                                </div>
-                              </div>
-                            )
-                          }
+                          const candidateName =
+                            typeof event.candidateId === 'object'
+                              ? event.candidateId?.fullName || event.candidateId?.name
+                              : 'Ứng viên'
 
-                          // 2. Overlapping Grouped Event Card with "+N khác" Badge
+                          const isCancelled = event.status === InterviewStatus.CANCELLED
+
                           return (
                             <div
-                              key={cluster.id}
+                              key={event._id}
                               style={{
                                 top: `${topPx}px`,
-                                height: `${heightPx}px`
+                                height: `${heightPx}px`,
+                                left: `${leftPct}%`,
+                                width: `${widthPct}%`
                               }}
-                              onMouseEnter={(e) => handleCardMouseEnter(primaryEvent, e)}
+                              onMouseEnter={(e) => handleCardMouseEnter(event, clusterItems, e)}
                               onMouseLeave={handleCardMouseLeave}
-                              onClick={() => {
-                                setSelectedCluster({
-                                  dateStr: dayISOStr,
-                                  startTime: cluster.startTime,
-                                  endTime: cluster.endTime,
-                                  items: cluster.items
-                                })
-                              }}
-                              className="absolute inset-x-1 p-1 px-1.5 rounded-lg text-[10px] font-bold transition-all cursor-pointer overflow-hidden z-10 flex flex-col justify-center gap-0.5 border-l-4 border-l-blue-600 border border-blue-400/80 bg-gradient-to-r from-blue-500/25 via-indigo-500/20 to-sky-500/15 text-blue-950 hover:bg-blue-500/35 shadow-xs hover:shadow-md hover:scale-[1.01] backdrop-blur-sm group"
-                              title={`Có ${count} buổi phỏng vấn cùng khung giờ. Bấm để xem chi tiết.`}
+                              onClick={() => router.push(`/interviews/${event._id}/evaluate`)}
+                              className={`absolute p-1 rounded-lg text-white font-medium transition-all cursor-pointer overflow-hidden z-10 flex flex-col justify-start border-2 border-white shadow-xs hover:shadow-md hover:z-30 hover:scale-[1.02] ${getEventBgByStatus(
+                                event.status
+                              )}`}
+                              title={`${event.startTime} - ${event.endTime}: ${jobTitle} (${candidateName})${
+                                isCancelled ? ' - [ĐÃ HỦY]' : ''
+                              }`}
                             >
-                              <div className="flex items-center justify-between gap-1 leading-tight">
-                                <span className="text-[9.5px] font-extrabold text-blue-950 truncate">
-                                  {cluster.startTime} - {cluster.endTime}
-                                </span>
-                                <span className="px-1.5 py-0.2 bg-blue-600 group-hover:bg-blue-700 text-white text-[9px] font-black rounded-full shadow-2xs shrink-0 transition-transform group-hover:scale-105">
-                                  +{count - 1} khác
-                                </span>
-                              </div>
-                              <div className="font-extrabold leading-tight truncate text-slate-900">
-                                {jobTitle}
-                              </div>
+                              {heightPx < 36 ? (
+                                <div className="flex items-center gap-1 min-w-0 leading-none h-full px-0.5 select-none">
+                                  <span
+                                    className={`text-[10px] font-extrabold text-white truncate ${
+                                      isCancelled ? 'line-through opacity-85' : ''
+                                    }`}
+                                  >
+                                    {jobTitle}
+                                  </span>
+                                  <span className="text-[8.5px] font-semibold text-white/90 shrink-0">
+                                    ({event.startTime})
+                                  </span>
+                                </div>
+                              ) : totalCols === 1 ? (
+                                <div className="flex flex-col justify-center h-full gap-0.5 select-none px-1">
+                                  <div className="flex items-center justify-between gap-1 leading-tight">
+                                    <span
+                                      className={`text-[10.5px] font-extrabold text-white truncate ${
+                                        isCancelled ? 'line-through opacity-85' : ''
+                                      }`}
+                                    >
+                                      {jobTitle}
+                                    </span>
+                                    <span className="text-[9px] font-semibold text-white/90 shrink-0">
+                                      {event.startTime} - {event.endTime}
+                                    </span>
+                                  </div>
+                                  <div className="text-[9.5px] font-medium text-white/90 truncate leading-tight flex items-center justify-between gap-1">
+                                    <span className="truncate">{candidateName}</span>
+                                    {isCancelled && (
+                                      <span className="text-[8px] bg-white/20 px-1 py-0.2 rounded text-white font-bold shrink-0">
+                                        Đã hủy
+                                      </span>
+                                    )}
+                                  </div>
+                                </div>
+                              ) : totalCols === 2 ? (
+                                <div className="flex flex-col justify-start h-full gap-0.5 select-none px-0.5">
+                                  <div
+                                    className={`text-[10px] font-extrabold text-white truncate leading-tight ${
+                                      isCancelled ? 'line-through opacity-85' : ''
+                                    }`}
+                                  >
+                                    {jobTitle}
+                                  </div>
+                                  <div className="text-[9px] font-semibold text-white/90 truncate leading-tight">
+                                    {event.startTime} - {event.endTime}
+                                  </div>
+                                  {heightPx >= 48 && (
+                                    <div className="text-[8.5px] font-medium text-white/80 truncate leading-tight">
+                                      {candidateName} {isCancelled && '(Hủy)'}
+                                    </div>
+                                  )}
+                                </div>
+                              ) : (
+                                <div className="flex flex-col justify-start h-full gap-0.5 select-none px-0.5 overflow-hidden">
+                                  <div
+                                    className={`text-[9.5px] font-extrabold text-white truncate leading-tight ${
+                                      isCancelled ? 'line-through opacity-85' : ''
+                                    }`}
+                                  >
+                                    {jobTitle}
+                                  </div>
+                                  <div className="text-[8.5px] font-semibold text-white/90 truncate leading-tight">
+                                    {event.startTime}
+                                  </div>
+                                  {heightPx >= 48 && (
+                                    <div className="text-[8px] font-medium text-white/80 truncate leading-tight">
+                                      {candidateName}
+                                    </div>
+                                  )}
+                                </div>
+                              )}
                             </div>
                           )
                         })
@@ -808,6 +924,19 @@ export default function InterviewsCalendarView({
       {hoveredInterview && (
         <InterviewPopoverTooltip
           hoveredInterview={hoveredInterview}
+          clusterCount={hoveredInterview.clusterItems?.length}
+          onViewCluster={() => {
+            if (hoveredInterview.clusterItems && hoveredInterview.clusterItems.length > 1) {
+              const first = hoveredInterview.clusterItems[0]
+              setSelectedCluster({
+                dateStr: formatDate(first.date),
+                startTime: first.startTime,
+                endTime: first.endTime,
+                items: hoveredInterview.clusterItems
+              })
+              setHoveredInterview(null)
+            }
+          }}
           formatDate={formatDate}
           getStatusBadge={getStatusBadge}
           getResultBadge={getResultBadge}

@@ -19,6 +19,8 @@ interface InterviewPopoverTooltipProps {
   formatDate: (dateStr?: string) => string
   getStatusBadge: (status: InterviewStatus, confirmationStatus?: string) => React.ReactNode
   getResultBadge: (result: InterviewResult) => React.ReactNode
+  clusterCount?: number
+  onViewCluster?: () => void
   onMouseEnter?: () => void
   onMouseLeave?: () => void
 }
@@ -28,6 +30,8 @@ export default function InterviewPopoverTooltip({
   formatDate,
   getStatusBadge,
   getResultBadge,
+  clusterCount,
+  onViewCluster,
   onMouseEnter,
   onMouseLeave
 }: InterviewPopoverTooltipProps) {
@@ -164,6 +168,28 @@ export default function InterviewPopoverTooltip({
             &ldquo;{item.feedback}&rdquo;
           </div>
         )}
+
+        {/* Overlapping Events Quick Access Button */}
+        {/* {Boolean(clusterCount && clusterCount > 1 && onViewCluster) && (
+          <div className="pt-2 border-t border-slate-100">
+            <button
+              type="button"
+              onClick={(e) => {
+                e.stopPropagation()
+                onViewCluster?.()
+              }}
+              className="w-full py-1.5 px-3 rounded-xl bg-blue-50/90 hover:bg-blue-100 text-blue-700 text-xs font-bold flex items-center justify-between transition-colors border border-blue-200/70 cursor-pointer shadow-2xs group"
+            >
+              <span className="flex items-center gap-1.5">
+                <span className="w-2 h-2 rounded-full bg-blue-600 animate-pulse" />
+                <span>Trùng {clusterCount} lịch cùng khung giờ</span>
+              </span>
+              <span className="px-2 py-0.5 bg-blue-600 group-hover:bg-blue-700 text-white text-[10px] font-extrabold rounded-md shadow-2xs">
+                Xem tất cả
+              </span>
+            </button>
+          </div>
+        )} */}
       </div>
     </div>
   )
