@@ -136,7 +136,7 @@ export const RegisterScreen: React.FC<RegisterScreenProps> = ({ onNavigateToLogi
               <Ionicons name="mail-outline" size={20} color="#7c3aed" style={styles.inputIcon} />
               <TextInput
                 style={styles.input}
-                placeholder="ungvien@example.com"
+                placeholder="example@gmail.com"
                 placeholderTextColor="#94a3b8"
                 value={email}
                 onChangeText={(text) => {
@@ -166,7 +166,7 @@ export const RegisterScreen: React.FC<RegisterScreenProps> = ({ onNavigateToLogi
               />
               <TextInput
                 style={styles.input}
-                placeholder="Tối thiểu 6 ký tự"
+                placeholder="Nhập mật khẩu"
                 placeholderTextColor="#94a3b8"
                 value={password}
                 onChangeText={(text) => {

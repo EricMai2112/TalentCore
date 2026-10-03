@@ -94,9 +94,6 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ onNavigateToRegister, 
             resizeMode="contain"
           />
           <Text style={styles.title}>Đăng nhập ứng viên</Text>
-          <Text style={styles.description}>
-            Chào mừng bạn quay lại hệ sinh thái tuyển dụng TalentCore
-          </Text>
         </View>
 
         {errorMessage ? (
@@ -113,7 +110,7 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ onNavigateToRegister, 
               <Ionicons name="mail-outline" size={20} color="#7c3aed" style={styles.inputIcon} />
               <TextInput
                 style={styles.input}
-                placeholder="ungvien@example.com"
+                placeholder="example@gmail.com"
                 placeholderTextColor="#94a3b8"
                 value={email}
                 onChangeText={(text) => {
