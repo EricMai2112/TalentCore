@@ -1,5 +1,14 @@
 import { apiClient } from '@/src/lib/api-client';
-import { DashboardData, OverviewKpis, RecruitmentFunnel, DepartmentFulfillment, OfferBreakdown, ApplicationTrends, AiInsights, RecentActivities } from '../types/dashboard.types';
+import {
+  DashboardData,
+  OverviewKpis,
+  RecruitmentFunnel,
+  DepartmentFulfillment,
+  OfferBreakdown,
+  ApplicationTrends,
+  RecentActivities,
+  HiringVelocityMetrics
+} from '../types/dashboard.types';
 
 interface ApiResponse<T> {
   message: string;
@@ -40,8 +49,9 @@ export const analyticsApi = {
     return res.data;
   },
 
-  getAiInsights: async (): Promise<AiInsights> => {
-    const res = await apiClient.get<ApiResponse<AiInsights>>('/analytics/ai-insights');
+
+  getHiringVelocity: async (): Promise<HiringVelocityMetrics> => {
+    const res = await apiClient.get<ApiResponse<HiringVelocityMetrics>>('/analytics/hiring-velocity');
     return res.data;
   },
 
