@@ -193,7 +193,6 @@ export const JobsScreen: React.FC<JobsScreenProps> = ({
 
         <View style={styles.sectionHeader}>
           <Text style={styles.sectionHeading}>Tìm việc theo ngành</Text>
-          <Text style={styles.deptCountText}>{departments.length} ngành nghề</Text>
         </View>
 
         <ScrollView
@@ -234,7 +233,6 @@ export const JobsScreen: React.FC<JobsScreenProps> = ({
 
         <View style={styles.sectionHeader}>
           <Text style={styles.sectionHeading}>Danh sách công việc</Text>
-          <Text style={styles.badgeCountText}>{filteredJobs.length} vị trí</Text>
         </View>
 
         {loading ? (
@@ -264,17 +262,10 @@ export const JobsScreen: React.FC<JobsScreenProps> = ({
                             <Text style={styles.deptLabelText}>{job.department}</Text>
                           </View>
 
-                          {job.priority === 'HIGH' && (
+                          {(job.priority === 'HIGH' || job.priority === 'URGENT') && (
                             <View style={styles.urgentLabel}>
-                              <Ionicons name="flame" size={12} color="#ea580c" />
-                              <Text style={styles.urgentLabelText}>Tuyển gấp</Text>
-                            </View>
-                          )}
-
-                          {job.priority === 'MEDIUM' && (
-                            <View style={styles.priorityMediumLabel}>
-                              <Ionicons name="flash" size={11} color="#2563eb" />
-                              <Text style={styles.priorityMediumLabelText}>Ưu tiên</Text>
+                              <Ionicons name="flame" size={12} color="#e11d48" />
+                              <Text style={styles.urgentLabelText}>Ưu tiên gấp</Text>
                             </View>
                           )}
                         </View>
@@ -295,7 +286,7 @@ export const JobsScreen: React.FC<JobsScreenProps> = ({
 
                     <View style={styles.salaryContainer}>
                       <Text style={styles.salaryLabel}>Mức lương:</Text>
-                      <Text style={styles.salaryValue}>💰 {job.salaryDisplay}</Text>
+                      <Text style={styles.salaryValue}>{job.salaryDisplay}</Text>
                     </View>
 
                     <View style={styles.metaLayoutGrid}>
@@ -604,29 +595,17 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 3,
-    backgroundColor: '#fff7ed',
+    backgroundColor: '#fff1f2',
+    borderWidth: 1,
+    borderColor: '#fecdd3',
     borderRadius: 6,
     paddingHorizontal: 7,
-    paddingVertical: 3,
+    paddingVertical: 2,
   },
   urgentLabelText: {
     fontSize: 11,
     fontWeight: '700',
-    color: '#ea580c',
-  },
-  priorityMediumLabel: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 3,
-    backgroundColor: '#eff6ff',
-    borderRadius: 6,
-    paddingHorizontal: 7,
-    paddingVertical: 3,
-  },
-  priorityMediumLabelText: {
-    fontSize: 11,
-    fontWeight: '700',
-    color: '#2563eb',
+    color: '#e11d48',
   },
   jobItemTitle: {
     fontSize: 16,
@@ -655,7 +634,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#f0fdf4',
     borderWidth: 1,
     borderColor: '#dcfce7',
-    borderRadius: 10,
+    borderRadius: 8,
     paddingHorizontal: 10,
     paddingVertical: 6,
     marginBottom: 12,
@@ -670,6 +649,7 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: '800',
     color: '#16a34a',
+    letterSpacing: 0.2,
   },
   metaLayoutGrid: {
     flexDirection: 'row',
