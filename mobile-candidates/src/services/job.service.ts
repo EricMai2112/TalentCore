@@ -25,7 +25,7 @@ const DEFAULT_JOBS: JobItem[] = [
     priority: 'HIGH',
     isUrgent: true,
     skills: ['Python', 'SQL', 'Spark', 'Kafka', 'AWS'],
-    postedTime: '15 phút trước',
+    postedTime: '01/10/2026',
     createdAt: new Date().toISOString(),
     description: 'Xây dựng và tối ưu hệ thống xử lý dữ liệu lớn (Big Data Pipeline) phục vụ phân tích thời gian thực.',
   },
@@ -43,7 +43,7 @@ const DEFAULT_JOBS: JobItem[] = [
     priority: 'HIGH',
     isUrgent: true,
     skills: ['Figma', 'Design System', 'Prototyping', 'UX Research'],
-    postedTime: '1 giờ trước',
+    postedTime: '30/09/2026',
     createdAt: new Date(Date.now() - 3600000).toISOString(),
     description: 'Thiết kế giao diện và kiến trúc trải nghiệm người dùng toàn diện cho các nền tảng TalentCore.',
   },
@@ -61,7 +61,7 @@ const DEFAULT_JOBS: JobItem[] = [
     priority: 'MEDIUM',
     isUrgent: false,
     skills: ['React', 'TypeScript', 'TailwindCSS', 'Next.js'],
-    postedTime: '3 giờ trước',
+    postedTime: '29/09/2026',
     createdAt: new Date(Date.now() - 10800000).toISOString(),
     description: 'Phát triển các module ứng dụng web và mobile chất lượng cao, tối ưu hóa trải nghiệm tương tác mượt mà.',
   },
@@ -79,7 +79,7 @@ const DEFAULT_JOBS: JobItem[] = [
     priority: 'MEDIUM',
     isUrgent: false,
     skills: ['Quản lý ngân sách', 'Thuế', 'Báo cáo tài chính', 'Excel'],
-    postedTime: 'Hôm nay',
+    postedTime: '28/09/2026',
     createdAt: new Date(Date.now() - 86400000).toISOString(),
     description: 'Quản trị dòng tiền, lập ngân sách và chiến lược tài chính cho các dự án mở rộng.',
   },
@@ -97,7 +97,7 @@ const DEFAULT_JOBS: JobItem[] = [
     priority: 'HIGH',
     isUrgent: true,
     skills: ['Node.js', 'NestJS', 'PostgreSQL', 'Docker', 'Redis'],
-    postedTime: 'Hôm qua',
+    postedTime: '27/09/2026',
     createdAt: new Date(Date.now() - 86400000 * 2).toISOString(),
     description: 'Thiết kế và triển khai hệ thống microservices backend với khả năng chịu tải và bảo mật cao.',
   },
@@ -119,21 +119,9 @@ const formatSalary = (min?: number, max?: number): string => {
 };
 
 const formatCreatedAt = (dateStr?: string): string => {
-  if (!dateStr) return 'Mới đăng';
+  if (!dateStr) return '';
   const date = new Date(dateStr);
-  if (isNaN(date.getTime())) return 'Mới đăng';
-
-  const diffMs = Date.now() - date.getTime();
-  const diffMinutes = Math.floor(diffMs / (1000 * 60));
-  if (diffMinutes < 1) return 'Vừa đăng';
-  if (diffMinutes < 60) return `${diffMinutes} phút trước`;
-
-  const diffHours = Math.floor(diffMinutes / 60);
-  if (diffHours < 24) return `${diffHours} giờ trước`;
-
-  const diffDays = Math.floor(diffHours / 24);
-  if (diffDays === 1) return 'Hôm qua';
-  if (diffDays < 7) return `${diffDays} ngày trước`;
+  if (isNaN(date.getTime())) return '';
 
   const day = String(date.getDate()).padStart(2, '0');
   const month = String(date.getMonth() + 1).padStart(2, '0');

@@ -69,24 +69,14 @@ export const JobsScreen: React.FC<JobsScreenProps> = ({
   };
 
   const handleLogoutPress = () => {
-    if (user) {
-      Alert.alert('Đăng xuất', 'Bạn có chắc chắn muốn đăng xuất tài khoản?', [
-        { text: 'Hủy', style: 'cancel' },
-        {
-          text: 'Đăng xuất',
-          style: 'destructive',
-          onPress: () => logout(),
-        },
-      ]);
-    } else {
-      Alert.alert('Tài khoản', 'Bạn chưa đăng nhập. Bạn có muốn đăng nhập không?', [
-        { text: 'Hủy', style: 'cancel' },
-        {
-          text: 'Đăng nhập',
-          onPress: () => onOpenProfile?.(),
-        },
-      ]);
-    }
+    Alert.alert('Đăng xuất', 'Bạn có chắc chắn muốn đăng xuất tài khoản?', [
+      { text: 'Hủy', style: 'cancel' },
+      {
+        text: 'Đăng xuất',
+        style: 'destructive',
+        onPress: () => logout(),
+      },
+    ]);
   };
 
   const currentHour = new Date().getHours();
@@ -97,7 +87,7 @@ export const JobsScreen: React.FC<JobsScreenProps> = ({
       ? 'Chào buổi chiều'
       : 'Chào buổi tối';
 
-  const displayName = user?.name || 'Thanh';
+  const displayName = user?.name || user?.email?.split('@')[0] || 'Ứng viên';
 
   const filteredJobs = jobs.filter((job) => {
     const matchesSearch =
