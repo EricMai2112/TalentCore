@@ -1,7 +1,7 @@
 import React, { useRef, useState } from 'react';
 import {
+  Alert,
   Animated,
-  Modal,
   Platform,
   Pressable,
   SafeAreaView,
@@ -11,9 +11,8 @@ import {
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
+import { useAuth } from '../context/AuthContext';
 import { JobsScreen } from './JobsScreen';
-import { LoginScreen } from './LoginScreen';
-import { RegisterScreen } from './RegisterScreen';
 
 type TabKey = 'jobs' | 'applications' | 'notifications' | 'profile';
 
@@ -32,10 +31,9 @@ const TABS: TabItem[] = [
 ];
 
 export const MainCandidateScreen: React.FC = () => {
+  const { user, logout } = useAuth();
   const [activeTab, setActiveTab] = useState<TabKey>('jobs');
   const [tabBarWidth, setTabBarWidth] = useState(0);
-  const [authModalVisible, setAuthModalVisible] = useState(false);
-  const [authModalMode, setAuthModalMode] = useState<'login' | 'register'>('login');
 
   const translateX = useRef(new Animated.Value(0)).current;
   const scaleAnim = useRef(new Animated.Value(1)).current;
@@ -44,9 +42,15 @@ export const MainCandidateScreen: React.FC = () => {
 
   const currentTabWidth = tabBarWidth > 0 ? (tabBarWidth - 16) / 4 : 0;
 
-  const openLoginModal = () => {
-    setAuthModalMode('login');
-    setAuthModalVisible(true);
+  const handleLogout = () => {
+    Alert.alert('Đăng xuất', 'Bạn có chắc chắn muốn đăng xuất tài khoản?', [
+      { text: 'Hủy', style: 'cancel' },
+      {
+        text: 'Đăng xuất',
+        style: 'destructive',
+        onPress: () => logout(),
+      },
+    ]);
   };
 
   const handleSelectTab = (tabKey: TabKey, index: number) => {
@@ -132,14 +136,33 @@ export const MainCandidateScreen: React.FC = () => {
           </View>
         );
       case 'profile':
+        const displayName = user?.name || user?.email?.split('@')[0] || 'Ứng viên';
+        const initial = displayName.charAt(0).toUpperCase();
         return (
-          <View style={styles.placeholderContainer}>
-            <Ionicons name="person-circle-outline" size={56} color="#7c3aed" />
-            <Text style={styles.placeholderTitle}>Tài khoản</Text>
-            <Pressable style={styles.loginTriggerBtn} onPress={openLoginModal}>
-              <Text style={styles.loginTriggerText}>Đăng nhập / Đăng ký</Text>
-            </Pressable>
-          </View>
+          <SafeAreaView style={styles.profileSafeArea}>
+            <View style={styles.profileContainer}>
+              <View style={styles.profileCard}>
+                <LinearGradient
+                  colors={['#7c3aed', '#6366f1']}
+                  start={{ x: 0, y: 0 }}
+                  end={{ x: 1, y: 1 }}
+                  style={styles.avatarGradient}
+                >
+                  <Text style={styles.avatarText}>{initial}</Text>
+                </LinearGradient>
+                <Text style={styles.profileName}>{displayName}</Text>
+                <Text style={styles.profileEmail}>{user?.email || ''}</Text>
+                <View style={styles.profileRoleBadge}>
+                  <Text style={styles.profileRoleText}>Ứng viên TalentCore</Text>
+                </View>
+              </View>
+
+              <Pressable style={styles.logoutBtn} onPress={handleLogout}>
+                <Ionicons name="log-out-outline" size={20} color="#dc2626" />
+                <Text style={styles.logoutBtnText}>Đăng xuất tài khoản</Text>
+              </Pressable>
+            </View>
+          </SafeAreaView>
         );
       default:
         return <JobsScreen />;
@@ -226,8 +249,8 @@ export const MainCandidateScreen: React.FC = () => {
                 >
                   <Ionicons
                     name={isActive ? tab.iconActive : tab.icon}
-                    size={20}
-                    color={isActive ? '#7c3aed' : '#64748b'}
+                    size={22}
+                    color={isActive ? '#7c3aed' : '#0f172a'}
                   />
                   <Text
                     style={[
@@ -243,25 +266,6 @@ export const MainCandidateScreen: React.FC = () => {
           })}
         </View>
       </SafeAreaView>
-
-      <Modal
-        visible={authModalVisible}
-        animationType="slide"
-        presentationStyle="pageSheet"
-        onRequestClose={() => setAuthModalVisible(false)}
-      >
-        {authModalMode === 'login' ? (
-          <LoginScreen
-            onNavigateToRegister={() => setAuthModalMode('register')}
-            onClose={() => setAuthModalVisible(false)}
-          />
-        ) : (
-          <RegisterScreen
-            onNavigateToLogin={() => setAuthModalMode('login')}
-            onClose={() => setAuthModalVisible(false)}
-          />
-        )}
-      </Modal>
     </View>
   );
 };
@@ -350,8 +354,8 @@ const styles = StyleSheet.create({
   },
   tabTitle: {
     fontSize: 10,
-    fontWeight: '600',
-    color: '#64748b',
+    fontWeight: '700',
+    color: '#334155',
     marginTop: 2,
   },
   tabTitleActive: {
@@ -377,16 +381,81 @@ const styles = StyleSheet.create({
     marginTop: 4,
     textAlign: 'center',
   },
-  loginTriggerBtn: {
-    marginTop: 16,
-    paddingHorizontal: 20,
-    paddingVertical: 10,
-    backgroundColor: '#7c3aed',
-    borderRadius: 10,
+  profileSafeArea: {
+    flex: 1,
+    backgroundColor: '#ffffff',
   },
-  loginTriggerText: {
+  profileContainer: {
+    flex: 1,
+    padding: 24,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  profileCard: {
+    width: '100%',
+    backgroundColor: '#f8fafc',
+    borderRadius: 24,
+    padding: 24,
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: '#f1f5f9',
+    marginBottom: 20,
+    shadowColor: '#000000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.04,
+    shadowRadius: 12,
+    elevation: 3,
+  },
+  avatarGradient: {
+    width: 76,
+    height: 76,
+    borderRadius: 38,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 14,
+  },
+  avatarText: {
+    fontSize: 28,
+    fontWeight: '800',
     color: '#ffffff',
-    fontWeight: '600',
+  },
+  profileName: {
+    fontSize: 20,
+    fontWeight: '800',
+    color: '#0f172a',
+    marginBottom: 4,
+  },
+  profileEmail: {
     fontSize: 14,
+    color: '#64748b',
+    marginBottom: 12,
+  },
+  profileRoleBadge: {
+    backgroundColor: '#ede9fe',
+    borderRadius: 12,
+    paddingHorizontal: 12,
+    paddingVertical: 5,
+  },
+  profileRoleText: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: '#7c3aed',
+  },
+  logoutBtn: {
+    width: '100%',
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#fef2f2',
+    borderWidth: 1,
+    borderColor: '#fee2e2',
+    borderRadius: 14,
+    paddingVertical: 14,
+    gap: 8,
+  },
+  logoutBtnText: {
+    fontSize: 15,
+    fontWeight: '700',
+    color: '#dc2626',
   },
 });
