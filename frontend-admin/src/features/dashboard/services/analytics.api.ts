@@ -17,9 +17,20 @@ interface ApiResponse<T> {
 
 export const analyticsApi = {
   /** Lấy toàn bộ dữ liệu dashboard trong 1 request */
-  getAllDashboardData: async (months = 6, limit = 5): Promise<DashboardData> => {
+  getAllDashboardData: async (
+    months = 6,
+    limit = 5,
+    departmentId?: string
+  ): Promise<DashboardData> => {
+    const params = new URLSearchParams({
+      months: String(months),
+      limit: String(limit)
+    });
+    if (departmentId && departmentId.trim()) {
+      params.append('departmentId', departmentId.trim());
+    }
     const res = await apiClient.get<ApiResponse<DashboardData>>(
-      `/analytics/all?months=${months}&limit=${limit}`
+      `/analytics/all?${params.toString()}`
     );
     return res.data;
   },

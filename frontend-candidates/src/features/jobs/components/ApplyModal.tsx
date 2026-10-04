@@ -14,6 +14,7 @@ import {
   Plus,
 } from "lucide-react";
 import { CandidateJob } from "../types/job.types";
+import { formatJobSalary } from "../utils/salary.utils";
 import { useAuth } from "@/src/providers/AuthProvider";
 import { candidateJobApi } from "../services/job-api";
 import { profileApi } from "@/src/features/user/services/user.api";
@@ -168,8 +169,7 @@ export default function ApplyModal({ isOpen, onClose, job }: ApplyModalProps) {
               <div className="flex justify-between items-center">
                 <span className="text-slate-500 font-medium">Mức lương:</span>
                 <span className="font-bold text-emerald-600">
-                  ${(job.minimumSalary ?? 0).toLocaleString("en-US")} - $
-                  {(job.maximumSalary ?? 0).toLocaleString("en-US")} / tháng
+                  {formatJobSalary(job.minimumSalary, job.maximumSalary)}
                 </span>
               </div>
             </div>

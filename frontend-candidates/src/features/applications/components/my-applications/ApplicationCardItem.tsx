@@ -1,7 +1,7 @@
 'use client'
 
 import Link from 'next/link'
-import { Briefcase, Building2, MapPin, DollarSign, Check, Clock, X, ArrowRight } from 'lucide-react'
+import { Briefcase, Building2, MapPin, Banknote, Check, Clock, X, ArrowRight } from 'lucide-react'
 import { CandidateApplicationItem } from '../../types/application.types'
 
 interface ApplicationCardItemProps {
@@ -12,7 +12,7 @@ export function ApplicationCardItem({ app }: ApplicationCardItemProps) {
   const job = app.jobDescriptionId
   const deptName = typeof job?.departmentId === 'object' ? job?.departmentId?.name : 'Engineering'
   const location = job?.location || 'Hồ Chí Minh'
-  const salary = job?.salaryRange || '$2500-$4000'
+  const salary = job?.salaryRange || 'Thương lượng'
 
   const activeIdx =
     app.currentStageIndex !== undefined && app.currentStageIndex >= 0 ? app.currentStageIndex : 0
@@ -132,7 +132,7 @@ export function ApplicationCardItem({ app }: ApplicationCardItemProps) {
               </span>
               <span>•</span>
               <span className="flex items-center gap-1 font-semibold text-slate-700">
-                <DollarSign size={13} className="text-slate-400" />
+                <Banknote size={13} className="text-slate-400" />
                 {salary}
               </span>
             </div>

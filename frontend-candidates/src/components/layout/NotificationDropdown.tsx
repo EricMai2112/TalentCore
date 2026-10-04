@@ -146,8 +146,16 @@ export default function NotificationDropdown({ isScrolled }: NotificationDropdow
       <button
         type="button"
         onClick={() => setIsOpen(!isOpen)}
-        className={`relative rounded-full bg-slate-900 border border-slate-800 hover:border-slate-700 transition-all duration-200 cursor-pointer flex items-center justify-center text-slate-300 hover:text-white ${
-          isOpen ? 'ring-2 ring-blue-500/50 border-blue-500 text-blue-400' : ''
+        className={`relative rounded-full transition-all duration-200 cursor-pointer flex items-center justify-center ${
+          isScrolled
+            ? 'bg-slate-100/90 border border-slate-200 hover:border-slate-300 hover:bg-slate-100 text-slate-700 hover:text-slate-900'
+            : 'bg-slate-900 border border-slate-800 hover:border-slate-700 text-slate-300 hover:text-white'
+        } ${
+          isOpen
+            ? isScrolled
+              ? 'ring-2 ring-blue-500/40 border-blue-500 text-blue-600 bg-blue-50'
+              : 'ring-2 ring-blue-500/50 border-blue-500 text-blue-400'
+            : ''
         } ${isScrolled ? 'w-8 h-8' : 'w-9 h-9'}`}
         title="Thông báo"
       >

@@ -1,6 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
-import { Model } from 'mongoose';
+import { Model, Types } from 'mongoose';
 import { User, UserDocument, UserRole } from '../users/schemas/user.schema';
 import {
   Candidate,
@@ -55,22 +55,72 @@ export class AnalyticsService {
     private aiEvaluationModel: Model<AiEvaluationDocument>,
   ) {}
 
+  private async getDepartmentJobIds(
+    departmentId?: string,
+  ): Promise<Types.ObjectId[] | null> {
+    if (!departmentId || !Types.ObjectId.isValid(departmentId)) {
+      return null;
+    }
+    const deptJobs = await this.jobDescriptionModel
+      .find({ departmentId: new Types.ObjectId(departmentId) })
+      .select('_id')
+      .lean();
+    return deptJobs.map((j) => j._id as Types.ObjectId);
+  }
+
   // ─────────────────────────────────────────────────────────────
   // KPI TỔNG QUAN
   // ─────────────────────────────────────────────────────────────
-  async getOverviewKpis() {
+  async getOverviewKpis(departmentId?: string) {
     const now = new Date();
     const thirtyDaysAgo = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
     const sixtyDaysAgo = new Date(now.getTime() - 60 * 24 * 60 * 60 * 1000);
 
+    const deptJobIds = await this.getDepartmentJobIds(departmentId);
+    const hasDeptFilter = deptJobIds !== null;
+    const deptObjId =
+      departmentId && Types.ObjectId.isValid(departmentId)
+        ? new Types.ObjectId(departmentId)
+        : null;
+
     // 1. Candidate metrics
-    const totalCandidates = await this.candidateModel.countDocuments();
-    const candidatesLast30 = await this.candidateModel.countDocuments({
-      createdAt: { $gte: thirtyDaysAgo },
-    });
-    const candidatesPrev30 = await this.candidateModel.countDocuments({
-      createdAt: { $gte: sixtyDaysAgo, $lt: thirtyDaysAgo },
-    });
+    let totalCandidates: number;
+    let candidatesLast30: number;
+    let candidatesPrev30: number;
+
+    if (hasDeptFilter) {
+      const allCandIds = await this.applicationModel.distinct('candidateId', {
+        jobDescriptionId: { $in: deptJobIds },
+      });
+      totalCandidates = allCandIds.length;
+
+      const last30CandIds = await this.applicationModel.distinct(
+        'candidateId',
+        {
+          jobDescriptionId: { $in: deptJobIds },
+          appliedAt: { $gte: thirtyDaysAgo },
+        },
+      );
+      candidatesLast30 = last30CandIds.length;
+
+      const prev30CandIds = await this.applicationModel.distinct(
+        'candidateId',
+        {
+          jobDescriptionId: { $in: deptJobIds },
+          appliedAt: { $gte: sixtyDaysAgo, $lt: thirtyDaysAgo },
+        },
+      );
+      candidatesPrev30 = prev30CandIds.length;
+    } else {
+      totalCandidates = await this.candidateModel.countDocuments();
+      candidatesLast30 = await this.candidateModel.countDocuments({
+        createdAt: { $gte: thirtyDaysAgo },
+      });
+      candidatesPrev30 = await this.candidateModel.countDocuments({
+        createdAt: { $gte: sixtyDaysAgo, $lt: thirtyDaysAgo },
+      });
+    }
+
     const candidateGrowth =
       candidatesPrev30 > 0
         ? Math.round(
@@ -81,12 +131,15 @@ export class AnalyticsService {
           : 0;
 
     // 2. Active Jobs
+    const jobDeptFilter = deptObjId ? { departmentId: deptObjId } : {};
     const activeJobs = await this.jobDescriptionModel.countDocuments({
       status: { $in: [JobStatus.JD_CREATED, JobStatus.APPROVED] },
+      ...jobDeptFilter,
     });
-    const totalJobs = await this.jobDescriptionModel.countDocuments();
+    const totalJobs = await this.jobDescriptionModel.countDocuments(jobDeptFilter);
     const newJobsLast30 = await this.jobDescriptionModel.countDocuments({
       createdAt: { $gte: thirtyDaysAgo },
+      ...jobDeptFilter,
     });
 
     // 3. Interviews Today & Upcoming
@@ -105,22 +158,39 @@ export class AnalyticsService {
       999,
     );
 
+    const intDeptFilter = hasDeptFilter
+      ? { jobDescriptionId: { $in: deptJobIds } }
+      : {};
+
     const todayInterviews = await this.interviewModel.countDocuments({
       date: { $gte: startOfToday, $lte: endOfToday },
+      ...intDeptFilter,
     });
     const upcomingInterviews = await this.interviewModel.countDocuments({
       status: { $in: [InterviewStatus.SCHEDULED, InterviewStatus.UPCOMING] },
+      ...intDeptFilter,
     });
 
     // 4. Offer Stats
-    const totalOffers = await this.offerModel.countDocuments();
+    const offerDeptFilter = deptObjId
+      ? {
+          $or: [
+            { departmentId: deptObjId },
+            ...(hasDeptFilter ? [{ jobDescriptionId: { $in: deptJobIds } }] : []),
+          ],
+        }
+      : {};
+
+    const totalOffers = await this.offerModel.countDocuments(offerDeptFilter);
     const acceptedOffers = await this.offerModel.countDocuments({
       status: OfferStatus.ACCEPTED,
+      ...offerDeptFilter,
     });
     const decidedOffers = await this.offerModel.countDocuments({
       status: {
         $in: [OfferStatus.ACCEPTED, OfferStatus.DECLINED, OfferStatus.EXPIRED],
       },
+      ...offerDeptFilter,
     });
     const acceptanceRate =
       decidedOffers > 0
@@ -128,6 +198,7 @@ export class AnalyticsService {
         : 0;
     const sentOffers = await this.offerModel.countDocuments({
       status: OfferStatus.SENT,
+      ...offerDeptFilter,
     });
 
     // 5. Total Employees (non-candidate users)
@@ -136,12 +207,14 @@ export class AnalyticsService {
     });
 
     // 6. Time-to-Hire: tính avg ngày từ appliedAt → offer respondedAt
+    const tthMatch: any = {
+      status: OfferStatus.ACCEPTED,
+      respondedAt: { $exists: true, $ne: null },
+      ...offerDeptFilter,
+    };
     const tthAgg = await this.offerModel.aggregate([
       {
-        $match: {
-          status: OfferStatus.ACCEPTED,
-          respondedAt: { $exists: true, $ne: null },
-        },
+        $match: tthMatch,
       },
       {
         $lookup: {
@@ -172,7 +245,7 @@ export class AnalyticsService {
     ]);
 
     const timeToHire =
-      tthAgg.length > 0
+      tthAgg.length > 0 && tthAgg[0].avgDays !== null
         ? {
             avgDays: Math.round(tthAgg[0].avgDays),
             sampleSize: tthAgg[0].count,
@@ -185,12 +258,14 @@ export class AnalyticsService {
     const overdueOffers = await this.offerModel.countDocuments({
       status: OfferStatus.SENT,
       sentAt: { $lt: threeDaysAgo },
+      ...offerDeptFilter,
     });
 
     // 8. Interviews chưa có kết quả (COMPLETED nhưng result = PENDING)
     const pendingInterviewResults = await this.interviewModel.countDocuments({
       status: InterviewStatus.COMPLETED,
       result: InterviewResult.PENDING,
+      ...intDeptFilter,
     });
 
     return {
@@ -236,25 +311,66 @@ export class AnalyticsService {
   // ─────────────────────────────────────────────────────────────
   // PHỄU TUYỂN DỤNG
   // ─────────────────────────────────────────────────────────────
-  async getRecruitmentFunnel() {
-    const totalApplications = await this.applicationModel.countDocuments();
-    const evaluatedApplications = await this.aiEvaluationModel.countDocuments();
+  async getRecruitmentFunnel(departmentId?: string) {
+    const deptJobIds = await this.getDepartmentJobIds(departmentId);
+    const hasDeptFilter = deptJobIds !== null;
+    const appFilter = hasDeptFilter
+      ? { jobDescriptionId: { $in: deptJobIds } }
+      : {};
+    const intFilter = hasDeptFilter
+      ? { jobDescriptionId: { $in: deptJobIds } }
+      : {};
+    const deptObjId =
+      departmentId && Types.ObjectId.isValid(departmentId)
+        ? new Types.ObjectId(departmentId)
+        : null;
+    const offerFilter = deptObjId
+      ? {
+          $or: [
+            { departmentId: deptObjId },
+            ...(hasDeptFilter ? [{ jobDescriptionId: { $in: deptJobIds } }] : []),
+          ],
+        }
+      : {};
+
+    const totalApplications =
+      await this.applicationModel.countDocuments(appFilter);
+
+    let evaluatedApplications: number;
+    if (hasDeptFilter) {
+      const appIds = await this.applicationModel
+        .find(appFilter)
+        .select('_id')
+        .lean();
+      evaluatedApplications = await this.aiEvaluationModel.countDocuments({
+        applicationId: { $in: appIds.map((a) => a._id) },
+      });
+    } else {
+      evaluatedApplications = await this.aiEvaluationModel.countDocuments();
+    }
 
     // Distinct applications that reached interview
-    const interviewedAppIds =
-      await this.interviewModel.distinct('applicationId');
+    const interviewedAppIds = await this.interviewModel.distinct(
+      'applicationId',
+      intFilter,
+    );
     const totalInterviewed = interviewedAppIds.length;
 
     // Distinct applications that got offers
-    const offerAppIds = await this.offerModel.distinct('applicationId');
+    const offerAppIds = await this.offerModel.distinct(
+      'applicationId',
+      offerFilter,
+    );
     const totalOffered = offerAppIds.length;
 
     // Applications hired
     const totalHired = await this.applicationModel.countDocuments({
       status: ApplicationStatus.HIRED,
+      ...appFilter,
     });
     const acceptedOffers = await this.offerModel.countDocuments({
       status: OfferStatus.ACCEPTED,
+      ...offerFilter,
     });
     const finalHired = Math.max(totalHired, acceptedOffers);
 
@@ -331,8 +447,12 @@ export class AnalyticsService {
   // ─────────────────────────────────────────────────────────────
   // TIẾN ĐỘ TUYỂN DỤNG THEO PHÒNG BAN
   // ─────────────────────────────────────────────────────────────
-  async getDepartmentFulfillment() {
-    const departments = await this.departmentModel.find().lean();
+  async getDepartmentFulfillment(departmentId?: string) {
+    const deptFilter =
+      departmentId && Types.ObjectId.isValid(departmentId)
+        ? { _id: new Types.ObjectId(departmentId) }
+        : {};
+    const departments = await this.departmentModel.find(deptFilter).lean();
 
     if (departments.length === 0) return [];
 
@@ -389,8 +509,24 @@ export class AnalyticsService {
   // ─────────────────────────────────────────────────────────────
   // PHÂN TÍCH OFFER
   // ─────────────────────────────────────────────────────────────
-  async getOfferBreakdown() {
-    const totalOffers = await this.offerModel.countDocuments();
+  async getOfferBreakdown(departmentId?: string) {
+    const deptJobIds = await this.getDepartmentJobIds(departmentId);
+    const deptObjId =
+      departmentId && Types.ObjectId.isValid(departmentId)
+        ? new Types.ObjectId(departmentId)
+        : null;
+    const offerDeptFilter = deptObjId
+      ? {
+          $or: [
+            { departmentId: deptObjId },
+            ...(deptJobIds !== null
+              ? [{ jobDescriptionId: { $in: deptJobIds } }]
+              : []),
+          ],
+        }
+      : {};
+
+    const totalOffers = await this.offerModel.countDocuments(offerDeptFilter);
 
     if (totalOffers === 0) {
       return {
@@ -413,21 +549,27 @@ export class AnalyticsService {
 
     const accepted = await this.offerModel.countDocuments({
       status: OfferStatus.ACCEPTED,
+      ...offerDeptFilter,
     });
     const declined = await this.offerModel.countDocuments({
       status: OfferStatus.DECLINED,
+      ...offerDeptFilter,
     });
     const sent = await this.offerModel.countDocuments({
       status: OfferStatus.SENT,
+      ...offerDeptFilter,
     });
     const draft = await this.offerModel.countDocuments({
       status: OfferStatus.DRAFT,
+      ...offerDeptFilter,
     });
     const expired = await this.offerModel.countDocuments({
       status: OfferStatus.EXPIRED,
+      ...offerDeptFilter,
     });
     const cancelled = await this.offerModel.countDocuments({
       status: OfferStatus.CANCELLED,
+      ...offerDeptFilter,
     });
 
     const decided = accepted + declined + expired;
@@ -440,6 +582,7 @@ export class AnalyticsService {
         $match: {
           status: OfferStatus.DECLINED,
           declineReason: { $exists: true, $ne: '' },
+          ...offerDeptFilter,
         },
       },
       { $group: { _id: '$declineReason', count: { $sum: 1 } } },
@@ -449,7 +592,7 @@ export class AnalyticsService {
 
     // Thống kê lương
     const salaryAgg = await this.offerModel.aggregate([
-      { $match: { salary: { $gt: 0 } } },
+      { $match: { salary: { $gt: 0 }, ...offerDeptFilter } },
       {
         $group: {
           _id: null,
@@ -497,9 +640,30 @@ export class AnalyticsService {
   // ─────────────────────────────────────────────────────────────
   // XU HƯỚNG TUYỂN DỤNG THEO THÁNG
   // ─────────────────────────────────────────────────────────────
-  async getApplicationTrends(monthsCount = 6) {
+  async getApplicationTrends(monthsCount = 6, departmentId?: string) {
     const now = new Date();
     const months: any[] = [];
+    const deptJobIds = await this.getDepartmentJobIds(departmentId);
+    const hasDeptFilter = deptJobIds !== null;
+    const deptObjId =
+      departmentId && Types.ObjectId.isValid(departmentId)
+        ? new Types.ObjectId(departmentId)
+        : null;
+
+    const appDeptFilter = hasDeptFilter
+      ? { jobDescriptionId: { $in: deptJobIds } }
+      : {};
+    const intDeptFilter = hasDeptFilter
+      ? { jobDescriptionId: { $in: deptJobIds } }
+      : {};
+    const offerDeptFilter = deptObjId
+      ? {
+          $or: [
+            { departmentId: deptObjId },
+            ...(hasDeptFilter ? [{ jobDescriptionId: { $in: deptJobIds } }] : []),
+          ],
+        }
+      : {};
 
     for (let i = monthsCount - 1; i >= 0; i--) {
       const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
@@ -518,15 +682,18 @@ export class AnalyticsService {
 
       const applied = await this.applicationModel.countDocuments({
         appliedAt: { $gte: startOfMonth, $lte: endOfMonth },
+        ...appDeptFilter,
       });
 
       const hired = await this.offerModel.countDocuments({
         status: OfferStatus.ACCEPTED,
         respondedAt: { $gte: startOfMonth, $lte: endOfMonth },
+        ...offerDeptFilter,
       });
 
       const interviewed = await this.interviewModel.countDocuments({
         date: { $gte: startOfMonth, $lte: endOfMonth },
+        ...intDeptFilter,
       });
 
       months.push({
@@ -635,13 +802,33 @@ export class AnalyticsService {
   // ─────────────────────────────────────────────────────────────
   // HIỆU SUẤT TUYỂN DỤNG & CHỈ SỐ SLA (HIRING VELOCITY)
   // ─────────────────────────────────────────────────────────────
-  async getHiringVelocityMetrics() {
+  async getHiringVelocityMetrics(departmentId?: string) {
+    const deptJobIds = await this.getDepartmentJobIds(departmentId);
+    const hasDeptFilter = deptJobIds !== null;
+    const deptObjId =
+      departmentId && Types.ObjectId.isValid(departmentId)
+        ? new Types.ObjectId(departmentId)
+        : null;
+
+    const intDeptFilter = hasDeptFilter
+      ? { jobDescriptionId: { $in: deptJobIds } }
+      : {};
+    const offerDeptFilter = deptObjId
+      ? {
+          $or: [
+            { departmentId: deptObjId },
+            ...(hasDeptFilter ? [{ jobDescriptionId: { $in: deptJobIds } }] : []),
+          ],
+        }
+      : {};
+
     // 1. Time-to-Hire: số ngày trung bình từ appliedAt -> accepted offer respondedAt
     const tthAgg = await this.offerModel.aggregate([
       {
         $match: {
           status: OfferStatus.ACCEPTED,
           respondedAt: { $exists: true, $ne: null },
+          ...offerDeptFilter,
         },
       },
       {
@@ -688,9 +875,11 @@ export class AnalyticsService {
     // 2. Tỷ lệ Đậu Phỏng vấn (Interview Pass Rate)
     const passedInterviews = await this.interviewModel.countDocuments({
       result: InterviewResult.PASS,
+      ...intDeptFilter,
     });
     const failedInterviews = await this.interviewModel.countDocuments({
       result: InterviewResult.FAIL,
+      ...intDeptFilter,
     });
     const decidedInterviews = passedInterviews + failedInterviews;
     const interviewPassRate =
@@ -701,12 +890,15 @@ export class AnalyticsService {
     // 3. Tỷ lệ Nhận việc Offer (Offer Acceptance Rate)
     const acceptedOffers = await this.offerModel.countDocuments({
       status: OfferStatus.ACCEPTED,
+      ...offerDeptFilter,
     });
     const declinedOffers = await this.offerModel.countDocuments({
       status: OfferStatus.DECLINED,
+      ...offerDeptFilter,
     });
     const expiredOffers = await this.offerModel.countDocuments({
       status: OfferStatus.EXPIRED,
+      ...offerDeptFilter,
     });
     const decidedOffers = acceptedOffers + declinedOffers + expiredOffers;
     const targetOfferRate = 80; // SLA chuẩn: >= 80%
@@ -717,6 +909,7 @@ export class AnalyticsService {
 
     // 4. Tốc độ Sàng lọc CV trung bình (Screening Speed - Ngày)
     const screeningAgg = await this.interviewModel.aggregate([
+      ...(hasDeptFilter ? [{ $match: { jobDescriptionId: { $in: deptJobIds } } }] : []),
       {
         $lookup: {
           from: 'applications',
@@ -785,8 +978,29 @@ export class AnalyticsService {
   // ─────────────────────────────────────────────────────────────
   // HOẠT ĐỘNG GẦN ĐÂY
   // ─────────────────────────────────────────────────────────────
-  async getRecentActivities(limit = 5) {
+  async getRecentActivities(limit = 5, departmentId?: string) {
     const safeLimit = Math.min(Math.max(1, limit), 20); // clamp 1–20
+    const deptJobIds = await this.getDepartmentJobIds(departmentId);
+    const hasDeptFilter = deptJobIds !== null;
+    const deptObjId =
+      departmentId && Types.ObjectId.isValid(departmentId)
+        ? new Types.ObjectId(departmentId)
+        : null;
+
+    const appDeptFilter = hasDeptFilter
+      ? { jobDescriptionId: { $in: deptJobIds } }
+      : {};
+    const intDeptFilter = hasDeptFilter
+      ? { jobDescriptionId: { $in: deptJobIds } }
+      : {};
+    const offerDeptFilter = deptObjId
+      ? {
+          $or: [
+            { departmentId: deptObjId },
+            ...(hasDeptFilter ? [{ jobDescriptionId: { $in: deptJobIds } }] : []),
+          ],
+        }
+      : {};
 
     const resolveCandidateName = (candDoc: any): string => {
       if (!candDoc) return 'Ứng viên';
@@ -818,7 +1032,7 @@ export class AnalyticsService {
 
     // 1. Recent applications
     const recentApplications = await this.applicationModel
-      .find()
+      .find(appDeptFilter)
       .sort({ appliedAt: -1 })
       .limit(safeLimit)
       .populate({
@@ -831,7 +1045,7 @@ export class AnalyticsService {
 
     // 2. Recent interviews (không bao gồm CANCELLED)
     const recentInterviews = await this.interviewModel
-      .find({ status: { $ne: InterviewStatus.CANCELLED } })
+      .find({ status: { $ne: InterviewStatus.CANCELLED }, ...intDeptFilter })
       .sort({ date: -1, startTime: -1 })
       .limit(safeLimit)
       .populate({
@@ -845,7 +1059,7 @@ export class AnalyticsService {
 
     // 3. Recent offers
     const recentOffers = await this.offerModel
-      .find()
+      .find(offerDeptFilter)
       .sort({ createdAt: -1 })
       .limit(safeLimit)
       .populate({

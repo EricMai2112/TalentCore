@@ -2,8 +2,9 @@
 
 import { useEffect, useState } from "react";
 import { createPortal } from "react-dom";
-import { X, MapPin, DollarSign, Briefcase, Calendar, CheckCircle2, Building2, Send, Sparkles } from "lucide-react";
+import { X, MapPin, Banknote, Briefcase, Calendar, CheckCircle2, Building2, Send, Sparkles, Gift } from "lucide-react";
 import { CandidateJob, EmploymentType } from "../types/job.types";
+import { formatJobSalary } from "../utils/salary.utils";
 
 interface JobDetailModalProps {
   isOpen: boolean;
@@ -57,8 +58,8 @@ export default function JobDetailModal({
                 {deptName}
               </span>
               <span className="inline-flex items-center gap-1 rounded-full bg-emerald-50 border border-emerald-100 px-3 py-0.5 text-xs font-bold text-emerald-700">
-                <DollarSign size={12} />
-                ${(job.minimumSalary ?? 0).toLocaleString("en-US")} - ${(job.maximumSalary ?? 0).toLocaleString("en-US")}
+                <Banknote size={12} />
+                {formatJobSalary(job.minimumSalary, job.maximumSalary)}
               </span>
             </div>
             <h2 className="text-2xl font-extrabold text-slate-900">{job.title}</h2>
@@ -146,7 +147,7 @@ export default function JobDetailModal({
           {/* Benefits */}
           <div className="space-y-2 border-t border-slate-100 pt-6">
             <h3 className="text-sm font-bold text-slate-900 uppercase tracking-wider flex items-center gap-2">
-              <DollarSign size={16} className="text-amber-600" />
+              <Gift size={16} className="text-amber-600" />
               Quyền lợi & Đãi ngộ
             </h3>
             <p className="text-sm text-slate-700 leading-relaxed whitespace-pre-wrap">

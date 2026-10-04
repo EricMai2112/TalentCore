@@ -6,19 +6,24 @@ import { RefreshCw, AlertTriangle } from 'lucide-react';
 // ─── Compact KPI Skeleton ──────────────────────────────────────────────────
 export function KpiSkeleton() {
   return (
-    <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-2.5 shrink-0">
+    <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-[repeat(5,minmax(0,1fr))_minmax(0,0.85fr)] gap-2.5 shrink-0 items-stretch">
       {Array.from({ length: 5 }).map((_, i) => (
         <div
           key={i}
-          className="bg-white/40 border border-white/60 rounded-2xl p-2.5 px-3 animate-pulse flex items-center gap-3 h-[68px]"
+          className="bg-white/40 border border-white/60 rounded-2xl p-2 px-2.5 animate-pulse flex items-center gap-2.5 h-[66px]"
         >
-          <div className="w-8 h-8 rounded-xl bg-slate-200/60 shrink-0" />
+          <div className="w-8.5 h-8.5 rounded-xl bg-slate-200/60 shrink-0" />
           <div className="flex-1 space-y-1.5 min-w-0">
-            <div className="h-2.5 bg-slate-200/60 rounded w-16" />
-            <div className="h-5 bg-slate-200/60 rounded w-12" />
+            <div className="h-2 bg-slate-200/60 rounded w-14" />
+            <div className="h-4 bg-slate-200/60 rounded w-10" />
           </div>
         </div>
       ))}
+      {/* 6th column: Filter Skeleton */}
+      <div className="bg-white/40 border border-white/60 rounded-2xl p-2 px-2.5 animate-pulse flex flex-col justify-center h-[66px] col-span-2 sm:col-span-1 lg:col-span-1">
+        <div className="h-2 bg-slate-200/60 rounded w-12 mb-1.5" />
+        <div className="h-7 bg-slate-200/60 rounded-xl w-full" />
+      </div>
     </div>
   );
 }

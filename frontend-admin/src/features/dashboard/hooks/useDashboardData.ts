@@ -4,7 +4,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { analyticsApi } from '../services/analytics.api';
 import { DashboardData } from '../types/dashboard.types';
 
-export function useDashboardData() {
+export function useDashboardData(departmentId?: string) {
   const [data, setData] = useState<DashboardData | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isError, setIsError] = useState(false);
@@ -14,7 +14,7 @@ export function useDashboardData() {
     setIsLoading(true);
     setIsError(false);
     try {
-      const result = await analyticsApi.getAllDashboardData(6, 5);
+      const result = await analyticsApi.getAllDashboardData(6, 5, departmentId);
       setData(result);
       setLastUpdated(new Date());
     } catch {
@@ -22,7 +22,7 @@ export function useDashboardData() {
     } finally {
       setIsLoading(false);
     }
-  }, []);
+  }, [departmentId]);
 
   useEffect(() => {
     fetchData();

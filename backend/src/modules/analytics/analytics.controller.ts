@@ -96,17 +96,22 @@ export class AnalyticsController {
   async getAllDashboardData(
     @Query('months', new DefaultValuePipe(6), ParseIntPipe) months: number,
     @Query('limit', new DefaultValuePipe(5), ParseIntPipe) limit: number,
+    @Query('departmentId') departmentId?: string,
   ) {
     const safeMonths = Math.min(Math.max(1, months), 24);
+    const cleanDeptId =
+      departmentId && departmentId.trim() && departmentId !== 'ALL'
+        ? departmentId.trim()
+        : undefined;
 
     const [kpis, funnel, departmentFulfillment, offers, trends, activities, velocity] = await Promise.all([
-      this.analyticsService.getOverviewKpis(),
-      this.analyticsService.getRecruitmentFunnel(),
-      this.analyticsService.getDepartmentFulfillment(),
-      this.analyticsService.getOfferBreakdown(),
-      this.analyticsService.getApplicationTrends(safeMonths),
-      this.analyticsService.getRecentActivities(limit),
-      this.analyticsService.getHiringVelocityMetrics(),
+      this.analyticsService.getOverviewKpis(cleanDeptId),
+      this.analyticsService.getRecruitmentFunnel(cleanDeptId),
+      this.analyticsService.getDepartmentFulfillment(cleanDeptId),
+      this.analyticsService.getOfferBreakdown(cleanDeptId),
+      this.analyticsService.getApplicationTrends(safeMonths, cleanDeptId),
+      this.analyticsService.getRecentActivities(limit, cleanDeptId),
+      this.analyticsService.getHiringVelocityMetrics(cleanDeptId),
     ]);
 
     return {

@@ -5,7 +5,8 @@ import { notFound } from "next/navigation";
 import {
   ChevronRight,
   MapPin,
-  DollarSign,
+  Gift,
+  Banknote,
   Briefcase,
   CheckCircle2,
   Building2,
@@ -18,6 +19,7 @@ import {
 import { CandidateJob, EmploymentType, JobPriority } from "@/src/features/jobs/types/job.types";
 import { candidateJobApi } from "@/src/features/jobs/services/job-api";
 import { JobDetailHeaderActions, JobSidebarApplyButton } from "@/src/features/jobs/components/JobDetailActions";
+import { formatJobSalary } from "@/src/features/jobs/utils/salary.utils";
 
 interface PageProps {
   params: Promise<{ id: string }>;
@@ -146,11 +148,9 @@ export default async function JobDetailPage({ params }: PageProps) {
               </h1>
 
               <div className="flex flex-wrap items-center gap-5 text-sm text-slate-300 pt-1">
-                <div className="flex items-center gap-1 text-emerald-400 font-bold text-base">
-                  <DollarSign size={18} className="shrink-0" />
-                  <span>
-                    ${(job.minimumSalary ?? 0).toLocaleString("en-US")} - ${(job.maximumSalary ?? 0).toLocaleString("en-US")} / tháng
-                  </span>
+                <div className="flex items-center gap-1.5 text-emerald-400 font-bold text-base">
+                  <Banknote size={18} className="shrink-0" />
+                  <span>{formatJobSalary(job.minimumSalary, job.maximumSalary)}</span>
                 </div>
                 <div className="flex items-center gap-1.5">
                   <MapPin size={16} className="text-slate-400 shrink-0" />
@@ -232,7 +232,7 @@ export default async function JobDetailPage({ params }: PageProps) {
                 {job.benefits && (
                   <div className="space-y-4">
                     <h2 className="text-xl sm:text-2xl font-extrabold text-slate-900 tracking-tight flex items-center gap-3">
-                      <DollarSign className="w-6 h-6 text-amber-600 shrink-0" />
+                      <Gift className="w-6 h-6 text-amber-600 shrink-0" />
                       <span>Quyền lợi & Đãi ngộ</span>
                     </h2>
                     <div className="text-base sm:text-[17px] text-slate-800 leading-relaxed sm:leading-[1.85] whitespace-pre-wrap font-normal tracking-wide">
@@ -256,12 +256,12 @@ export default async function JobDetailPage({ params }: PageProps) {
                 <div className="space-y-6">
                   <div className="flex items-start gap-4">
                     <div className="p-3 rounded-2xl bg-emerald-50 text-emerald-600 shrink-0 shadow-2xs">
-                      <DollarSign size={22} />
+                      <Banknote size={22} />
                     </div>
                     <div>
                       <span className="text-slate-500 font-semibold block mb-1 text-sm">Mức lương</span>
                       <span className="font-bold text-slate-900 text-base sm:text-[17px] leading-snug">
-                        ${(job.minimumSalary ?? 0).toLocaleString("en-US")} - ${(job.maximumSalary ?? 0).toLocaleString("en-US")} / tháng
+                        {formatJobSalary(job.minimumSalary, job.maximumSalary)}
                       </span>
                     </div>
                   </div>

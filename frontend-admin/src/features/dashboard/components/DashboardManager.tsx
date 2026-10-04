@@ -1,6 +1,6 @@
 'use client';
 
-import React from 'react';
+import React, { useState } from 'react';
 import { useDashboardData } from '../hooks/useDashboardData';
 import KpiStatsRow from './KpiStatsRow';
 import TimelineTrendChart from './TimelineTrendChart';
@@ -16,18 +16,25 @@ import {
 } from './DashboardSkeletons';
 
 export default function DashboardManager() {
-  const { data, isLoading, isError, refetch } = useDashboardData();
+  const [selectedDepartment, setSelectedDepartment] = useState<string>('');
+  const { data, isLoading, isError, refetch } = useDashboardData(selectedDepartment);
 
   return (
     <div className="h-full max-h-full flex flex-col gap-2.5 overflow-hidden">
       {/* Error notification banner if API fails */}
       {isError && !isLoading && <ErrorCard onRetry={refetch} />}
 
-      {/* ─── Tầng 1: Micro KPI Stat Strip (Height ~70px) ───────────────── */}
+      {/* ─── Tầng 1: Micro KPI Stat Strip (Height ~66px) ───────────────── */}
       {isLoading ? (
         <KpiSkeleton />
       ) : (
-        data && <KpiStatsRow kpis={data.kpis} />
+        data && (
+          <KpiStatsRow
+            kpis={data.kpis}
+            selectedDepartment={selectedDepartment}
+            onDepartmentChange={setSelectedDepartment}
+          />
+        )
       )}
 
       {/* ─── Tầng 2: Analytical Workspace Grid (3:5:4 columns, 2 rows) ── */}
