@@ -1,4 +1,4 @@
-import { Search, Filter, X, RotateCcw, MapPin, DollarSign, Briefcase } from "lucide-react";
+import { Search, Filter, X, RotateCcw, MapPin, Banknote, Briefcase } from "lucide-react";
 import { EmploymentType, JobFilterState } from "../types/job.types";
 
 interface JobFiltersProps {
@@ -93,14 +93,14 @@ export default function JobFilters({
         {/* Min Salary Filter */}
         <div className="space-y-1">
           <label className="text-[11px] font-bold text-slate-500 uppercase tracking-wider flex items-center gap-1">
-            <DollarSign size={12} className="text-emerald-600" />
-            Mức lương từ ($/tháng)
+            <Banknote size={12} className="text-emerald-600" />
+            Mức lương từ (VNĐ/tháng)
           </label>
           <input
             type="number"
             value={filters.minSalary}
             onChange={(e) => onChange({ ...filters, minSalary: e.target.value })}
-            placeholder="VD: 1000"
+            placeholder="VD: 10000000"
             className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs text-slate-800 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 focus:bg-white font-medium"
           />
         </div>
