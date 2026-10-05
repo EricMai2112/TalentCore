@@ -16,6 +16,11 @@ export interface JobItem {
   postedTime?: string;
   createdAt?: string;
   description?: string;
+  requirements?: string;
+  benefits?: string;
+  responsibilities?: string;
+  experienceLevel?: string;
+  employmentType?: string;
 }
 
 export interface DepartmentItem {
