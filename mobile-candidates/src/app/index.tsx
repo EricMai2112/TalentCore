@@ -1,11 +1,14 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import { ActivityIndicator, StyleSheet, View } from 'react-native';
 import * as SplashScreen from 'expo-splash-screen';
 import { useAuth } from '../context/AuthContext';
 import { MainCandidateScreen } from '../components/MainCandidateScreen';
+import { LoginScreen } from '../components/LoginScreen';
+import { RegisterScreen } from '../components/RegisterScreen';
 
 export default function IndexPage() {
-  const { isLoading } = useAuth();
+  const { user, token, isLoading } = useAuth();
+  const [authMode, setAuthMode] = useState<'login' | 'register'>('login');
 
   useEffect(() => {
     if (!isLoading) {
@@ -17,6 +20,21 @@ export default function IndexPage() {
     return (
       <View style={styles.loadingContainer}>
         <ActivityIndicator size="large" color="#7c3aed" />
+      </View>
+    );
+  }
+
+  if (!user || !token) {
+    if (authMode === 'register') {
+      return (
+        <View style={styles.container}>
+          <RegisterScreen onNavigateToLogin={() => setAuthMode('login')} />
+        </View>
+      );
+    }
+    return (
+      <View style={styles.container}>
+        <LoginScreen onNavigateToRegister={() => setAuthMode('register')} />
       </View>
     );
   }

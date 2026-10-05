@@ -1,6 +1,5 @@
 import React, { useRef, useState } from 'react';
 import {
-  Alert,
   Animated,
   Platform,
   Pressable,
@@ -11,8 +10,10 @@ import {
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
-import { useAuth } from '../context/AuthContext';
+import { ApplicationsScreen } from './ApplicationsScreen';
 import { JobsScreen } from './JobsScreen';
+import { NotificationsScreen } from './NotificationsScreen';
+import { ProfileScreen } from './ProfileScreen';
 
 type TabKey = 'jobs' | 'applications' | 'notifications' | 'profile';
 
@@ -31,7 +32,6 @@ const TABS: TabItem[] = [
 ];
 
 export const MainCandidateScreen: React.FC = () => {
-  const { user, logout } = useAuth();
   const [activeTab, setActiveTab] = useState<TabKey>('jobs');
   const [tabBarWidth, setTabBarWidth] = useState(0);
 
@@ -41,17 +41,6 @@ export const MainCandidateScreen: React.FC = () => {
   const iconScaleAnim = useRef(new Animated.Value(1)).current;
 
   const currentTabWidth = tabBarWidth > 0 ? (tabBarWidth - 16) / 4 : 0;
-
-  const handleLogout = () => {
-    Alert.alert('Đăng xuất', 'Bạn có chắc chắn muốn đăng xuất tài khoản?', [
-      { text: 'Hủy', style: 'cancel' },
-      {
-        text: 'Đăng xuất',
-        style: 'destructive',
-        onPress: () => logout(),
-      },
-    ]);
-  };
 
   const handleSelectTab = (tabKey: TabKey, index: number) => {
     if (tabKey === activeTab) return;
@@ -121,49 +110,14 @@ export const MainCandidateScreen: React.FC = () => {
         );
       case 'applications':
         return (
-          <View style={styles.placeholderContainer}>
-            <Ionicons name="briefcase-outline" size={48} color="#94a3b8" />
-            <Text style={styles.placeholderTitle}>Ứng tuyển</Text>
-            <Text style={styles.placeholderSubtitle}>Tính năng đang được phát triển</Text>
-          </View>
+          <ApplicationsScreen
+            onRequireLogin={() => handleSelectTab('profile', 3)}
+          />
         );
       case 'notifications':
-        return (
-          <View style={styles.placeholderContainer}>
-            <Ionicons name="notifications-outline" size={48} color="#94a3b8" />
-            <Text style={styles.placeholderTitle}>Thông báo</Text>
-            <Text style={styles.placeholderSubtitle}>Chưa có thông báo mới</Text>
-          </View>
-        );
+        return <NotificationsScreen />;
       case 'profile':
-        const displayName = user?.name || user?.email?.split('@')[0] || 'Ứng viên';
-        const initial = displayName.charAt(0).toUpperCase();
-        return (
-          <SafeAreaView style={styles.profileSafeArea}>
-            <View style={styles.profileContainer}>
-              <View style={styles.profileCard}>
-                <LinearGradient
-                  colors={['#7c3aed', '#6366f1']}
-                  start={{ x: 0, y: 0 }}
-                  end={{ x: 1, y: 1 }}
-                  style={styles.avatarGradient}
-                >
-                  <Text style={styles.avatarText}>{initial}</Text>
-                </LinearGradient>
-                <Text style={styles.profileName}>{displayName}</Text>
-                <Text style={styles.profileEmail}>{user?.email || ''}</Text>
-                <View style={styles.profileRoleBadge}>
-                  <Text style={styles.profileRoleText}>Ứng viên TalentCore</Text>
-                </View>
-              </View>
-
-              <Pressable style={styles.logoutBtn} onPress={handleLogout}>
-                <Ionicons name="log-out-outline" size={20} color="#dc2626" />
-                <Text style={styles.logoutBtnText}>Đăng xuất tài khoản</Text>
-              </Pressable>
-            </View>
-          </SafeAreaView>
-        );
+        return <ProfileScreen />;
       default:
         return <JobsScreen />;
     }
@@ -361,101 +315,5 @@ const styles = StyleSheet.create({
   tabTitleActive: {
     color: '#7c3aed',
     fontWeight: '800',
-  },
-  placeholderContainer: {
-    flex: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-    padding: 24,
-    backgroundColor: '#f8fafc',
-  },
-  placeholderTitle: {
-    fontSize: 18,
-    fontWeight: '700',
-    color: '#1e293b',
-    marginTop: 12,
-  },
-  placeholderSubtitle: {
-    fontSize: 14,
-    color: '#64748b',
-    marginTop: 4,
-    textAlign: 'center',
-  },
-  profileSafeArea: {
-    flex: 1,
-    backgroundColor: '#ffffff',
-  },
-  profileContainer: {
-    flex: 1,
-    padding: 24,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  profileCard: {
-    width: '100%',
-    backgroundColor: '#f8fafc',
-    borderRadius: 24,
-    padding: 24,
-    alignItems: 'center',
-    borderWidth: 1,
-    borderColor: '#f1f5f9',
-    marginBottom: 20,
-    shadowColor: '#000000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.04,
-    shadowRadius: 12,
-    elevation: 3,
-  },
-  avatarGradient: {
-    width: 76,
-    height: 76,
-    borderRadius: 38,
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginBottom: 14,
-  },
-  avatarText: {
-    fontSize: 28,
-    fontWeight: '800',
-    color: '#ffffff',
-  },
-  profileName: {
-    fontSize: 20,
-    fontWeight: '800',
-    color: '#0f172a',
-    marginBottom: 4,
-  },
-  profileEmail: {
-    fontSize: 14,
-    color: '#64748b',
-    marginBottom: 12,
-  },
-  profileRoleBadge: {
-    backgroundColor: '#ede9fe',
-    borderRadius: 12,
-    paddingHorizontal: 12,
-    paddingVertical: 5,
-  },
-  profileRoleText: {
-    fontSize: 12,
-    fontWeight: '700',
-    color: '#7c3aed',
-  },
-  logoutBtn: {
-    width: '100%',
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: '#fef2f2',
-    borderWidth: 1,
-    borderColor: '#fee2e2',
-    borderRadius: 14,
-    paddingVertical: 14,
-    gap: 8,
-  },
-  logoutBtnText: {
-    fontSize: 15,
-    fontWeight: '700',
-    color: '#dc2626',
   },
 });

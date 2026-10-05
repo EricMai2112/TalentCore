@@ -2,6 +2,8 @@ import React, { useEffect, useState } from 'react';
 import {
   Alert,
   Image,
+  LayoutAnimation,
+  Platform,
   Pressable,
   RefreshControl,
   SafeAreaView,
@@ -9,10 +11,12 @@ import {
   StyleSheet,
   Text,
   TextInput,
+  UIManager,
   View,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
+import { useRouter } from 'expo-router';
 import { useAuth } from '../context/AuthContext';
 import { jobService } from '../services/job.service';
 import { DepartmentItem, JobItem } from '../types/job.types';
@@ -29,6 +33,7 @@ export const JobsScreen: React.FC<JobsScreenProps> = ({
   onOpenProfile,
   onApplyJob,
 }) => {
+  const router = useRouter();
   const { user, logout } = useAuth();
   const [jobs, setJobs] = useState<JobItem[]>([]);
   const [departments, setDepartments] = useState<DepartmentItem[]>([]);
@@ -37,6 +42,17 @@ export const JobsScreen: React.FC<JobsScreenProps> = ({
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedDeptId, setSelectedDeptId] = useState<string>('All');
   const [savedJobIds, setSavedJobIds] = useState<string[]>([]);
+  const [expandedJobIds, setExpandedJobIds] = useState<string[]>([]);
+
+  const toggleExpandJob = (id: string) => {
+    if (Platform.OS === 'android' && UIManager.setLayoutAnimationEnabledExperimental) {
+      UIManager.setLayoutAnimationEnabledExperimental(true);
+    }
+    LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
+    setExpandedJobIds((prev) =>
+      prev.includes(id) ? prev.filter((item) => item !== id) : [...prev, id]
+    );
+  };
 
   const loadData = async () => {
     try {
@@ -66,6 +82,10 @@ export const JobsScreen: React.FC<JobsScreenProps> = ({
     setSavedJobIds((prev) =>
       prev.includes(id) ? prev.filter((item) => item !== id) : [...prev, id]
     );
+  };
+
+  const handleOpenJobDetail = (job: JobItem) => {
+    router.push(`/job/${job._id}` as any);
   };
 
   const handleLogoutPress = () => {
@@ -239,11 +259,12 @@ export const JobsScreen: React.FC<JobsScreenProps> = ({
               </View>
             ) : (
               filteredJobs.map((job) => {
-                const isSaved = savedJobIds.includes(job._id);
+                const isExpanded = expandedJobIds.includes(job._id);
                 return (
                   <Pressable
                     key={job._id}
                     style={styles.jobItemCard}
+                    onPress={() => handleOpenJobDetail(job)}
                   >
                     <View style={styles.jobItemHeader}>
                       <View style={styles.jobMainInfo}>
@@ -315,32 +336,65 @@ export const JobsScreen: React.FC<JobsScreenProps> = ({
 
                     <View style={styles.jobItemFooter}>
                       <Pressable
-                        style={styles.saveJobBtn}
-                        onPress={() => toggleSaveJob(job._id)}
-                        hitSlop={10}
+                        style={[styles.quickViewBtn, isExpanded && styles.quickViewBtnActive]}
+                        onPress={(e) => {
+                          e.stopPropagation();
+                          toggleExpandJob(job._id);
+                        }}
+                        hitSlop={8}
                       >
-                        <Ionicons
-                          name={isSaved ? 'bookmark' : 'bookmark-outline'}
-                          size={18}
-                          color={isSaved ? '#7c3aed' : '#64748b'}
-                        />
-                        <Text
-                          style={[
-                            styles.saveJobText,
-                            isSaved && { color: '#7c3aed', fontWeight: '700' },
-                          ]}
-                        >
-                          {isSaved ? 'Đã lưu' : 'Lưu tin'}
+                        <Text style={[styles.quickViewText, isExpanded && styles.quickViewTextActive]}>
+                          {isExpanded ? 'Thu gọn' : 'Xem nhanh'}
                         </Text>
+                        <Ionicons
+                          name={isExpanded ? 'chevron-up' : 'chevron-down'}
+                          size={14}
+                          color={isExpanded ? '#7c3aed' : '#475569'}
+                        />
                       </Pressable>
 
                       <Pressable
                         style={styles.applyNowBtn}
+                        onPress={() => handleOpenJobDetail(job)}
                       >
                         <Text style={styles.applyNowText}>Ứng tuyển ngay</Text>
                         <Ionicons name="arrow-forward" size={14} color="#ffffff" />
                       </Pressable>
                     </View>
+
+                    {isExpanded && (
+                      <View style={styles.quickSummaryContainer}>
+                        <View style={styles.quickSummaryHeader}>
+                          <Text style={styles.quickSummaryTitle}>Yêu cầu công việc</Text>
+                        </View>
+                        {job.requirements ? (
+                          <Text style={styles.quickSummaryText}>
+                            {job.requirements}
+                          </Text>
+                        ) : null}
+                        {job.skills && job.skills.length > 0 && (
+                          <View style={styles.summarySkillsRow}>
+                            {job.skills.map((skill, sIdx) => (
+                              <View key={sIdx} style={styles.summarySkillChip}>
+                                <Text style={styles.summarySkillText}>{skill}</Text>
+                              </View>
+                            ))}
+                          </View>
+                        )}
+                        {!job.requirements && (!job.skills || job.skills.length === 0) && (
+                          <Text style={styles.quickSummaryText}>
+                            Phù hợp ứng viên có cấp bậc {job.level} và kinh nghiệm chuyên môn liên quan.
+                          </Text>
+                        )}
+                        <Pressable
+                          style={styles.summaryFullDetailBtn}
+                          onPress={() => handleOpenJobDetail(job)}
+                        >
+                          <Text style={styles.summaryFullDetailText}>Xem toàn bộ chi tiết</Text>
+                          <Ionicons name="chevron-forward" size={13} color="#7c3aed" />
+                        </Pressable>
+                      </View>
+                    )}
                   </Pressable>
                 );
               })
@@ -679,17 +733,28 @@ const styles = StyleSheet.create({
     borderTopColor: '#f1f5f9',
     paddingTop: 12,
   },
-  saveJobBtn: {
+  quickViewBtn: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 6,
+    gap: 4,
     paddingVertical: 6,
-    paddingHorizontal: 8,
+    paddingHorizontal: 10,
+    backgroundColor: '#f1f5f9',
+    borderRadius: 8,
   },
-  saveJobText: {
-    fontSize: 13,
+  quickViewBtnActive: {
+    backgroundColor: '#f5f3ff',
+    borderWidth: 1,
+    borderColor: '#ddd6fe',
+  },
+  quickViewText: {
+    fontSize: 12,
     fontWeight: '600',
-    color: '#64748b',
+    color: '#475569',
+  },
+  quickViewTextActive: {
+    color: '#7c3aed',
+    fontWeight: '700',
   },
   applyNowBtn: {
     flexDirection: 'row',
@@ -704,5 +769,65 @@ const styles = StyleSheet.create({
     color: '#ffffff',
     fontSize: 13,
     fontWeight: '700',
+  },
+  quickSummaryContainer: {
+    marginTop: 12,
+    paddingTop: 12,
+    borderTopWidth: 1,
+    borderTopColor: '#f1f5f9',
+    backgroundColor: '#faf5ff',
+    borderRadius: 12,
+    padding: 12,
+    borderWidth: 1,
+    borderColor: '#ede9fe',
+  },
+  quickSummaryHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 6,
+  },
+  quickSummaryTitle: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: '#7c3aed',
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
+  },
+  quickSummaryText: {
+    fontSize: 13,
+    lineHeight: 20,
+    color: '#334155',
+  },
+  summarySkillsRow: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 6,
+    marginTop: 10,
+  },
+  summarySkillChip: {
+    backgroundColor: '#ffffff',
+    borderWidth: 1,
+    borderColor: '#e2e8f0',
+    borderRadius: 6,
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+  },
+  summarySkillText: {
+    fontSize: 11,
+    fontWeight: '600',
+    color: '#475569',
+  },
+  summaryFullDetailBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'flex-end',
+    gap: 4,
+    marginTop: 10,
+    paddingTop: 6,
+  },
+  summaryFullDetailText: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: '#7c3aed',
   },
 });
