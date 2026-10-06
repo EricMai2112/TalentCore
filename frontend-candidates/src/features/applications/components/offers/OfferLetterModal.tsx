@@ -37,13 +37,13 @@ export const OfferLetterModal: React.FC<OfferLetterModalProps> = ({
   const [confirmAcceptMode, setConfirmAcceptMode] = useState(false);
   const [declineMode, setDeclineMode] = useState(false);
   const [declineReason, setDeclineReason] = useState('');
+  const [otp, setOtp] = useState('');
   const [errorMessage, setErrorMessage] = useState('');
 
   useEffect(() => {
     setMounted(true);
   }, []);
 
-  // Lock body scroll when modal is open and unlock upon closing or unmounting
   useEffect(() => {
     if (!isOpen) return;
 
@@ -80,6 +80,11 @@ export const OfferLetterModal: React.FC<OfferLetterModalProps> = ({
   ).toLocaleString('vi-VN');
 
   const handleRespond = async (action: 'ACCEPT' | 'DECLINE') => {
+    if (action === 'ACCEPT' && (!otp || otp.trim().length === 0)) {
+      setErrorMessage('Vui lòng nhập mã OTP được gửi trong email để xác nhận nhận việc');
+      return;
+    }
+
     try {
       setSubmitting(true);
       setErrorMessage('');
@@ -88,12 +93,14 @@ export const OfferLetterModal: React.FC<OfferLetterModalProps> = ({
         offer._id,
         action,
         action === 'DECLINE' ? declineReason : undefined,
+        action === 'ACCEPT' ? otp.trim() : undefined,
       );
 
       if (res.success) {
         onOfferResponded();
         setConfirmAcceptMode(false);
         setDeclineMode(false);
+        setOtp('');
         onClose();
       } else {
         setErrorMessage(res.message || 'Có lỗi xảy ra, vui lòng thử lại');
@@ -319,6 +326,27 @@ export const OfferLetterModal: React.FC<OfferLetterModalProps> = ({
                   {offer.workLocation}
                 </span>
               </div>
+            </div>
+
+            <div className="space-y-1.5 p-3.5 bg-slate-50 rounded-2xl border border-slate-200">
+              <label className="text-xs font-bold text-slate-800 flex items-center justify-between">
+                <span>Mã OTP xác thực (6 chữ số):</span>
+                <span className="text-[11px] font-normal text-slate-500">Đã gửi về email của bạn</span>
+              </label>
+              <input
+                type="text"
+                maxLength={6}
+                value={otp}
+                onChange={(e) => {
+                  setOtp(e.target.value.replace(/\D/g, ''));
+                  if (errorMessage) setErrorMessage('');
+                }}
+                placeholder="Nhập 6 chữ số OTP"
+                className="w-full px-4 py-2.5 text-center text-lg font-mono font-bold tracking-[6px] rounded-xl border border-slate-300 bg-white focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-600 text-slate-900 transition-all placeholder:tracking-normal placeholder:font-sans placeholder:text-xs placeholder:text-slate-400"
+              />
+              <p className="text-[11px] text-slate-500 text-center">
+                Vui lòng kiểm tra email của bạn để lấy mã OTP xác nhận việc nhận offer.
+              </p>
             </div>
 
             <p className="text-xs text-slate-600 leading-relaxed">

@@ -94,8 +94,10 @@ export class OffersService {
 
     const savedOffer = await offer.save();
 
-    // If sent immediately, dispatch notification and email to candidate
     if (dto.sendImmediately) {
+      savedOffer.otpCode = this.generateOtp();
+      savedOffer.otpExpiresAt = savedOffer.expirationDate;
+      await savedOffer.save();
       await this.notifyCandidateForOffer(savedOffer);
       await this.sendOfferEmailToCandidate(savedOffer);
     }
@@ -248,13 +250,12 @@ export class OffersService {
 
     offer.status = OfferStatus.SENT;
     offer.sentAt = new Date();
+    offer.otpCode = this.generateOtp();
+    offer.otpExpiresAt = offer.expirationDate;
 
     const updatedOffer = await offer.save();
 
-    // Notify candidate
     await this.notifyCandidateForOffer(updatedOffer);
-
-    // Gửi email Offer cho ứng viên qua AWS SES
     await this.sendOfferEmailToCandidate(updatedOffer);
 
     this.logger.log(`Offer ${id} marked as SENT. Notification & email dispatched.`);
@@ -322,6 +323,19 @@ export class OffersService {
     const deptId = offer.departmentId?.toString();
 
     if (dto.action === 'ACCEPT') {
+      if (offer.otpCode) {
+        const inputOtp = dto.otp ? String(dto.otp).trim() : '';
+        if (!inputOtp) {
+          throw new BadRequestException('Vui lòng nhập mã OTP được gửi trong email để xác nhận nhận việc');
+        }
+        if (inputOtp !== offer.otpCode) {
+          throw new BadRequestException('Mã OTP không chính xác. Vui lòng kiểm tra lại email nhận việc.');
+        }
+        if (offer.otpExpiresAt && new Date() > new Date(offer.otpExpiresAt)) {
+          throw new BadRequestException('Mã OTP đã hết hạn. Vui lòng liên hệ nhà tuyển dụng.');
+        }
+      }
+
       const session = await this.connection.startSession();
       let useTransaction = true;
       try {
@@ -459,6 +473,7 @@ export class OffersService {
         candidateId: { $in: candidateIds },
         status: { $ne: OfferStatus.DRAFT },
       })
+      .select('-otpCode')
       .sort({ createdAt: -1 })
       .populate({
         path: 'jobDescriptionId',
@@ -621,6 +636,7 @@ export class OffersService {
         companyName: 'TalentCore',
         customSubject: offer.emailSubject,
         customLetterHtml: offer.offerLetterHtml,
+        otpCode: offer.otpCode,
       });
 
       this.logger.log(
@@ -631,5 +647,9 @@ export class OffersService {
         `Lỗi gửi email Offer cho ứng viên (offerId: ${offer._id}): ${error?.message || error}`,
       );
     }
+  }
+
+  private generateOtp(): string {
+    return Math.floor(100000 + Math.random() * 900000).toString();
   }
 }

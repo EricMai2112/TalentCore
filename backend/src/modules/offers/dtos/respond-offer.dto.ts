@@ -8,4 +8,8 @@ export class RespondOfferDto {
   @IsOptional()
   @IsString({ message: 'Lý do từ chối phải là chuỗi ký tự' })
   declineReason?: string;
+
+  @IsOptional()
+  @IsString({ message: 'Mã OTP phải là chuỗi ký tự' })
+  otp?: string;
 }

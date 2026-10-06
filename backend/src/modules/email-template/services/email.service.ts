@@ -666,6 +666,7 @@ export class EmailService {
     companyName?: string;
     customSubject?: string;
     customLetterHtml?: string;
+    otpCode?: string;
     salary?: string;
     startDate?: string;
     expirationDate?: string;
@@ -680,12 +681,10 @@ export class EmailService {
 
     const actionUrl = `${this.candidateUrl}/user/applications?tab=offers`;
 
-    // 1. Tiêu đề email: Ưu tiên trực tiếp từ màn hình tạo offer (emailSubject)
     const subject =
       params.customSubject?.trim() ||
       `[TalentCore] Thư mời nhận việc - Vị trí ${params.jobTitle} - ${params.candidateName}`;
 
-    // 2. Nội dung thư mời: Lấy trực tiếp từ màn hình tạo offer (offerLetterHtml)
     let bodyContent = params.customLetterHtml?.trim();
 
     if (!bodyContent) {
@@ -697,7 +696,17 @@ export class EmailService {
       `.trim();
     }
 
-    // 3. Render HTML chuẩn mực với layout tương thích tối đa trên Gmail
+    if (params.otpCode) {
+      const otpHtml = `
+        <div style="background-color: #faf5ff; border: 1.5px dashed #c084fc; border-radius: 14px; padding: 20px; margin: 24px 0; text-align: center;">
+          <p style="margin: 0 0 6px 0; font-size: 13px; font-weight: 700; color: #6b21a8; text-transform: uppercase; letter-spacing: 0.8px;">Mã OTP xác thực chấp nhận nhận việc</p>
+          <div style="font-size: 32px; font-weight: 800; color: #7c3aed; letter-spacing: 6px; font-family: monospace; padding: 6px 0;">${params.otpCode}</div>
+          <p style="margin: 8px 0 0 0; font-size: 12px; color: #6b7280; line-height: 18px;">Khi bấm đồng ý nhận việc trên hệ thống TalentCore, vui lòng nhập chính xác mã OTP này để hoàn tất xác nhận.</p>
+        </div>
+      `;
+      bodyContent = `${bodyContent}\n${otpHtml}`;
+    }
+
     const renderedHtml = this.generateGeneralHtmlEmail({
       title: subject,
       bodyText: bodyContent,

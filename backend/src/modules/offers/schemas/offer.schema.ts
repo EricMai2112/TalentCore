@@ -86,6 +86,12 @@ export class Offer {
 
   @Prop({ required: false, trim: true })
   declineReason?: string;
+
+  @Prop({ required: false, trim: true })
+  otpCode?: string;
+
+  @Prop({ required: false, type: Date })
+  otpExpiresAt?: Date;
 }
 
 export const OfferSchema = SchemaFactory.createForClass(Offer);
