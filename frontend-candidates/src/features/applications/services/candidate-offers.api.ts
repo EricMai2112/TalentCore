@@ -21,6 +21,7 @@ export const candidateOffersApi = {
     offerId: string,
     action: 'ACCEPT' | 'DECLINE',
     declineReason?: string,
+    otp?: string,
   ): Promise<{ success: boolean; message?: string }> => {
     try {
       const res = await apiClient.post<ApiResponse<CandidateOfferItem>>(
@@ -28,6 +29,7 @@ export const candidateOffersApi = {
         {
           action,
           declineReason,
+          otp,
         },
       );
       return { success: true, message: res.message };
@@ -35,7 +37,10 @@ export const candidateOffersApi = {
       console.error('Lỗi khi phản hồi lời mời nhận việc:', error);
       return {
         success: false,
-        message: error.message || 'Không thể gửi phản hồi lúc này',
+        message:
+          error.response?.data?.message ||
+          error.message ||
+          'Không thể gửi phản hồi lúc này',
       };
     }
   },
