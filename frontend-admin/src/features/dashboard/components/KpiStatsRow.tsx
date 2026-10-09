@@ -21,9 +21,9 @@ function KpiCard({ icon, iconBg, blobGradient, label, value, unit, tooltip }: Kp
   return (
     <div
       title={tooltip}
-      className="relative bg-white/60 backdrop-blur-md border rounded-2xl p-2 px-2.5 
+      className="relative bg-white/60 backdrop-blur-md border rounded-2xl p-2.5 px-3 
                  shadow-sm shadow-blue-500/5 hover:bg-white/80 hover:border-white/95 hover:shadow-md 
-                 transition-all duration-200 overflow-hidden flex items-center gap-2.5 h-[66px] group border-white/70"
+                 transition-all duration-200 overflow-hidden flex items-center gap-2.5 h-[68px] group border-white/70"
     >
       {/* Ambient Gradient Glow */}
       <div
@@ -40,9 +40,9 @@ function KpiCard({ icon, iconBg, blobGradient, label, value, unit, tooltip }: Kp
       </div>
 
       {/* Main Content Area */}
-      <div className="relative z-10 flex flex-col justify-center flex-1 min-w-0">
+      <div className="relative z-10 flex flex-col justify-center flex-1 min-w-0 pt-0.5">
         {/* Label */}
-        <span className="text-[9.5px] inline-block font-bold tracking-wider text-slate-400 uppercase truncate leading-none mb-1">
+        <span className="text-[9.5px] inline-block font-bold tracking-wider text-slate-400 uppercase truncate leading-tight mb-0.5 pt-0.5">
           {label}
         </span>
 
@@ -76,8 +76,7 @@ export default function KpiStatsRow({
     { value: '', label: 'Tất cả phòng ban' },
     ...departments.map((d: Department) => ({
       value: d._id,
-      label: d.name,
-      subLabel: d.code
+      label: d.name
     }))
   ]
 
@@ -139,13 +138,13 @@ export default function KpiStatsRow({
 
       {/* 6th Column: Compact Department Filter */}
       <div
-        className="relative bg-white/60 backdrop-blur-md border border-white/70 rounded-2xl p-2 px-2.5 
+        className="relative bg-white/60 backdrop-blur-md border border-white/70 rounded-2xl p-2.5 px-3 
                    shadow-sm shadow-blue-500/5 hover:bg-white/80 hover:border-white/95 transition-all duration-200 
-                   flex flex-col justify-center h-[66px] col-span-2 sm:col-span-1 lg:col-span-1 group"
+                   flex flex-col justify-center h-[68px] col-span-2 sm:col-span-1 lg:col-span-1 group"
       >
-        <div className="flex items-center gap-1.5 mb-1 px-0.5">
+        <div className="flex items-center gap-1.5 mb-1 px-0.5 pt-0.5">
           <Building2 size={11} className="text-blue-600 shrink-0 stroke-[2.2]" />
-          <span className="text-[9px] font-bold tracking-wider text-slate-400 uppercase truncate">
+          <span className="text-[9px] font-bold tracking-wider text-slate-400 uppercase truncate leading-tight">
             Phòng ban
           </span>
         </div>

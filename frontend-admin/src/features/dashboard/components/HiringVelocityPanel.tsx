@@ -27,12 +27,12 @@ interface SlaBulletItem {
 export default function HiringVelocityPanel({ velocity }: Props) {
   if (!velocity) {
     return (
-      <div className="bg-white/60 backdrop-blur-md border border-white/80 rounded-2xl p-3.5 shadow-xs shadow-blue-500/5 h-full flex flex-col min-h-0">
+      <div className="bg-white/55 backdrop-blur-md border border-white/70 rounded-2xl p-3.5 shadow-sm shadow-blue-500/5 h-full flex flex-col min-h-0">
         <div className="flex items-center gap-2 mb-2 shrink-0">
-          <div className="w-7 h-7 rounded-xl bg-blue-100/90 text-blue-600 border border-blue-200/60 flex items-center justify-center shadow-2xs">
+          <div className="w-7 h-7 rounded-lg bg-blue-100/90 text-blue-600 border border-blue-200/60 flex items-center justify-center">
             <Gauge size={14} className="stroke-[2.2]" />
           </div>
-          <h3 className="text-xs font-extrabold text-slate-800">Hiệu suất Tuyển dụng & SLA</h3>
+          <h3 className="text-xs font-bold text-slate-800">Hiệu suất Tuyển dụng & SLA</h3>
         </div>
         <EmptyState message="Đang cập nhật chỉ số SLA..." icon={<Gauge size={24} />} />
       </div>
@@ -141,18 +141,18 @@ export default function HiringVelocityPanel({ velocity }: Props) {
   ]
 
   return (
-    <div className="bg-white/65 backdrop-blur-xl border border-white/80 rounded-2xl p-3.5 shadow-sm shadow-blue-500/5 h-full flex flex-col min-h-0 justify-between">
+    <div className="bg-white/55 backdrop-blur-md border border-white/70 rounded-2xl p-3.5 shadow-sm shadow-blue-500/5 h-full flex flex-col min-h-0 justify-between">
       {/* ─── Header ───────────────────────────────────────────────────────── */}
       <div className="flex items-center justify-between gap-2 mb-2 shrink-0">
         <div className="flex items-center gap-2 min-w-0">
-          <div className="w-7 h-7 rounded-xl bg-gradient-to-br from-blue-600 to-indigo-600 text-white flex items-center justify-center shadow-xs shrink-0">
+          <div className="w-7 h-7 rounded-lg bg-blue-100/90 text-blue-600 border border-blue-200/60 flex items-center justify-center shrink-0">
             <Gauge size={14} className="stroke-[2.2]" />
           </div>
           <div className="min-w-0">
-            <h3 className="text-xs font-black text-slate-800 leading-tight tracking-tight truncate">
+            <h3 className="text-xs font-bold text-slate-800 leading-tight tracking-tight truncate">
               Hiệu suất Tuyển dụng & SLA
             </h3>
-            <p className="text-[9.5px] text-slate-400 font-medium truncate">
+            <p className="text-[10px] text-slate-400 font-medium truncate">
               Tiến độ thực tế so với mục tiêu cam kết
             </p>
           </div>
@@ -160,7 +160,7 @@ export default function HiringVelocityPanel({ velocity }: Props) {
 
         {/* Tổng kết trạng thái SLA */}
         <span
-          className={`text-[9.5px] font-extrabold px-2 py-0.5 rounded-full flex items-center gap-1.5 shadow-2xs border shrink-0 ${
+          className={`text-[10px] font-bold px-2 py-0.5 rounded-full flex items-center gap-1.5 shadow-2xs border shrink-0 ${
             isOverallGood
               ? 'bg-emerald-50 text-emerald-700 border-emerald-200/80'
               : 'bg-amber-50 text-amber-700 border-amber-200/80'
@@ -206,20 +206,20 @@ export default function HiringVelocityPanel({ velocity }: Props) {
                   >
                     {item.icon}
                   </div>
-                  <span className="font-bold text-slate-800 text-[10.5px] truncate">
+                  <span className="font-semibold text-slate-700 text-[11px] truncate">
                     {item.name}
                   </span>
                 </div>
 
                 <div className="flex items-center gap-1.5 shrink-0 ml-2">
-                  <span className="text-[11px] font-black text-slate-900">
+                  <span className="text-[11px] font-bold text-slate-800">
                     {item.actualStr}{' '}
-                    <span className="text-[9px] font-semibold text-slate-400">
+                    <span className="text-[10px] font-medium text-slate-400">
                       ({item.targetStr})
                     </span>
                   </span>
                   <span
-                    className={`text-[9px] font-extrabold px-1.5 py-0.2 rounded-md border shrink-0 ${badgeCls}`}
+                    className={`text-[9.5px] font-bold px-1.5 py-0.2 rounded-md border shrink-0 ${badgeCls}`}
                   >
                     {item.badgeText}
                   </span>
@@ -227,7 +227,7 @@ export default function HiringVelocityPanel({ velocity }: Props) {
               </div>
 
               {/* Row 2: Bullet Progress Bar with Target SLA Marker */}
-              <div className="relative w-full h-2 bg-slate-100/90 rounded-full border border-slate-200/60 overflow-hidden shadow-inner">
+              <div className="relative w-full h-2 bg-slate-100/90 rounded-full overflow-hidden">
                 {/* Thanh tiến độ thực tế */}
                 <div
                   className={`h-full rounded-full transition-all duration-700 ${item.barGradient}`}
@@ -236,7 +236,7 @@ export default function HiringVelocityPanel({ velocity }: Props) {
 
                 {/* Vạch mốc chuẩn SLA Target */}
                 <div
-                  className="absolute top-0 bottom-0 w-[2.5px] bg-slate-800/80 shadow-xs z-10"
+                  className="absolute top-0 bottom-0 w-[2px] bg-slate-600/90 z-10 shadow-2xs"
                   style={{ left: `${item.percentTarget}%` }}
                   title={`Mốc SLA: ${item.targetStr}`}
                 />
@@ -249,12 +249,12 @@ export default function HiringVelocityPanel({ velocity }: Props) {
       {/* ─── Bottom Legend ────────────────────────────────────────────────── */}
       <div className="flex items-center justify-between pt-1.5 border-t border-slate-100/90 shrink-0 mt-0.5 text-[9.5px]">
         <div className="flex items-center gap-3">
-          <div className="flex items-center gap-1 text-slate-600 font-semibold">
+          <div className="flex items-center gap-1 text-slate-600 font-medium">
             <span className="w-2 h-2 rounded-full bg-blue-500 shrink-0" />
             <span>Thực tế đạt được</span>
           </div>
           <div className="flex items-center gap-1 text-slate-500 font-medium">
-            <span className="w-0.5 h-2.5 bg-slate-800 rounded-full shrink-0" />
+            <span className="w-0.5 h-2.5 bg-slate-600 rounded-full shrink-0" />
             <span>Mốc SLA chuẩn</span>
           </div>
         </div>
