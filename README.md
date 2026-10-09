@@ -294,15 +294,3 @@ npx expo start
 ```
 
 ---
-
-## 📝 Giấy Phép & Tác Giả (License & Credits)
-
-- **Dự án**: TalentCore - Hệ Thống Quản Lý Tuyển Dụng Thông Minh (Smart ATS)
-- **Báo cáo Khóa luận Tốt nghiệp / Đồ án**
-- **Bản quyền**: © 2026 TalentCore Team. All rights reserved.
-
----
-
-<p align="center">
-  <b>⭐ Nếu bạn thấy dự án hữu ích, hãy tặng dự án 1 Star trên GitHub nhé! ⭐</b>
-</p>
