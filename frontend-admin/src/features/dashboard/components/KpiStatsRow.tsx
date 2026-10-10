@@ -6,6 +6,8 @@ import { OverviewKpis } from '../types/dashboard.types'
 import CustomSelect, { CustomSelectOption } from '@/src/components/common/CustomSelect'
 import { useDepartmentsQuery } from '@/src/features/departments/hooks/useDepartmentsQuery'
 import { Department } from '@/src/features/departments/types/department.types'
+import { useAuth } from '@/src/providers/AuthProvider'
+import { UserRole } from '@/src/features/users/types/user.types'
 
 interface KpiCardProps {
   icon: React.ReactNode
@@ -70,15 +72,30 @@ export default function KpiStatsRow({
   onDepartmentChange
 }: Props) {
   const { candidates, jobs, interviews, offers, timeToHire } = kpis
+  const { user } = useAuth()
   const { data: departments = [] } = useDepartmentsQuery()
 
-  const departmentOptions: CustomSelectOption[] = [
-    { value: '', label: 'Tất cả phòng ban' },
-    ...departments.map((d: Department) => ({
-      value: d._id,
-      label: d.name
-    }))
-  ]
+  const isDeptManager = user?.role === UserRole.DEPARTMENT_MANAGER
+  const userDeptId = typeof user?.departmentId === 'object'
+    ? (user?.departmentId as any)?._id
+    : user?.departmentId
+
+  const availableDepartments = isDeptManager && userDeptId
+    ? departments.filter((d: Department) => d._id === userDeptId)
+    : departments
+
+  const departmentOptions: CustomSelectOption[] = isDeptManager && userDeptId
+    ? availableDepartments.map((d: Department) => ({
+        value: d._id,
+        label: d.name
+      }))
+    : [
+        { value: '', label: 'Tất cả phòng ban' },
+        ...availableDepartments.map((d: Department) => ({
+          value: d._id,
+          label: d.name
+        }))
+      ]
 
   const cards: KpiCardProps[] = [
     {
@@ -154,7 +171,8 @@ export default function KpiStatsRow({
           value={selectedDepartment}
           onChange={(val) => onDepartmentChange?.(val)}
           options={departmentOptions}
-          placeholder="Tất cả phòng ban"
+          placeholder={isDeptManager && userDeptId ? (availableDepartments[0]?.name || 'Phòng ban của tôi') : 'Tất cả phòng ban'}
+          disabled={isDeptManager}
           className="w-full"
         />
       </div>

@@ -31,7 +31,7 @@ interface NavItem {
 }
 
 const navItems: NavItem[] = [
-  { label: 'Tổng quan', href: '/dashboard', icon: LayoutDashboard, roles: [UserRole.HR_ADMIN] },
+  { label: 'Tổng quan', href: '/dashboard', icon: LayoutDashboard, roles: [UserRole.HR_ADMIN, UserRole.DEPARTMENT_MANAGER] },
   {
     label: 'Tin tuyển dụng',
     href: '/job-description',

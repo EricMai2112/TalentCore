@@ -1,6 +1,8 @@
 'use client';
 
 import React, { useState } from 'react';
+import { useAuth } from '@/src/providers/AuthProvider';
+import { UserRole } from '@/src/features/users/types/user.types';
 import { useDashboardData } from '../hooks/useDashboardData';
 import KpiStatsRow from './KpiStatsRow';
 import TimelineTrendChart from './TimelineTrendChart';
@@ -16,8 +18,16 @@ import {
 } from './DashboardSkeletons';
 
 export default function DashboardManager() {
+  const { user } = useAuth();
+  const isDeptManager = user?.role === UserRole.DEPARTMENT_MANAGER;
+  const userDeptId = typeof user?.departmentId === 'object'
+    ? (user?.departmentId as any)?._id
+    : user?.departmentId;
+
   const [selectedDepartment, setSelectedDepartment] = useState<string>('');
-  const { data, isLoading, isError, refetch } = useDashboardData(selectedDepartment);
+
+  const activeDepartment = isDeptManager && userDeptId ? userDeptId : selectedDepartment;
+  const { data, isLoading, isError, refetch } = useDashboardData(activeDepartment);
 
   return (
     <div className="h-full max-h-full flex flex-col gap-2.5 overflow-hidden">
@@ -31,7 +41,7 @@ export default function DashboardManager() {
         data && (
           <KpiStatsRow
             kpis={data.kpis}
-            selectedDepartment={selectedDepartment}
+            selectedDepartment={activeDepartment}
             onDepartmentChange={setSelectedDepartment}
           />
         )
