@@ -80,15 +80,15 @@ export default function HiringVelocityPanel({ velocity }: Props) {
       icon: <Clock size={12} />,
       iconBg: 'bg-blue-100/90 text-blue-600 border border-blue-200/60',
       actualStr: `${avgTth} ngày`,
-      targetStr: `Mục tiêu ≤${targetTth}d`,
-      badgeText: isTthMet ? `-${tthDiff}d (Đạt SLA)` : `+${tthDiff}d (Chậm)`,
+      targetStr: `≤${targetTth}d`,
+      badgeText: isTthMet ? `Sớm ${tthDiff}d` : `Trễ ${tthDiff}d`,
       badgeType: isTthMet ? 'success' : 'warning',
       percentFill: tthFill,
       percentTarget: tthTarget,
       barGradient: isTthMet
         ? 'bg-gradient-to-r from-blue-500 to-indigo-600'
         : 'bg-gradient-to-r from-rose-500 to-red-600',
-      tooltip: `Thực tế: ${avgTth} ngày (Chuẩn SLA: ≤ ${targetTth} ngày)`
+      tooltip: `Thời gian tuyển thực tế: ${avgTth} ngày (Chuẩn cam kết SLA: ≤ ${targetTth} ngày)`
     },
     {
       id: 'screening',
@@ -98,15 +98,15 @@ export default function HiringVelocityPanel({ velocity }: Props) {
         ? 'bg-indigo-100/90 text-indigo-600 border border-indigo-200/60'
         : 'bg-amber-100/90 text-amber-600 border border-amber-200/60',
       actualStr: `${avgScreening} ngày`,
-      targetStr: `Mục tiêu ≤${targetScreening}d`,
-      badgeText: isScreeningMet ? 'Đạt chuẩn' : `+${screeningDiff}d (Vượt SLA)`,
+      targetStr: `≤${targetScreening}d`,
+      badgeText: isScreeningMet ? 'Đạt chuẩn' : `Chậm ${screeningDiff}d`,
       badgeType: isScreeningMet ? 'success' : 'warning',
       percentFill: screeningFill,
       percentTarget: screeningTarget,
       barGradient: isScreeningMet
         ? 'bg-gradient-to-r from-indigo-500 to-purple-600'
         : 'bg-gradient-to-r from-amber-400 to-orange-500',
-      tooltip: `Thực tế: ${avgScreening} ngày (Chuẩn SLA: ≤ ${targetScreening} ngày)`
+      tooltip: `Sàng lọc CV thực tế: ${avgScreening} ngày (Chuẩn cam kết SLA: ≤ ${targetScreening} ngày)`
     },
     {
       id: 'offer',
@@ -114,15 +114,15 @@ export default function HiringVelocityPanel({ velocity }: Props) {
       icon: <TrendingUp size={12} />,
       iconBg: 'bg-emerald-100/90 text-emerald-600 border border-emerald-200/60',
       actualStr: `${offerRate}%`,
-      targetStr: `Mục tiêu ≥${targetOffer}%`,
-      badgeText: isOfferMet ? 'Đạt SLA' : `Thiếu ${targetOffer - offerRate}%`,
+      targetStr: `≥${targetOffer}%`,
+      badgeText: isOfferMet ? 'Đạt chuẩn' : `Thiếu ${targetOffer - offerRate}%`,
       badgeType: isOfferMet ? 'success' : 'warning',
       percentFill: Math.min(100, offerRate),
       percentTarget: targetOffer,
       barGradient: isOfferMet
         ? 'bg-gradient-to-r from-emerald-500 to-teal-500'
         : 'bg-gradient-to-r from-amber-400 to-orange-500',
-      tooltip: `Thực tế: ${offerRate}% (Mục tiêu SLA: ≥ ${targetOffer}%)`
+      tooltip: `Tỷ lệ nhận Offer thực tế: ${offerRate}% (Mục tiêu chuẩn SLA: ≥ ${targetOffer}%)`
     },
     {
       id: 'pass',
@@ -130,13 +130,13 @@ export default function HiringVelocityPanel({ velocity }: Props) {
       icon: <Award size={12} />,
       iconBg: 'bg-purple-100/90 text-purple-600 border border-purple-200/60',
       actualStr: `${passRate}%`,
-      targetStr: `${interviewPassRate.passedCount}/${interviewPassRate.totalDecided} đạt vòng`,
-      badgeText: passRate >= 80 ? 'Rất tốt' : 'Bình thường',
+      targetStr: `${interviewPassRate.passedCount}/${interviewPassRate.totalDecided}`,
+      badgeText: `${interviewPassRate.passedCount}/${interviewPassRate.totalDecided} đạt`,
       badgeType: 'purple',
       percentFill: Math.min(100, passRate),
       percentTarget: targetPass,
       barGradient: 'bg-gradient-to-r from-purple-500 to-indigo-600',
-      tooltip: `Đậu ${interviewPassRate.passedCount}/${interviewPassRate.totalDecided} lượt phỏng vấn (${passRate}%)`
+      tooltip: `Đậu ${interviewPassRate.passedCount}/${interviewPassRate.totalDecided} lượt phỏng vấn đã đánh giá (${passRate}%)`
     }
   ]
 
@@ -212,12 +212,16 @@ export default function HiringVelocityPanel({ velocity }: Props) {
                 </div>
 
                 <div className="flex items-center gap-1.5 shrink-0 ml-2">
-                  <span className="text-[11px] font-bold text-slate-800">
-                    {item.actualStr}{' '}
-                    <span className="text-[10px] font-medium text-slate-400">
-                      ({item.targetStr})
+                  <div className="flex items-baseline gap-1">
+                    <span className="text-[11px] font-bold text-slate-800">
+                      {item.actualStr}
                     </span>
-                  </span>
+                    {item.id !== 'pass' && (
+                      <span className="text-[10px] font-medium text-slate-400">
+                        / {item.targetStr}
+                      </span>
+                    )}
+                  </div>
                   <span
                     className={`text-[9.5px] font-bold px-1.5 py-0.2 rounded-md border shrink-0 ${badgeCls}`}
                   >
