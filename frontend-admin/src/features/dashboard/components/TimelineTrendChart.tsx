@@ -48,24 +48,45 @@ function CustomTooltip({ active, payload, label }: any) {
 
 interface Props {
   initialTrends: ApplicationTrends;
+  departmentId?: string;
 }
 
-export default function TimelineTrendChart({ initialTrends }: Props) {
+export default function TimelineTrendChart({ initialTrends, departmentId }: Props) {
   const [trends, setTrends] = useState<ApplicationTrends>(initialTrends);
   const [selectedMonths, setSelectedMonths] = useState<number>(6);
   const [isLoading, setIsLoading] = useState<boolean>(false);
 
   // Sync if initialTrends updates from parent refetch
   useEffect(() => {
-    setTrends(initialTrends);
-  }, [initialTrends]);
+    if (selectedMonths === 6) {
+      setTrends(initialTrends);
+    } else {
+      // If user was on 3T or 12T and departmentId changes, fetch trends for the active tab and new department
+      let isMounted = true;
+      setIsLoading(true);
+      analyticsApi
+        .getTrends(selectedMonths, departmentId)
+        .then((res) => {
+          if (isMounted) setTrends(res);
+        })
+        .catch((err) => {
+          console.error('Failed to fetch timeline trends on dept change:', err);
+        })
+        .finally(() => {
+          if (isMounted) setIsLoading(false);
+        });
+      return () => {
+        isMounted = false;
+      };
+    }
+  }, [initialTrends, departmentId]);
 
   const handleSelectMonths = async (m: number) => {
     if (m === selectedMonths || isLoading) return;
     setSelectedMonths(m);
     setIsLoading(true);
     try {
-      const res = await analyticsApi.getTrends(m);
+      const res = await analyticsApi.getTrends(m, departmentId);
       setTrends(res);
     } catch (err) {
       console.error('Failed to fetch timeline trends:', err);
@@ -122,7 +143,7 @@ export default function TimelineTrendChart({ initialTrends }: Props) {
           <EmptyState message="Chưa có dữ liệu xu hướng" icon={<TrendingUp size={28} />} />
         ) : (
           <ResponsiveContainer width="100%" height="100%">
-            <AreaChart data={trends.data} margin={{ top: 5, right: 6, left: -22, bottom: -6 }}>
+            <AreaChart data={trends.data} margin={{ top: 5, right: 10, left: -22, bottom: -6 }}>
               <defs>
                 <linearGradient id="colorApp" x1="0" y1="0" x2="0" y2="1">
                   <stop offset="5%" stopColor="#3B82F6" stopOpacity={0.25} />
@@ -140,7 +161,13 @@ export default function TimelineTrendChart({ initialTrends }: Props) {
               <CartesianGrid strokeDasharray="3 3" stroke="rgba(15,23,42,0.05)" vertical={false} />
               <XAxis
                 dataKey="month"
-                tick={{ fontSize: 9.5, fill: '#64748B', fontWeight: 600 }}
+                interval={0}
+                padding={{ left: 8, right: 8 }}
+                tick={{
+                  fontSize: selectedMonths === 12 ? 8.5 : 9.5,
+                  fill: '#64748B',
+                  fontWeight: 600
+                }}
                 axisLine={false}
                 tickLine={false}
               />

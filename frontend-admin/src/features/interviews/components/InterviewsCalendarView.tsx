@@ -235,7 +235,7 @@ export default function InterviewsCalendarView({
     return h * 60 + m
   }
 
-  // Google Calendar Interval Overlap & Multi-Column Layout Algorithm
+  // Google Calendar Interval Overlap & Cascading Stacking Layout Algorithm
   interface PositionedEvent {
     event: InterviewItem
     colIndex: number
@@ -244,6 +244,7 @@ export default function InterviewsCalendarView({
     heightPx: number
     leftPct: number
     widthPct: number
+    zIndex: number
     clusterItems: InterviewItem[]
   }
 
@@ -339,6 +340,11 @@ export default function InterviewsCalendarView({
       const totalCols = Math.max(columns.length, 1)
       const clusterAllEvents = cluster.items.map((i) => i.event)
 
+      // Calculate cascading overlap geometry like Google Calendar
+      // When multiple events overlap, later events offset slightly to the right and stack on top
+      const stepOffset = totalCols > 1 ? Math.min(16, 50 / (totalCols - 1)) : 0
+      const baseWidth = totalCols === 1 ? 100 : Math.max(68, 100 - (totalCols - 1) * stepOffset)
+
       for (const item of clusterAssigned) {
         const start = parseTime(item.event.startTime)
         const end = parseTime(item.event.endTime)
@@ -351,8 +357,19 @@ export default function InterviewsCalendarView({
         const topPx = Math.max(0, (startOffsetMinutes / 60) * HOUR_HEIGHT)
         const heightPx = Math.max((durationMinutes / 60) * HOUR_HEIGHT, 28)
 
-        const widthPct = 100 / totalCols
-        const leftPct = item.colIndex * widthPct
+        let leftPct = 0
+        let widthPct = 100
+        const zIndex = 10 + item.colIndex
+
+        if (totalCols > 1) {
+          leftPct = item.colIndex * stepOffset
+          if (item.colIndex === totalCols - 1) {
+            // The last event can stretch to the right edge
+            widthPct = 100 - leftPct
+          } else {
+            widthPct = baseWidth
+          }
+        }
 
         positionedEvents.push({
           event: item.event,
@@ -362,6 +379,7 @@ export default function InterviewsCalendarView({
           heightPx,
           leftPct,
           widthPct,
+          zIndex,
           clusterItems: clusterAllEvents
         })
       }
@@ -800,6 +818,7 @@ export default function InterviewsCalendarView({
                             heightPx,
                             leftPct,
                             widthPct,
+                            zIndex,
                             clusterItems
                           } = item
 
@@ -822,12 +841,13 @@ export default function InterviewsCalendarView({
                                 top: `${topPx}px`,
                                 height: `${heightPx}px`,
                                 left: `${leftPct}%`,
-                                width: `${widthPct}%`
+                                width: `${widthPct}%`,
+                                zIndex
                               }}
                               onMouseEnter={(e) => handleCardMouseEnter(event, clusterItems, e)}
                               onMouseLeave={handleCardMouseLeave}
                               onClick={() => router.push(`/interviews/${event._id}/evaluate`)}
-                              className={`absolute p-1 rounded-lg text-white font-medium transition-all cursor-pointer overflow-hidden z-10 flex flex-col justify-start border-2 border-white shadow-xs hover:shadow-md hover:z-30 hover:scale-[1.02] ${getEventBgByStatus(
+                              className={`absolute p-1 rounded-lg text-white font-medium transition-all cursor-pointer overflow-hidden flex flex-col justify-start border-2 border-white shadow-sm hover:shadow-xl hover:!z-50 hover:scale-[1.02] ${getEventBgByStatus(
                                 event.status
                               )}`}
                               title={`${event.startTime} - ${event.endTime}: ${jobTitle} (${candidateName})${
@@ -870,39 +890,26 @@ export default function InterviewsCalendarView({
                                     )}
                                   </div>
                                 </div>
-                              ) : totalCols === 2 ? (
-                                <div className="flex flex-col justify-start h-full gap-0.5 select-none px-0.5">
-                                  <div
-                                    className={`text-[10px] font-extrabold text-white truncate leading-tight ${
-                                      isCancelled ? 'line-through opacity-85' : ''
-                                    }`}
-                                  >
-                                    {jobTitle}
+                              ) : (
+                                <div className="flex flex-col justify-start h-full gap-0.5 select-none px-1 overflow-hidden">
+                                  <div className="flex items-center justify-between gap-1 leading-tight">
+                                    <span
+                                      className={`text-[10px] font-extrabold text-white truncate ${
+                                        isCancelled ? 'line-through opacity-85' : ''
+                                      }`}
+                                    >
+                                      {jobTitle}
+                                    </span>
+                                    <span className="text-[8.5px] font-semibold text-white/90 shrink-0">
+                                      {event.startTime}
+                                    </span>
                                   </div>
                                   <div className="text-[9px] font-semibold text-white/90 truncate leading-tight">
                                     {event.startTime} - {event.endTime}
                                   </div>
                                   {heightPx >= 48 && (
-                                    <div className="text-[8.5px] font-medium text-white/80 truncate leading-tight">
+                                    <div className="text-[8.5px] font-medium text-white/85 truncate leading-tight">
                                       {candidateName} {isCancelled && '(Hủy)'}
-                                    </div>
-                                  )}
-                                </div>
-                              ) : (
-                                <div className="flex flex-col justify-start h-full gap-0.5 select-none px-0.5 overflow-hidden">
-                                  <div
-                                    className={`text-[9.5px] font-extrabold text-white truncate leading-tight ${
-                                      isCancelled ? 'line-through opacity-85' : ''
-                                    }`}
-                                  >
-                                    {jobTitle}
-                                  </div>
-                                  <div className="text-[8.5px] font-semibold text-white/90 truncate leading-tight">
-                                    {event.startTime}
-                                  </div>
-                                  {heightPx >= 48 && (
-                                    <div className="text-[8px] font-medium text-white/80 truncate leading-tight">
-                                      {candidateName}
                                     </div>
                                   )}
                                 </div>

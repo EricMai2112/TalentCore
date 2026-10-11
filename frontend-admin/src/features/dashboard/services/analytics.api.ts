@@ -55,8 +55,14 @@ export const analyticsApi = {
     return res.data;
   },
 
-  getTrends: async (months = 6): Promise<ApplicationTrends> => {
-    const res = await apiClient.get<ApiResponse<ApplicationTrends>>(`/analytics/timeline-trends?months=${months}`);
+  getTrends: async (months = 6, departmentId?: string): Promise<ApplicationTrends> => {
+    const params = new URLSearchParams({ months: String(months) });
+    if (departmentId && departmentId.trim() && departmentId !== 'ALL') {
+      params.append('departmentId', departmentId.trim());
+    }
+    const res = await apiClient.get<ApiResponse<ApplicationTrends>>(
+      `/analytics/timeline-trends?${params.toString()}`
+    );
     return res.data;
   },
 
