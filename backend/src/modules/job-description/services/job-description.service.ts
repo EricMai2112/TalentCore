@@ -288,7 +288,7 @@ export class JobDescriptionService {
       .populate('interviewerId')
       .populate('interviewerIds')
       .populate('postedById')
-      .sort({ createdAt: -1 })
+      .sort({ updatedAt: -1 })
       .exec();
   }
 

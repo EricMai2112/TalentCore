@@ -95,3 +95,7 @@ export class Offer {
 }
 
 export const OfferSchema = SchemaFactory.createForClass(Offer);
+
+OfferSchema.index({ updatedAt: -1 });
+OfferSchema.index({ departmentId: 1, updatedAt: -1 });
+OfferSchema.index({ status: 1, updatedAt: -1 });

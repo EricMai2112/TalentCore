@@ -193,6 +193,10 @@ export default function JobRequestTable({
       !query || title.toLowerCase().includes(query) || deptName.toLowerCase().includes(query)
 
     return matchDept && matchStatus && matchPriority && matchSearch
+  }).sort((a, b) => {
+    const timeA = new Date(a.updatedAt || a.createdAt || 0).getTime()
+    const timeB = new Date(b.updatedAt || b.createdAt || 0).getTime()
+    return timeB - timeA
   })
 
   return (

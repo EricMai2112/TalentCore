@@ -132,6 +132,10 @@ export default function DepartmentManager({
       dept.code.toLowerCase().includes(q) ||
       managerName.toLowerCase().includes(q)
     )
+  }).sort((a, b) => {
+    const timeA = new Date((a as any).updatedAt || (a as any).createdAt || 0).getTime()
+    const timeB = new Date((b as any).updatedAt || (b as any).createdAt || 0).getTime()
+    return timeB - timeA
   })
 
   const totalPages = Math.ceil(filteredDepartments.length / pageSize) || 1

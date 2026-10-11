@@ -234,6 +234,10 @@ export default function CandidatesManager({
       }
 
       return true
+    }).sort((a, b) => {
+      const timeA = new Date(a.updatedAt || a.appliedAt || 0).getTime()
+      const timeB = new Date(b.updatedAt || b.appliedAt || 0).getTime()
+      return timeB - timeA
     })
   }, [scopedApplications, searchQuery, selectedPosition, selectedStage])
 

@@ -172,6 +172,10 @@ export default function UserManager({ initialUsers, initialDepartments }: UserMa
     const matchStatus = selectedStatus === 'all' || u.status === selectedStatus
 
     return matchSearch && matchDept && matchRole && matchStatus
+  }).sort((a, b) => {
+    const timeA = new Date(a.updatedAt || a.createdAt || 0).getTime()
+    const timeB = new Date(b.updatedAt || b.createdAt || 0).getTime()
+    return timeB - timeA
   })
 
   const paginatedUsers = filtered.slice((currentPage - 1) * pageSize, currentPage * pageSize)

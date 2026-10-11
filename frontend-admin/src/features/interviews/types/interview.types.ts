@@ -86,6 +86,7 @@ export interface InterviewItem {
   cancelReason?: string;
   isEscalated?: boolean;
   createdAt?: string;
+  updatedAt?: string;
 }
 
 export interface CreateInterviewPayload {
