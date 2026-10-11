@@ -43,13 +43,19 @@ export class AnalyticsController {
 
   /**
    * ?months=6  — số tháng cần lấy xu hướng (mặc định 6, tối đa 24)
+   * ?departmentId — lọc theo phòng ban (tùy chọn)
    */
   @Get('timeline-trends')
   async getTimelineTrends(
     @Query('months', new DefaultValuePipe(6), ParseIntPipe) months: number,
+    @Query('departmentId') departmentId?: string,
   ) {
     const safeMonths = Math.min(Math.max(1, months), 24);
-    const data = await this.analyticsService.getApplicationTrends(safeMonths);
+    const cleanDeptId =
+      departmentId && departmentId.trim() && departmentId !== 'ALL'
+        ? departmentId.trim()
+        : undefined;
+    const data = await this.analyticsService.getApplicationTrends(safeMonths, cleanDeptId);
     return {
       message: 'Lấy xu hướng tuyển dụng theo thời gian thành công',
       data,

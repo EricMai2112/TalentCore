@@ -48,7 +48,11 @@ export default function CustomSelect({
   const containerRef = useRef<HTMLDivElement>(null)
   const buttonRef = useRef<HTMLButtonElement>(null)
   const dropdownRef = useRef<HTMLDivElement>(null)
-  const [menuStyle, setMenuStyle] = useState<React.CSSProperties>({})
+  const [menuStyle, setMenuStyle] = useState<React.CSSProperties>({
+    position: 'fixed',
+    zIndex: 99999,
+    visibility: 'hidden'
+  })
 
   useEffect(() => {
     setMounted(true)
@@ -68,7 +72,8 @@ export default function CustomSelect({
       right: align === 'right' ? `${window.innerWidth - rect.right}px` : 'auto',
       minWidth: `${Math.max(rect.width, 180)}px`,
       maxWidth: 'calc(100vw - 32px)',
-      zIndex: 99999
+      zIndex: 99999,
+      visibility: 'visible'
     }
 
     if (placeAbove) {
@@ -80,6 +85,14 @@ export default function CustomSelect({
     }
 
     setMenuStyle(style)
+  }
+
+  const handleToggle = () => {
+    if (disabled || isLocked) return
+    if (!isOpen) {
+      updatePosition()
+    }
+    setIsOpen((prev) => !prev)
   }
 
   // Single unified effect for positioning, outside click, and keyboard handling
@@ -137,7 +150,7 @@ export default function CustomSelect({
     <div
       ref={dropdownRef}
       style={menuStyle}
-      className="bg-white/95 border border-white/80 rounded-2xl shadow-xl shadow-blue-500/10 p-1.5 space-y-1 animate-in fade-in zoom-in-95 duration-150 max-h-60 overflow-y-auto"
+      className="fixed z-[99999] bg-white/95 border border-white/80 rounded-2xl shadow-xl shadow-blue-500/10 p-1.5 space-y-1 animate-in fade-in zoom-in-95 duration-150 max-h-60 overflow-y-auto"
     >
       {options.length === 0 ? (
         <div className="p-3 text-center text-xs text-slate-400 font-medium">
@@ -194,7 +207,7 @@ export default function CustomSelect({
           ref={buttonRef}
           type="button"
           disabled={disabled || isLocked}
-          onClick={() => setIsOpen((prev) => !prev)}
+          onClick={handleToggle}
           className={`w-full flex items-center justify-between gap-2 ${sizeClasses[size]} transition-all border shadow-2xs outline-none text-left ${
             disabled || isLocked
               ? 'bg-slate-100/70 text-slate-400 border-slate-200/80 cursor-not-allowed opacity-75'

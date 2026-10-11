@@ -77,12 +77,18 @@ export const OffersManager: React.FC<OffersManagerProps> = ({
     [currentPage, selectedStatus, selectedDepartment, search]
   )
 
+  const isDefaultView =
+    currentPage === 1 &&
+    selectedStatus === 'ALL' &&
+    selectedDepartment === 'ALL' &&
+    !search
+
   const initialData = React.useMemo(() => {
-    if (initialOffers.length > 0) {
+    if (isDefaultView && initialOffers.length > 0) {
       return { items: initialOffers, total: initialTotal }
     }
     return undefined
-  }, [initialOffers, initialTotal])
+  }, [isDefaultView, initialOffers, initialTotal])
 
   const { data, isLoading, isFetching } = useOffersQuery({
     params: queryParams,
@@ -279,6 +285,8 @@ export const OffersManager: React.FC<OffersManagerProps> = ({
           pageSize,
           onPageChange: (p) => setCurrentPage(p)
         }}
+        isLoading={isLoading}
+        loadingMessage="Đang tải danh sách đề nghị nhận việc..."
         isEmpty={offers.length === 0}
         emptyTitle="Chưa có đề nghị nhận việc nào"
         emptyDescription="Hiện chưa có đề nghị nhận việc nào phù hợp với bộ lọc. Hãy tạo đề nghị đầu tiên để gửi đến ứng viên."
@@ -295,7 +303,11 @@ export const OffersManager: React.FC<OffersManagerProps> = ({
               <th className="px-5 py-3.5 text-center">Thao tác</th>
             </tr>
           </thead>
-          <tbody className="divide-y divide-slate-200/40">
+          <tbody
+            className={`divide-y divide-slate-200/40 transition-opacity duration-200 ${
+              isFetching ? 'opacity-50 pointer-events-none' : ''
+            }`}
+          >
             {offers.map((offer) => {
               const candidate = offer.candidateId
               const candidateUser = candidate?.userId

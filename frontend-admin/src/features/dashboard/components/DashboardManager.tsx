@@ -77,7 +77,12 @@ export default function DashboardManager() {
             {isLoading ? (
               <BoxSkeleton className="h-full" />
             ) : (
-              data && <TimelineTrendChart initialTrends={data.trends} />
+              data && (
+                <TimelineTrendChart
+                  initialTrends={data.trends}
+                  departmentId={activeDepartment}
+                />
+              )
             )}
           </div>
 
