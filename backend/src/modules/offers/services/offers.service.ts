@@ -133,7 +133,7 @@ export class OffersService {
     const [items, total] = await Promise.all([
       this.offerModel
         .find(filter)
-        .sort({ createdAt: -1 })
+        .sort({ updatedAt: -1 })
         .skip(skip)
         .limit(limit)
         .populate({

@@ -118,3 +118,7 @@ export class JobDescription {
 }
 
 export const JobDescriptionSchema = SchemaFactory.createForClass(JobDescription);
+
+JobDescriptionSchema.index({ updatedAt: -1 });
+JobDescriptionSchema.index({ departmentId: 1, updatedAt: -1 });
+JobDescriptionSchema.index({ status: 1, updatedAt: -1 });

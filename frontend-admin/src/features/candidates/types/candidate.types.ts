@@ -85,4 +85,6 @@ export interface CandidateApplication {
   aiEvaluation?: any;
   stageName?: string;
   stageColor?: string;
+  createdAt?: string;
+  updatedAt?: string;
 }

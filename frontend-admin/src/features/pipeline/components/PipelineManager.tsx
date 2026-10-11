@@ -113,6 +113,10 @@ export default function PipelineManager({ initialTemplates }: PipelineManagerPro
     const matchName = t.name.toLowerCase().includes(q)
     const matchStage = t.stages.some((s) => s.name.toLowerCase().includes(q))
     return matchName || matchStage
+  }).sort((a, b) => {
+    const timeA = new Date((a as any).updatedAt || (a as any).createdAt || 0).getTime()
+    const timeB = new Date((b as any).updatedAt || (b as any).createdAt || 0).getTime()
+    return timeB - timeA
   })
 
   const totalPages = Math.ceil(filteredTemplates.length / pageSize) || 1

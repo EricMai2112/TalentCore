@@ -192,7 +192,7 @@ export class ApplicationService {
         path: 'candidateId',
         populate: { path: 'userId', select: 'name email phone avatar' },
       })
-      .sort({ appliedAt: -1 })
+      .sort({ updatedAt: -1 })
       .lean()
       .exec();
 

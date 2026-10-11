@@ -252,6 +252,10 @@ export default function SkillManager({
     const matchDept = deptName.toLowerCase().includes(q)
     const matchSkill = pos.skillIds?.some((s) => s.name.toLowerCase().includes(q))
     return matchPos || matchDept || matchSkill
+  }).sort((a, b) => {
+    const timeA = new Date((a as any).updatedAt || (a as any).createdAt || 0).getTime()
+    const timeB = new Date((b as any).updatedAt || (b as any).createdAt || 0).getTime()
+    return timeB - timeA
   })
 
   const groups = buildDepartmentGroups(filteredPositions)

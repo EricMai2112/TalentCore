@@ -419,12 +419,16 @@ export default function InterviewsManager({
     [baseFilteredInterviews, todayISO]
   )
 
-  // Final filtered list based on active time tab
+  // Final filtered list based on active time tab (Sorted: Newest updated/created first)
   const filteredInterviews = useMemo(
     () =>
-      baseFilteredInterviews.filter((item) =>
-        isMatchingTimeTab(item.date, timeTabFilter, todayISO)
-      ),
+      baseFilteredInterviews
+        .filter((item) => isMatchingTimeTab(item.date, timeTabFilter, todayISO))
+        .sort((a, b) => {
+          const timeA = new Date(a.updatedAt || a.date || a.createdAt || 0).getTime()
+          const timeB = new Date(b.updatedAt || b.date || b.createdAt || 0).getTime()
+          return timeB - timeA
+        }),
     [baseFilteredInterviews, timeTabFilter, todayISO]
   )
 
