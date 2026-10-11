@@ -354,7 +354,80 @@ export const OfferDetailModal: React.FC<OfferDetailModalProps> = ({
               </h4>
               <div
                 className="p-6 rounded-2xl border border-slate-200 bg-white shadow-2xs max-h-[400px] overflow-y-auto"
-                dangerouslySetInnerHTML={{ __html: offer.offerLetterHtml }}
+                dangerouslySetInnerHTML={{
+                  __html:
+                    offer.offerLetterHtml && offer.offerLetterHtml.trim().length > 0
+                      ? offer.offerLetterHtml
+                      : `
+<div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; max-width: 680px; margin: 0 auto; color: #1e293b; line-height: 1.6;">
+  <div style="text-align: center; padding-bottom: 20px; border-bottom: 2px solid #e2e8f0;">
+    <h1 style="color: #2563eb; margin: 0; font-size: 22px; font-weight: 700;">THƯ MỜI NHẬN VIỆC (JOB OFFER)</h1>
+    <p style="color: #64748b; margin: 6px 0 0 0; font-size: 13px;">Công ty Cổ phần Giải pháp Công nghệ TalentCore</p>
+  </div>
+
+  <div style="padding: 20px 0;">
+    <p>Kính gửi <strong>${candidateName}</strong>,</p>
+    <p>Thay mặt Ban lãnh đạo cùng tập thể TalentCore, chúng tôi xin chúc mừng bạn đã xuất sắc vượt qua các vòng phỏng vấn và đánh giá chuyên môn vừa qua. Chúng tôi rất ấn tượng với năng lực và tiềm năng của bạn, và trân trọng gửi đến bạn lời mời gia nhập đội ngũ TalentCore với các thông tin chi tiết như sau:</p>
+
+    <div style="background-color: #f8fafc; border: 1px solid #e2e8f0; border-radius: 12px; padding: 18px; margin: 16px 0;">
+      <h3 style="color: #0f172a; margin-top: 0; font-size: 15px; border-bottom: 1px solid #cbd5e1; padding-bottom: 8px;">1. THÔNG TIN VỊ TRÍ & ĐIỀU KIỆN LÀM VIỆC</h3>
+      <table style="width: 100%; border-collapse: collapse; font-size: 13px;">
+        <tr>
+          <td style="padding: 6px 0; color: #64748b; width: 40%;">Vị trí công tác:</td>
+          <td style="padding: 6px 0; font-weight: 600; color: #0f172a;">${offer.positionTitle || 'Chuyên viên'}</td>
+        </tr>
+        <tr>
+          <td style="padding: 6px 0; color: #64748b;">Phòng ban:</td>
+          <td style="padding: 6px 0; font-weight: 600; color: #0f172a;">${department?.name || 'TalentCore'}</td>
+        </tr>
+        <tr>
+          <td style="padding: 6px 0; color: #64748b;">Hình thức hợp đồng:</td>
+          <td style="padding: 6px 0; font-weight: 600; color: #0f172a;">Toàn thời gian (Full-time)</td>
+        </tr>
+        <tr>
+          <td style="padding: 6px 0; color: #64748b;">Địa điểm làm việc:</td>
+          <td style="padding: 6px 0; font-weight: 600; color: #0f172a;">${offer.workLocation || 'Tòa nhà TalentCore, TP. Hồ Chí Minh'}</td>
+        </tr>
+        <tr>
+          <td style="padding: 6px 0; color: #64748b;">Thời gian bắt đầu làm việc:</td>
+          <td style="padding: 6px 0; font-weight: 600; color: #2563eb;">${new Date(offer.startDate).toLocaleDateString('vi-VN')}</td>
+        </tr>
+      </table>
+
+      <h3 style="color: #0f172a; margin-top: 16px; font-size: 15px; border-bottom: 1px solid #cbd5e1; padding-bottom: 8px;">2. CHẾ ĐỘ LƯƠNG & ĐÃI NGỘ</h3>
+      <table style="width: 100%; border-collapse: collapse; font-size: 13px;">
+        <tr>
+          <td style="padding: 6px 0; color: #64748b; width: 40%;">Mức lương chính thức (Gross):</td>
+          <td style="padding: 6px 0; font-weight: 700; color: #16a34a; font-size: 15px;">${formattedSalary} VND/tháng</td>
+        </tr>
+        <tr>
+          <td style="padding: 6px 0; color: #64748b;">Thời gian thử việc:</td>
+          <td style="padding: 6px 0; font-weight: 600; color: #0f172a;">${offer.probationDurationMonths || 2} tháng</td>
+        </tr>
+        <tr>
+          <td style="padding: 6px 0; color: #64748b;">Lương thử việc (${offer.probationSalaryPercentage || 85}%):</td>
+          <td style="padding: 6px 0; font-weight: 600; color: #0f172a;">${formattedProbationSalary} VND/tháng</td>
+        </tr>
+      </table>
+
+      ${
+        offer.benefits && offer.benefits.length > 0
+          ? `
+      <h4 style="color: #0f172a; margin: 14px 0 6px 0; font-size: 13px;">Quyền lợi và phúc lợi:</h4>
+      <ul style="margin: 0; padding-left: 20px; font-size: 13px; color: #334155;">
+        ${offer.benefits.map((b) => `<li style="margin-bottom: 4px;">${b.replace(/^[-•*✓]\s*/, '')}</li>`).join('')}
+      </ul>
+      `
+          : ''
+      }
+    </div>
+
+    <p>Thư mời nhận việc này có hiệu lực phản hồi đến hết ngày <strong>${new Date(offer.expirationDate).toLocaleDateString('vi-VN')}</strong>. Bạn vui lòng xác nhận phản hồi trên Cổng thông tin ứng viên TalentCore.</p>
+    <p style="margin-top: 24px;">Trân trọng,<br><strong>Phòng Nhân sự TalentCore</strong></p>
+  </div>
+</div>
+                      `
+                }}
               />
             </div>
           </div>
