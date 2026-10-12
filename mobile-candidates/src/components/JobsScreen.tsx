@@ -18,6 +18,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter } from 'expo-router';
 import { useAuth } from '../context/AuthContext';
+import { useNotification } from '../context/NotificationContext';
 import { jobService } from '../services/job.service';
 import { DepartmentItem, JobItem } from '../types/job.types';
 import { JobSkeleton } from './JobSkeleton';
@@ -35,6 +36,7 @@ export const JobsScreen: React.FC<JobsScreenProps> = ({
 }) => {
   const router = useRouter();
   const { user, logout } = useAuth();
+  const { unreadCount } = useNotification();
   const [jobs, setJobs] = useState<JobItem[]>([]);
   const [departments, setDepartments] = useState<DepartmentItem[]>([]);
   const [loading, setLoading] = useState(true);
@@ -159,7 +161,13 @@ export const JobsScreen: React.FC<JobsScreenProps> = ({
                   hitSlop={10}
                 >
                   <Ionicons name="notifications-outline" size={20} color="#1e1b4b" />
-                  <View style={styles.notificationDot} />
+                  {unreadCount > 0 && (
+                    <View style={styles.notificationBadge}>
+                      <Text style={styles.notificationBadgeText}>
+                        {unreadCount > 99 ? '99+' : unreadCount}
+                      </Text>
+                    </View>
+                  )}
                 </Pressable>
 
                 <Pressable
@@ -451,14 +459,24 @@ const styles = StyleSheet.create({
     shadowRadius: 4,
     elevation: 3,
   },
-  notificationDot: {
+  notificationBadge: {
     position: 'absolute',
-    top: 9,
-    right: 10,
-    width: 8,
-    height: 8,
-    borderRadius: 4,
+    top: 4,
+    right: 4,
+    minWidth: 16,
+    height: 16,
+    borderRadius: 8,
     backgroundColor: '#ef4444',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: 4,
+    borderWidth: 1.5,
+    borderColor: '#ffffff',
+  },
+  notificationBadgeText: {
+    color: '#ffffff',
+    fontSize: 9,
+    fontWeight: '900',
   },
   greetingBox: {
     marginTop: 4,
