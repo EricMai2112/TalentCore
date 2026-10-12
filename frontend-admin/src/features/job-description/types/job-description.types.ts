@@ -158,3 +158,37 @@ export interface UpdateJobDescriptionDto {
   headcount?: number;
   applicationDeadline?: string;
 }
+
+export interface JobDraftData {
+  title?: string;
+  departmentId?: string;
+  positionId?: string;
+  location?: string;
+  employmentType?: EmploymentType;
+  minimumSalary?: number;
+  maximumSalary?: number;
+  headcount?: number;
+  priority?: JobPriority;
+  experienceLevel?: string;
+  applicationDeadline?: string;
+  requiredSkills?: string[];
+  criteria?: JobCriteria[];
+  description?: string;
+  requirements?: string;
+  benefits?: string;
+  selectedPipelineTemplateId?: string;
+  pipelineStages?: PipelineStage[];
+  status?: JobStatus;
+  [key: string]: any;
+}
+
+export interface JobDescriptionDraft {
+  _id: string;
+  positionId: string;
+  experienceLevel: string;
+  departmentId: string;
+  savedById: string;
+  draftData: JobDraftData;
+  createdAt: string;
+  updatedAt: string;
+}

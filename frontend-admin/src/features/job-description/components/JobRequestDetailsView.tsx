@@ -29,6 +29,7 @@ import { useAuth } from "@/src/providers/AuthProvider";
 import { UserRole } from "@/src/features/users/types/user.types";
 import ReviewModal from "./ReviewModal";
 import DeleteConfirmModal from "./DeleteConfirmModal";
+import CandidateRediscoverySection from "./CandidateRediscoverySection";
 
 interface JobRequestDetailsViewProps {
   job: JobDescription;
@@ -441,6 +442,13 @@ export default function JobRequestDetailsView({ job }: JobRequestDetailsViewProp
           </div>
         </div>
       </div>
+
+      {/* Candidate Rediscovery / Silver Medalist Section at the bottom */}
+      <CandidateRediscoverySection
+        jobId={currentJob._id}
+        jobTitle={currentJob.title}
+        departmentName={deptName}
+      />
 
       {/* Review Modal */}
       <ReviewModal

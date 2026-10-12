@@ -7,6 +7,7 @@ import { CandidateApplicationItem, ApplicationStats } from '../../types/applicat
 import { candidateApplicationsApi } from '../../services/candidate-applications.api'
 import { ApplicationStatsCards } from './ApplicationStatsCards'
 import { ApplicationCardItem } from './ApplicationCardItem'
+import { InvitationHeroBanner } from './InvitationHeroBanner'
 
 interface MyApplicationsContentProps {
   onStatsLoaded?: (stats: ApplicationStats) => void
@@ -22,26 +23,27 @@ export function MyApplicationsContent({ onStatsLoaded }: MyApplicationsContentPr
   })
   const [isLoading, setIsLoading] = useState(true)
 
-  useEffect(() => {
-    const fetchApplications = async () => {
-      setIsLoading(true)
-      try {
-        const data = await candidateApplicationsApi.getMyApplications()
-        setApplications(data.applications || [])
-        const retrievedStats = data.stats || {
-          totalApplied: 0,
-          processingCount: 0,
-          interviewCount: 0,
-          offerCount: 0
-        }
-        setStats(retrievedStats)
-        if (onStatsLoaded) onStatsLoaded(retrievedStats)
-      } catch (err) {
-        console.error('Lỗi khi lấy đơn ứng tuyển của tôi:', err)
-      } finally {
-        setIsLoading(false)
+  const fetchApplications = async () => {
+    setIsLoading(true)
+    try {
+      const data = await candidateApplicationsApi.getMyApplications()
+      setApplications(data.applications || [])
+      const retrievedStats = data.stats || {
+        totalApplied: 0,
+        processingCount: 0,
+        interviewCount: 0,
+        offerCount: 0
       }
+      setStats(retrievedStats)
+      if (onStatsLoaded) onStatsLoaded(retrievedStats)
+    } catch (err) {
+      console.error('Lỗi khi lấy đơn ứng tuyển của tôi:', err)
+    } finally {
+      setIsLoading(false)
     }
+  }
+
+  useEffect(() => {
     fetchApplications()
   }, [])
 
@@ -56,6 +58,9 @@ export function MyApplicationsContent({ onStatsLoaded }: MyApplicationsContentPr
           Theo dõi tiến trình ứng tuyển của bạn qua từng giai đoạn
         </p>
       </div>
+
+      {/* Hero Banner: Lời mời cơ hội việc làm từ HR (Candidate Rediscovery) */}
+      <InvitationHeroBanner onApplicationCreated={fetchApplications} />
 
       {/* 4 Metric Summary Cards Grid */}
       <ApplicationStatsCards stats={stats} />

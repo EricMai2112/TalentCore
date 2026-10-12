@@ -69,6 +69,13 @@ export default function NotificationDropdown({ isScrolled }: NotificationDropdow
   };
 
   const getCategoryIcon = (category: NotificationCategory, type: NotificationType) => {
+    if (type === NotificationType.RE_ENGAGEMENT_INVITE) {
+      return (
+        <div className="w-8 h-8 rounded-xl bg-gradient-to-tr from-purple-600 to-indigo-600 text-white flex items-center justify-center shrink-0 shadow-md shadow-purple-500/25 ring-1 ring-purple-300">
+          <Sparkles size={16} />
+        </div>
+      );
+    }
     if (type === NotificationType.CANDIDATE_HIRED) {
       return (
         <div className="w-8 h-8 rounded-xl bg-gradient-to-tr from-emerald-500 to-green-600 text-white flex items-center justify-center shrink-0 shadow-md shadow-emerald-500/25 ring-1 ring-emerald-300">

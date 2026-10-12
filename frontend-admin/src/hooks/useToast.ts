@@ -1,6 +1,8 @@
-import { useState, useCallback, useRef, useEffect } from 'react';
+'use client';
 
-export type ToastType = 'success' | 'error' | 'warning' | 'info';
+import { useToast as useGlobalToast, ToastType, ToastItem } from '@/src/providers/ToastProvider';
+
+export type { ToastType };
 
 export interface ToastState {
   id: string;
@@ -8,43 +10,22 @@ export interface ToastState {
   type: ToastType;
 }
 
-export function useToast(defaultDuration = 3000) {
-  const [toast, setToast] = useState<ToastState | null>(null);
-  const timerRef = useRef<NodeJS.Timeout | null>(null);
-
-  const hideToast = useCallback(() => {
-    if (timerRef.current) {
-      clearTimeout(timerRef.current);
-      timerRef.current = null;
-    }
-    setToast(null);
-  }, []);
-
-  const showToast = useCallback(
-    (message: string, type: ToastType = 'success', duration = defaultDuration) => {
-      if (timerRef.current) {
-        clearTimeout(timerRef.current);
-      }
-      setToast({ id: String(Date.now()), message, type });
-      timerRef.current = setTimeout(() => {
-        setToast(null);
-        timerRef.current = null;
-      }, duration);
-    },
-    [defaultDuration]
-  );
-
-  useEffect(() => {
-    return () => {
-      if (timerRef.current) {
-        clearTimeout(timerRef.current);
-      }
-    };
-  }, []);
+export function useToast() {
+  const globalToast = useGlobalToast();
 
   return {
-    toast,
-    showToast,
-    hideToast,
+    toast: globalToast.toasts[0] || null,
+    showToast: globalToast.showToast,
+    hideToast: (id?: string) => {
+      if (id) {
+        globalToast.hideToast(id);
+      } else if (globalToast.toasts[0]) {
+        globalToast.hideToast(globalToast.toasts[0].id);
+      }
+    },
+    success: globalToast.success,
+    error: globalToast.error,
+    info: globalToast.info,
+    warning: globalToast.warning,
   };
 }

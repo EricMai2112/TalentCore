@@ -8,6 +8,8 @@ import {
   PipelineTemplate,
   User,
   Position,
+  JobDescriptionDraft,
+  JobDraftData,
 } from "../types/job-description.types";
 
 interface ApiResponse<T> {
@@ -123,6 +125,43 @@ export const jobDescriptionApi = {
       return res.data || res || [];
     } catch {
       return [];
+    }
+  },
+
+  // Job Drafts
+  saveDraft: async (data: {
+    positionId: string;
+    departmentId: string;
+    experienceLevel: string;
+    draftData: JobDraftData;
+  }): Promise<JobDescriptionDraft> => {
+    const res = await apiClient.post<ApiResponse<JobDescriptionDraft>>("/job-descriptions/drafts", data);
+    return res.data;
+  },
+
+  getDraftByPosition: async (
+    positionId: string,
+    experienceLevel?: string,
+  ): Promise<JobDescriptionDraft | null> => {
+    try {
+      const url = experienceLevel
+        ? `/job-descriptions/drafts/${positionId}?experienceLevel=${encodeURIComponent(experienceLevel)}`
+        : `/job-descriptions/drafts/${positionId}`;
+      const res = await apiClient.get<ApiResponse<JobDescriptionDraft>>(url);
+      return res.data || null;
+    } catch {
+      return null;
+    }
+  },
+
+  deleteDraft: async (positionId: string, experienceLevel?: string): Promise<void> => {
+    try {
+      const url = experienceLevel
+        ? `/job-descriptions/drafts/${positionId}?experienceLevel=${encodeURIComponent(experienceLevel)}`
+        : `/job-descriptions/drafts/${positionId}`;
+      await apiClient.delete(url);
+    } catch {
+      // ignore
     }
   },
 };
