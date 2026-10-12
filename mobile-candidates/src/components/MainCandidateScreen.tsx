@@ -14,6 +14,7 @@ import { ApplicationsScreen } from './ApplicationsScreen';
 import { JobsScreen } from './JobsScreen';
 import { NotificationsScreen } from './NotificationsScreen';
 import { ProfileScreen } from './ProfileScreen';
+import { useNotification } from '../context/NotificationContext';
 
 type TabKey = 'jobs' | 'applications' | 'notifications' | 'profile';
 
@@ -32,6 +33,7 @@ const TABS: TabItem[] = [
 ];
 
 export const MainCandidateScreen: React.FC = () => {
+  const { unreadCount } = useNotification();
   const [activeTab, setActiveTab] = useState<TabKey>('jobs');
   const [tabBarWidth, setTabBarWidth] = useState(0);
 
@@ -201,11 +203,20 @@ export const MainCandidateScreen: React.FC = () => {
                     isActive && { transform: [{ scale: iconScaleAnim }] },
                   ]}
                 >
-                  <Ionicons
-                    name={isActive ? tab.iconActive : tab.icon}
-                    size={22}
-                    color={isActive ? '#7c3aed' : '#0f172a'}
-                  />
+                  <View style={styles.tabIconBox}>
+                    <Ionicons
+                      name={isActive ? tab.iconActive : tab.icon}
+                      size={22}
+                      color={isActive ? '#7c3aed' : '#0f172a'}
+                    />
+                    {tab.key === 'notifications' && unreadCount > 0 && (
+                      <View style={styles.tabBadge}>
+                        <Text style={styles.tabBadgeText}>
+                          {unreadCount > 99 ? '99+' : unreadCount}
+                        </Text>
+                      </View>
+                    )}
+                  </View>
                   <Text
                     style={[
                       styles.tabTitle,
@@ -315,5 +326,29 @@ const styles = StyleSheet.create({
   tabTitleActive: {
     color: '#7c3aed',
     fontWeight: '800',
+  },
+  tabIconBox: {
+    position: 'relative',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  tabBadge: {
+    position: 'absolute',
+    top: -5,
+    right: -10,
+    backgroundColor: '#f43f5e',
+    minWidth: 16,
+    height: 16,
+    borderRadius: 8,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: 4,
+    borderWidth: 1.5,
+    borderColor: '#ffffff',
+  },
+  tabBadgeText: {
+    color: '#ffffff',
+    fontSize: 9,
+    fontWeight: '900',
   },
 });

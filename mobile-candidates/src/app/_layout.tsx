@@ -3,6 +3,7 @@ import * as SplashScreen from 'expo-splash-screen';
 import { useColorScheme } from 'react-native';
 import { Stack } from 'expo-router';
 import { AuthProvider } from '../context/AuthContext';
+import { NotificationProvider } from '../context/NotificationContext';
 
 SplashScreen.preventAutoHideAsync();
 
@@ -11,23 +12,25 @@ export default function RootLayout() {
 
   return (
     <AuthProvider>
-      <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
-        <Stack
-          screenOptions={{
-            headerShown: false,
-            animation: 'slide_from_right',
-          }}
-        >
-          <Stack.Screen name="index" options={{ headerShown: false }} />
-          <Stack.Screen
-            name="job/[id]"
-            options={{
+      <NotificationProvider>
+        <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
+          <Stack
+            screenOptions={{
               headerShown: false,
               animation: 'slide_from_right',
             }}
-          />
-        </Stack>
-      </ThemeProvider>
+          >
+            <Stack.Screen name="index" options={{ headerShown: false }} />
+            <Stack.Screen
+              name="job/[id]"
+              options={{
+                headerShown: false,
+                animation: 'slide_from_right',
+              }}
+            />
+          </Stack>
+        </ThemeProvider>
+      </NotificationProvider>
     </AuthProvider>
   );
 }
