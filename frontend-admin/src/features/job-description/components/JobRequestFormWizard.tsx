@@ -22,7 +22,8 @@ import {
   Clock,
   UserCheck,
   RefreshCw,
-  Info
+  Info,
+  Bookmark
 } from 'lucide-react'
 import {
   CustomInput,
@@ -42,7 +43,8 @@ import {
   User,
   Position,
   CriteriaRequirementType,
-  JobCriteria
+  JobCriteria,
+  JobDraftData
 } from '../types/job-description.types'
 import { jobDescriptionApi } from '../services/job-description.api'
 import { useAuth } from '@/src/providers/AuthProvider'
@@ -54,6 +56,7 @@ import {
   jobRequestStep2Schema,
   jobRequestFullSchema
 } from '../schemas/job-request.schema'
+import { useToast } from '@/src/providers/ToastProvider'
 
 interface JobRequestFormWizardProps {
   mode: 'create' | 'edit'
@@ -97,6 +100,7 @@ export default function JobRequestFormWizard({
 }: JobRequestFormWizardProps) {
   const router = useRouter()
   const { user: currentUser } = useAuth()
+  const { showToast } = useToast()
   const isDeptManager = currentUser?.role === UserRole.DEPARTMENT_MANAGER
 
   const getDeptIdStr = (dept: string | Department | undefined): string => {
@@ -135,6 +139,10 @@ export default function JobRequestFormWizard({
   const isSubmittedRef = useRef(false)
   const isMountedRef = useRef(false)
 
+  // Draft state
+  const [isSavingDraft, setIsSavingDraft] = useState(false)
+  const [hasLoadedDraft, setHasLoadedDraft] = useState(false)
+
   // Form Fields State
   const [title, setTitle] = useState('')
   const [departmentId, setDepartmentId] = useState('')
@@ -145,7 +153,7 @@ export default function JobRequestFormWizard({
   const [maximumSalary, setMaximumSalary] = useState<number | ''>('')
   const [headcount, setHeadcount] = useState<number>(1)
   const [priority, setPriority] = useState<JobPriority>(JobPriority.MEDIUM)
-  const [experienceLevel, setExperienceLevel] = useState('Mid-level')
+  const [experienceLevel, setExperienceLevel] = useState('')
   const [applicationDeadline, setApplicationDeadline] = useState(getDefaultDeadline())
   const [selectedSkills, setSelectedSkills] = useState<string[]>([])
   const [criteria, setCriteria] = useState<JobCriteria[]>([])
@@ -276,7 +284,7 @@ export default function JobRequestFormWizard({
       setMaximumSalary('')
       setHeadcount(1)
       setPriority(JobPriority.MEDIUM)
-      setExperienceLevel('Mid-level')
+      setExperienceLevel('')
       setApplicationDeadline(getDefaultDeadline())
       setSelectedSkills([])
       setCriteria([])
@@ -725,13 +733,17 @@ export default function JobRequestFormWizard({
   const handleDepartmentChange = (deptId: string) => {
     setDepartmentId(deptId)
     setPositionId('')
+    setExperienceLevel('')
     setTitle('')
     setSelectedSkills([])
     setCriteria([])
+    setHasLoadedDraft(false)
   }
 
   const handlePositionChange = (posId: string) => {
     setPositionId(posId)
+    setExperienceLevel('')
+    setHasLoadedDraft(false)
     const selectedPos = positions.find((pos) => pos._id === posId)
     if (selectedPos) {
       setTitle(selectedPos.name)
@@ -743,6 +755,212 @@ export default function JobRequestFormWizard({
       setTitle('')
       setSelectedSkills([])
       setCriteria([])
+    }
+  }
+
+  // Tải bản nháp cụ thể cho cặp (positionId, experienceLevel)
+  const loadDraftForPositionAndLevel = async (posId: string, level: string) => {
+    if (!posId || !level) return
+    const selectedPos = positions.find((pos) => pos._id === posId)
+
+    if (mode === 'create') {
+      try {
+        const draft = await jobDescriptionApi.getDraftByPosition(posId, level)
+        if (draft && draft.draftData) {
+          const d = draft.draftData
+          setTitle(d.title || selectedPos?.name || '')
+          if (d.location !== undefined) setLocation(d.location)
+          if (d.employmentType) setEmploymentType(d.employmentType)
+          if (d.minimumSalary !== undefined && d.minimumSalary !== null) setMinimumSalary(d.minimumSalary)
+          if (d.maximumSalary !== undefined && d.maximumSalary !== null) setMaximumSalary(d.maximumSalary)
+          if (d.headcount !== undefined && d.headcount !== null) setHeadcount(d.headcount)
+          if (d.priority) setPriority(d.priority)
+          if (d.applicationDeadline) {
+            setApplicationDeadline(d.applicationDeadline.split('T')[0])
+          }
+
+          if (Array.isArray(d.requiredSkills) && d.requiredSkills.length > 0) {
+            setSelectedSkills(d.requiredSkills)
+          } else {
+            const skillIdsToSelect =
+              selectedPos?.skillIds?.map((s: any) => (typeof s === 'string' ? s : s?._id)) || []
+            setSelectedSkills(skillIdsToSelect)
+          }
+
+          if (Array.isArray(d.criteria) && d.criteria.length > 0) {
+            setCriteria(d.criteria)
+          } else if (Array.isArray(d.requiredSkills) && d.requiredSkills.length > 0) {
+            syncCriteriaFromSkillIds(d.requiredSkills)
+          } else {
+            const skillIdsToSelect =
+              selectedPos?.skillIds?.map((s: any) => (typeof s === 'string' ? s : s?._id)) || []
+            syncCriteriaFromSkillIds(skillIdsToSelect)
+          }
+
+          if (d.description !== undefined) setDescription(d.description)
+          if (d.requirements !== undefined) setRequirements(d.requirements)
+          if (d.benefits !== undefined) setBenefits(d.benefits)
+
+          if (d.selectedPipelineTemplateId) {
+            setSelectedPipelineTemplateId(d.selectedPipelineTemplateId)
+            if (Array.isArray(d.pipelineStages) && d.pipelineStages.length > 0) {
+              setPipelineStages(d.pipelineStages)
+            } else {
+              const matched = pipelineTemplates.find((t) => t._id === d.selectedPipelineTemplateId)
+              if (matched) setPipelineStages(matched.stages.map((s) => ({ ...s })))
+            }
+          }
+
+          if (d.status) setStatus(d.status)
+
+          setHasLoadedDraft(true)
+          showToast(
+            `Đã tự động tải lại dữ liệu bản nháp của vị trí "${selectedPos?.name}" (Cấp độ: ${level}).`,
+            'info'
+          )
+          return
+        }
+      } catch (err) {
+        console.error('Lỗi khi tải bản nháp theo cấp độ:', err)
+      }
+    }
+
+    // Trường hợp chưa có bản nháp cho cấp độ này: giữ thông tin cơ bản của vị trí và reset nội dung cũ
+    setHasLoadedDraft(false)
+    if (selectedPos) {
+      setTitle(selectedPos.name)
+      const skillIdsToSelect =
+        selectedPos.skillIds?.map((s: any) => (typeof s === 'string' ? s : s?._id)) || []
+      setSelectedSkills(skillIdsToSelect)
+      syncCriteriaFromSkillIds(skillIdsToSelect)
+    }
+    setLocation('')
+    setMinimumSalary('')
+    setMaximumSalary('')
+    setHeadcount(1)
+    setPriority(JobPriority.MEDIUM)
+    setApplicationDeadline(getDefaultDeadline())
+    setDescription('')
+    setRequirements('')
+    setBenefits('')
+  }
+
+  // Xử lý khi chọn Kinh nghiệm yêu cầu
+  const handleExperienceLevelChange = async (newLevel: string) => {
+    setExperienceLevel(newLevel)
+    if (!newLevel) {
+      setHasLoadedDraft(false)
+      return
+    }
+    if (positionId && mode === 'create') {
+      await loadDraftForPositionAndLevel(positionId, newLevel)
+    }
+  }
+
+  // Lưu hoặc cập nhật bản nháp cho cặp (vị trí + cấp độ kinh nghiệm)
+  const handleSaveDraft = async () => {
+    if (!positionId) {
+      setError('Vui lòng chọn Vị trí tuyển dụng trước khi lưu nháp.')
+      showToast('Vui lòng chọn Vị trí tuyển dụng trước khi lưu nháp.', 'error')
+      return
+    }
+
+    if (!experienceLevel) {
+      setError('Vui lòng chọn Kinh nghiệm yêu cầu trước khi lưu nháp.')
+      showToast('Vui lòng chọn Kinh nghiệm yêu cầu trước khi lưu nháp.', 'error')
+      return
+    }
+
+    const selectedPos = positions.find((p) => p._id === positionId)
+    const effectiveDeptId =
+      departmentId ||
+      (selectedPos && typeof selectedPos.departmentId === 'object'
+        ? (selectedPos.departmentId as any)._id
+        : selectedPos?.departmentId)
+
+    if (!effectiveDeptId) {
+      setError('Vui lòng chọn Phòng ban trước khi lưu nháp.')
+      showToast('Vui lòng chọn Phòng ban trước khi lưu nháp.', 'error')
+      return
+    }
+
+    setIsSavingDraft(true)
+    setError(null)
+
+    try {
+      const draftData: JobDraftData = {
+        title: title || selectedPos?.name,
+        departmentId: effectiveDeptId,
+        positionId,
+        location,
+        employmentType,
+        minimumSalary: minimumSalary !== '' ? Number(minimumSalary) : undefined,
+        maximumSalary: maximumSalary !== '' ? Number(maximumSalary) : undefined,
+        headcount,
+        priority,
+        experienceLevel,
+        applicationDeadline,
+        requiredSkills: selectedSkills,
+        criteria,
+        description,
+        requirements,
+        benefits,
+        selectedPipelineTemplateId,
+        pipelineStages,
+        status
+      }
+
+      await jobDescriptionApi.saveDraft({
+        positionId,
+        departmentId: effectiveDeptId,
+        experienceLevel,
+        draftData
+      })
+
+      setHasLoadedDraft(true)
+      setIsDirty(false)
+      showToast(
+        `Đã lưu bản nháp thành công cho vị trí "${selectedPos?.name || 'đã chọn'}" (Cấp độ: ${experienceLevel}). Bản nháp cũ của cấp độ này đã được thay thế.`,
+        'success'
+      )
+    } catch (err: any) {
+      setError(err?.message || 'Không thể lưu bản nháp. Vui lòng thử lại.')
+      showToast('Không thể lưu bản nháp. Vui lòng kiểm tra lại.', 'error')
+    } finally {
+      setIsSavingDraft(false)
+    }
+  }
+
+  // Xóa bản nháp của cặp (vị trí + cấp độ kinh nghiệm) đang chọn
+  const handleDeleteDraft = async () => {
+    if (!positionId || !experienceLevel) return
+    const selectedPos = positions.find((p) => p._id === positionId)
+    try {
+      await jobDescriptionApi.deleteDraft(positionId, experienceLevel)
+      setHasLoadedDraft(false)
+      showToast(
+        `Đã xóa bản nháp của vị trí "${selectedPos?.name || ''}" (Cấp độ: ${experienceLevel}).`,
+        'info'
+      )
+      if (selectedPos) {
+        setTitle(selectedPos.name)
+        setLocation('')
+        setEmploymentType(EmploymentType.FULL_TIME)
+        setMinimumSalary('')
+        setMaximumSalary('')
+        setHeadcount(1)
+        setPriority(JobPriority.MEDIUM)
+        setApplicationDeadline(getDefaultDeadline())
+        const skillIdsToSelect =
+          selectedPos.skillIds?.map((s: any) => (typeof s === 'string' ? s : s?._id)) || []
+        setSelectedSkills(skillIdsToSelect)
+        syncCriteriaFromSkillIds(skillIdsToSelect)
+        setDescription('')
+        setRequirements('')
+        setBenefits('')
+      }
+    } catch (err) {
+      console.error(err)
     }
   }
 
@@ -835,6 +1053,9 @@ export default function JobRequestFormWizard({
     try {
       if (mode === 'create') {
         await jobDescriptionApi.createJob(payload)
+        if (positionId && experienceLevel) {
+          await jobDescriptionApi.deleteDraft(positionId, experienceLevel)
+        }
       } else if (mode === 'edit' && initialJob) {
         await jobDescriptionApi.updateJob(initialJob._id, payload)
       }
@@ -998,19 +1219,41 @@ export default function JobRequestFormWizard({
                     ]}
                   />
 
-                  <CustomSelect
-                    label="Kinh nghiệm yêu cầu"
-                    value={experienceLevel}
-                    onChange={(val) => setExperienceLevel(val)}
-                    options={[
-                      { value: 'Intern', label: 'Intern (Thực tập sinh - Dưới 6 tháng)' },
-                      { value: 'Fresher', label: 'Fresher (Mới tốt nghiệp - Dưới 1 năm)' },
-                      { value: 'Junior', label: 'Junior (1 - 3 năm)' },
-                      { value: 'Mid-level', label: 'Mid-level (3 - 5 năm)' },
-                      { value: 'Senior', label: 'Senior (5+ năm)' },
-                      { value: 'Lead / Manager', label: 'Lead / Manager (7+ năm)' }
-                    ]}
-                  />
+                  <div className="space-y-1">
+                    <CustomSelect
+                      label="Kinh nghiệm yêu cầu"
+                      required
+                      value={experienceLevel}
+                      onChange={(val) => handleExperienceLevelChange(val)}
+                      disabled={!positionId}
+                      placeholder="-- Chọn cấp độ kinh nghiệm --"
+                      options={[
+                        { value: '', label: '-- Chọn cấp độ kinh nghiệm --' },
+                        { value: 'Intern', label: 'Intern (Thực tập sinh - Dưới 6 tháng)' },
+                        { value: 'Fresher', label: 'Fresher (Mới tốt nghiệp - Dưới 1 năm)' },
+                        { value: 'Junior', label: 'Junior (1 - 3 năm)' },
+                        { value: 'Mid-level', label: 'Mid-level (3 - 5 năm)' },
+                        { value: 'Senior', label: 'Senior (5+ năm)' },
+                        { value: 'Lead / Manager', label: 'Lead / Manager (7+ năm)' }
+                      ]}
+                    />
+                    {hasLoadedDraft && experienceLevel && (
+                      <div className="flex items-center justify-between px-2.5 py-1 bg-amber-500/10 border border-amber-300/50 rounded-xl text-amber-800 text-[11px] font-medium shadow-2xs animate-in fade-in">
+                        <span className="flex items-center gap-1.5 truncate">
+                          <Bookmark size={12} className="text-amber-600 shrink-0" />
+                          Đang dùng bản nháp cấp độ: <strong className="font-bold">{experienceLevel}</strong>
+                        </span>
+                        <button
+                          type="button"
+                          onClick={handleDeleteDraft}
+                          className="text-rose-600 hover:text-rose-800 font-bold hover:underline cursor-pointer ml-2 text-[10px] shrink-0"
+                          title="Xóa bản nháp này để tạo lại từ đầu"
+                        >
+                          Xóa bản nháp
+                        </button>
+                      </div>
+                    )}
+                  </div>
                 </div>
 
                 {/* Row 2: Title, Location, Employment Type & Headcount */}
@@ -1596,66 +1839,89 @@ export default function JobRequestFormWizard({
 
         {/* Floating Glass Sticky Action Footer Bar */}
         <div className="flex items-center justify-between px-6 py-4 border shadow-lg bg-white/80 backdrop-blur-xl border-white/90 rounded-3xl">
-          {mode === 'create' ? (
-            step > 1 ? (
-              <button
-                type="button"
-                onClick={handlePrevStep}
-                className="flex items-center gap-2 px-4 py-2.5 bg-white hover:bg-slate-50 text-slate-700 font-semibold text-xs rounded-xl border border-slate-200/90 shadow-2xs transition-all cursor-pointer"
-              >
-                <ArrowLeft size={15} />
-                Quay lại (Bước {step - 1})
-              </button>
-            ) : (
-              <button
-                type="button"
-                onClick={handleBackClick}
-                className="flex items-center gap-2 px-4 py-2.5 bg-white hover:bg-slate-50 text-slate-600 font-semibold text-xs rounded-xl border border-slate-200/90 shadow-2xs transition-all cursor-pointer"
-              >
-                Hủy thay đổi
-              </button>
-            )
-          ) : (
-            <div className="flex items-center gap-2.5">
-              <button
-                type="button"
-                onClick={handleBackClick}
-                className="flex items-center gap-2 px-4 py-2.5 bg-white hover:bg-slate-50 text-slate-600 font-semibold text-xs rounded-xl border border-slate-200/90 shadow-2xs transition-all cursor-pointer"
-              >
-                Hủy thay đổi
-              </button>
-
-              <button
-                type="button"
-                onClick={executeSave}
-                disabled={isSubmitting}
-                className="flex items-center gap-2 px-5 py-2.5 bg-[#3B82F6] hover:bg-blue-600 text-white font-bold text-xs rounded-xl transition-all shadow-xs cursor-pointer disabled:opacity-50"
-              >
-                {isSubmitting ? (
-                  <>
-                    <Loader2 size={15} className="animate-spin" />
-                    Đang lưu...
-                  </>
-                ) : (
-                  <>
-                    <Save size={15} />
-                    Lưu
-                  </>
-                )}
-              </button>
-
-              {step > 1 && (
+          <div className="flex items-center gap-2.5">
+            {mode === 'create' ? (
+              step > 1 ? (
                 <button
                   type="button"
                   onClick={handlePrevStep}
-                  className="flex items-center gap-2 px-4 py-2.5 bg-white hover:bg-slate-50 text-slate-700 font-semibold text-xs rounded-xl border border-slate-200/90 shadow-2xs transition-all cursor-pointer ml-1"
+                  className="flex items-center gap-2 px-4 py-2.5 bg-white hover:bg-slate-50 text-slate-700 font-semibold text-xs rounded-xl border border-slate-200/90 shadow-2xs transition-all cursor-pointer"
                 >
                   <ArrowLeft size={15} />
                   Quay lại (Bước {step - 1})
                 </button>
+              ) : (
+                <button
+                  type="button"
+                  onClick={handleBackClick}
+                  className="flex items-center gap-2 px-4 py-2.5 bg-white hover:bg-slate-50 text-slate-600 font-semibold text-xs rounded-xl border border-slate-200/90 shadow-2xs transition-all cursor-pointer"
+                >
+                  Hủy thay đổi
+                </button>
+              )
+            ) : (
+              <div className="flex items-center gap-2.5">
+                <button
+                  type="button"
+                  onClick={handleBackClick}
+                  className="flex items-center gap-2 px-4 py-2.5 bg-white hover:bg-slate-50 text-slate-600 font-semibold text-xs rounded-xl border border-slate-200/90 shadow-2xs transition-all cursor-pointer"
+                >
+                  Hủy thay đổi
+                </button>
+
+                <button
+                  type="button"
+                  onClick={executeSave}
+                  disabled={isSubmitting}
+                  className="flex items-center gap-2 px-5 py-2.5 bg-[#3B82F6] hover:bg-blue-600 text-white font-bold text-xs rounded-xl transition-all shadow-xs cursor-pointer disabled:opacity-50"
+                >
+                  {isSubmitting ? (
+                    <>
+                      <Loader2 size={15} className="animate-spin" />
+                      Đang lưu...
+                    </>
+                  ) : (
+                    <>
+                      <Save size={15} />
+                      Lưu
+                    </>
+                  )}
+                </button>
+
+                {step > 1 && (
+                  <button
+                    type="button"
+                    onClick={handlePrevStep}
+                    className="flex items-center gap-2 px-4 py-2.5 bg-white hover:bg-slate-50 text-slate-700 font-semibold text-xs rounded-xl border border-slate-200/90 shadow-2xs transition-all cursor-pointer ml-1"
+                  >
+                    <ArrowLeft size={15} />
+                    Quay lại (Bước {step - 1})
+                  </button>
+                )}
+              </div>
+            )}
+
+            {/* Nút Lưu nháp nhanh ở Footer */}
+            <button
+              type="button"
+              onClick={handleSaveDraft}
+              disabled={isSavingDraft || isSubmitting}
+              className="flex items-center gap-2 px-4 py-2.5 bg-amber-50 hover:bg-amber-100 text-amber-800 font-bold text-xs rounded-xl border border-amber-300/80 shadow-2xs transition-all cursor-pointer disabled:opacity-50"
+              title="Lưu lại tiến độ hiện tại thành bản nháp (ghi đè bản nháp cũ của vị trí này)"
+            >
+              {isSavingDraft ? (
+                <>
+                  <Loader2 size={15} className="animate-spin text-amber-600" />
+                  Đang lưu nháp...
+                </>
+              ) : (
+                <>
+                  <Bookmark size={15} className="text-amber-600" />
+                  Lưu nháp
+                </>
               )}
-            </div>
-          )}
+            </button>
+          </div>
 
           {step < 3 ? (
             <button

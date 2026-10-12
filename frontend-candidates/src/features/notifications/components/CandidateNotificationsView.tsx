@@ -148,6 +148,14 @@ export default function CandidateNotificationsView() {
   };
 
   const getCategoryBadge = (category: NotificationCategory, type: NotificationType) => {
+    if (type === NotificationType.RE_ENGAGEMENT_INVITE) {
+      return (
+        <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-bold bg-purple-100 text-purple-800 border border-purple-300">
+          <Sparkles size={12} />
+          Lời mời việc làm ✨
+        </span>
+      );
+    }
     if (type === NotificationType.CANDIDATE_HIRED) {
       return (
         <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-bold bg-emerald-100 text-emerald-800 border border-emerald-300">
@@ -208,6 +216,13 @@ export default function CandidateNotificationsView() {
   };
 
   const getCategoryIcon = (category: NotificationCategory, type: NotificationType) => {
+    if (type === NotificationType.RE_ENGAGEMENT_INVITE) {
+      return (
+        <div className="w-11 h-11 rounded-2xl bg-gradient-to-tr from-purple-600 to-indigo-600 text-white flex items-center justify-center shrink-0 shadow-md shadow-purple-500/25 ring-2 ring-purple-300">
+          <Sparkles size={22} />
+        </div>
+      );
+    }
     if (type === NotificationType.CANDIDATE_HIRED) {
       return (
         <div className="w-11 h-11 rounded-2xl bg-gradient-to-tr from-emerald-500 to-green-600 text-white flex items-center justify-center shrink-0 shadow-md shadow-emerald-500/25 ring-2 ring-emerald-300">

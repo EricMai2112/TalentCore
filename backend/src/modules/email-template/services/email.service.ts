@@ -721,4 +721,75 @@ export class EmailService {
       this.logger.error(`[Offer Email] Lỗi gửi email Offer Letter tới ${params.toEmail}: ${err?.message || err}`);
     }
   }
+
+  /**
+   * Gửi email mời tái ứng tuyển (Candidate Rediscovery / Re-engagement)
+   */
+  async sendReEngagementInvitationEmail(params: {
+    toEmail: string;
+    candidateName: string;
+    jobTitle: string;
+    departmentName?: string;
+    salaryRange?: string;
+    customNote?: string;
+    expiresAtDate?: string;
+    invitationUrl?: string;
+  }) {
+    if (!params.toEmail) {
+      this.logger.warn('[Re-engagement Email] Không có email ứng viên, bỏ qua gửi mail.');
+      return;
+    }
+
+    const actionUrl = params.invitationUrl || `${this.candidateUrl}/user/applications`;
+    const subject = `[TalentCore] Lời mời cơ hội việc làm mới: ${params.jobTitle} - Dành riêng cho ${params.candidateName}`;
+
+    const infoList: Array<{ label: string; value: string }> = [
+      { label: 'Vị trí công việc', value: params.jobTitle },
+    ];
+    if (params.departmentName) {
+      infoList.push({ label: 'Phòng ban', value: params.departmentName });
+    }
+    if (params.salaryRange) {
+      infoList.push({ label: 'Mức lương dự kiến', value: params.salaryRange });
+    }
+    if (params.expiresAtDate) {
+      infoList.push({ label: 'Hạn phản hồi lời mời', value: params.expiresAtDate });
+    }
+
+    let bodyContent = `
+      <p>Kính gửi <strong>${params.candidateName}</strong>,</p>
+      <p>Dựa trên hồ sơ năng lực rất ấn tượng và kết quả đánh giá nổi bật của bạn ở đợt tuyển dụng trước, Bộ phận Tuyển dụng TalentCore trân trọng gửi đến bạn lời mời tham gia ứng tuyển cơ hội mới cho vị trí <strong>${params.jobTitle}</strong>.</p>
+    `;
+
+    if (params.customNote?.trim()) {
+      bodyContent += `
+        <div style="background-color: #f0fdf4; border-left: 4px solid #16a34a; padding: 14px 18px; margin: 18px 0; border-radius: 8px;">
+          <p style="margin: 0 0 4px 0; font-size: 12px; font-weight: 700; color: #166534; text-transform: uppercase;">Lời nhắn từ Đội ngũ Tuyển dụng:</p>
+          <p style="margin: 0; font-size: 14px; color: #14532d; line-height: 22px; font-style: italic;">"${params.customNote.trim()}"</p>
+        </div>
+      `;
+    }
+
+    bodyContent += `
+      <p>Bạn không cần phải chuẩn bị hay nộp lại hồ sơ từ đầu. Chỉ cần bấm vào nút bên dưới để xem toàn bộ thông tin chi tiết và <strong>Xác nhận tham gia ứng tuyển (1-Click)</strong> bằng hồ sơ đã có của bạn.</p>
+      <p style="margin-top: 24px;">Trân trọng,<br><strong>Ban Tuyển dụng & Phát triển Nhân tài TalentCore</strong></p>
+    `.trim();
+
+    const renderedHtml = this.generateGeneralHtmlEmail({
+      title: subject,
+      bodyText: bodyContent,
+      badgeText: 'Thư mời ứng tuyển đặc biệt',
+      badgeColor: '#7c3aed',
+      infoList,
+      actionText: 'Xem chi tiết & Xác nhận tham gia',
+      actionUrl,
+    });
+
+    try {
+      await this.sendEmail(params.toEmail, subject, renderedHtml, bodyContent);
+      this.logger.log(`[Re-engagement Email] Đã gửi email mời tái ứng tuyển thành công tới ${params.toEmail}`);
+    } catch (err: any) {
+      this.logger.error(`[Re-engagement Email] Lỗi gửi email mời tái ứng tuyển tới ${params.toEmail}: ${err?.message || err}`);
+    }
+  }
 }

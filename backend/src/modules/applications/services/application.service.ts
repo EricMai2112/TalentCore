@@ -500,11 +500,20 @@ export class ApplicationService {
       (s: any) => s._id.toString() === application.currentStageId.toString(),
     );
 
+    const aiEval = await this.aiEvaluationModel
+      .findOne({ applicationId: application._id })
+      .lean()
+      .exec();
+
     return {
       ...application.toObject(),
       stageName: currentStage?.name || 'Không xác định',
       stageColor: currentStage?.color || '#94a3b8',
       currentStage,
+      aiEvaluation: aiEval || null,
+      aiFitScore: aiEval?.aiFitScore ?? (application as any).aiFitScore ?? null,
+      evidenceStrengthScore: aiEval?.evidenceStrengthScore ?? 0,
+      isMissingMandatory: Boolean(aiEval?.isMissingMandatory),
     };
   }
 

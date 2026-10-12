@@ -16,13 +16,25 @@ import { AiMatchingCronService } from './services/ai-matching-cron.service';
 import { NotificationsModule } from '../notifications/notifications.module';
 import { EmailTemplateModule } from '../email-template/email-template.module';
 
+import { User, UserSchema } from '../users/schemas/user.schema';
+import { CandidateInvitation, CandidateInvitationSchema } from './schemas/candidate-invitation.schema';
+import { CandidateRediscoveryService } from './services/candidate-rediscovery.service';
+import { CandidateRediscoveryController } from './controllers/candidate-rediscovery.controller';
+import { InterviewEvaluation, InterviewEvaluationSchema } from '../interviews/schemas/interview-evaluation.schema';
+import { Offer, OfferSchema } from '../offers/schemas/offer.schema';
+
 @Module({
-    imports: [MongooseModule.forFeature([{name: Application.name, schema: ApplicationSchema},
+    imports: [MongooseModule.forFeature([
+        { name: Application.name, schema: ApplicationSchema },
         { name: Candidate.name, schema: CandidateSchema },
         { name: AiEvaluation.name, schema: AiEvaluationSchema },
-      { name: JobDescription.name, schema: JobDescriptionSchema },
-      { name: PipelineTemplate.name, schema: PipelineTemplateSchema },
-      { name: Interview.name, schema: InterviewSchema },
+        { name: JobDescription.name, schema: JobDescriptionSchema },
+        { name: PipelineTemplate.name, schema: PipelineTemplateSchema },
+        { name: Interview.name, schema: InterviewSchema },
+        { name: User.name, schema: UserSchema },
+        { name: CandidateInvitation.name, schema: CandidateInvitationSchema },
+        { name: InterviewEvaluation.name, schema: InterviewEvaluationSchema },
+        { name: Offer.name, schema: OfferSchema },
     ]),
     JwtModule.registerAsync({
       imports: [ConfigModule],
@@ -34,8 +46,14 @@ import { EmailTemplateModule } from '../email-template/email-template.module';
     NotificationsModule,
     EmailTemplateModule,
 ],
-    controllers: [ApplicationController],
-    providers: [ApplicationService, AiMatchingService, AiMatchingProcessor, AiMatchingCronService],
-    exports: [ApplicationService, AiMatchingCronService]
+    controllers: [ApplicationController, CandidateRediscoveryController],
+    providers: [
+      ApplicationService,
+      AiMatchingService,
+      AiMatchingProcessor,
+      AiMatchingCronService,
+      CandidateRediscoveryService,
+    ],
+    exports: [ApplicationService, AiMatchingCronService, CandidateRediscoveryService]
 })
 export class ApplicationsModule {}

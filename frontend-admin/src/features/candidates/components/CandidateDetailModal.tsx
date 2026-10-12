@@ -40,6 +40,7 @@ interface CandidateDetailModalProps {
   onClose: () => void
   onOpenDeptScheduleModal?: (interview: InterviewItem) => void
   onRejectDeptCv?: (interview: InterviewItem) => void
+  readOnly?: boolean
 }
 
 export default function CandidateDetailModal({
@@ -48,6 +49,7 @@ export default function CandidateDetailModal({
   onClose,
   onOpenDeptScheduleModal,
   onRejectDeptCv,
+  readOnly = false,
 }: CandidateDetailModalProps) {
   const { user: currentUser } = useAuth()
   const [activeTab, setActiveTab] = useState<'overview' | 'evaluation' | 'profile'>('overview')
@@ -826,36 +828,56 @@ export default function CandidateDetailModal({
         </div>
 
         {/* Footer Actions */}
-        <CandidateDetailFooterActions
-          applicationId={renderApp._id}
-          candidateName={name}
-          userRole={currentUser?.role}
-          interview={interview}
-          isCandidateRejected={
-            renderApp?.status === 'REJECTED' ||
-            renderApp?.reviewStatus === 'Rejected' ||
-            interview?.confirmationStatus === 'REJECTED' ||
-            interview?.confirmationStatus === 'CANCELLED' ||
-            interview?.status === 'CANCELLED'
-          }
-          onClose={handleClose}
-          onOpenDeptScheduleModal={onOpenDeptScheduleModal}
-          onRejectDeptCv={onRejectDeptCv || (interview ? () => setIsRejectModalOpen(true) : undefined)}
-          onRejectCandidate={() => setIsRejectModalOpen(true)}
-        />
+        {readOnly ? (
+          <div className="px-6 py-4 border-t border-slate-100 bg-slate-50/70 flex items-center justify-between shrink-0">
+            <div className="text-xs text-slate-500">
+              Ứng viên: <strong className="text-slate-800">{name}</strong>
+              <span className="ml-2 px-2.5 py-0.5 rounded-full text-[11px] font-semibold bg-blue-50 text-blue-700 border border-blue-200">
+                Hồ sơ đợt trước
+              </span>
+            </div>
+            <button
+              type="button"
+              onClick={handleClose}
+              className="px-4 py-2 text-xs font-bold bg-white border border-slate-200 hover:bg-slate-50 text-slate-700 rounded-xl transition-all cursor-pointer shadow-2xs"
+            >
+              Đóng
+            </button>
+          </div>
+        ) : (
+          <CandidateDetailFooterActions
+            applicationId={renderApp._id}
+            candidateName={name}
+            userRole={currentUser?.role}
+            interview={interview}
+            isCandidateRejected={
+              renderApp?.status === 'REJECTED' ||
+              renderApp?.reviewStatus === 'Rejected' ||
+              interview?.confirmationStatus === 'REJECTED' ||
+              interview?.confirmationStatus === 'CANCELLED' ||
+              interview?.status === 'CANCELLED'
+            }
+            onClose={handleClose}
+            onOpenDeptScheduleModal={onOpenDeptScheduleModal}
+            onRejectDeptCv={onRejectDeptCv || (interview ? () => setIsRejectModalOpen(true) : undefined)}
+            onRejectCandidate={() => setIsRejectModalOpen(true)}
+          />
+        )}
       </div>
 
-      <RejectCandidateModal
-        isOpen={isRejectModalOpen}
-        onClose={() => setIsRejectModalOpen(false)}
-        applicationId={renderApp._id}
-        interviewId={interview?._id}
-        candidateName={name}
-        jobTitle={typeof renderApp.jobDescriptionId === 'object' ? renderApp.jobDescriptionId?.title : 'Vị trí tuyển dụng'}
-        onSuccess={() => {
-          handleClose()
-        }}
-      />
+      {!readOnly && (
+        <RejectCandidateModal
+          isOpen={isRejectModalOpen}
+          onClose={() => setIsRejectModalOpen(false)}
+          applicationId={renderApp._id}
+          interviewId={interview?._id}
+          candidateName={name}
+          jobTitle={typeof renderApp.jobDescriptionId === 'object' ? renderApp.jobDescriptionId?.title : 'Vị trí tuyển dụng'}
+          onSuccess={() => {
+            handleClose()
+          }}
+        />
+      )}
     </div>
   )
 

@@ -3,6 +3,7 @@ import { Inter, Geist_Mono } from 'next/font/google'
 import './globals.css'
 import { AuthProvider } from '@/src/providers/AuthProvider'
 import { QueryProvider } from '@/src/providers/QueryProvider'
+import { ToastProvider } from '@/src/providers/ToastProvider'
 
 const inter = Inter({
   variable: '--font-inter',
@@ -28,7 +29,9 @@ export default function RootLayout({
     <html lang="en" className={`${inter.variable} ${geistMono.variable} h-full antialiased`}>
       <body className="min-h-full flex flex-col">
         <QueryProvider>
-          <AuthProvider>{children}</AuthProvider>
+          <AuthProvider>
+            <ToastProvider>{children}</ToastProvider>
+          </AuthProvider>
         </QueryProvider>
       </body>
     </html>

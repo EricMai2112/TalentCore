@@ -23,6 +23,13 @@ export const candidateApi = {
     return res.data || [];
   },
 
+  getApplicationById: async (applicationId: string): Promise<CandidateApplication> => {
+    const res = await apiClient.get<ApiResponse<CandidateApplication>>(
+      `/applications/${applicationId}`
+    );
+    return res.data;
+  },
+
 
   rejectApplication: async (
     applicationId: string,

@@ -1,11 +1,13 @@
 import { BadRequestException, Injectable, NotFoundException, InternalServerErrorException } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
-import { isValidObjectId, Model } from 'mongoose';
+import { isValidObjectId, Model, Types } from 'mongoose';
 import { GoogleGenAI, Type, Schema } from '@google/genai';
 import { JobDescription, JobDescriptionDocument, JobStatus } from '../schemas/job-description.schema';
+import { JobDescriptionDraft, JobDescriptionDraftDocument } from '../schemas/job-description-draft.schema';
 import { CreateJobDescriptionDto, UpdateJobDescriptionDto } from '../dtos/job-description.dto';
 import { SuggestCriteriaWeightsDto } from '../dtos/suggest-criteria-weights.dto';
 import { GenerateJdContentDto } from '../dtos/generate-jd-content.dto';
+import { SaveJobDraftDto } from '../dtos/save-job-draft.dto';
 import { EventsGateway } from '../gateways/events.gateway';
 import { NotificationsService } from '../../notifications/services/notifications.service';
 
@@ -16,6 +18,8 @@ export class JobDescriptionService {
   constructor(
     @InjectModel(JobDescription.name)
     private readonly jobDescriptionModel: Model<JobDescriptionDocument>,
+    @InjectModel(JobDescriptionDraft.name)
+    private readonly jobDraftModel: Model<JobDescriptionDraftDocument>,
     private readonly eventsGateway: EventsGateway,
     private readonly notificationsService: NotificationsService,
   ) {
@@ -374,5 +378,77 @@ export class JobDescriptionService {
   async delete(id: string): Promise<void> {
     await this.findById(id);
     await this.jobDescriptionModel.findByIdAndDelete(id).exec();
+  }
+
+  /**
+   * Lưu hoặc ghi đè bản nháp cho một vị trí (Position) kèm Cấp độ kinh nghiệm (Experience Level).
+   * Mỗi cấp độ kinh nghiệm của vị trí sẽ có một bản nháp riêng biệt.
+   */
+  async saveDraft(dto: SaveJobDraftDto, userId: string): Promise<JobDescriptionDraftDocument> {
+    if (!isValidObjectId(dto.positionId)) {
+      throw new BadRequestException('positionId không hợp lệ');
+    }
+    if (!isValidObjectId(dto.departmentId)) {
+      throw new BadRequestException('departmentId không hợp lệ');
+    }
+    if (!dto.experienceLevel || !dto.experienceLevel.trim()) {
+      throw new BadRequestException('experienceLevel không được để trống');
+    }
+
+    const posId = new Types.ObjectId(dto.positionId);
+    const deptId = new Types.ObjectId(dto.departmentId);
+    const userObjId = new Types.ObjectId(userId);
+    const expLevel = dto.experienceLevel.trim();
+
+    const updatedDraft = await this.jobDraftModel
+      .findOneAndUpdate(
+        { positionId: posId, experienceLevel: expLevel },
+        {
+          positionId: posId,
+          experienceLevel: expLevel,
+          departmentId: deptId,
+          savedById: userObjId,
+          draftData: dto.draftData,
+        },
+        { upsert: true, new: true, setDefaultsOnInsert: true },
+      )
+      .exec();
+
+    return updatedDraft;
+  }
+
+  /**
+   * Lấy bản nháp của một vị trí theo cấp độ kinh nghiệm cụ thể.
+   */
+  async getDraftByPosition(
+    positionId: string,
+    experienceLevel?: string,
+  ): Promise<JobDescriptionDraftDocument | null> {
+    if (!isValidObjectId(positionId)) {
+      throw new BadRequestException('positionId không hợp lệ');
+    }
+
+    const query: any = { positionId: new Types.ObjectId(positionId) };
+    if (experienceLevel && experienceLevel.trim()) {
+      query.experienceLevel = experienceLevel.trim();
+    }
+
+    return this.jobDraftModel.findOne(query).exec();
+  }
+
+  /**
+   * Xóa bản nháp của một vị trí (hoặc theo cấp độ kinh nghiệm nếu có).
+   */
+  async deleteDraft(positionId: string, experienceLevel?: string): Promise<void> {
+    if (!isValidObjectId(positionId)) {
+      throw new BadRequestException('positionId không hợp lệ');
+    }
+
+    const query: any = { positionId: new Types.ObjectId(positionId) };
+    if (experienceLevel && experienceLevel.trim()) {
+      query.experienceLevel = experienceLevel.trim();
+    }
+
+    await this.jobDraftModel.deleteMany(query).exec();
   }
 }
