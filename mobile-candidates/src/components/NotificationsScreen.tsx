@@ -235,14 +235,7 @@ export const NotificationsScreen: React.FC<NotificationsScreenProps> = ({ onRequ
               <Text style={styles.newBadgeText}>{unreadCount} mới</Text>
             </View>
           )}
-        </View>
-        <Text style={styles.mainSubtitle}>
-          Theo dõi tức thì các cập nhật về lịch phỏng vấn, sự thay đổi vòng đánh giá hồ sơ và thư mời nhận việc từ các nhà tuyển dụng tại TalentCore.
-        </Text>
-      </View>
-
-      <View style={styles.actionButtonsRow}>
-        <Pressable
+          <Pressable
           style={styles.refreshBtn}
           onPress={onRefresh}
           disabled={refreshing || isLoading}
@@ -254,7 +247,10 @@ export const NotificationsScreen: React.FC<NotificationsScreenProps> = ({ onRequ
           />
           <Text style={styles.refreshBtnText}>Làm mới</Text>
         </Pressable>
+        </View>
+      </View>
 
+      <View style={styles.actionButtonsRow}>
         {unreadCount > 0 && (
           <Pressable style={styles.markAllBtn} onPress={markAllAsRead}>
             <Ionicons name="checkmark-done" size={16} color="#ffffff" />
@@ -429,12 +425,16 @@ export const NotificationsScreen: React.FC<NotificationsScreenProps> = ({ onRequ
       <View style={styles.searchBarContainer}>
         <Ionicons name="search" size={17} color="#94a3b8" style={styles.searchIcon} />
         <TextInput
+          key="notif-search-input"
           style={styles.searchInput}
           placeholder="Tìm kiếm thông báo..."
           placeholderTextColor="#94a3b8"
           value={searchQuery}
           onChangeText={setSearchQuery}
           autoCapitalize="none"
+          autoCorrect={false}
+          returnKeyType="search"
+          blurOnSubmit={false}
         />
         {searchQuery.length > 0 && (
           <Pressable onPress={() => setSearchQuery('')} hitSlop={8}>
@@ -457,7 +457,9 @@ export const NotificationsScreen: React.FC<NotificationsScreenProps> = ({ onRequ
           <FlatList
             data={filteredNotifications}
             keyExtractor={(item) => item._id}
-            ListHeaderComponent={renderHeader}
+            ListHeaderComponent={renderHeader()}
+            keyboardShouldPersistTaps="handled"
+            keyboardDismissMode="on-drag"
             contentContainerStyle={styles.listContent}
             showsVerticalScrollIndicator={false}
             refreshControl={
@@ -614,6 +616,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 8,
+    justifyContent: "space-between"
   },
   mainTitle: {
     fontSize: 22,
