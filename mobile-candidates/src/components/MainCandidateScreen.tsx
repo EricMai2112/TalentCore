@@ -10,7 +10,7 @@ import {
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
-import { ApplicationsScreen } from './ApplicationsScreen';
+import { ApplicationsScreen } from '../screens/applications';
 import { JobsScreen } from './JobsScreen';
 import { NotificationsScreen } from './NotificationsScreen';
 import { ProfileScreen } from './ProfileScreen';

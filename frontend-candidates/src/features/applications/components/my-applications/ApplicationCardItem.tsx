@@ -12,7 +12,22 @@ export function ApplicationCardItem({ app }: ApplicationCardItemProps) {
   const job = app.jobDescriptionId
   const deptName = typeof job?.departmentId === 'object' ? job?.departmentId?.name : 'Engineering'
   const location = job?.location || 'Hồ Chí Minh'
-  const salary = job?.salaryRange || 'Thương lượng'
+  const formatSalary = (min?: number, max?: number, fallback?: string): string => {
+    if (!min && !max) return fallback || 'Thương lượng';
+    if (min && max) {
+      if (min >= 1000000) {
+        return `${(min / 1000000).toLocaleString('vi-VN')} - ${(max / 1000000).toLocaleString('vi-VN')} triệu VNĐ`;
+      }
+      return `${min.toLocaleString('vi-VN')} - ${max.toLocaleString('vi-VN')} VNĐ`;
+    }
+    if (min) {
+      if (min >= 1000000) return `Từ ${(min / 1000000).toLocaleString('vi-VN')} triệu VNĐ`;
+      return `Từ ${min.toLocaleString('vi-VN')} VNĐ`;
+    }
+    return fallback || 'Thương lượng';
+  };
+
+  const salary = formatSalary(job?.minimumSalary, job?.maximumSalary, job?.salaryRange);
 
   const activeIdx =
     app.currentStageIndex !== undefined && app.currentStageIndex >= 0 ? app.currentStageIndex : 0

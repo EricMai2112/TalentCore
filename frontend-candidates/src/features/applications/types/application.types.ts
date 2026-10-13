@@ -9,6 +9,8 @@ export interface AppliedJobDescription {
   _id: string;
   title: string;
   salaryRange?: string;
+  minimumSalary?: number;
+  maximumSalary?: number;
   location?: string;
   departmentId?: {
     _id: string;
