@@ -112,6 +112,11 @@ export const OfferLetterModal: React.FC<OfferLetterModalProps> = ({
     }
   };
 
+  const isExpired =
+    offer.status === CandidateOfferStatus.EXPIRED ||
+    (offer.status === CandidateOfferStatus.SENT && new Date() > new Date(offer.expirationDate));
+  const canRespond = offer.status === CandidateOfferStatus.SENT && !isExpired;
+
   return createPortal(
     <>
       {/* Main Job Offer Modal Backdrop */}
@@ -191,21 +196,46 @@ export const OfferLetterModal: React.FC<OfferLetterModalProps> = ({
                 </p>
               </div>
 
-              <div className="p-3 rounded-2xl bg-amber-50/60 border border-amber-200/80 flex flex-col justify-between">
-                <span className="text-[10px] sm:text-[11px] font-bold text-amber-700 uppercase tracking-wider">
+              <div className={`p-3 rounded-2xl border flex flex-col justify-between ${
+                isExpired
+                  ? 'bg-orange-50/70 border-orange-200/90'
+                  : 'bg-amber-50/60 border-amber-200/80'
+              }`}>
+                <span className={`text-[10px] sm:text-[11px] font-bold uppercase tracking-wider ${
+                  isExpired ? 'text-orange-700' : 'text-amber-700'
+                }`}>
                   Hạn chót phản hồi
                 </span>
-                <p className="text-xs sm:text-[13px] font-bold text-amber-800 mt-1 flex items-center gap-1.5">
-                  <Clock className="w-3.5 h-3.5 shrink-0 text-amber-600" />
+                <p className={`text-xs sm:text-[13px] font-bold mt-1 flex items-center gap-1.5 ${
+                  isExpired ? 'text-orange-800' : 'text-amber-800'
+                }`}>
+                  <Clock className={`w-3.5 h-3.5 shrink-0 ${isExpired ? 'text-orange-600' : 'text-amber-600'}`} />
                   <span>{new Date(offer.expirationDate).toLocaleDateString('vi-VN')}</span>
                 </p>
-                <p className="text-[10px] sm:text-[11px] text-amber-600 mt-0.5">
-                  Vui lòng phản hồi đúng hạn
+                <p className={`text-[10px] sm:text-[11px] mt-0.5 font-medium ${
+                  isExpired ? 'text-orange-700' : 'text-amber-600'
+                }`}>
+                  {isExpired ? 'Đã hết hạn phản hồi' : 'Vui lòng phản hồi đúng hạn'}
                 </p>
               </div>
             </div>
 
             {/* Status Banners */}
+            {isExpired && (
+              <div className="p-4 rounded-2xl bg-orange-50/80 border border-orange-200 flex items-start gap-3">
+                <Clock className="w-5 h-5 text-orange-600 shrink-0 mt-0.5" />
+                <div>
+                  <h4 className="font-bold text-orange-950 text-sm">
+                    Lời mời nhận việc đã hết hạn phản hồi
+                  </h4>
+                  <p className="text-xs text-orange-800 mt-1 leading-relaxed">
+                    Thời hạn phản hồi cho Thư mời nhận việc này đã kết thúc vào ngày{' '}
+                    <strong>{new Date(offer.expirationDate).toLocaleDateString('vi-VN')}</strong>. Bạn hiện chỉ có thể xem nội dung thư mời. Nếu cần hỗ trợ thêm, vui lòng liên hệ trực tiếp với Bộ phận Tuyển dụng TalentCore.
+                  </p>
+                </div>
+              </div>
+            )}
+
             {offer.status === CandidateOfferStatus.ACCEPTED && (
               <div className="p-4 rounded-2xl bg-emerald-50 border border-emerald-200 flex items-start gap-3">
                 <CheckCircle2 className="w-5 h-5 text-emerald-600 shrink-0 mt-0.5" />
@@ -253,7 +283,7 @@ export const OfferLetterModal: React.FC<OfferLetterModalProps> = ({
               Đóng
             </button>
 
-            {offer.status === CandidateOfferStatus.SENT && (
+            {canRespond && (
               <div className="flex items-center gap-2.5">
                 <button
                   type="button"
