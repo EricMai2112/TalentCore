@@ -1,0 +1,1383 @@
+'use client'
+
+import { useEffect, useState } from 'react'
+import {
+  User,
+  Mail,
+  Phone,
+  MapPin,
+  Briefcase,
+  GraduationCap,
+  FolderGit2,
+  Cpu,
+  Award,
+  Languages,
+  Plus,
+  Pencil,
+  Lightbulb,
+  CheckCircle2,
+  ExternalLink,
+  Calendar,
+  Building2,
+  FileText,
+  Globe,
+  Target,
+  Link as LinkIcon,
+  Sparkles,
+  Loader2,
+  UploadCloud,
+  ChevronDown,
+  ChevronUp
+} from 'lucide-react'
+import { useAuth } from '@/src/providers/AuthProvider'
+import {
+  CandidateProfile,
+  CertificateItem,
+  CustomSection,
+  EducationItem,
+  ExperienceItem,
+  ProjectItem
+} from '../types/profile.types'
+import { profileApi } from '../services/user.api'
+import { ActiveProfileProvider } from '../context/ActiveProfileContext'
+import EditCareerObjectiveModal from './EditCareerObjectiveModal'
+import EditPersonalInfoModal from './EditPersonalInfoModal'
+import EditEducationModal from './EditEducationModal'
+import EditSkillsModal from './EditSkillsModal'
+import EditExperienceModal from './EditExperienceModal'
+import EditExpSummaryModal from './EditExpSummaryModal'
+import EditProjectModal from './EditProjectModal'
+import EditCertificationModal from './EditCertificationModal'
+import EditLanguageModal from './EditLanguageModal'
+import EditCustomSectionModal from './EditCustomSectionModal'
+import CvParsingPreviewModal from './CvParsingPreviewModal'
+import { toast } from 'react-toastify'
+import ProfileNavSidebar from './ProfileNavSidebar'
+import { useRouter } from 'next/navigation'
+import userImage from '../../../../public/user.png'
+import Image from 'next/image'
+import RichTextDisplay from '@/src/components/common/RichTextDisplay'
+import { isHtmlEmpty } from '@/src/components/common/RichTextEditor'
+
+interface CandidateProfileViewProps {
+  profileId?: string
+}
+
+export default function CandidateProfileView({ profileId }: CandidateProfileViewProps = {}) {
+  const { user: authUser, isLoading: isAuthLoading } = useAuth()
+  const router = useRouter()
+  const [profile, setProfile] = useState<CandidateProfile | null>(null)
+  const [loading, setLoading] = useState<boolean>(true)
+  const [isObjectiveModalOpen, setIsObjectiveModalOpen] = useState(false)
+  const [isPersonalModalOpen, setIsPersonalModalOpen] = useState(false)
+  const [isEduModalOpen, setIsEduModalOpen] = useState(false)
+  const [selectedEdu, setSelectedEdu] = useState<EducationItem | null>(null)
+  const [selectedEduIndex, setSelectedEduIndex] = useState<number | null>(null)
+  const [isSkillsModalOpen, setIsSkillsModalOpen] = useState(false)
+  const [isExpModalOpen, setIsExpModalOpen] = useState(false)
+  const [selectedExp, setSelectedExp] = useState<ExperienceItem | null>(null)
+  const [selectedExpIndex, setSelectedExpIndex] = useState<number | null>(null)
+  const [isProjectModalOpen, setIsProjectModalOpen] = useState(false)
+  const [selectedProject, setSelectedProject] = useState<ProjectItem | null>(null)
+  const [selectedProjectIndex, setSelectedProjectIndex] = useState<number | null>(null)
+  const [isCertModalOpen, setIsCertModalOpen] = useState(false)
+  const [selectedCert, setSelectedCert] = useState<CertificateItem | null>(null)
+  const [selectedCertIndex, setSelectedCertIndex] = useState<number | null>(null)
+  const [isLangModalOpen, setIsLangModalOpen] = useState(false)
+  const [isExpSummaryModalOpen, setIsExpSummaryModalOpen] = useState(false)
+  const [isCustomSectionModalOpen, setIsCustomSectionModalOpen] = useState(false)
+  const [selectedCustomSection, setSelectedCustomSection] = useState<CustomSection | null>(null)
+  const [selectedSectionIndex, setSelectedSectionIndex] = useState<number | null>(null)
+  const [isParsingCv, setIsParsingCv] = useState(false)
+  const [parsedCvData, setParsedCvData] = useState<any>(null)
+  const [isPreviewModalOpen, setIsPreviewModalOpen] = useState(false)
+
+  // Accordion collapse state for profile sections (Default CLOSED)
+  const [collapsedSections, setCollapsedSections] = useState<Record<string, boolean>>({})
+
+  const isCollapsed = (key: string) =>
+    collapsedSections[key] === undefined ? true : collapsedSections[key]
+
+  const toggleSection = (key: string) => {
+    setCollapsedSections((prev) => ({
+      ...prev,
+      [key]: !isCollapsed(key)
+    }))
+  }
+
+  useEffect(() => {
+    if (isAuthLoading) return
+
+    if (!authUser) {
+      router.replace('/login')
+      return
+    }
+    const loadProfile = async () => {
+      try {
+        const data = profileId
+          ? await profileApi.getProfileById(profileId)
+          : await profileApi.getMyProfile()
+        setProfile(data)
+      } catch (err) {
+        console.error('Lỗi lấy dữ liệu profile:', err)
+      } finally {
+        setLoading(false)
+      }
+    }
+    loadProfile()
+  }, [authUser, isAuthLoading, router, profileId])
+
+  if (loading) {
+    return (
+      <div className="flex justify-center items-center min-h-[400px]">
+        <div className="animate-spin rounded-full h-9 w-9 border-2 border-blue-600 border-t-transparent" />
+      </div>
+    )
+  }
+
+  const candidateName =
+    (typeof profile?.userId === 'object' ? profile?.userId?.name : null) ||
+    authUser?.name ||
+    'Ứng viên'
+
+  const candidateEmail =
+    (typeof profile?.userId === 'object' ? profile?.userId?.email : null) || authUser?.email || ''
+
+  const candidatePhone =
+    (typeof profile?.userId === 'object' ? profile?.userId?.phone : null) || authUser?.phone || ''
+
+  const initialLetter = candidateName.charAt(0).toUpperCase()
+
+  const hasCareerObjective = !isHtmlEmpty(profile?.careerObjective)
+  const hasExperience = (profile?.experiences?.length ?? 0) > 0
+  const hasEducation = (profile?.educations?.length ?? 0) > 0
+  const hasProjects = (profile?.projects?.length ?? 0) > 0
+  const hasSkills = (profile?.skills?.length ?? 0) > 0
+  const hasCertifications = (profile?.certifications?.length ?? 0) > 0
+  const hasLanguages = (profile?.languages?.length ?? 0) > 0
+  const hasCustomSections = (profile?.customSections?.length ?? 0) > 0
+
+  const renderSocialIcon = (platform: string) => {
+    const p = platform.toLowerCase()
+    if (p.includes('github')) {
+      return (
+        <svg className="w-3.5 h-3.5 fill-current" viewBox="0 0 24 24">
+          <path d="M12 0C5.37 0 0 5.37 0 12c0 5.31 3.435 9.795 8.205 11.385.6.105.825-.255.825-.57 0-.285-.015-1.23-.015-2.235-3.015.555-3.795-.735-4.035-1.41-.135-.345-.72-1.41-1.23-1.695-.42-.225-1.02-.78-.015-.795.945-.015 1.62.87 1.845 1.23 1.08 1.815 2.805 1.305 3.495.99.105-.78.42-1.305.765-1.605-2.67-.3-5.46-1.335-5.46-5.925 0-1.305.465-2.385 1.23-3.225-.12-.3-.54-1.53.12-3.18 0 0 1.005-.315 3.3 1.23.96-.27 1.98-.405 3-.405s2.04.135 3 .405c2.295-1.56 3.3-1.23 3.3-1.23.66 1.65.24 2.88.12 3.18.765.84 1.23 1.905 1.23 3.225 0 4.605-2.805 5.625-5.475 5.925.435.375.81 1.095.81 2.22 0 1.605-.015 2.895-.015 3.3 0 .315.225.69.825.57A12.02 12.02 0 0024 12c0-6.63-5.37-12-12-12z" />
+        </svg>
+      )
+    }
+    if (p.includes('linkedin')) {
+      return (
+        <svg className="w-3.5 h-3.5 fill-current" viewBox="0 0 24 24">
+          <path d="M19 0h-14c-2.761 0-5 2.239-5 5v14c0 2.761 2.239 5 5 5h14c2.762 0 5-2.239 5-5v-14c0-2.761-2.238-5-5-5zm-11 19h-3v-11h3v11zm-1.5-12.268c-.966 0-1.75-.779-1.75-1.75s.784-1.75 1.75-1.75 1.75.779 1.75 1.75-.784 1.75-1.75 1.75zm13.5 12.268h-3v-5.604c0-3.368-4-3.113-4 0v5.604h-3v-11h3v1.765c1.396-2.586 7-2.777 7 2.476v6.759z" />
+        </svg>
+      )
+    }
+    return <Globe size={14} />
+  }
+
+  const handleOpenAddEdu = () => {
+    setSelectedEdu(null)
+    setSelectedEduIndex(null)
+    setIsEduModalOpen(true)
+  }
+
+  const handleOpenEditEdu = (edu: EducationItem, index: number) => {
+    setSelectedEdu(edu)
+    setSelectedEduIndex(index)
+    setIsEduModalOpen(true)
+  }
+
+  const handleOpenAddExp = () => {
+    setSelectedExp(null)
+    setSelectedExpIndex(null)
+    setIsExpModalOpen(true)
+  }
+
+  const handleOpenEditExp = (exp: ExperienceItem, index: number) => {
+    setSelectedExp(exp)
+    setSelectedExpIndex(index)
+    setIsExpModalOpen(true)
+  }
+  const handleOpenAddProject = () => {
+    setSelectedProject(null)
+    setSelectedProjectIndex(null)
+    setIsProjectModalOpen(true)
+  }
+
+  const handleOpenEditProject = (proj: ProjectItem, index: number) => {
+    setSelectedProject(proj)
+    setSelectedProjectIndex(index)
+    setIsProjectModalOpen(true)
+  }
+
+  const handleOpenAddCert = () => {
+    setSelectedCert(null)
+    setSelectedCertIndex(null)
+    setIsCertModalOpen(true)
+  }
+
+  const handleOpenEditCert = (cert: CertificateItem, index: number) => {
+    setSelectedCert(cert)
+    setSelectedCertIndex(index)
+    setIsCertModalOpen(true)
+  }
+  const handleOpenAddCustomSection = () => {
+    setSelectedCustomSection(null)
+    setSelectedSectionIndex(null)
+    setIsCustomSectionModalOpen(true)
+  }
+
+  const handleOpenEditCustomSection = (sec: CustomSection, index: number) => {
+    setSelectedCustomSection(sec)
+    setSelectedSectionIndex(index)
+    setIsCustomSectionModalOpen(true)
+  }
+
+  const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    if (!file) return
+
+    const allowedTypes = ['.pdf', '.docx', '.png', '.jpg', '.jpeg', '.webp']
+    const isAllowed = allowedTypes.some((ext) => file.name.toLowerCase().endsWith(ext))
+
+    if (!isAllowed) {
+      toast.error('Vui lòng tải lên file định dạng PDF, Word (.docx) hoặc Ảnh (.png, .jpg).')
+      return
+    }
+
+    setIsParsingCv(true)
+    try {
+      const data = await profileApi.parseCvWithAi(file)
+
+      if (!data || Object.keys(data).length === 0) {
+        throw new Error('Dữ liệu rỗng')
+      }
+
+      setParsedCvData(data)
+      setIsPreviewModalOpen(true)
+      toast.success('Bóc tách thông tin CV thành công!')
+    } catch (error: any) {
+      console.error('Lỗi parse CV:', error)
+      toast.error('Có lỗi xảy ra, vui lòng thử lại')
+    } finally {
+      setIsParsingCv(false)
+      e.target.value = ''
+    }
+  }
+
+  return (
+    <ActiveProfileProvider profileId={profileId}>
+      <div className="w-full">
+        <div className="max-w-[1560px] mx-auto space-y-3.5 pb-16 text-slate-900">
+          {/* Profile Status Bar */}
+          {profile?.profileName && (
+            <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between bg-white border border-slate-200/90 rounded-2xl p-3 sm:px-5 sm:py-2.5 shadow-xs gap-2 sm:gap-4">
+              <div className="flex flex-wrap items-center gap-2 sm:gap-3 min-w-0">
+                <div className="w-2 h-2 rounded-full bg-blue-500 shrink-0" />
+                <span className="text-xs sm:text-sm font-bold text-slate-800 truncate max-w-[200px] sm:max-w-none">
+                  Đang chỉnh sửa:{" "}
+                  <span className="text-blue-600 font-extrabold">{profile.profileName}</span>
+                </span>
+                {profile.isDefault && (
+                  <span className="px-2 py-0.5 text-[10px] font-extrabold bg-emerald-100 text-emerald-700 rounded-full uppercase tracking-wide shrink-0 whitespace-nowrap">
+                    Mặc định
+                  </span>
+                )}
+              </div>
+              <a
+                href="/user/profile"
+                className="text-[11px] sm:text-xs font-semibold text-slate-500 hover:text-blue-600 transition-colors shrink-0 whitespace-nowrap self-end sm:self-auto"
+              >
+                ← Quản lý hồ sơ
+              </a>
+            </div>
+          )}
+
+          {/* AI CV Import Banner */}
+          <div className="bg-gradient-to-r from-blue-600 via-indigo-600 to-violet-600 rounded-3xl p-5 sm:p-6 text-white shadow-lg shadow-blue-500/10 flex flex-col sm:flex-row items-center justify-between gap-5">
+            <div className="space-y-1 text-center sm:text-left">
+              <div className="inline-flex items-center gap-1.5 px-3 py-0.5 bg-white/20 backdrop-blur-md rounded-full text-xs font-bold text-blue-50 mb-0.5">
+                <Sparkles size={14} className="text-yellow-300 animate-spin" />
+                <span>Tính năng AI thông minh</span>
+              </div>
+              <h2 className="text-xl sm:text-2xl font-extrabold tracking-tight">
+                Tự động điền hồ sơ bằng CV sẵn có
+              </h2>
+              <p className="text-xs sm:text-sm text-blue-100 max-w-2xl font-medium">
+                Hỗ trợ tải lên file <strong>PDF, Word hoặc Ảnh CV</strong>. Hệ thống TalentCore sẽ
+                tự động trích xuất các thông tin chỉ trong vài giây.
+              </p>
+            </div>
+
+            <div className="shrink-0 w-full sm:w-auto">
+              <label
+                className={`inline-flex items-center justify-center gap-2 px-6 py-3 bg-white text-blue-700 hover:bg-blue-50 active:scale-95 text-xs font-extrabold rounded-2xl shadow-md cursor-pointer transition-all w-full sm:w-auto ${
+                  isParsingCv ? 'opacity-75 pointer-events-none' : ''
+                }`}
+              >
+                {isParsingCv ? (
+                  <>
+                    <Loader2 size={16} className="animate-spin text-blue-600" />
+                    <span>AI đang phân tích CV...</span>
+                  </>
+                ) : (
+                  <>
+                    <UploadCloud size={18} className="text-blue-600" />
+                    <span>Tải lên CV (PDF, DOCX, Ảnh)</span>
+                  </>
+                )}
+                <input
+                  type="file"
+                  accept=".pdf,.docx,.png,.jpg,.jpeg,.webp"
+                  disabled={isParsingCv}
+                  onChange={handleFileUpload}
+                  className="hidden"
+                />
+              </label>
+            </div>
+          </div>
+
+          <div className="flex flex-col lg:flex-row items-start gap-5">
+            {/* Profile Navigation Sidebar */}
+            <div className="hidden lg:block w-72 xl:w-80 shrink-0 self-stretch">
+              <ProfileNavSidebar profile={profile} />
+            </div>
+
+            {/* UNIFIED CONTINUOUS PROFILE CONTAINER CARD */}
+            <div className="flex-1 min-w-0 w-full bg-white rounded-3xl border border-slate-200/90 shadow-xs divide-y divide-slate-100 overflow-hidden">
+              {/* 1. THÔNG TIN CÁ NHÂN (PERMANENTLY OPEN HEADER SECTION - NO COLLAPSE TOGGLE) */}
+              <section id="section-personal-info" className="p-6 sm:p-8">
+                <div className="flex flex-col sm:flex-row items-start justify-between gap-6">
+                  <div className="flex items-start gap-5">
+                    <Image
+                      src={userImage}
+                      alt="User avatar"
+                      width={80}
+                      height={80}
+                      className="w-20 h-20 rounded-2xl object-cover shrink-0"
+                    />
+
+                    <div className="space-y-2">
+                      <h1 className="text-2xl font-extrabold text-slate-900">{candidateName}</h1>
+
+                      <p className="text-base font-semibold text-blue-600">
+                        {profile?.headline || 'Chưa cập nhật chức danh nghề nghiệp'}
+                      </p>
+
+                      <div className="flex flex-wrap items-center gap-4 text-xs font-medium text-slate-500 pt-0.5">
+                        {candidateEmail && (
+                          <span className="flex items-center gap-1.5">
+                            <Mail size={14} className="text-slate-400" />
+                            {candidateEmail}
+                          </span>
+                        )}
+                        {candidatePhone && (
+                          <span className="flex items-center gap-1.5">
+                            <Phone size={14} className="text-slate-400" />
+                            {candidatePhone}
+                          </span>
+                        )}
+                        <span className="flex items-center gap-1.5">
+                          <MapPin size={14} className="text-slate-400" />
+                          {profile?.address || 'Chưa cập nhật địa chỉ'}
+                        </span>
+                      </div>
+
+                      {profile?.socialLinks && profile.socialLinks.length > 0 && (
+                        <div className="pt-2 flex flex-wrap items-center gap-2">
+                          {profile.socialLinks.map((item, idx) => (
+                            <a
+                              key={idx}
+                              href={item.url.startsWith('http') ? item.url : `https://${item.url}`}
+                              target="_blank"
+                              rel="noreferrer"
+                              className="inline-flex items-center gap-1.5 px-3 py-1 rounded-lg bg-slate-50 hover:bg-blue-50 border border-slate-200 hover:border-blue-200 text-slate-700 hover:text-blue-600 text-xs font-semibold transition-colors"
+                            >
+                              {renderSocialIcon(item.platform)}
+                              <span>{item.platform}</span>
+                              <ExternalLink size={11} className="text-slate-400" />
+                            </a>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  </div>
+
+                  <button
+                    type="button"
+                    onClick={() => setIsPersonalModalOpen(true)}
+                    className="inline-flex items-center gap-1.5 px-4 py-2 border border-blue-600 text-blue-600 text-xs font-bold rounded-full hover:bg-blue-50 transition-all cursor-pointer shrink-0"
+                  >
+                    <Pencil size={13} />
+                    <span>Chỉnh sửa</span>
+                  </button>
+                </div>
+
+                <div className="mt-6 pt-5 border-t border-slate-100">
+                  <h3 className="text-xs font-bold uppercase tracking-wider text-slate-500 mb-2">
+                    Giới thiệu bản thân
+                  </h3>
+                  <RichTextDisplay
+                    content={profile?.summary}
+                    fallback="Thêm mô tả ngắn về kinh nghiệm và thế mạnh của bạn để tạo ấn tượng tốt với nhà tuyển dụng."
+                    className="text-sm text-slate-700"
+                  />
+                </div>
+              </section>
+
+              {/* 2. MỤC TIÊU NGHỀ NGHIỆP (COLLAPSIBLE) */}
+              <section id="section-career-objective" className="p-4 sm:p-6 md:p-8">
+                <div className="flex items-start justify-between gap-4">
+                  <div className="flex items-start gap-4">
+                    <div className="p-3 bg-blue-50 text-blue-600 rounded-2xl shrink-0">
+                      <Target className="w-7 h-7" />
+                    </div>
+                    <div>
+                      <h2 className="text-base sm:text-lg md:text-xl font-extrabold text-slate-900 flex items-center gap-1.5">
+                        Mục tiêu nghề nghiệp <span className="text-rose-500 font-bold">*</span>
+                      </h2>
+                      {hasCareerObjective ? (
+                        <span className="inline-flex items-center gap-1 text-xs font-semibold text-emerald-600 mt-1">
+                          <CheckCircle2 size={13} /> Đã hoàn thành
+                        </span>
+                      ) : (
+                        <span className="text-xs font-bold text-rose-500 mt-1 block">
+                          Chưa hoàn thành
+                        </span>
+                      )}
+                    </div>
+                  </div>
+
+                  <div className="flex items-center gap-3 shrink-0">
+                    {!hasCareerObjective && (
+                      <button
+                        type="button"
+                        className="inline-flex items-center gap-1.5 px-4 py-2 border border-blue-600 text-blue-600 text-xs font-bold rounded-full hover:bg-blue-50 transition-all cursor-pointer"
+                        onClick={() => setIsObjectiveModalOpen(true)}
+                      >
+                        <Plus size={15} />
+                        <span>Thêm mới</span>
+                      </button>
+                    )}
+                    <button
+                      type="button"
+                      onClick={() => toggleSection('careerObjective')}
+                      className="p-2 text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded-xl transition-all cursor-pointer"
+                      title={isCollapsed('careerObjective') ? 'Mở rộng' : 'Thu gọn'}
+                    >
+                      <ChevronDown
+                        size={18}
+                        className={`transition-transform duration-300 ${
+                          !isCollapsed('careerObjective') ? 'rotate-180' : ''
+                        }`}
+                      />
+                    </button>
+                  </div>
+                </div>
+
+                <div
+                  className={`grid transition-all duration-300 ease-in-out ${
+                    isCollapsed('careerObjective')
+                      ? 'grid-rows-[0fr] opacity-0 mt-0 pointer-events-none'
+                      : 'grid-rows-[1fr] opacity-100 mt-6'
+                  }`}
+                >
+                  <div className="overflow-hidden">
+                    {!hasCareerObjective ? (
+                      <div className="border border-dashed border-slate-300 rounded-xl p-6 bg-slate-50/60 text-left">
+                        <p className="text-sm text-slate-600 font-medium">
+                          Nêu rõ mục tiêu ngắn hạn và dài hạn trong sự nghiệp giúp nhà tuyển dụng
+                          đánh giá định hướng phát triển của bạn
+                        </p>
+                        <button
+                          type="button"
+                          className="mt-3 inline-flex items-center gap-1 text-xs font-bold text-blue-600 hover:text-blue-700 hover:underline uppercase tracking-wider cursor-pointer"
+                          onClick={() => setIsObjectiveModalOpen(true)}
+                        >
+                          <Plus size={14} />
+                          <span>THÊM MỤC TIÊU NGHỀ NGHIỆP</span>
+                        </button>
+                      </div>
+                    ) : (
+                      <div className="p-4 rounded-xl border border-slate-100 bg-slate-50/70 flex justify-between items-start gap-4">
+                        <div className="flex-1">
+                          <RichTextDisplay
+                            content={profile?.careerObjective}
+                            className="text-sm text-slate-700"
+                          />
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => setIsObjectiveModalOpen(true)}
+                          className="p-1.5 text-slate-400 hover:text-blue-600 rounded-lg hover:bg-white transition-all cursor-pointer shrink-0"
+                        >
+                          <Pencil size={15} />
+                        </button>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </section>
+
+              {/* 3. HỌC VẤN (COLLAPSIBLE) */}
+              <section id="section-education" className="p-4 sm:p-6 md:p-8">
+                <div className="flex items-start justify-between gap-4">
+                  <div className="flex items-start gap-4">
+                    <div className="p-3 bg-blue-50 text-blue-600 rounded-2xl shrink-0">
+                      <GraduationCap className="w-7 h-7" />
+                    </div>
+                    <div>
+                      <h2 className="text-base sm:text-lg md:text-xl font-extrabold text-slate-900 flex items-center gap-1.5">
+                        Học vấn <span className="text-rose-500 font-bold">*</span>
+                      </h2>
+                      {hasEducation ? (
+                        <span className="inline-flex items-center gap-1 text-xs font-semibold text-emerald-600 mt-1">
+                          <CheckCircle2 size={13} /> Đã hoàn thành
+                        </span>
+                      ) : (
+                        <span className="text-xs font-bold text-rose-500 mt-1 block">
+                          Chưa hoàn thành
+                        </span>
+                      )}
+                    </div>
+                  </div>
+
+                  <div className="flex items-center gap-3 shrink-0">
+                    <button
+                      type="button"
+                      onClick={handleOpenAddEdu}
+                      className="inline-flex items-center gap-1.5 px-4 py-2 border border-blue-600 text-blue-600 text-xs font-bold rounded-full hover:bg-blue-50 transition-all cursor-pointer"
+                    >
+                      <Plus size={15} />
+                      <span>Thêm mới</span>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => toggleSection('education')}
+                      className="p-2 text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded-xl transition-all cursor-pointer"
+                      title={isCollapsed('education') ? 'Mở rộng' : 'Thu gọn'}
+                    >
+                      <ChevronDown
+                        size={18}
+                        className={`transition-transform duration-300 ${
+                          !isCollapsed('education') ? 'rotate-180' : ''
+                        }`}
+                      />
+                    </button>
+                  </div>
+                </div>
+
+                <div
+                  className={`grid transition-all duration-300 ease-in-out ${
+                    isCollapsed('education')
+                      ? 'grid-rows-[0fr] opacity-0 mt-0 pointer-events-none'
+                      : 'grid-rows-[1fr] opacity-100 mt-6'
+                  }`}
+                >
+                  <div className="overflow-hidden">
+                    {!hasEducation ? (
+                      <div className="border border-dashed border-slate-300 rounded-xl p-6 bg-slate-50/60 text-left">
+                        <p className="text-sm text-slate-600 font-medium">
+                          Nhập thông tin học vấn của bạn
+                        </p>
+                        <button
+                          type="button"
+                          onClick={handleOpenAddEdu}
+                          className="mt-3 inline-flex items-center gap-1 text-xs font-bold text-blue-600 hover:text-blue-700 hover:underline uppercase tracking-wider cursor-pointer"
+                        >
+                          <Plus size={14} />
+                          <span>THÊM MỚI</span>
+                        </button>
+                      </div>
+                    ) : (
+                      <div className="space-y-3">
+                        {profile?.educations.map((edu, index) => (
+                          <div
+                            key={index}
+                            className="p-4 rounded-xl border border-slate-100 bg-slate-50/70 flex justify-between items-start gap-4"
+                          >
+                            <div className="space-y-1">
+                              <h3 className="text-base font-bold text-slate-900">
+                                {edu.institution}
+                              </h3>
+                              <p className="text-sm font-semibold text-slate-700">
+                                {edu.major} {edu.degree && `• ${edu.degree}`}
+                              </p>
+                              {(edu.startDate || edu.endDate) && (
+                                <p className="text-xs text-slate-400">
+                                  {edu.startDate || 'N/A'} - {edu.endDate || 'Hiện tại'}
+                                </p>
+                              )}
+                              {edu.gpa !== undefined && (
+                                <p className="text-xs font-bold text-slate-800 pt-0.5">
+                                  GPA: <span className="text-blue-600">{edu.gpa}</span>
+                                </p>
+                              )}
+                            </div>
+                            <button
+                              type="button"
+                              onClick={() => handleOpenEditEdu(edu, index)}
+                              className="p-1.5 text-slate-400 hover:text-blue-600 rounded-lg hover:bg-white transition-all cursor-pointer"
+                            >
+                              <Pencil size={15} />
+                            </button>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </section>
+
+              {/* 4. KỸ NĂNG CHUYÊN MÔN (COLLAPSIBLE) */}
+              <section id="section-skills" className="p-4 sm:p-6 md:p-8">
+                <div className="flex items-start justify-between gap-4">
+                  <div className="flex items-start gap-4">
+                    <div className="p-3 bg-blue-50 text-blue-600 rounded-2xl shrink-0">
+                      <Cpu className="w-7 h-7" />
+                    </div>
+                    <div>
+                      <h2 className="text-base sm:text-lg md:text-xl font-extrabold text-slate-900">Kỹ năng chuyên môn</h2>
+                      {hasSkills ? (
+                        <span className="inline-flex items-center gap-1 text-xs font-semibold text-emerald-600 mt-1">
+                          <CheckCircle2 size={13} /> Đã cập nhật
+                        </span>
+                      ) : (
+                        <span className="text-xs font-bold text-slate-400 mt-1 block">
+                          Chưa cập nhật
+                        </span>
+                      )}
+                    </div>
+                  </div>
+
+                  <div className="flex items-center gap-3 shrink-0">
+                    <button
+                      type="button"
+                      onClick={() => setIsSkillsModalOpen(true)}
+                      className="inline-flex items-center gap-1.5 px-4 py-2 border border-blue-600 text-blue-600 text-xs font-bold rounded-full hover:bg-blue-50 transition-all cursor-pointer"
+                    >
+                      {hasSkills ? <Pencil size={13} /> : <Plus size={15} />}
+                      <span>{hasSkills ? 'Chỉnh sửa' : 'Thêm mới'}</span>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => toggleSection('skills')}
+                      className="p-2 text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded-xl transition-all cursor-pointer"
+                      title={isCollapsed('skills') ? 'Mở rộng' : 'Thu gọn'}
+                    >
+                      <ChevronDown
+                        size={18}
+                        className={`transition-transform duration-300 ${
+                          !isCollapsed('skills') ? 'rotate-180' : ''
+                        }`}
+                      />
+                    </button>
+                  </div>
+                </div>
+
+                <div
+                  className={`grid transition-all duration-300 ease-in-out ${
+                    isCollapsed('skills')
+                      ? 'grid-rows-[0fr] opacity-0 mt-0 pointer-events-none'
+                      : 'grid-rows-[1fr] opacity-100 mt-6'
+                  }`}
+                >
+                  <div className="overflow-hidden">
+                    {!hasSkills ? (
+                      <div className="border border-dashed border-slate-300 rounded-xl p-6 bg-slate-50/60 text-left">
+                        <p className="text-sm text-slate-600 font-medium">
+                          Thêm các kỹ năng chuyên môn của bạn để hệ thống AI so khớp độ tương thích
+                          với Job Description
+                        </p>
+                        <button
+                          type="button"
+                          onClick={() => setIsSkillsModalOpen(true)}
+                          className="mt-3 inline-flex items-center gap-1 text-xs font-bold text-blue-600 hover:underline uppercase tracking-wider cursor-pointer"
+                        >
+                          <Plus size={14} />
+                          <span>THÊM KỸ NĂNG</span>
+                        </button>
+                      </div>
+                    ) : (
+                      <div className="flex flex-wrap gap-2.5">
+                        {profile?.skills.map((skill, index) => (
+                          <div
+                            key={index}
+                            className="px-3.5 py-2 rounded-xl bg-slate-50 border border-slate-200/80 flex items-center gap-2 group hover:border-blue-300 transition-colors"
+                          >
+                            <span className="text-sm font-bold text-slate-800">{skill.name}</span>
+                            {skill.yearsOfExperience !== undefined && (
+                              <span className="text-[11px] text-slate-500 font-medium bg-white px-1.5 py-0.5 rounded border border-slate-200">
+                                {skill.yearsOfExperience} năm
+                              </span>
+                            )}
+                            {skill.proficiency && (
+                              <span className="text-[10px] font-bold text-blue-600 bg-blue-50 px-1.5 py-0.5 rounded">
+                                {skill.proficiency}
+                              </span>
+                            )}
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </section>
+
+              {/* 5. KINH NGHIỆM LÀM VIỆC (COLLAPSIBLE) */}
+              <section id="section-experience" className="p-4 sm:p-6 md:p-8">
+                <div className="flex items-start justify-between gap-4">
+                  <div className="flex items-start gap-4">
+                    <div className="p-3 bg-blue-50 text-blue-600 rounded-2xl shrink-0">
+                      <Briefcase className="w-7 h-7" />
+                    </div>
+                    <div>
+                      <h2 className="text-base sm:text-lg md:text-xl font-extrabold text-slate-900">Kinh nghiệm làm việc</h2>
+                      {hasExperience ? (
+                        <span className="inline-flex items-center gap-1 text-xs font-semibold text-emerald-600 mt-1">
+                          <CheckCircle2 size={13} /> Đã cập nhật
+                        </span>
+                      ) : (
+                        <span className="text-xs font-medium text-slate-400 mt-1 block">
+                          Chưa có kinh nghiệm / Fresher
+                        </span>
+                      )}
+                    </div>
+                  </div>
+
+                  <div className="flex items-center gap-3 shrink-0">
+                    <button
+                      type="button"
+                      onClick={handleOpenAddExp}
+                      className="inline-flex items-center gap-1.5 px-4 py-2 border border-blue-600 text-blue-600 text-xs font-bold rounded-full hover:bg-blue-50 transition-all cursor-pointer"
+                    >
+                      <Plus size={15} />
+                      <span>Thêm mới</span>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => toggleSection('experience')}
+                      className="p-2 text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded-xl transition-all cursor-pointer"
+                      title={isCollapsed('experience') ? 'Mở rộng' : 'Thu gọn'}
+                    >
+                      <ChevronDown
+                        size={18}
+                        className={`transition-transform duration-300 ${
+                          !isCollapsed('experience') ? 'rotate-180' : ''
+                        }`}
+                      />
+                    </button>
+                  </div>
+                </div>
+
+                <div
+                  className={`grid transition-all duration-300 ease-in-out ${
+                    isCollapsed('experience')
+                      ? 'grid-rows-[0fr] opacity-0 mt-0 pointer-events-none'
+                      : 'grid-rows-[1fr] opacity-100 mt-6'
+                  }`}
+                >
+                  <div className="overflow-hidden">
+                    {!hasExperience ? (
+                      <div className="border border-dashed border-slate-300 rounded-xl p-6 bg-slate-50/60 text-left">
+                        <p className="text-sm text-slate-600 font-medium">
+                          Nếu bạn là sinh viên hoặc thực tập sinh, bạn có thể bỏ qua phần này hoặc
+                          thêm các kỳ thực tập trước đây
+                        </p>
+                        <button
+                          type="button"
+                          onClick={handleOpenAddExp}
+                          className="mt-3 inline-flex items-center gap-1 text-xs font-bold text-blue-600 hover:text-blue-700 hover:underline uppercase tracking-wider cursor-pointer"
+                        >
+                          <Plus size={14} />
+                          <span>THÊM KINH NGHIỆM / THỰC TẬP</span>
+                        </button>
+                      </div>
+                    ) : (
+                      <div className="space-y-3">
+                        {profile?.experiences.map((exp, index) => (
+                          <div
+                            key={index}
+                            className="p-4 rounded-xl border border-slate-100 bg-slate-50/70 flex justify-between items-start gap-4"
+                          >
+                            <div className="space-y-1">
+                              <h3 className="text-base font-bold text-slate-900">{exp.position}</h3>
+                              <p className="text-sm font-semibold text-slate-700 flex items-center gap-1.5">
+                                <Building2 size={14} className="text-slate-400" />
+                                <span>{exp.company}</span>
+                              </p>
+                              {(exp.startDate || exp.endDate) && (
+                                <p className="text-xs text-slate-400 flex items-center gap-1">
+                                  <Calendar size={13} />
+                                  <span>
+                                    {exp.startDate || 'N/A'} - {exp.endDate || 'Hiện tại'}
+                                  </span>
+                                </p>
+                              )}
+                              {exp.description && (
+                                <RichTextDisplay
+                                  content={exp.description}
+                                  className="text-xs text-slate-600 pt-1"
+                                />
+                              )}
+                              {exp.technologies && exp.technologies.length > 0 && (
+                                <div className="flex flex-wrap gap-1.5 pt-2">
+                                  {exp.technologies.map((tech, idx) => (
+                                    <span
+                                      key={idx}
+                                      className="px-2 py-0.5 rounded-md bg-white border border-slate-200 text-[11px] font-medium text-slate-700"
+                                    >
+                                      {tech}
+                                    </span>
+                                  ))}
+                                </div>
+                              )}
+                            </div>
+                            <button
+                              type="button"
+                              onClick={() => handleOpenEditExp(exp, index)}
+                              className="p-1.5 text-slate-400 hover:text-blue-600 rounded-lg hover:bg-white transition-all cursor-pointer"
+                            >
+                              <Pencil size={15} />
+                            </button>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </section>
+
+              {/* 6. DỰ ÁN THỰC TẾ (COLLAPSIBLE) */}
+              <section id="section-projects" className="p-4 sm:p-6 md:p-8">
+                <div className="flex items-start justify-between gap-4">
+                  <div className="flex items-start gap-4">
+                    <div className="p-3 bg-blue-50 text-blue-600 rounded-2xl shrink-0">
+                      <FolderGit2 className="w-7 h-7" />
+                    </div>
+                    <div>
+                      <h2 className="text-base sm:text-lg md:text-xl font-extrabold text-slate-900">Dự án thực tế</h2>
+                      {hasProjects ? (
+                        <span className="inline-flex items-center gap-1 text-xs font-semibold text-emerald-600 mt-1">
+                          <CheckCircle2 size={13} /> Đã cập nhật
+                        </span>
+                      ) : (
+                        <span className="text-xs font-bold text-slate-400 mt-1 block">
+                          Chưa cập nhật
+                        </span>
+                      )}
+                    </div>
+                  </div>
+
+                  <div className="flex items-center gap-3 shrink-0">
+                    <button
+                      type="button"
+                      onClick={handleOpenAddProject}
+                      className="inline-flex items-center gap-1.5 px-4 py-2 border border-blue-600 text-blue-600 text-xs font-bold rounded-full hover:bg-blue-50 transition-all cursor-pointer"
+                    >
+                      <Plus size={15} />
+                      <span>Thêm mới</span>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => toggleSection('projects')}
+                      className="p-2 text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded-xl transition-all cursor-pointer"
+                      title={isCollapsed('projects') ? 'Mở rộng' : 'Thu gọn'}
+                    >
+                      <ChevronDown
+                        size={18}
+                        className={`transition-transform duration-300 ${
+                          !isCollapsed('projects') ? 'rotate-180' : ''
+                        }`}
+                      />
+                    </button>
+                  </div>
+                </div>
+
+                <div
+                  className={`grid transition-all duration-300 ease-in-out ${
+                    isCollapsed('projects')
+                      ? 'grid-rows-[0fr] opacity-0 mt-0 pointer-events-none'
+                      : 'grid-rows-[1fr] opacity-100 mt-6'
+                  }`}
+                >
+                  <div className="overflow-hidden">
+                    {!hasProjects ? (
+                      <div className="border border-dashed border-slate-300 rounded-xl p-6 bg-slate-50/60 text-left">
+                        <p className="text-sm text-slate-600 font-medium">
+                          Thêm dự án nổi bật cùng link GitHub / Demo để tăng điểm AI Fit Score
+                        </p>
+                        <button
+                          type="button"
+                          onClick={handleOpenAddProject}
+                          className="mt-3 inline-flex items-center gap-1 text-xs font-bold text-blue-600 hover:underline uppercase tracking-wider cursor-pointer"
+                        >
+                          <Plus size={14} />
+                          <span>THÊM DỰ ÁN</span>
+                        </button>
+                      </div>
+                    ) : (
+                      <div className="space-y-4">
+                        {profile?.projects?.map((proj, index) => (
+                          <div
+                            key={index}
+                            className="p-5 rounded-xl border border-slate-100 bg-slate-50/70 flex justify-between items-start gap-4"
+                          >
+                            <div className="space-y-2 flex-1">
+                              <div className="flex flex-wrap items-center gap-2.5">
+                                <h3 className="text-base font-bold text-slate-900">{proj.name}</h3>
+                                {proj.role && (
+                                  <span className="text-xs px-2.5 py-0.5 bg-blue-100/80 text-blue-700 rounded-md font-semibold">
+                                    {proj.role}
+                                  </span>
+                                )}
+                              </div>
+
+                              {(proj.startDate || proj.endDate) && (
+                                <p className="text-xs text-slate-400 font-medium flex items-center gap-1.5">
+                                  <Calendar size={13} className="text-slate-400" />
+                                  <span>
+                                    {proj.startDate || 'N/A'} - {proj.endDate || 'Hiện tại'}
+                                  </span>
+                                </p>
+                              )}
+
+                              {proj.projectUrl && (
+                                <div>
+                                  <a
+                                    href={proj.projectUrl}
+                                    target="_blank"
+                                    rel="noreferrer"
+                                    className="text-xs font-semibold text-blue-600 hover:underline inline-flex items-center gap-1"
+                                  >
+                                    <ExternalLink size={12} /> {proj.projectUrl}
+                                  </a>
+                                </div>
+                              )}
+
+                              {proj.description && (
+                                <RichTextDisplay
+                                  content={proj.description}
+                                  className="text-xs text-slate-600 pt-0.5"
+                                />
+                              )}
+
+                              {proj.technologies && proj.technologies.length > 0 && (
+                                <div className="pt-2 border-t border-slate-200/60 mt-3">
+                                  <span className="text-[11px] font-bold text-slate-500 block mb-1.5 uppercase tracking-wider">
+                                    Công nghệ sử dụng:
+                                  </span>
+                                  <div className="flex flex-wrap gap-1.5">
+                                    {proj.technologies.map((t, idx) => (
+                                      <span
+                                        key={idx}
+                                        className="px-2.5 py-1 bg-white border border-slate-200 text-[11px] font-semibold text-slate-700 rounded-lg shadow-2xs"
+                                      >
+                                        {t}
+                                      </span>
+                                    ))}
+                                  </div>
+                                </div>
+                              )}
+                            </div>
+
+                            <button
+                              type="button"
+                              onClick={() => handleOpenEditProject(proj, index)}
+                              className="p-1.5 text-slate-400 hover:text-blue-600 rounded-lg hover:bg-white transition-all cursor-pointer shrink-0"
+                            >
+                              <Pencil size={15} />
+                            </button>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </section>
+
+              {/* 7. CHỨNG CHỈ & NGOẠI NGỮ (COLLAPSIBLE SECTION) */}
+              <section id="section-certifications" className="p-4 sm:p-6 md:p-8">
+                <div className="flex items-center justify-between gap-4 mb-4">
+                  <div className="flex items-center gap-3">
+                    <div className="p-3 bg-blue-50 text-blue-600 rounded-2xl shrink-0">
+                      <Award className="w-7 h-7" />
+                    </div>
+                    <div>
+                      <h2 className="text-base sm:text-lg md:text-xl font-extrabold text-slate-900">Chứng chỉ & Ngoại ngữ</h2>
+                      <p className="text-xs text-slate-500 mt-0.5">
+                        Bằng cấp, chứng chỉ chuyên môn và trình độ ngoại ngữ
+                      </p>
+                    </div>
+                  </div>
+
+                  <button
+                    type="button"
+                    onClick={() => toggleSection('certifications')}
+                    className="p-2 text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded-xl transition-all cursor-pointer"
+                    title={isCollapsed('certifications') ? 'Mở rộng' : 'Thu gọn'}
+                  >
+                    <ChevronDown
+                      size={18}
+                      className={`transition-transform duration-300 ${
+                        !isCollapsed('certifications') ? 'rotate-180' : ''
+                      }`}
+                    />
+                  </button>
+                </div>
+
+                <div
+                  className={`grid transition-all duration-300 ease-in-out ${
+                    isCollapsed('certifications')
+                      ? 'grid-rows-[0fr] opacity-0 mt-0 pointer-events-none'
+                      : 'grid-rows-[1fr] opacity-100 mt-6'
+                  }`}
+                >
+                  <div className="overflow-hidden">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                      {/* CERTIFICATES */}
+                      <div className="bg-slate-50/70 rounded-2xl p-5 border border-slate-100 flex flex-col justify-between">
+                        <div>
+                          <div className="flex items-start justify-between gap-4 mb-4">
+                            <div className="flex items-center gap-3">
+                              <div className="p-2 bg-blue-50 text-blue-600 rounded-xl">
+                                <Award size={20} />
+                              </div>
+                              <div>
+                                <h3 className="text-base font-bold text-slate-900">Chứng chỉ</h3>
+                                <span className="text-[11px] text-slate-500">
+                                  TOEIC, IELTS, AWS...
+                                </span>
+                              </div>
+                            </div>
+                            <button
+                              type="button"
+                              onClick={handleOpenAddCert}
+                              className="p-1.5 text-blue-600 hover:bg-blue-50 rounded-lg cursor-pointer transition-colors"
+                              title="Thêm chứng chỉ"
+                            >
+                              <Plus size={18} />
+                            </button>
+                          </div>
+
+                          {!hasCertifications ? (
+                            <div className="border border-dashed border-slate-300 rounded-xl p-4 bg-white text-left">
+                              <p className="text-xs text-slate-600 font-medium">Chưa có chứng chỉ</p>
+                              <button
+                                type="button"
+                                onClick={handleOpenAddCert}
+                                className="mt-2 inline-flex items-center gap-1 text-[11px] font-bold text-blue-600 hover:underline uppercase tracking-wider cursor-pointer"
+                              >
+                                <Plus size={13} />
+                                <span>THÊM MỚI</span>
+                              </button>
+                            </div>
+                          ) : (
+                            <div className="space-y-2.5">
+                              {profile?.certifications?.map((cert, index) => (
+                                <div
+                                  key={index}
+                                  className="p-3 bg-white border border-slate-200/80 rounded-xl text-xs flex justify-between items-start gap-2 hover:border-blue-300 transition-colors"
+                                >
+                                  <div className="space-y-0.5">
+                                    <p className="font-bold text-slate-800">{cert.name}</p>
+                                    <p className="text-slate-500">
+                                      {cert.organization}{' '}
+                                      {cert.scoreOrLevel && `• ${cert.scoreOrLevel}`}
+                                    </p>
+                                    {cert.issueDate && (
+                                      <p className="text-slate-400 text-[11px]">{cert.issueDate}</p>
+                                    )}
+                                  </div>
+                                  <button
+                                    type="button"
+                                    onClick={() => handleOpenEditCert(cert, index)}
+                                    className="p-1 text-slate-400 hover:text-blue-600 rounded-md hover:bg-slate-50 transition-all cursor-pointer shrink-0"
+                                  >
+                                    <Pencil size={13} />
+                                  </button>
+                                </div>
+                              ))}
+                            </div>
+                          )}
+                        </div>
+                      </div>
+
+                      {/* NGOẠI NGỮ */}
+                      <div className="bg-slate-50/70 rounded-2xl p-5 border border-slate-100 flex flex-col justify-between">
+                        <div>
+                          <div className="flex items-start justify-between gap-4 mb-4">
+                            <div className="flex items-center gap-3">
+                              <div className="p-2 bg-blue-50 text-blue-600 rounded-xl">
+                                <Languages size={20} />
+                              </div>
+                              <div>
+                                <h3 className="text-base font-bold text-slate-900">Ngoại ngữ</h3>
+                                <span className="text-[11px] text-slate-500">
+                                  Tiếng Anh, Nhật, Hàn...
+                                </span>
+                              </div>
+                            </div>
+                            <button
+                              type="button"
+                              onClick={() => setIsLangModalOpen(true)}
+                              className="p-1.5 text-blue-600 hover:bg-blue-50 rounded-lg cursor-pointer transition-colors"
+                              title="Chỉnh sửa ngoại ngữ"
+                            >
+                              {hasLanguages ? <Pencil size={16} /> : <Plus size={18} />}
+                            </button>
+                          </div>
+
+                          {!hasLanguages ? (
+                            <div className="border border-dashed border-slate-300 rounded-xl p-4 bg-white text-left">
+                              <p className="text-xs text-slate-600 font-medium">Chưa có ngoại ngữ</p>
+                              <button
+                                type="button"
+                                onClick={() => setIsLangModalOpen(true)}
+                                className="mt-2 inline-flex items-center gap-1 text-[11px] font-bold text-blue-600 hover:underline uppercase tracking-wider cursor-pointer"
+                              >
+                                <Plus size={13} />
+                                <span>THÊM MỚI</span>
+                              </button>
+                            </div>
+                          ) : (
+                            <div className="space-y-2.5">
+                              {profile?.languages?.map((lang, index) => (
+                                <div
+                                  key={index}
+                                  className="p-3 bg-white border border-slate-200/80 rounded-xl text-xs flex items-center justify-between"
+                                >
+                                  <span className="font-bold text-slate-800">{lang.language}</span>
+                                  <span className="text-blue-600 font-semibold px-2.5 py-0.5 bg-blue-50 rounded-md">
+                                    {lang.proficiency || 'Cơ bản'}
+                                  </span>
+                                </div>
+                              ))}
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </section>
+
+              {/* 8. MỤC BỔ SUNG & TÙY CHỈNH (COLLAPSIBLE SECTION) */}
+              <section id="section-custom" className="p-4 sm:p-6 md:p-8">
+                <div className="flex items-start justify-between gap-4">
+                  <div className="flex items-start gap-4">
+                    <div className="p-3 bg-blue-50 text-blue-600 rounded-2xl shrink-0">
+                      <FileText className="w-7 h-7" />
+                    </div>
+                    <div>
+                      <h2 className="text-base sm:text-lg md:text-xl font-extrabold text-slate-900">Mục bổ sung & Tùy chỉnh</h2>
+                      <p className="text-xs text-slate-500 mt-1">
+                        Giải thưởng, Hoạt động ngoại khóa, Tình nguyện, Sở thích cá nhân...
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="flex items-center gap-3 shrink-0">
+                    <button
+                      type="button"
+                      onClick={handleOpenAddCustomSection}
+                      className="inline-flex items-center gap-1.5 px-4 py-2 border border-blue-600 text-blue-600 text-xs font-bold rounded-full hover:bg-blue-50 transition-all cursor-pointer"
+                    >
+                      <Plus size={15} />
+                      <span>Thêm mục</span>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => toggleSection('custom')}
+                      className="p-2 text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded-xl transition-all cursor-pointer"
+                      title={isCollapsed('custom') ? 'Mở rộng' : 'Thu gọn'}
+                    >
+                      <ChevronDown
+                        size={18}
+                        className={`transition-transform duration-300 ${
+                          !isCollapsed('custom') ? 'rotate-180' : ''
+                        }`}
+                      />
+                    </button>
+                  </div>
+                </div>
+
+                <div
+                  className={`grid transition-all duration-300 ease-in-out ${
+                    isCollapsed('custom')
+                      ? 'grid-rows-[0fr] opacity-0 mt-0 pointer-events-none'
+                      : 'grid-rows-[1fr] opacity-100 mt-6'
+                  }`}
+                >
+                  <div className="overflow-hidden">
+                    <div className="space-y-6">
+                      {hasCustomSections ? (
+                        profile?.customSections.map((section, sIdx) => (
+                          <div
+                            key={sIdx}
+                            className="p-5 rounded-2xl border border-slate-100 bg-slate-50/70 space-y-4"
+                          >
+                            <div className="flex items-center justify-between gap-4">
+                              <h3 className="text-base font-bold text-slate-900">
+                                {section.sectionTitle}
+                              </h3>
+                              <button
+                                type="button"
+                                onClick={() => handleOpenEditCustomSection(section, sIdx)}
+                                className="inline-flex items-center gap-1 px-3 py-1 border border-blue-600 text-blue-600 text-xs font-bold rounded-full hover:bg-blue-50 transition-all cursor-pointer"
+                              >
+                                <Pencil size={12} />
+                                <span>Sửa</span>
+                              </button>
+                            </div>
+
+                            <div className="space-y-3">
+                              {section.items.map((item, iIdx) => (
+                                <div
+                                  key={iIdx}
+                                  className="p-4 rounded-xl border border-slate-200/60 bg-white space-y-1 text-xs"
+                                >
+                                  <div className="flex flex-wrap items-center justify-between gap-2">
+                                    <h4 className="text-sm font-bold text-slate-800">{item.title}</h4>
+                                    {item.date && (
+                                      <span className="text-slate-400 font-medium">{item.date}</span>
+                                    )}
+                                  </div>
+                                  {item.subtitle && (
+                                    <p className="text-slate-600 font-semibold">{item.subtitle}</p>
+                                  )}
+                                  {item.description && (
+                                    <p className="text-slate-500 leading-relaxed pt-1 whitespace-pre-line">
+                                      {item.description}
+                                    </p>
+                                  )}
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+                        ))
+                      ) : (
+                        <div className="border border-dashed border-slate-300 rounded-xl p-6 bg-slate-50/60 text-left">
+                          <p className="text-sm text-slate-600 font-medium">
+                            Thêm các thành tích, giải thưởng hoặc hoạt động ngoại khóa để hồ sơ nổi
+                            bật hơn
+                          </p>
+                          <button
+                            type="button"
+                            onClick={handleOpenAddCustomSection}
+                            className="mt-3 inline-flex items-center gap-1 text-xs font-bold text-blue-600 hover:underline uppercase tracking-wider cursor-pointer"
+                          >
+                            <Plus size={14} />
+                            <span>THÊM MỤC MỚI</span>
+                          </button>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              </section>
+            </div>
+          </div>
+
+          {/* Modals */}
+          <EditEducationModal
+            isOpen={isEduModalOpen}
+            onClose={() => setIsEduModalOpen(false)}
+            initialData={selectedEdu}
+            currentIndex={selectedEduIndex}
+            allEducations={profile?.educations || []}
+            onSuccess={(updatedEducations) => {
+              setProfile((prev) => (prev ? { ...prev, educations: updatedEducations } : null))
+            }}
+          />
+
+          <EditSkillsModal
+            isOpen={isSkillsModalOpen}
+            onClose={() => setIsSkillsModalOpen(false)}
+            initialSkills={profile?.skills || []}
+            onSuccess={(updatedSkills) => {
+              setProfile((prev) => (prev ? { ...prev, skills: updatedSkills } : null))
+            }}
+          />
+
+          <EditExperienceModal
+            isOpen={isExpModalOpen}
+            onClose={() => setIsExpModalOpen(false)}
+            initialData={selectedExp}
+            currentIndex={selectedExpIndex}
+            allExperiences={profile?.experiences || []}
+            onSuccess={(updatedList) => {
+              setProfile((prev) => (prev ? { ...prev, experiences: updatedList } : null))
+            }}
+          />
+
+          <EditExpSummaryModal
+            isOpen={isExpSummaryModalOpen}
+            onClose={() => setIsExpSummaryModalOpen(false)}
+            currentYears={profile?.yearsOfExperience || 0}
+            currentLevel={profile?.currentLevel || ''}
+            onSuccess={(data) => {
+              setProfile((prev) => (prev ? { ...prev, ...data } : null))
+            }}
+          />
+
+          <EditProjectModal
+            isOpen={isProjectModalOpen}
+            onClose={() => setIsProjectModalOpen(false)}
+            initialData={selectedProject}
+            currentIndex={selectedProjectIndex}
+            allProjects={profile?.projects || []}
+            onSuccess={(updatedProjects) => {
+              setProfile((prev) => (prev ? { ...prev, projects: updatedProjects } : null))
+            }}
+          />
+
+          <EditCertificationModal
+            isOpen={isCertModalOpen}
+            onClose={() => setIsCertModalOpen(false)}
+            initialData={selectedCert}
+            currentIndex={selectedCertIndex}
+            allCertifications={profile?.certifications || []}
+            onSuccess={(updatedCertifications) => {
+              setProfile((prev) =>
+                prev ? { ...prev, certifications: updatedCertifications } : null
+              )
+            }}
+          />
+
+          <EditLanguageModal
+            isOpen={isLangModalOpen}
+            onClose={() => setIsLangModalOpen(false)}
+            initialLanguages={profile?.languages || []}
+            onSuccess={(updatedLanguages) => {
+              setProfile((prev) => (prev ? { ...prev, languages: updatedLanguages } : null))
+            }}
+          />
+
+          <EditCustomSectionModal
+            isOpen={isCustomSectionModalOpen}
+            onClose={() => setIsCustomSectionModalOpen(false)}
+            initialData={selectedCustomSection}
+            sectionIndex={selectedSectionIndex}
+            allCustomSections={profile?.customSections || []}
+            onSuccess={(updatedCustomSections) => {
+              setProfile((prev) =>
+                prev ? { ...prev, customSections: updatedCustomSections } : null
+              )
+            }}
+          />
+
+          <CvParsingPreviewModal
+            isOpen={isPreviewModalOpen}
+            onClose={() => setIsPreviewModalOpen(false)}
+            parsedData={parsedCvData}
+            onSuccess={(updatedProfile) => {
+              setProfile(updatedProfile)
+            }}
+          />
+        </div>
+      </div>
+    </ActiveProfileProvider>
+  )
+}

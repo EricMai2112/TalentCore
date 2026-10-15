@@ -1,11 +1,15 @@
-import { Trash2, Loader2 } from 'lucide-react'
+"use client";
+
+import { useState, useEffect } from "react";
+import { createPortal } from "react-dom";
+import { Trash2, Loader2, AlertTriangle, X } from "lucide-react";
 
 interface DeleteConfirmModalProps {
-  isOpen: boolean
-  onClose: () => void
-  onConfirm: () => void
-  templateName: string
-  isDeleting: boolean
+  isOpen: boolean;
+  onClose: () => void;
+  onConfirm: () => void;
+  templateName: string;
+  isDeleting: boolean;
 }
 
 export default function DeleteConfirmModal({
@@ -13,47 +17,69 @@ export default function DeleteConfirmModal({
   onClose,
   onConfirm,
   templateName,
-  isDeleting
+  isDeleting,
 }: DeleteConfirmModalProps) {
-  if (!isOpen) return null
+  const [isMounted, setIsMounted] = useState(false);
 
-  return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 duration-200 bg-black/45 backdrop-blur-xs animate-in fade-in">
+  useEffect(() => {
+    setIsMounted(true);
+  }, []);
+
+  if (!isOpen || !isMounted) return null;
+
+  return createPortal(
+    <div className="fixed inset-0 z-[9999] flex items-center justify-center p-4">
+      {/* Full Backdrop */}
       <div
-        className="w-full max-w-md p-6 duration-200 bg-white border border-gray-100 shadow-2xl rounded-2xl animate-in zoom-in-95"
+        className="fixed inset-0 bg-slate-950/45 backdrop-blur-xs transition-opacity animate-in fade-in duration-200"
+        onClick={onClose}
+      />
+
+      <div
+        className="relative bg-white/95 backdrop-blur-2xl rounded-3xl w-full max-w-md shadow-2xl shadow-rose-500/10 border border-white/90 p-6 z-10 text-slate-900 animate-in zoom-in-95 duration-200"
         onClick={(e) => e.stopPropagation()}
       >
         <div className="flex items-start gap-4">
-          <div className="flex items-center justify-center w-10 h-10 text-red-500 border border-red-100 rounded-full bg-red-50 shrink-0">
+          <div className="w-11 h-11 rounded-2xl bg-gradient-to-tr from-rose-500 to-red-600 text-white flex items-center justify-center shrink-0 shadow-md shadow-rose-500/20">
             <Trash2 size={20} />
           </div>
-          <div className="space-y-1.5">
-            <h3 className="text-base font-bold text-gray-900">Xóa Email Template?</h3>
-            <p className="text-sm leading-relaxed text-gray-500">
-              Bạn có chắc chắn muốn xóa email template{' '}
-              <strong className="text-gray-800">“{templateName}”</strong> không?
+          <div className="flex-1 min-w-0 space-y-1">
+            <h3 className="text-base font-bold text-slate-900">Xóa Email Template?</h3>
+            <p className="text-xs text-slate-500 leading-relaxed">
+              Bạn có chắc chắn muốn xóa email template{" "}
+              <strong className="text-slate-800 font-bold">"{templateName}"</strong> không? Hành động này không thể hoàn tác.
             </p>
           </div>
+          <button
+            type="button"
+            onClick={onClose}
+            className="p-1.5 text-slate-400 hover:text-slate-700 hover:bg-slate-100 rounded-xl transition-colors cursor-pointer"
+          >
+            <X size={16} />
+          </button>
         </div>
 
-        <div className="flex items-center justify-end gap-3 mt-6">
+        <div className="flex items-center justify-end gap-3 mt-6 pt-4 border-t border-slate-100">
           <button
+            type="button"
             onClick={onClose}
             disabled={isDeleting}
-            className="px-4 py-2 text-sm font-semibold text-gray-700 transition-colors bg-white border border-gray-200 cursor-pointer hover:bg-gray-50 rounded-xl disabled:opacity-50"
+            className="px-4 py-2 text-xs sm:text-sm font-bold text-slate-700 transition-colors bg-white border border-slate-200 cursor-pointer hover:bg-slate-50 rounded-xl disabled:opacity-50 shadow-3xs"
           >
             Hủy
           </button>
           <button
+            type="button"
             onClick={onConfirm}
             disabled={isDeleting}
-            className="flex items-center gap-1.5 px-4 py-2 bg-red-600 hover:bg-red-700 disabled:bg-red-400 text-white font-semibold text-sm rounded-xl transition-all cursor-pointer"
+            className="flex items-center gap-1.5 px-5 py-2 bg-gradient-to-r from-rose-600 to-red-600 hover:from-rose-700 hover:to-red-700 disabled:opacity-50 text-white font-bold text-xs sm:text-sm rounded-xl transition-all shadow-md shadow-rose-500/20 cursor-pointer"
           >
             {isDeleting ? <Loader2 size={16} className="animate-spin" /> : <Trash2 size={16} />}
-            Xóa
+            <span>Xóa template</span>
           </button>
         </div>
       </div>
-    </div>
-  )
+    </div>,
+    document.body
+  );
 }

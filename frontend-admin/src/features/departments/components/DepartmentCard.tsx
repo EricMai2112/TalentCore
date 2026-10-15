@@ -21,27 +21,27 @@ export default function DepartmentCard({
   const managerName = getManagerName(department.managerId);
 
   return (
-    <div className="bg-white border border-gray-100 rounded-2xl overflow-hidden shadow-xs hover:shadow-sm transition-shadow">
+    <div className="bg-white/70 backdrop-blur-md border border-white/80 rounded-3xl overflow-hidden shadow-xs hover:shadow-md hover:bg-white/85 transition-all">
       {/* Card Header — clickable để expand */}
       <div
         className="flex items-center gap-4 px-5 py-4 cursor-pointer select-none"
         onClick={() => setIsExpanded((p) => !p)}
       >
         {/* Icon */}
-        <div className="w-10 h-10 rounded-xl bg-indigo-50 flex items-center justify-center shrink-0">
-          <Building2 size={18} className="text-indigo-500" />
+        <div className="w-10 h-10 rounded-2xl bg-blue-50 border border-blue-100/60 flex items-center justify-center shrink-0 shadow-2xs">
+          <Building2 size={18} className="text-blue-600" />
         </div>
 
         {/* Info */}
         <div className="flex-1 min-w-0">
-          <h3 className="font-bold text-gray-900 text-sm leading-snug">
+          <h3 className="font-bold text-slate-900 text-sm leading-snug">
             {department.name}
           </h3>
-          <p className="text-xs text-gray-400 mt-0.5">
+          <p className="text-xs text-slate-500 mt-0.5">
             {managerName ? (
               <>Trưởng phòng: {managerName}</>
             ) : (
-              <span className="italic">Chưa có trưởng phòng</span>
+              <span className="italic text-slate-400">Chưa có trưởng phòng</span>
             )}
             {" · "}
             <span>0 jobs</span>
@@ -53,7 +53,7 @@ export default function DepartmentCard({
         {/* Chevron */}
         <ChevronDown
           size={16}
-          className={`text-gray-400 shrink-0 transition-transform duration-200 ${
+          className={`text-slate-400 shrink-0 transition-transform duration-200 ${
             isExpanded ? "rotate-180" : ""
           }`}
         />
@@ -61,42 +61,42 @@ export default function DepartmentCard({
 
       {/* Expanded Content */}
       {isExpanded && (
-        <div className="border-t border-gray-50 px-5 py-4 bg-gray-50/40 space-y-4">
+        <div className="border-t border-slate-100/80 px-5 py-4 bg-slate-50/50 backdrop-blur-xs space-y-4">
           {/* Detail grid */}
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-            <div className="flex items-center gap-2.5 bg-white rounded-xl px-3.5 py-2.5 border border-gray-100">
-              <User size={14} className="text-indigo-400 shrink-0" />
+            <div className="flex items-center gap-2.5 bg-white/70 backdrop-blur-xs rounded-2xl px-4 py-3 border border-white/80 shadow-2xs">
+              <User size={15} className="text-blue-500 shrink-0" />
               <div>
-                <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">
+                <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">
                   Mã phòng ban
                 </p>
-                <p className="text-sm font-bold text-gray-800 font-mono">
+                <p className="text-sm font-bold text-slate-800 font-mono">
                   {department.code}
                 </p>
               </div>
             </div>
 
-            <div className="flex items-center gap-2.5 bg-white rounded-xl px-3.5 py-2.5 border border-gray-100">
-              <Users size={14} className="text-indigo-400 shrink-0" />
+            <div className="flex items-center gap-2.5 bg-white/70 backdrop-blur-xs rounded-2xl px-4 py-3 border border-white/80 shadow-2xs">
+              <Users size={15} className="text-blue-500 shrink-0" />
               <div>
-                <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">
+                <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">
                   Thành viên
                 </p>
-                <p className="text-sm font-bold text-gray-800">
+                <p className="text-sm font-bold text-slate-800">
                   {memberCount} người
                 </p>
               </div>
             </div>
 
-            <div className="flex items-center gap-2.5 bg-white rounded-xl px-3.5 py-2.5 border border-gray-100">
-              <Briefcase size={14} className="text-indigo-400 shrink-0" />
+            <div className="flex items-center gap-2.5 bg-white/70 backdrop-blur-xs rounded-2xl px-4 py-3 border border-white/80 shadow-2xs">
+              <Briefcase size={15} className="text-blue-500 shrink-0" />
               <div>
-                <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">
+                <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">
                   Trưởng phòng
                 </p>
-                <p className="text-sm font-bold text-gray-800 truncate">
+                <p className="text-sm font-bold text-slate-800 truncate">
                   {managerName ?? (
-                    <span className="text-gray-400 font-normal italic text-xs">
+                    <span className="text-slate-400 font-normal italic text-xs">
                       Chưa phân công
                     </span>
                   )}
@@ -108,21 +108,23 @@ export default function DepartmentCard({
           {/* Actions */}
           <div className="flex items-center justify-end gap-2 pt-1">
             <button
+              type="button"
               onClick={(e) => {
                 e.stopPropagation();
                 onEdit();
               }}
-              className="flex items-center gap-1.5 px-3.5 py-1.5 text-sm font-semibold text-indigo-600 hover:text-indigo-700 hover:bg-indigo-50 border border-indigo-100 rounded-xl transition-all cursor-pointer"
+              className="flex items-center gap-1.5 px-3.5 py-1.5 text-xs sm:text-sm font-bold text-blue-600 hover:text-blue-700 bg-white hover:bg-blue-50 border border-blue-200/60 rounded-xl transition-all shadow-2xs cursor-pointer"
             >
               <Pencil size={14} />
               Chỉnh sửa
             </button>
             <button
+              type="button"
               onClick={(e) => {
                 e.stopPropagation();
                 onDelete();
               }}
-              className="flex items-center gap-1.5 px-3.5 py-1.5 text-sm font-semibold text-red-500 hover:text-red-600 hover:bg-red-50 border border-red-100 rounded-xl transition-all cursor-pointer"
+              className="flex items-center gap-1.5 px-3.5 py-1.5 text-xs sm:text-sm font-bold text-rose-600 hover:text-rose-700 bg-white hover:bg-rose-50 border border-rose-200/60 rounded-xl transition-all shadow-2xs cursor-pointer"
             >
               <Trash2 size={14} />
               Xóa

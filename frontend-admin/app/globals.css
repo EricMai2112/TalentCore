@@ -1,26 +1,129 @@
 @import "tailwindcss";
 
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  /* Brand Primary Colors */
+  --primary: #3B82F6;
+  --primary-dark: #1D4ED8;
+  --primary-light: #93C5FD;
+  --primary-soft: #DBEAFE;
+
+  /* Accent Colors (Matching Background Radiants) */
+  --violet: #8B5CF6;
+  --cyan: #06B6D4;
+  --teal: #14B8A6;
+
+  /* Surface & Glass Levels */
+  --glass-ultralight: rgba(255, 255, 255, 0.15);
+  --glass-light: rgba(255, 255, 255, 0.45);
+  --glass-medium: rgba(255, 255, 255, 0.50);
+  --glass-strong: rgba(255, 255, 255, 0.70);
+  --glass-solid: rgba(255, 255, 255, 0.80);
+  --glass-overlay: rgba(255, 255, 255, 0.92);
+  --border-glass: rgba(255, 255, 255, 0.65);
+  --border-glass-strong: rgba(255, 255, 255, 0.80);
+  --border-subtle: rgba(15, 23, 42, 0.08);
+  --overlay: rgba(15, 23, 42, 0.35);
+
+  /* Typography Colors */
+  --text-primary: #0F172A;
+  --text-secondary: #334155;
+  --text-muted: #64748B;
+  --text-disabled: #94A3B8;
+
+  /* Semantic Colors */
+  --success: #10B981;
+  --warning: #F59E0B;
+  --error: #EF4444;
+  --info: #3B82F6;
 }
 
 @theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
+  --color-primary: var(--primary);
+  --color-primary-dark: var(--primary-dark);
+  --color-primary-light: var(--primary-light);
+  --color-primary-soft: var(--primary-soft);
+
+  --color-violet: var(--violet);
+  --color-cyan: var(--cyan);
+  --color-teal: var(--teal);
+
+  --color-text-primary: var(--text-primary);
+  --color-text-secondary: var(--text-secondary);
+  --color-text-muted: var(--text-muted);
+
   --font-sans: var(--font-inter);
   --font-mono: var(--font-geist-mono);
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
+@utility glass-panel {
+  background: var(--glass-light);
+  backdrop-filter: blur(18px) saturate(160%);
+  -webkit-backdrop-filter: blur(18px) saturate(160%);
+  border: 1px solid var(--border-glass);
+  box-shadow: 0 20px 40px rgba(15, 23, 42, 0.10);
+}
+
+@utility glass-card {
+  background: var(--glass-medium);
+  backdrop-filter: blur(14px) saturate(150%);
+  -webkit-backdrop-filter: blur(14px) saturate(150%);
+  border: 1px solid var(--border-glass);
+  box-shadow: 0 12px 32px rgba(15, 23, 42, 0.08);
+  transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+@utility glass-card-hover {
+  &:hover {
+    background: var(--glass-strong);
+    border-color: var(--border-glass-strong);
+    transform: translateY(-2px);
+    box-shadow: 0 20px 40px rgba(139, 92, 246, 0.15);
   }
+}
+
+@utility glass-strong {
+  background: var(--glass-strong);
+  backdrop-filter: blur(20px) saturate(180%);
+  -webkit-backdrop-filter: blur(20px) saturate(180%);
+  border: 1px solid var(--border-glass-strong);
+  box-shadow: 0 24px 48px rgba(15, 23, 42, 0.12);
 }
 
 body {
   background: var(--background);
   color: var(--foreground);
   font-family: var(--font-sans), Arial, Helvetica, sans-serif;
+}
+
+/* Sleek primary blue custom scrollbar applied globally across all scrollable containers */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: rgba(59, 130, 246, 0.05);
+  border-radius: 9999px;
+}
+
+::-webkit-scrollbar-thumb {
+  background: linear-gradient(180deg, rgba(59, 130, 246, 0.55) 0%, rgba(37, 99, 235, 0.65) 100%);
+  border-radius: 9999px;
+  border: 1px solid rgba(255, 255, 255, 0.5);
+  transition: all 0.25s ease;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: linear-gradient(180deg, #3B82F6 0%, #1D4ED8 100%);
+  box-shadow: 0 0 10px rgba(59, 130, 246, 0.5);
+}
+
+::-webkit-scrollbar-thumb:active {
+  background: #1E40AF;
+}
+
+/* Firefox standard scrollbar support with primary blue theme */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: rgba(59, 130, 246, 0.6) transparent;
 }
