@@ -3,7 +3,7 @@ import { View, ActivityIndicator, StyleSheet } from 'react-native';
 import * as SplashScreen from 'expo-splash-screen';
 import { useAuth } from '../context/AuthContext';
 import LoginScreen from '../components/LoginScreen';
-import DashboardScreen from '../components/DashboardScreen';
+import MainAdminScreen from '../components/MainAdminScreen';
 
 export default function IndexPage() {
   const { user, isLoading } = useAuth();
@@ -23,7 +23,7 @@ export default function IndexPage() {
   }
 
   if (user) {
-    return <DashboardScreen />;
+    return <MainAdminScreen />;
   }
 
   return <LoginScreen />;
