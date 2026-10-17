@@ -15,17 +15,22 @@ import {
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useLocalSearchParams, useRouter } from 'expo-router';
+import { useAuth } from '../../context/AuthContext';
+import { applicationService } from '../../services/application.service';
 import { jobService } from '../../services/job.service';
 import { JobItem } from '../../types/job.types';
+import { ApplyJobModal } from '../../components/jobs/ApplyJobModal';
 
 export default function JobDetailPage() {
   const router = useRouter();
   const { id } = useLocalSearchParams<{ id: string }>();
+  const { user } = useAuth();
 
   const [job, setJob] = useState<JobItem | null>(null);
   const [loading, setLoading] = useState(true);
   const [isSaved, setIsSaved] = useState(false);
   const [applied, setApplied] = useState(false);
+  const [isApplyModalOpen, setIsApplyModalOpen] = useState(false);
 
   useEffect(() => {
     let isMounted = true;
@@ -49,6 +54,32 @@ export default function JobDetailPage() {
     };
   }, [id]);
 
+  useEffect(() => {
+    let isMounted = true;
+    const checkAppliedStatus = async () => {
+      if (!user || !id) return;
+      try {
+        const myApps = await applicationService.getMyApplications();
+        if (!isMounted) return;
+        const isAlreadyApplied = (myApps.applications || []).some((app) => {
+          const jdId =
+            typeof app.jobDescriptionId === 'object'
+              ? app.jobDescriptionId?._id
+              : app.jobDescriptionId;
+          return jdId === id;
+        });
+        if (isAlreadyApplied) {
+          setApplied(true);
+        }
+      } catch {}
+    };
+
+    checkAppliedStatus();
+    return () => {
+      isMounted = false;
+    };
+  }, [id, user]);
+
   const handleShare = async () => {
     if (!job) return;
     try {
@@ -66,23 +97,22 @@ export default function JobDetailPage() {
       return;
     }
 
-    Alert.alert(
-      'Xác nhận ứng tuyển',
-      `Bạn có chắc chắn muốn nộp hồ sơ ứng tuyển vị trí "${job.title}"?`,
-      [
-        { text: 'Hủy', style: 'cancel' },
-        {
-          text: 'Nộp hồ sơ ngay',
-          onPress: () => {
-            setApplied(true);
-            Alert.alert(
-              'Thành công',
-              'Đơn ứng tuyển của bạn đã được gửi thành công! Nhà tuyển dụng sẽ liên hệ sớm nhất.'
-            );
+    if (!user) {
+      Alert.alert(
+        'Yêu cầu đăng nhập',
+        'Vui lòng đăng nhập tài khoản ứng viên để nộp hồ sơ ứng tuyển vị trí này.',
+        [
+          { text: 'Hủy', style: 'cancel' },
+          {
+            text: 'Đăng nhập',
+            onPress: () => router.push('/' as any),
           },
-        },
-      ]
-    );
+        ]
+      );
+      return;
+    }
+
+    setIsApplyModalOpen(true);
   };
 
   if (loading) {
@@ -333,6 +363,14 @@ export default function JobDetailPage() {
           </Pressable>
         </View>
       </SafeAreaView>
+
+      <ApplyJobModal
+        isOpen={isApplyModalOpen}
+        onClose={() => setIsApplyModalOpen(false)}
+        job={job}
+        onAppliedSuccess={() => setApplied(true)}
+        onRequireLogin={() => router.push('/' as any)}
+      />
     </View>
   );
 }

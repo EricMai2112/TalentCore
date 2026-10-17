@@ -95,6 +95,16 @@ export const applicationService = {
     }
   },
 
+  applyJob: async (payload: {
+    jobDescriptionId: string;
+    candidateId: string;
+  }): Promise<{ message: string; applicationId: string; currentStage?: any }> => {
+    return await request('/applications/apply', {
+      method: 'POST',
+      body: JSON.stringify(payload),
+    });
+  },
+
   // 2. Interviews
   getMyInterviews: async (): Promise<CandidateInterviewItem[]> => {
     try {
