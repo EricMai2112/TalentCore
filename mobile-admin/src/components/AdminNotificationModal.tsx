@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   Modal,
   View,
@@ -6,48 +6,71 @@ import {
   StyleSheet,
   TouchableOpacity,
   ScrollView,
+  ActivityIndicator,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import { adminService, AdminNotification } from '../services/admin.services';
 
 interface AdminNotificationModalProps {
   visible: boolean;
   onClose: () => void;
+  onRefreshBadge?: () => void;
 }
-
-const MOCK_NOTIFICATIONS = [
-  {
-    id: '1',
-    title: 'Ứng viên mới nộp hồ sơ',
-    body: 'Nguyễn Văn A đã ứng tuyển vào vị trí Senior Backend Engineer.',
-    time: '5 phút trước',
-    unread: true,
-    icon: 'document-text',
-    color: '#2563EB',
-  },
-  {
-    id: '2',
-    title: 'Lịch phỏng vấn sắp diễn ra',
-    body: 'Phỏng vấn kỹ thuật vòng 2 với ứng viên Trần Thị B lúc 14:00.',
-    time: '30 phút trước',
-    unread: true,
-    icon: 'calendar',
-    color: '#7C3AED',
-  },
-  {
-    id: '3',
-    title: 'Offer được xác nhận qua OTP',
-    body: 'Ứng viên Lê Hoàng C đã đồng ý lời mời nhận việc thành công.',
-    time: '2 giờ trước',
-    unread: false,
-    icon: 'checkmark-circle',
-    color: '#10B981',
-  },
-];
 
 export const AdminNotificationModal: React.FC<AdminNotificationModalProps> = ({
   visible,
   onClose,
+  onRefreshBadge,
 }) => {
+  const [notifications, setNotifications] = useState<AdminNotification[]>([]);
+  const [loading, setLoading] = useState<boolean>(false);
+
+  useEffect(() => {
+    if (visible) {
+      loadNotifications();
+    }
+  }, [visible]);
+
+  const loadNotifications = async () => {
+    setLoading(true);
+    try {
+      const res = await adminService.getNotifications();
+      setNotifications(res.items);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleMarkAsRead = async (id: string) => {
+    await adminService.markNotificationAsRead(id);
+    setNotifications((prev) =>
+      prev.map((n) => (n._id === id ? { ...n, isRead: true } : n))
+    );
+    if (onRefreshBadge) onRefreshBadge();
+  };
+
+  const handleMarkAll = async () => {
+    await adminService.markAllNotificationsAsRead();
+    setNotifications((prev) => prev.map((n) => ({ ...n, isRead: true })));
+    if (onRefreshBadge) onRefreshBadge();
+  };
+
+  const unreadCount = notifications.filter((n) => !n.isRead).length;
+
+  const formatTime = (timeStr?: string) => {
+    if (!timeStr) return '';
+    try {
+      const d = new Date(timeStr);
+      const hours = String(d.getHours()).padStart(2, '0');
+      const mins = String(d.getMinutes()).padStart(2, '0');
+      const day = String(d.getDate()).padStart(2, '0');
+      const month = String(d.getMonth() + 1).padStart(2, '0');
+      return `${hours}:${mins} • ${day}/${month}`;
+    } catch {
+      return '';
+    }
+  };
+
   return (
     <Modal
       visible={visible}
@@ -65,47 +88,66 @@ export const AdminNotificationModal: React.FC<AdminNotificationModalProps> = ({
           <View style={styles.header}>
             <View style={styles.titleRow}>
               <Text style={styles.title}>Thông báo quản trị</Text>
-              <View style={styles.badge}>
-                <Text style={styles.badgeText}>2 mới</Text>
-              </View>
+              {unreadCount > 0 && (
+                <View style={styles.badge}>
+                  <Text style={styles.badgeText}>{unreadCount} mới</Text>
+                </View>
+              )}
             </View>
-            <TouchableOpacity onPress={onClose} style={styles.closeBtn}>
-              <Ionicons name="close" size={20} color="#64748B" />
-            </TouchableOpacity>
+            <View style={styles.headerActions}>
+              {unreadCount > 0 && (
+                <TouchableOpacity onPress={handleMarkAll} style={styles.markAllBtn}>
+                  <Text style={styles.markAllText}>Đã đọc tất cả</Text>
+                </TouchableOpacity>
+              )}
+              <TouchableOpacity onPress={onClose} style={styles.closeBtn}>
+                <Ionicons name="close" size={20} color="#64748B" />
+              </TouchableOpacity>
+            </View>
           </View>
 
-          <ScrollView style={styles.list} showsVerticalScrollIndicator={false}>
-            {MOCK_NOTIFICATIONS.map((item) => (
-              <View
-                key={item.id}
-                style={[
-                  styles.itemCard,
-                  item.unread && styles.itemCardUnread,
-                ]}
-              >
-                <View
-                  style={[
-                    styles.iconBox,
-                    { backgroundColor: `${item.color}15` },
-                  ]}
-                >
-                  <Ionicons
-                    name={item.icon as any}
-                    size={20}
-                    color={item.color}
-                  />
+          {loading ? (
+            <View style={styles.loadingBox}>
+              <ActivityIndicator size="small" color="#2563EB" />
+            </View>
+          ) : (
+            <ScrollView style={styles.list} showsVerticalScrollIndicator={false}>
+              {notifications.length === 0 ? (
+                <View style={styles.emptyBox}>
+                  <Ionicons name="notifications-off-outline" size={36} color="#CBD5E1" />
+                  <Text style={styles.emptyText}>Chưa có thông báo nào</Text>
                 </View>
-                <View style={styles.itemContent}>
-                  <Text style={styles.itemTitle}>{item.title}</Text>
-                  <Text style={styles.itemBody} numberOfLines={2}>
-                    {item.body}
-                  </Text>
-                  <Text style={styles.itemTime}>{item.time}</Text>
-                </View>
-                {item.unread && <View style={styles.unreadDot} />}
-              </View>
-            ))}
-          </ScrollView>
+              ) : (
+                notifications.map((item) => (
+                  <TouchableOpacity
+                    key={item._id}
+                    style={[
+                      styles.itemCard,
+                      !item.isRead && styles.itemCardUnread,
+                    ]}
+                    onPress={() => !item.isRead && handleMarkAsRead(item._id)}
+                    activeOpacity={0.8}
+                  >
+                    <View style={styles.iconBox}>
+                      <Ionicons
+                        name="notifications"
+                        size={18}
+                        color={!item.isRead ? '#2563EB' : '#94A3B8'}
+                      />
+                    </View>
+                    <View style={styles.itemContent}>
+                      <Text style={styles.itemTitle}>{item.title}</Text>
+                      <Text style={styles.itemBody} numberOfLines={2}>
+                        {item.message}
+                      </Text>
+                      <Text style={styles.itemTime}>{formatTime(item.createdAt)}</Text>
+                    </View>
+                    {!item.isRead && <View style={styles.unreadDot} />}
+                  </TouchableOpacity>
+                ))
+              )}
+            </ScrollView>
+          )}
         </View>
       </View>
     </Modal>
@@ -138,7 +180,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'space-between',
     paddingHorizontal: 18,
-    paddingVertical: 16,
+    paddingVertical: 14,
     borderBottomWidth: 1,
     borderBottomColor: '#F1F5F9',
   },
@@ -148,7 +190,7 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   title: {
-    fontSize: 17,
+    fontSize: 16,
     fontWeight: '800',
     color: '#0F172A',
   },
@@ -165,16 +207,42 @@ const styles = StyleSheet.create({
     fontSize: 11,
     fontWeight: '700',
   },
+  headerActions: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+  },
+  markAllBtn: {
+    paddingVertical: 4,
+  },
+  markAllText: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: '#2563EB',
+  },
   closeBtn: {
-    width: 32,
-    height: 32,
-    borderRadius: 16,
+    width: 30,
+    height: 30,
+    borderRadius: 15,
     backgroundColor: '#F8FAFC',
     alignItems: 'center',
     justifyContent: 'center',
   },
+  loadingBox: {
+    padding: 30,
+    alignItems: 'center',
+  },
   list: {
     padding: 14,
+  },
+  emptyBox: {
+    alignItems: 'center',
+    paddingVertical: 36,
+    gap: 8,
+  },
+  emptyText: {
+    fontSize: 13,
+    color: '#94A3B8',
   },
   itemCard: {
     flexDirection: 'row',
@@ -191,30 +259,31 @@ const styles = StyleSheet.create({
     borderColor: '#E2E8F0',
   },
   iconBox: {
-    width: 38,
-    height: 38,
-    borderRadius: 12,
+    width: 34,
+    height: 34,
+    borderRadius: 10,
+    backgroundColor: '#EFF6FF',
     alignItems: 'center',
     justifyContent: 'center',
-    marginRight: 12,
+    marginRight: 10,
   },
   itemContent: {
     flex: 1,
   },
   itemTitle: {
-    fontSize: 14,
+    fontSize: 13.5,
     fontWeight: '700',
     color: '#0F172A',
     marginBottom: 3,
   },
   itemBody: {
-    fontSize: 12.5,
+    fontSize: 12,
     color: '#64748B',
-    lineHeight: 17,
+    lineHeight: 16,
     marginBottom: 4,
   },
   itemTime: {
-    fontSize: 11,
+    fontSize: 10.5,
     color: '#94A3B8',
   },
   unreadDot: {

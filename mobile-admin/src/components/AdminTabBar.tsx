@@ -10,7 +10,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-export type AdminTabKey = 'recruitment' | 'interviews' | 'dashboard' | 'offers' | 'settings';
+export type AdminTabKey = 'recruitment' | 'interviews' | 'dashboard' | 'offers' | 'notifications';
 
 export interface TabConfig {
   key: AdminTabKey;
@@ -21,53 +21,54 @@ export interface TabConfig {
   isCenter?: boolean;
 }
 
-const TABS: TabConfig[] = [
-  {
-    key: 'recruitment',
-    label: 'Tuyển dụng',
-    icon: 'briefcase-outline',
-    iconActive: 'briefcase',
-  },
-  {
-    key: 'interviews',
-    label: 'Phỏng vấn',
-    icon: 'calendar-outline',
-    iconActive: 'calendar',
-    badge: true,
-  },
-  {
-    key: 'dashboard',
-    label: 'Tổng quan',
-    icon: 'stats-chart',
-    iconActive: 'stats-chart',
-    isCenter: true,
-  },
-  {
-    key: 'offers',
-    label: 'Offers',
-    icon: 'mail-unread-outline',
-    iconActive: 'mail-unread',
-    badge: 2,
-  },
-  {
-    key: 'settings',
-    label: 'Cấu hình',
-    icon: 'settings-outline',
-    iconActive: 'settings',
-  },
-];
-
 interface AdminTabBarProps {
   activeTab: AdminTabKey;
   onTabChange: (tab: AdminTabKey) => void;
+  unreadCount?: number;
 }
 
 export const AdminTabBar: React.FC<AdminTabBarProps> = ({
   activeTab,
   onTabChange,
+  unreadCount = 0,
 }) => {
   const insets = useSafeAreaInsets();
   const [tabBarWidth, setTabBarWidth] = useState<number>(0);
+
+  const TABS: TabConfig[] = [
+    {
+      key: 'recruitment',
+      label: 'Tuyển dụng',
+      icon: 'briefcase-outline',
+      iconActive: 'briefcase',
+    },
+    {
+      key: 'interviews',
+      label: 'Phỏng vấn',
+      icon: 'calendar-outline',
+      iconActive: 'calendar',
+    },
+    {
+      key: 'dashboard',
+      label: 'Tổng quan',
+      icon: 'stats-chart',
+      iconActive: 'stats-chart',
+      isCenter: true,
+    },
+    {
+      key: 'offers',
+      label: 'Offers',
+      icon: 'mail-unread-outline',
+      iconActive: 'mail-unread',
+    },
+    {
+      key: 'notifications',
+      label: 'Thông báo',
+      icon: 'notifications-outline',
+      iconActive: 'notifications',
+      badge: unreadCount > 0 ? unreadCount : undefined,
+    },
+  ];
 
   const activeIndex = TABS.findIndex((t) => t.key === activeTab);
   const isCenterActive = activeTab === 'dashboard';
@@ -331,7 +332,9 @@ export const AdminTabBar: React.FC<AdminTabBarProps> = ({
                   {tab.badge === true && <View style={styles.badgeDot} />}
                   {typeof tab.badge === 'number' && (
                     <View style={styles.badgePill}>
-                      <Text style={styles.badgePillText}>{tab.badge}</Text>
+                      <Text style={styles.badgePillText}>
+                        {tab.badge > 99 ? '99+' : tab.badge}
+                      </Text>
                     </View>
                   )}
                 </View>
