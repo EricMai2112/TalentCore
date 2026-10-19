@@ -41,11 +41,11 @@ const TAB_META: Record<
     icon: 'mail-unread',
     gradient: ['#10B981', '#047857'],
   },
-  settings: {
-    title: 'Cấu hình hệ thống',
-    subtitle: 'Phòng ban, nhân sự, pipeline và kỹ năng',
-    icon: 'settings',
-    gradient: ['#64748B', '#334155'],
+  notifications: {
+    title: 'Trung tâm Thông báo',
+    subtitle: 'Theo dõi duyệt JD, đánh giá ứng viên và lịch hẹn',
+    icon: 'notifications',
+    gradient: ['#2563EB', '#4F46E5'],
   },
 };
 
