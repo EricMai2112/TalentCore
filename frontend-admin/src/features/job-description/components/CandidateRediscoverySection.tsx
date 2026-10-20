@@ -1,6 +1,6 @@
-"use client";
+'use client'
 
-import { useState, useEffect } from "react";
+import { useState, useEffect } from 'react'
 import {
   Sparkles,
   UserCheck,
@@ -17,63 +17,60 @@ import {
   Eye,
   Loader2,
   Award,
-  Star,
-} from "lucide-react";
-import {
-  RecommendedCandidate,
-  InvitationStatus,
-} from "../types/candidate-rediscovery.types";
-import { candidateRediscoveryApi } from "../services/candidate-rediscovery.api";
-import { candidateApi } from "@/src/features/candidates/services/candidate.api";
-import { CandidateApplication } from "@/src/features/candidates/types/candidate.types";
-import { CandidateDetailModal } from "@/src/components/common";
-import { useToast } from "@/src/providers/ToastProvider";
-import InviteCandidateModal from "./InviteCandidateModal";
+  Star
+} from 'lucide-react'
+import { RecommendedCandidate, InvitationStatus } from '../types/candidate-rediscovery.types'
+import { candidateRediscoveryApi } from '../services/candidate-rediscovery.api'
+import { candidateApi } from '@/src/features/candidates/services/candidate.api'
+import { CandidateApplication } from '@/src/features/candidates/types/candidate.types'
+import { CandidateDetailModal } from '@/src/components/common'
+import { useToast } from '@/src/providers/ToastProvider'
+import InviteCandidateModal from './InviteCandidateModal'
 
 interface CandidateRediscoverySectionProps {
-  jobId: string;
-  jobTitle: string;
-  departmentName?: string;
+  jobId: string
+  jobTitle: string
+  departmentName?: string
 }
 
 export default function CandidateRediscoverySection({
   jobId,
   jobTitle,
-  departmentName,
+  departmentName
 }: CandidateRediscoverySectionProps) {
-  const { showToast } = useToast();
-  const [candidates, setCandidates] = useState<RecommendedCandidate[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
-  const [isCollapsed, setIsCollapsed] = useState(false);
-  const [selectedCandidate, setSelectedCandidate] = useState<RecommendedCandidate | null>(null);
-  const [isModalOpen, setIsModalOpen] = useState(false);
+  const { showToast } = useToast()
+  const [candidates, setCandidates] = useState<RecommendedCandidate[]>([])
+  const [isLoading, setIsLoading] = useState(true)
+  const [isCollapsed, setIsCollapsed] = useState(false)
+  const [selectedCandidate, setSelectedCandidate] = useState<RecommendedCandidate | null>(null)
+  const [isModalOpen, setIsModalOpen] = useState(false)
 
   // Candidate Detail View state
-  const [viewingApp, setViewingApp] = useState<CandidateApplication | null>(null);
-  const [loadingAppId, setLoadingAppId] = useState<string | null>(null);
+  const [viewingApp, setViewingApp] = useState<CandidateApplication | null>(null)
+  const [loadingAppId, setLoadingAppId] = useState<string | null>(null)
 
   const fetchRecommendations = async () => {
-    setIsLoading(true);
+    setIsLoading(true)
     try {
-      const data = await candidateRediscoveryApi.getRecommendations(jobId);
-      setCandidates(data);
+      const data = await candidateRediscoveryApi.getRecommendations(jobId)
+      setCandidates(data)
     } catch (err) {
-      console.error("Lỗi tải ứng viên tiềm năng:", err);
+      console.error('Lỗi tải ứng viên tiềm năng:', err)
     } finally {
-      setIsLoading(false);
+      setIsLoading(false)
     }
-  };
+  }
 
   useEffect(() => {
     if (jobId) {
-      fetchRecommendations();
+      fetchRecommendations()
     }
-  }, [jobId]);
+  }, [jobId])
 
   const handleOpenInvite = (candidate: RecommendedCandidate) => {
-    setSelectedCandidate(candidate);
-    setIsModalOpen(true);
-  };
+    setSelectedCandidate(candidate)
+    setIsModalOpen(true)
+  }
 
   const handleInviteSuccess = (candidateId: string, invitation: any) => {
     setCandidates((prev) =>
@@ -86,23 +83,23 @@ export default function CandidateRediscoverySection({
                 status: invitation.status,
                 expiresAt: invitation.expiresAt,
                 createdAt: invitation.createdAt,
-                note: invitation.note,
-              },
+                note: invitation.note
+              }
             }
           : c
       )
-    );
-  };
+    )
+  }
 
   // Xem chi tiết hồ sơ ứng viên
   const handleViewCandidate = async (cand: RecommendedCandidate) => {
-    setLoadingAppId(cand.candidateId);
+    setLoadingAppId(cand.candidateId)
     try {
       if (cand.previousApplicationId) {
-        const app = await candidateApi.getApplicationById(cand.previousApplicationId);
+        const app = await candidateApi.getApplicationById(cand.previousApplicationId)
         if (app) {
-          setViewingApp(app);
-          return;
+          setViewingApp(app)
+          return
         }
       }
 
@@ -120,29 +117,29 @@ export default function CandidateRediscoverySection({
             name: cand.name,
             email: cand.email,
             phone: cand.phone,
-            avatar: cand.avatar,
-          },
+            avatar: cand.avatar
+          }
         },
         jobDescriptionId: {
           _id: cand.previousJobId,
           title: cand.previousJobTitle,
-          departmentId: { name: departmentName || "Phòng ban" },
+          departmentId: { name: departmentName || 'Phòng ban' }
         },
         aiFitScore: cand.previousAiFitScore,
         evidenceStrengthScore: cand.evidenceStrengthScore,
         appliedAt: cand.appliedAt,
-        status: "POTENTIAL_MEDALIST",
+        status: 'POTENTIAL_MEDALIST',
         aiEvaluation: {
           aiFitScore: cand.previousAiFitScore,
           evidenceStrengthScore: cand.evidenceStrengthScore,
           keyStrengths: cand.keyStrengths,
-          summary: `Ứng viên Á quân ${cand.name} từng tham gia ứng tuyển vị trí "${cand.previousJobTitle}". Thành tích: ${cand.stageBadgeTitle || 'Đạt chuẩn Á quân'}${cand.interviewScore ? ` (Điểm PV: ${cand.interviewScore}/5.0 ${cand.interviewRecommendationLabel ? `- ${cand.interviewRecommendationLabel}` : ''})` : ''}, AI Match: ${cand.previousAiFitScore}%.`,
-        },
-      };
-      setViewingApp(fallbackApp);
+          summary: `Ứng viên Tiềm Năng ${cand.name} từng tham gia ứng tuyển vị trí "${cand.previousJobTitle}". Thành tích: ${cand.stageBadgeTitle || 'Đạt chuẩn Tiềm Năng'}${cand.interviewScore ? ` (Điểm PV: ${cand.interviewScore}/5.0 ${cand.interviewRecommendationLabel ? `- ${cand.interviewRecommendationLabel}` : ''})` : ''}, AI Match: ${cand.previousAiFitScore}%.`
+        }
+      }
+      setViewingApp(fallbackApp)
     } catch (err: any) {
-      console.error("Lỗi khi tải chi tiết hồ sơ ứng viên:", err);
-      showToast("Không thể tải chi tiết hồ sơ ứng viên. Đang mở hồ sơ tóm tắt.", "info");
+      console.error('Lỗi khi tải chi tiết hồ sơ ứng viên:', err)
+      showToast('Không thể tải chi tiết hồ sơ ứng viên. Đang mở hồ sơ tóm tắt.', 'info')
 
       // Dùng fallback tóm tắt để người dùng vẫn xem được thông tin
       const fallbackApp: any = {
@@ -158,13 +155,13 @@ export default function CandidateRediscoverySection({
             name: cand.name,
             email: cand.email,
             phone: cand.phone,
-            avatar: cand.avatar,
-          },
+            avatar: cand.avatar
+          }
         },
         jobDescriptionId: {
           _id: cand.previousJobId,
           title: cand.previousJobTitle,
-          departmentId: { name: departmentName || "Phòng ban" },
+          departmentId: { name: departmentName || 'Phòng ban' }
         },
         aiFitScore: cand.previousAiFitScore,
         evidenceStrengthScore: cand.evidenceStrengthScore,
@@ -172,21 +169,21 @@ export default function CandidateRediscoverySection({
         aiEvaluation: {
           aiFitScore: cand.previousAiFitScore,
           keyStrengths: cand.keyStrengths,
-          summary: `Ứng viên Á quân ${cand.name} từng ứng tuyển vị trí ${cand.previousJobTitle}. Thành tích: ${cand.stageBadgeTitle || 'Đạt chuẩn Á quân'}${cand.interviewScore ? ` (Điểm PV: ${cand.interviewScore}/5.0)` : ''}, AI Match: ${cand.previousAiFitScore}%.`,
-        },
-      };
-      setViewingApp(fallbackApp);
+          summary: `Ứng viên Tiềm Năng ${cand.name} từng ứng tuyển vị trí ${cand.previousJobTitle}. Thành tích: ${cand.stageBadgeTitle || 'Đạt chuẩn Tiềm Năng'}${cand.interviewScore ? ` (Điểm PV: ${cand.interviewScore}/5.0)` : ''}, AI Match: ${cand.previousAiFitScore}%.`
+        }
+      }
+      setViewingApp(fallbackApp)
     } finally {
-      setLoadingAppId(null);
+      setLoadingAppId(null)
     }
-  };
+  }
 
   const getDaysRemaining = (expiresAtStr?: string) => {
-    if (!expiresAtStr) return 0;
-    const diffMs = new Date(expiresAtStr).getTime() - Date.now();
-    const days = Math.ceil(diffMs / (1000 * 60 * 60 * 24));
-    return days > 0 ? days : 0;
-  };
+    if (!expiresAtStr) return 0
+    const diffMs = new Date(expiresAtStr).getTime() - Date.now()
+    const days = Math.ceil(diffMs / (1000 * 60 * 60 * 24))
+    return days > 0 ? days : 0
+  }
 
   return (
     <div className="bg-white/70 backdrop-blur-xl border border-white/80 rounded-3xl p-5 sm:p-6 shadow-sm space-y-4">
@@ -199,18 +196,19 @@ export default function CandidateRediscoverySection({
           <div>
             <div className="flex items-center gap-2">
               <h3 className="text-sm sm:text-base font-bold text-slate-900">
-                Gợi ý ứng viên tiềm năng (Candidate Rediscovery)
+                Gợi ý ứng viên tiềm năng
               </h3>
               {!isLoading && candidates.length > 0 && (
                 <span className="px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-blue-50 text-blue-700 border border-blue-200/90 shadow-2xs">
-                  {candidates.length} ứng viên Á quân
+                  {candidates.length} ứng viên
                 </span>
               )}
             </div>
             <p className="text-xs text-slate-500 mt-0.5">
-              Chỉ gợi ý ứng viên Á quân từng vào vòng Phỏng vấn (đánh giá ≥ 3.5★ hoặc Đề xuất nhận việc) hoặc đã nhận Offer cho vị trí{" "}
+              Chỉ gợi ý ứng viên Tiềm Năng từng vào vòng Phỏng vấn (đánh giá ≥ 3.5★ hoặc Đề xuất
+              nhận việc) hoặc đã nhận Offer cho vị trí{' '}
               <strong className="font-semibold text-slate-700">{jobTitle}</strong>
-              {departmentName ? ` (${departmentName})` : ""}
+              {departmentName ? ` (${departmentName})` : ''}
             </p>
           </div>
         </div>
@@ -222,7 +220,7 @@ export default function CandidateRediscoverySection({
             title="Làm mới danh sách gợi ý"
             className="p-2 rounded-xl text-slate-400 hover:text-slate-600 hover:bg-slate-100 transition-all cursor-pointer"
           >
-            <RefreshCw size={15} className={isLoading ? "animate-spin text-blue-600" : ""} />
+            <RefreshCw size={15} className={isLoading ? 'animate-spin text-blue-600' : ''} />
           </button>
           <button
             onClick={() => setIsCollapsed(!isCollapsed)}
@@ -238,7 +236,9 @@ export default function CandidateRediscoverySection({
           {isLoading ? (
             <div className="py-8 flex flex-col items-center justify-center gap-3 text-slate-400">
               <div className="w-6 h-6 border-2 border-blue-600 border-t-transparent rounded-full animate-spin" />
-              <span className="text-xs font-medium">Đang quét kho dữ liệu nhân tài của phòng ban...</span>
+              <span className="text-xs font-medium">
+                Đang quét kho dữ liệu nhân tài của phòng ban...
+              </span>
             </div>
           ) : candidates.length === 0 ? (
             <div className="py-6 px-4 text-center rounded-2xl bg-slate-50/70 border border-dashed border-slate-200">
@@ -247,23 +247,24 @@ export default function CandidateRediscoverySection({
                 Chưa có dữ liệu ứng viên tiềm năng từ đợt tuyển trước
               </p>
               <p className="text-[11px] text-slate-400 mt-0.5 max-w-md mx-auto leading-relaxed">
-                Hệ thống chỉ gợi ý ứng viên từng nộp vào vị trí{" "}
+                Hệ thống chỉ gợi ý ứng viên từng nộp vào vị trí{' '}
                 <strong className="text-slate-600">{jobTitle}</strong>
-                {departmentName ? ` thuộc ${departmentName}` : ""}. Hiện tại chưa có đợt tuyển nào khác của vị trí này hoặc chưa có ứng viên đạt tiêu chí.
+                {departmentName ? ` thuộc ${departmentName}` : ''}. Hiện tại chưa có đợt tuyển nào
+                khác của vị trí này hoặc chưa có ứng viên đạt tiêu chí.
               </p>
             </div>
           ) : (
             /* 4 columns layout on xl screen, responsive grid */
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3.5 pt-1">
               {candidates.map((cand) => {
-                const inv = cand.invitation;
-                const isPending = inv?.status === InvitationStatus.PENDING;
-                const isAccepted = inv?.status === InvitationStatus.ACCEPTED;
-                const isDeclined = inv?.status === InvitationStatus.DECLINED;
-                const isExpired = inv?.status === InvitationStatus.EXPIRED;
-                const daysRemaining = isPending ? getDaysRemaining(inv?.expiresAt) : 0;
-                const isViewingThis = loadingAppId === cand.candidateId;
-                const isOfferTier = cand.tier === "OFFER";
+                const inv = cand.invitation
+                const isPending = inv?.status === InvitationStatus.PENDING
+                const isAccepted = inv?.status === InvitationStatus.ACCEPTED
+                const isDeclined = inv?.status === InvitationStatus.DECLINED
+                const isExpired = inv?.status === InvitationStatus.EXPIRED
+                const daysRemaining = isPending ? getDaysRemaining(inv?.expiresAt) : 0
+                const isViewingThis = loadingAppId === cand.candidateId
+                const isOfferTier = cand.tier === 'OFFER'
 
                 return (
                   <div
@@ -276,19 +277,23 @@ export default function CandidateRediscoverySection({
                         {isOfferTier ? (
                           <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-lg text-[11px] font-bold bg-emerald-50 text-emerald-700 border border-emerald-200/80 shadow-2xs">
                             <Award size={12} className="text-emerald-600" />
-                            {cand.stageBadgeTitle || "Từng nhận Offer"}
+                            {cand.stageBadgeTitle || 'Từng nhận Offer'}
                           </span>
                         ) : (
                           <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-lg text-[11px] font-bold bg-indigo-50 text-indigo-700 border border-indigo-200/80 shadow-2xs">
                             <Award size={12} className="text-indigo-600" />
-                            {cand.stageBadgeTitle || "Phỏng vấn tốt"}
+                            {cand.stageBadgeTitle || 'Phỏng vấn tốt'}
                           </span>
                         )}
 
                         {cand.interviewScore && (
                           <span
                             className="text-[11px] font-bold text-slate-700 inline-flex items-center gap-1 bg-amber-50/80 px-1.5 py-0.5 rounded-md border border-amber-200/60"
-                            title={cand.interviewRecommendationLabel ? `Đề xuất: ${cand.interviewRecommendationLabel}` : undefined}
+                            title={
+                              cand.interviewRecommendationLabel
+                                ? `Đề xuất: ${cand.interviewRecommendationLabel}`
+                                : undefined
+                            }
                           >
                             <Star size={11} className="text-amber-500 fill-amber-400" />
                             {cand.interviewScore}/5.0
@@ -334,13 +339,16 @@ export default function CandidateRediscoverySection({
                         <div className="flex items-center gap-1.5 min-w-0">
                           <Briefcase size={12} className="text-slate-400 shrink-0" />
                           <span className="truncate">
-                            Đợt: <strong className="font-semibold text-slate-700">{cand.previousJobTitle}</strong>
+                            Đợt:{' '}
+                            <strong className="font-semibold text-slate-700">
+                              {cand.previousJobTitle}
+                            </strong>
                           </span>
                         </div>
                         {cand.appliedAt && (
                           <div className="flex items-center gap-1.5">
                             <Calendar size={12} className="text-slate-400 shrink-0" />
-                            <span>{new Date(cand.appliedAt).toLocaleDateString("vi-VN")}</span>
+                            <span>{new Date(cand.appliedAt).toLocaleDateString('vi-VN')}</span>
                           </div>
                         )}
                       </div>
@@ -404,7 +412,7 @@ export default function CandidateRediscoverySection({
                           onClick={() => handleViewCandidate(cand)}
                           disabled={isViewingThis}
                           className={`py-1.5 px-2.5 rounded-xl border border-slate-200/90 hover:border-slate-300 bg-white hover:bg-slate-50 text-slate-700 text-xs font-semibold shadow-2xs flex items-center justify-center gap-1 transition-all cursor-pointer disabled:opacity-50 ${
-                            !inv || isExpired ? "flex-1" : "w-full"
+                            !inv || isExpired ? 'flex-1' : 'w-full'
                           }`}
                           title="Xem thông tin chi tiết ứng viên"
                         >
@@ -425,13 +433,15 @@ export default function CandidateRediscoverySection({
                             title="Gửi thư mời tham gia đợt tuyển dụng này"
                           >
                             <Send size={11} />
-                            <span className="truncate">{isExpired ? "Mời lại" : "Mời ứng tuyển"}</span>
+                            <span className="truncate">
+                              {isExpired ? 'Mời lại' : 'Mời ứng tuyển'}
+                            </span>
                           </button>
                         )}
                       </div>
                     </div>
                   </div>
-                );
+                )
               })}
             </div>
           )}
@@ -457,5 +467,5 @@ export default function CandidateRediscoverySection({
         />
       )}
     </div>
-  );
+  )
 }

@@ -11,7 +11,21 @@ export interface PendingActions {
   total: number;
 }
 
+export interface HeadcountPlan {
+  target: number;
+  hired: number;
+  percentage: number;
+  remaining: number;
+}
+
+export interface TimeToFill {
+  avgDays: number | null;
+  targetDays: number;
+  isEmpty: boolean;
+}
+
 export interface OverviewKpis {
+  headcountPlan: HeadcountPlan;
   candidates: {
     total: number;
     growth: number;
@@ -40,6 +54,7 @@ export interface OverviewKpis {
   };
   employees: { total: number };
   timeToHire: TimeToHire;
+  timeToFill: TimeToFill;
   pendingActions: PendingActions;
 }
 
@@ -47,8 +62,12 @@ export interface OverviewKpis {
 export interface FunnelStage {
   id: string;
   name: string;
+  rawName?: string;
+  order?: number;
   count: number;
+  currentCount?: number;
   percentage: number;
+  stepConversionRate?: number;
   color: string;
 }
 
@@ -188,13 +207,154 @@ export interface HiringVelocityMetrics {
   };
 }
 
+// ─── ACTIONABLE ALERTS ───────────────────────────────────────────────────────
+export interface ExpiringOfferAlert {
+  id: string;
+  candidateName: string;
+  jobTitle: string;
+  departmentName: string;
+  expiresAt: string;
+  hoursLeft: number;
+  isOverdue: boolean;
+  salary: number;
+}
+
+export interface StaleApplicationAlert {
+  id: string;
+  candidateName: string;
+  jobTitle: string;
+  updatedAt: string;
+  daysStale: number;
+}
+
+export interface PendingJobAlert {
+  id: string;
+  title: string;
+  departmentName: string;
+  headcount: number;
+  priority: string;
+  creatorName: string;
+  createdAt: string;
+}
+
+export interface TodayInterviewAlert {
+  id: string;
+  candidateName: string;
+  jobTitle: string;
+  startTime: string;
+  endTime: string;
+  interviewerName: string;
+  locationType: string;
+}
+
+export interface ActionableAlerts {
+  summary: {
+    totalAlerts: number;
+    expiringOffers: number;
+    staleApplications: number;
+    pendingJobs: number;
+    todayInterviews: number;
+  };
+  expiringOffers: ExpiringOfferAlert[];
+  staleApplications: StaleApplicationAlert[];
+  pendingJobs: PendingJobAlert[];
+  todayInterviews: TodayInterviewAlert[];
+}
+
+// ─── COMPENSATION & REQUISITIONS ─────────────────────────────────────────────
+export interface CompensationStats {
+  totalCommittedPayroll: number;
+  avgHiredSalary: number;
+  budgetComplianceRate: number;
+  hiredCount: number;
+}
+
+export interface RequisitionPriorityStats {
+  high: number;
+  medium: number;
+  low: number;
+  totalActive: number;
+  totalActiveHeadcount?: number;
+  highPriorityHeadcount: number;
+  mediumPriorityHeadcount?: number;
+  lowPriorityHeadcount?: number;
+  pendingCount?: number;
+  pendingHeadcount?: number;
+}
+
+export interface RequisitionStatusCounts {
+  OPEN: number;
+  PENDING: number;
+  COMPLETED: number;
+  REJECTED: number;
+}
+
+export interface CompensationAndRequisitions {
+  compensation: CompensationStats;
+  requisitionPriority: RequisitionPriorityStats;
+  requisitionStatus: RequisitionStatusCounts;
+}
+
+// ─── EXPORT REPORT DATA ──────────────────────────────────────────────────────
+export interface ExportReportData {
+  exportedAt: string;
+  summary: {
+    targetHeadcount: number;
+    hiredHeadcount: number;
+    fulfillmentRate: number;
+    timeToHireDays: number;
+    timeToFillDays: number;
+    offerAcceptanceRate: number;
+    totalCommittedPayroll: number;
+    avgHiredSalary: number;
+    budgetComplianceRate: number;
+    activeJobs: number;
+    totalCandidates: number;
+  };
+  departments: DepartmentFulfillment[];
+  requisitions: {
+    id: string;
+    title: string;
+    departmentName: string;
+    departmentCode: string;
+    headcount: number;
+    priority: string;
+    status: string;
+    minimumSalary: number;
+    maximumSalary: number;
+    location: string;
+    employmentType: string;
+    createdAt: string;
+    deadline: string | null;
+    creatorName: string;
+  }[];
+  offers: {
+    id: string;
+    candidateName: string;
+    candidateEmail: string;
+    positionTitle: string;
+    departmentName: string;
+    contractType: string;
+    salary: number;
+    probationSalary: number;
+    currency: string;
+    status: string;
+    sentAt: string;
+    expiresAt: string;
+    respondedAt: string | null;
+    declineReason: string;
+  }[];
+}
+
 // ─── COMBINED ────────────────────────────────────────────────────────────────
 export interface DashboardData {
   kpis: OverviewKpis;
-  funnel: RecruitmentFunnel;
+  funnel?: RecruitmentFunnel;
   departmentFulfillment: DepartmentFulfillment[];
   offers: OfferBreakdown;
   trends: ApplicationTrends;
   velocity: HiringVelocityMetrics;
   activities: RecentActivities;
+  alerts: ActionableAlerts;
+  compensation: CompensationAndRequisitions;
 }

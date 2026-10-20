@@ -24,24 +24,42 @@ const MONTH_OPTIONS = [
 
 const SERIES_CONFIG = [
   { key: 'applications', label: 'Ứng tuyển', color: '#3B82F6', gradientId: 'colorApp' },
-  { key: 'interviews', label: 'Phỏng vấn', color: '#8B5CF6', gradientId: 'colorInt' },
-  { key: 'hired', label: 'Trúng tuyển', color: '#10B981', gradientId: 'colorHired' },
+  { key: 'hired', label: 'Đã tuyển', color: '#10B981', gradientId: 'colorHired' },
 ];
 
 function CustomTooltip({ active, payload, label }: any) {
   if (!active || !payload?.length) return null;
+  const appEntry = payload.find((p: any) => p.dataKey === 'applications');
+  const hiredEntry = payload.find((p: any) => p.dataKey === 'hired');
+  const appVal = appEntry?.value ?? 0;
+  const hiredVal = hiredEntry?.value ?? 0;
+  const rate = appVal > 0 ? Math.round((hiredVal / appVal) * 100) : 0;
+
   return (
-    <div className="bg-white/95 backdrop-blur-md border border-white/80 rounded-xl shadow-lg px-3 py-2 text-xs">
+    <div className="bg-white border border-slate-200/90 rounded-xl shadow-xl px-3 py-2 text-xs min-w-[140px] z-50">
       <p className="font-bold text-slate-800 mb-1.5">{label}</p>
-      {payload.map((entry: any) => (
-        <div key={entry.dataKey} className="flex items-center justify-between gap-4 text-[11px] mb-0.5">
+      <div className="space-y-1">
+        <div className="flex items-center justify-between gap-4 text-[11px]">
           <div className="flex items-center gap-1.5">
-            <span className="w-2 h-2 rounded-full shrink-0" style={{ background: entry.color }} />
-            <span className="text-slate-600">{entry.name}:</span>
+            <span className="w-2 h-2 rounded-full shrink-0 bg-blue-500" />
+            <span className="text-slate-600">Ứng tuyển:</span>
           </div>
-          <span className="font-bold text-slate-900">{entry.value}</span>
+          <span className="font-bold text-slate-900">{appVal}</span>
         </div>
-      ))}
+        <div className="flex items-center justify-between gap-4 text-[11px]">
+          <div className="flex items-center gap-1.5">
+            <span className="w-2 h-2 rounded-full shrink-0 bg-emerald-500" />
+            <span className="text-slate-600">Đã tuyển:</span>
+          </div>
+          <span className="font-bold text-slate-900">{hiredVal}</span>
+        </div>
+        {appVal > 0 && (
+          <div className="flex items-center justify-between gap-4 text-[10px] pt-1 mt-1 border-t border-slate-100 text-slate-400">
+            <span>Tỉ lệ tuyển:</span>
+            <strong className="text-emerald-600 font-bold">{rate}%</strong>
+          </div>
+        )}
+      </div>
     </div>
   );
 }
@@ -49,9 +67,14 @@ function CustomTooltip({ active, payload, label }: any) {
 interface Props {
   initialTrends: ApplicationTrends;
   departmentId?: string;
+  jobDescriptionId?: string;
 }
 
-export default function TimelineTrendChart({ initialTrends, departmentId }: Props) {
+export default function TimelineTrendChart({
+  initialTrends,
+  departmentId,
+  jobDescriptionId,
+}: Props) {
   const [trends, setTrends] = useState<ApplicationTrends>(initialTrends);
   const [selectedMonths, setSelectedMonths] = useState<number>(6);
   const [isLoading, setIsLoading] = useState<boolean>(false);
@@ -61,16 +84,15 @@ export default function TimelineTrendChart({ initialTrends, departmentId }: Prop
     if (selectedMonths === 6) {
       setTrends(initialTrends);
     } else {
-      // If user was on 3T or 12T and departmentId changes, fetch trends for the active tab and new department
       let isMounted = true;
       setIsLoading(true);
       analyticsApi
-        .getTrends(selectedMonths, departmentId)
+        .getTrends(selectedMonths, departmentId, jobDescriptionId)
         .then((res) => {
           if (isMounted) setTrends(res);
         })
         .catch((err) => {
-          console.error('Failed to fetch timeline trends on dept change:', err);
+          console.error('Failed to fetch timeline trends on filter change:', err);
         })
         .finally(() => {
           if (isMounted) setIsLoading(false);
@@ -79,14 +101,14 @@ export default function TimelineTrendChart({ initialTrends, departmentId }: Prop
         isMounted = false;
       };
     }
-  }, [initialTrends, departmentId]);
+  }, [initialTrends, departmentId, jobDescriptionId]);
 
   const handleSelectMonths = async (m: number) => {
     if (m === selectedMonths || isLoading) return;
     setSelectedMonths(m);
     setIsLoading(true);
     try {
-      const res = await analyticsApi.getTrends(m, departmentId);
+      const res = await analyticsApi.getTrends(m, departmentId, jobDescriptionId);
       setTrends(res);
     } catch (err) {
       console.error('Failed to fetch timeline trends:', err);
@@ -107,7 +129,7 @@ export default function TimelineTrendChart({ initialTrends, departmentId }: Prop
           </div>
           <div>
             <h3 className="text-xs font-bold text-slate-800 leading-tight">Xu hướng Tuyển dụng</h3>
-            <p className="text-[10px] text-slate-400">Ứng tuyển, Phỏng vấn & Trúng tuyển</p>
+            <p className="text-[10px] text-slate-400">So sánh số lượng Ứng tuyển & Đã tuyển</p>
           </div>
         </div>
 
@@ -131,7 +153,7 @@ export default function TimelineTrendChart({ initialTrends, departmentId }: Prop
         </div>
       </div>
 
-      {/* Chart Canvas with localized smooth loading overlay */}
+      {/* Area Chart Canvas with localized smooth loading overlay */}
       <div className="flex-1 w-full min-h-0 relative">
         {isLoading && (
           <div className="absolute inset-0 z-10 flex items-center justify-center bg-white/40 backdrop-blur-xs rounded-xl">
@@ -143,15 +165,11 @@ export default function TimelineTrendChart({ initialTrends, departmentId }: Prop
           <EmptyState message="Chưa có dữ liệu xu hướng" icon={<TrendingUp size={28} />} />
         ) : (
           <ResponsiveContainer width="100%" height="100%">
-            <AreaChart data={trends.data} margin={{ top: 5, right: 10, left: -22, bottom: -6 }}>
+            <AreaChart data={trends.data} margin={{ top: 8, right: 10, left: -22, bottom: -6 }}>
               <defs>
                 <linearGradient id="colorApp" x1="0" y1="0" x2="0" y2="1">
                   <stop offset="5%" stopColor="#3B82F6" stopOpacity={0.25} />
                   <stop offset="95%" stopColor="#3B82F6" stopOpacity={0.0} />
-                </linearGradient>
-                <linearGradient id="colorInt" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="5%" stopColor="#8B5CF6" stopOpacity={0.25} />
-                  <stop offset="95%" stopColor="#8B5CF6" stopOpacity={0.0} />
                 </linearGradient>
                 <linearGradient id="colorHired" x1="0" y1="0" x2="0" y2="1">
                   <stop offset="5%" stopColor="#10B981" stopOpacity={0.25} />
@@ -166,7 +184,7 @@ export default function TimelineTrendChart({ initialTrends, departmentId }: Prop
                 tick={{
                   fontSize: selectedMonths === 12 ? 8.5 : 9.5,
                   fill: '#64748B',
-                  fontWeight: 600
+                  fontWeight: 600,
                 }}
                 axisLine={false}
                 tickLine={false}
@@ -177,7 +195,10 @@ export default function TimelineTrendChart({ initialTrends, departmentId }: Prop
                 tickLine={false}
                 allowDecimals={false}
               />
-              <Tooltip content={<CustomTooltip />} />
+              <Tooltip
+                content={<CustomTooltip />}
+                wrapperStyle={{ zIndex: 100 }}
+              />
               <Legend
                 iconType="circle"
                 iconSize={6}

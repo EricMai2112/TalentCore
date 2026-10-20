@@ -1,181 +1,140 @@
-'use client'
+'use client';
 
-import React from 'react'
-import { Users, Briefcase, Calendar, CheckCircle2, Clock, Building2 } from 'lucide-react'
-import { OverviewKpis } from '../types/dashboard.types'
-import CustomSelect, { CustomSelectOption } from '@/src/components/common/CustomSelect'
-import { useDepartmentsQuery } from '@/src/features/departments/hooks/useDepartmentsQuery'
-import { Department } from '@/src/features/departments/types/department.types'
-import { useAuth } from '@/src/providers/AuthProvider'
-import { UserRole } from '@/src/features/users/types/user.types'
+import React from 'react';
+import { Target, Briefcase, Zap, CheckCircle2 } from 'lucide-react';
+import { OverviewKpis } from '../types/dashboard.types';
 
 interface KpiCardProps {
-  icon: React.ReactNode
-  iconBg: string
-  blobGradient: string
-  label: string
-  value: string | number
-  unit: string
-  tooltip?: string
+  icon: React.ReactNode;
+  iconBg: string;
+  blobGradient: string;
+  label: string;
+  value: string | number;
+  unit: string;
+  badgeText: string;
+  badgeColor: string;
+  tooltip?: string;
 }
 
-function KpiCard({ icon, iconBg, blobGradient, label, value, unit, tooltip }: KpiCardProps) {
+function KpiCard({
+  icon,
+  iconBg,
+  blobGradient,
+  label,
+  value,
+  unit,
+  badgeText,
+  badgeColor,
+  tooltip,
+}: KpiCardProps) {
   return (
     <div
       title={tooltip}
-      className="relative bg-white/60 backdrop-blur-md border rounded-2xl p-2.5 px-3 
-                 shadow-sm shadow-blue-500/5 hover:bg-white/80 hover:border-white/95 hover:shadow-md 
-                 transition-all duration-200 overflow-hidden flex items-center gap-2.5 h-[68px] group border-white/70"
+      className="relative bg-white/30 backdrop-blur-md border border-white/60 rounded-2xl p-2.5 px-3.5 
+                 shadow-md shadow-blue-500/5 hover:bg-white/40 transition-all duration-200 
+                 overflow-hidden flex items-center gap-3 h-[68px] group min-w-0"
     >
-      {/* Ambient Gradient Glow */}
+      {/* Ambient Accent background */}
       <div
-        className={`absolute -bottom-6 -right-6 w-16 h-16 rounded-full 
-                    bg-gradient-to-br ${blobGradient} blur-xl pointer-events-none 
-                    opacity-40 group-hover:opacity-75 transition-opacity`}
+        className={`absolute -bottom-6 -right-6 w-20 h-20 rounded-full bg-gradient-to-br ${blobGradient} blur-lg pointer-events-none`}
       />
 
-      {/* Icon Badge */}
+      {/* Left: Icon Badge */}
       <div
         className={`w-8.5 h-8.5 rounded-xl border flex items-center justify-center shrink-0 shadow-2xs ${iconBg}`}
       >
         {icon}
       </div>
 
-      {/* Main Content Area */}
-      <div className="relative z-10 flex flex-col justify-center flex-1 min-w-0 pt-0.5">
-        {/* Label */}
-        <span className="text-[9.5px] inline-block font-bold tracking-wider text-slate-400 uppercase truncate leading-tight mb-0.5 pt-0.5">
+      {/* Right: Label + Value & Badge */}
+      <div className="relative z-10 flex-1 min-w-0">
+        <span className="text-[10px] font-bold tracking-wider text-slate-500 uppercase block truncate leading-tight">
           {label}
         </span>
-
-        {/* Value + Unit */}
-        <div className="flex items-baseline gap-1 leading-none">
-          <span className="text-lg font-black leading-none tracking-tight truncate lg:text-xl text-slate-800">
-            {value}
+        <div className="flex items-baseline justify-between gap-1.5 mt-0.5">
+          <div className="flex items-baseline gap-1 truncate">
+            <span className="text-lg sm:text-xl font-black text-slate-900 tracking-tight leading-none">
+              {value}
+            </span>
+            {unit && (
+              <span className="text-[10px] font-bold text-slate-400 leading-none truncate">
+                {unit}
+              </span>
+            )}
+          </div>
+          <span
+            className={`text-[10px] font-bold px-1.5 py-0.5 rounded-md border shrink-0 leading-none ${badgeColor}`}
+          >
+            {badgeText}
           </span>
-          <span className="text-[10px] font-bold text-slate-500 leading-none truncate">{unit}</span>
         </div>
       </div>
     </div>
-  )
+  );
 }
 
 interface Props {
-  kpis: OverviewKpis
-  selectedDepartment?: string
-  onDepartmentChange?: (deptId: string) => void
+  kpis: OverviewKpis;
 }
 
-export default function KpiStatsRow({
-  kpis,
-  selectedDepartment = '',
-  onDepartmentChange
-}: Props) {
-  const { candidates, jobs, interviews, offers, timeToHire } = kpis
-  const { user } = useAuth()
-  const { data: departments = [] } = useDepartmentsQuery()
-
-  const isDeptManager = user?.role === UserRole.DEPARTMENT_MANAGER
-  const userDeptId = typeof user?.departmentId === 'object'
-    ? (user?.departmentId as any)?._id
-    : user?.departmentId
-
-  const availableDepartments = isDeptManager && userDeptId
-    ? departments.filter((d: Department) => d._id === userDeptId)
-    : departments
-
-  const departmentOptions: CustomSelectOption[] = isDeptManager && userDeptId
-    ? availableDepartments.map((d: Department) => ({
-        value: d._id,
-        label: d.name
-      }))
-    : [
-        { value: '', label: 'Tất cả phòng ban' },
-        ...availableDepartments.map((d: Department) => ({
-          value: d._id,
-          label: d.name
-        }))
-      ]
+export default function KpiStatsRow({ kpis }: Props) {
+  const { headcountPlan, jobs, timeToHire, offers } = kpis;
 
   const cards: KpiCardProps[] = [
     {
-      icon: <Users size={15} className="stroke-[2.2]" />,
-      iconBg: 'bg-blue-100/90 text-blue-600 border-blue-200/70',
-      blobGradient: 'from-blue-500/50 via-sky-400/30 to-transparent',
-      label: 'Tổng ứng viên',
-      value: candidates.total.toLocaleString(),
-      unit: 'hồ sơ',
-      tooltip: `${candidates.newLast30Days} hồ sơ mới trong 30 ngày qua`
+      icon: <Target size={16} className="stroke-[2.2]" />,
+      iconBg: 'bg-blue-100/90 text-[#3B82F6] border-blue-200/60',
+      blobGradient: 'from-blue-500/15 via-sky-400/10 to-transparent',
+      label: 'CHỈ TIÊU TUYỂN DỤNG',
+      value: `${headcountPlan?.hired || 0} / ${headcountPlan?.target || 0}`,
+      unit: 'người',
+      badgeText: `${headcountPlan?.percentage || 0}% đạt`,
+      badgeColor: 'bg-blue-50 text-[#3B82F6] border-blue-100',
+      tooltip: `Đã tuyển được ${headcountPlan?.hired || 0} trên tổng chỉ tiêu ${headcountPlan?.target || 0} nhân sự`,
     },
     {
-      icon: <Briefcase size={15} className="stroke-[2.2]" />,
-      iconBg: 'bg-violet-100/90 text-violet-600 border-violet-200/70',
-      blobGradient: 'from-violet-500/50 via-purple-400/30 to-transparent',
-      label: 'JD đang mở',
-      value: jobs.active,
+      icon: <Briefcase size={16} className="stroke-[2.2]" />,
+      iconBg: 'bg-indigo-100/90 text-indigo-600 border-indigo-200/60',
+      blobGradient: 'from-indigo-500/15 via-purple-400/10 to-transparent',
+      label: 'VỊ TRÍ ĐANG MỞ',
+      value: jobs?.active || 0,
       unit: 'vị trí',
-      tooltip: `${jobs.total} tổng tin tuyển dụng trong hệ thống`
+      badgeText: `+${jobs?.newCount ?? 0} trong 30 ngày`,
+      badgeColor: 'bg-indigo-50 text-indigo-700 border-indigo-100',
+      tooltip: `Có ${jobs?.active || 0} vị trí đang mở nhận hồ sơ (+${jobs?.newCount ?? 0} vị trí tạo mới trong 30 ngày qua trên tổng số ${jobs?.total || 0} tin tuyển dụng)`,
     },
     {
-      icon: <Calendar size={15} className="stroke-[2.2]" />,
-      iconBg: 'bg-indigo-100/90 text-indigo-600 border-indigo-200/70',
-      blobGradient: 'from-indigo-500/50 via-blue-400/30 to-transparent',
-      label: 'PV hôm nay',
-      value: interviews.today,
-      unit: 'cuộc hẹn',
-      tooltip: `${interviews.pendingResults} phỏng vấn đã hoàn tất đang chờ nhập kết quả`
+      icon: <Zap size={16} className="stroke-[2.2]" />,
+      iconBg: 'bg-amber-100/90 text-amber-600 border-amber-200/60',
+      blobGradient: 'from-amber-500/15 via-orange-400/10 to-transparent',
+      label: 'TỐC ĐỘ TUYỂN DỤNG',
+      value: timeToHire?.isEmpty || timeToHire?.avgDays === null ? '—' : timeToHire.avgDays,
+      unit: timeToHire?.isEmpty ? '' : 'ngày',
+      badgeText: 'Mục tiêu ≤ 25 ngày',
+      badgeColor:
+        timeToHire?.avgDays && timeToHire.avgDays > 25
+          ? 'bg-rose-50 text-rose-700 border-rose-100'
+          : 'bg-amber-50 text-amber-700 border-amber-100',
+      tooltip: 'Thời gian trung bình từ lúc ứng viên nộp đơn đến khi chấp nhận Offer (Mục tiêu chuẩn ≤ 25 ngày)',
     },
     {
-      icon: <CheckCircle2 size={15} className="stroke-[2.2]" />,
-      iconBg: 'bg-emerald-100/90 text-emerald-600 border-emerald-200/70',
-      blobGradient: 'from-emerald-500/50 via-teal-400/30 to-transparent',
-      label: 'Tỷ lệ nhận offer',
-      value: `${offers.acceptanceRate}%`,
+      icon: <CheckCircle2 size={16} className="stroke-[2.2]" />,
+      iconBg: 'bg-emerald-100/90 text-emerald-600 border-emerald-200/60',
+      blobGradient: 'from-emerald-500/15 via-teal-400/10 to-transparent',
+      label: 'TỶ LỆ NHẬN VIỆC',
+      value: `${offers?.acceptanceRate || 0}%`,
       unit: 'chấp thuận',
-      tooltip: `${offers.sent} offer đang chờ phản hồi (${offers.overdueCount} quá hạn phản hồi)`
+      badgeText: 'Mục tiêu ≥ 80%',
+      badgeColor: 'bg-emerald-50 text-emerald-700 border-emerald-100',
+      tooltip: `${offers?.accepted || 0} offer đồng ý trên tổng số offer đã có phản hồi (Mục tiêu chuẩn ≥ 80%)`,
     },
-    {
-      icon: <Clock size={15} className="stroke-[2.2]" />,
-      iconBg: 'bg-teal-100/90 text-teal-600 border-teal-200/70',
-      blobGradient: 'from-teal-500/50 via-cyan-400/30 to-transparent',
-      label: 'Thời gian tuyển TB',
-      value: timeToHire.isEmpty || timeToHire.avgDays === null ? '—' : timeToHire.avgDays,
-      unit: timeToHire.isEmpty ? '' : 'ngày',
-      tooltip: timeToHire.isEmpty
-        ? 'Chưa có đủ dữ liệu tính thời gian tuyển dụng'
-        : 'Thời gian trung bình từ lúc nộp hồ sơ đến khi chấp nhận offer'
-    }
-  ]
+  ];
 
   return (
-    <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-[repeat(5,minmax(0,1fr))_minmax(0,0.85fr)] gap-2.5 shrink-0 items-stretch">
+    <div className="grid grid-cols-2 lg:grid-cols-4 gap-2.5 shrink-0">
       {cards.map((card, i) => (
         <KpiCard key={i} {...card} />
       ))}
-
-      {/* 6th Column: Compact Department Filter */}
-      <div
-        className="relative bg-white/60 backdrop-blur-md border border-white/70 rounded-2xl p-2.5 px-3 
-                   shadow-sm shadow-blue-500/5 hover:bg-white/80 hover:border-white/95 transition-all duration-200 
-                   flex flex-col justify-center h-[68px] col-span-2 sm:col-span-1 lg:col-span-1 group"
-      >
-        <div className="flex items-center gap-1.5 mb-1 px-0.5 pt-0.5">
-          <Building2 size={11} className="text-blue-600 shrink-0 stroke-[2.2]" />
-          <span className="text-[9px] font-bold tracking-wider text-slate-400 uppercase truncate leading-tight">
-            Phòng ban
-          </span>
-        </div>
-        <CustomSelect
-          size="sm"
-          align="right"
-          value={selectedDepartment}
-          onChange={(val) => onDepartmentChange?.(val)}
-          options={departmentOptions}
-          placeholder={isDeptManager && userDeptId ? (availableDepartments[0]?.name || 'Phòng ban của tôi') : 'Tất cả phòng ban'}
-          disabled={isDeptManager}
-          className="w-full"
-        />
-      </div>
     </div>
-  )
+  );
 }
