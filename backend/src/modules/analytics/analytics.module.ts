@@ -10,6 +10,10 @@ import { Interview, InterviewSchema } from '../interviews/schemas/interview.sche
 import { Offer, OfferSchema } from '../offers/schemas/offer.schema';
 import { Department, DepartmentSchema } from '../departments/schemas/department.schema';
 import { AiEvaluation, AiEvaluationSchema } from '../applications/schemas/ai-evaluation.schema';
+import {
+  PipelineTemplate,
+  PipelineTemplateSchema,
+} from '../pipeline-template/schemas/pipeline-template.schema';
 
 @Module({
   imports: [
@@ -22,6 +26,7 @@ import { AiEvaluation, AiEvaluationSchema } from '../applications/schemas/ai-eva
       { name: Offer.name, schema: OfferSchema },
       { name: Department.name, schema: DepartmentSchema },
       { name: AiEvaluation.name, schema: AiEvaluationSchema },
+      { name: PipelineTemplate.name, schema: PipelineTemplateSchema },
     ]),
   ],
   controllers: [AnalyticsController],

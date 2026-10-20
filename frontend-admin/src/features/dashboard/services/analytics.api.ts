@@ -7,7 +7,8 @@ import {
   OfferBreakdown,
   ApplicationTrends,
   RecentActivities,
-  HiringVelocityMetrics
+  HiringVelocityMetrics,
+  ExportReportData,
 } from '../types/dashboard.types';
 
 interface ApiResponse<T> {
@@ -20,14 +21,18 @@ export const analyticsApi = {
   getAllDashboardData: async (
     months = 6,
     limit = 5,
-    departmentId?: string
+    departmentId?: string,
+    jobDescriptionId?: string
   ): Promise<DashboardData> => {
     const params = new URLSearchParams({
       months: String(months),
-      limit: String(limit)
+      limit: String(limit),
     });
-    if (departmentId && departmentId.trim()) {
+    if (departmentId && departmentId.trim() && departmentId !== 'ALL') {
       params.append('departmentId', departmentId.trim());
+    }
+    if (jobDescriptionId && jobDescriptionId.trim() && jobDescriptionId !== 'ALL') {
+      params.append('jobDescriptionId', jobDescriptionId.trim());
     }
     const res = await apiClient.get<ApiResponse<DashboardData>>(
       `/analytics/all?${params.toString()}`
@@ -55,10 +60,17 @@ export const analyticsApi = {
     return res.data;
   },
 
-  getTrends: async (months = 6, departmentId?: string): Promise<ApplicationTrends> => {
+  getTrends: async (
+    months = 6,
+    departmentId?: string,
+    jobDescriptionId?: string
+  ): Promise<ApplicationTrends> => {
     const params = new URLSearchParams({ months: String(months) });
     if (departmentId && departmentId.trim() && departmentId !== 'ALL') {
       params.append('departmentId', departmentId.trim());
+    }
+    if (jobDescriptionId && jobDescriptionId.trim() && jobDescriptionId !== 'ALL') {
+      params.append('jobDescriptionId', jobDescriptionId.trim());
     }
     const res = await apiClient.get<ApiResponse<ApplicationTrends>>(
       `/analytics/timeline-trends?${params.toString()}`
@@ -74,6 +86,24 @@ export const analyticsApi = {
 
   getRecentActivities: async (limit = 5): Promise<RecentActivities> => {
     const res = await apiClient.get<ApiResponse<RecentActivities>>(`/analytics/recent-activities?limit=${limit}`);
+    return res.data;
+  },
+
+  getExportReportData: async (
+    departmentId?: string,
+    jobDescriptionId?: string
+  ): Promise<ExportReportData> => {
+    const params = new URLSearchParams();
+    if (departmentId && departmentId.trim() && departmentId !== 'ALL') {
+      params.append('departmentId', departmentId.trim());
+    }
+    if (jobDescriptionId && jobDescriptionId.trim() && jobDescriptionId !== 'ALL') {
+      params.append('jobDescriptionId', jobDescriptionId.trim());
+    }
+    const queryString = params.toString() ? `?${params.toString()}` : '';
+    const res = await apiClient.get<ApiResponse<ExportReportData>>(
+      `/analytics/export-report${queryString}`
+    );
     return res.data;
   },
 };

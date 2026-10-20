@@ -49,13 +49,18 @@ export class AnalyticsController {
   async getTimelineTrends(
     @Query('months', new DefaultValuePipe(6), ParseIntPipe) months: number,
     @Query('departmentId') departmentId?: string,
+    @Query('jobDescriptionId') jobDescriptionId?: string,
   ) {
     const safeMonths = Math.min(Math.max(1, months), 24);
     const cleanDeptId =
       departmentId && departmentId.trim() && departmentId !== 'ALL'
         ? departmentId.trim()
         : undefined;
-    const data = await this.analyticsService.getApplicationTrends(safeMonths, cleanDeptId);
+    const cleanJobId =
+      jobDescriptionId && jobDescriptionId.trim() && jobDescriptionId !== 'ALL'
+        ? jobDescriptionId.trim()
+        : undefined;
+    const data = await this.analyticsService.getApplicationTrends(safeMonths, cleanDeptId, cleanJobId);
     return {
       message: 'Lấy xu hướng tuyển dụng theo thời gian thành công',
       data,
@@ -72,8 +77,19 @@ export class AnalyticsController {
   }
 
   @Get('hiring-velocity')
-  async getHiringVelocity() {
-    const data = await this.analyticsService.getHiringVelocityMetrics();
+  async getHiringVelocity(
+    @Query('departmentId') departmentId?: string,
+    @Query('jobDescriptionId') jobDescriptionId?: string,
+  ) {
+    const cleanDeptId =
+      departmentId && departmentId.trim() && departmentId !== 'ALL'
+        ? departmentId.trim()
+        : undefined;
+    const cleanJobId =
+      jobDescriptionId && jobDescriptionId.trim() && jobDescriptionId !== 'ALL'
+        ? jobDescriptionId.trim()
+        : undefined;
+    const data = await this.analyticsService.getHiringVelocityMetrics(cleanDeptId, cleanJobId);
     return {
       message: 'Lấy dữ liệu hiệu suất tuyển dụng & chỉ số SLA thành công',
       data,
@@ -86,10 +102,68 @@ export class AnalyticsController {
   @Get('recent-activities')
   async getRecentActivities(
     @Query('limit', new DefaultValuePipe(5), ParseIntPipe) limit: number,
+    @Query('departmentId') departmentId?: string,
   ) {
-    const data = await this.analyticsService.getRecentActivities(limit);
+    const cleanDeptId =
+      departmentId && departmentId.trim() && departmentId !== 'ALL'
+        ? departmentId.trim()
+        : undefined;
+    const data = await this.analyticsService.getRecentActivities(limit, cleanDeptId);
     return {
       message: 'Lấy hoạt động gần đây thành công',
+      data,
+    };
+  }
+
+  @Get('alerts')
+  async getActionableAlerts(
+    @Query('departmentId') departmentId?: string,
+    @Query('jobDescriptionId') jobDescriptionId?: string,
+  ) {
+    const cleanDeptId =
+      departmentId && departmentId.trim() && departmentId !== 'ALL'
+        ? departmentId.trim()
+        : undefined;
+    const cleanJobId =
+      jobDescriptionId && jobDescriptionId.trim() && jobDescriptionId !== 'ALL'
+        ? jobDescriptionId.trim()
+        : undefined;
+    const data = await this.analyticsService.getActionableAlerts(cleanDeptId, cleanJobId);
+    return {
+      message: 'Lấy danh sách cảnh báo công việc thành công',
+      data,
+    };
+  }
+
+  @Get('compensation')
+  async getCompensationStats(@Query('departmentId') departmentId?: string) {
+    const cleanDeptId =
+      departmentId && departmentId.trim() && departmentId !== 'ALL'
+        ? departmentId.trim()
+        : undefined;
+    const data = await this.analyticsService.getCompensationAndRequisitionStats(cleanDeptId);
+    return {
+      message: 'Lấy dữ liệu ngân sách và vị trí tuyển dụng thành công',
+      data,
+    };
+  }
+
+  @Get('export-report')
+  async getExportReportData(
+    @Query('departmentId') departmentId?: string,
+    @Query('jobDescriptionId') jobDescriptionId?: string,
+  ) {
+    const cleanDeptId =
+      departmentId && departmentId.trim() && departmentId !== 'ALL'
+        ? departmentId.trim()
+        : undefined;
+    const cleanJobId =
+      jobDescriptionId && jobDescriptionId.trim() && jobDescriptionId !== 'ALL'
+        ? jobDescriptionId.trim()
+        : undefined;
+    const data = await this.analyticsService.getExportReportData(cleanDeptId, cleanJobId);
+    return {
+      message: 'Lấy dữ liệu xuất báo cáo tuyển dụng thành công',
       data,
     };
   }
@@ -103,21 +177,38 @@ export class AnalyticsController {
     @Query('months', new DefaultValuePipe(6), ParseIntPipe) months: number,
     @Query('limit', new DefaultValuePipe(5), ParseIntPipe) limit: number,
     @Query('departmentId') departmentId?: string,
+    @Query('jobDescriptionId') jobDescriptionId?: string,
   ) {
     const safeMonths = Math.min(Math.max(1, months), 24);
     const cleanDeptId =
       departmentId && departmentId.trim() && departmentId !== 'ALL'
         ? departmentId.trim()
         : undefined;
+    const cleanJobId =
+      jobDescriptionId && jobDescriptionId.trim() && jobDescriptionId !== 'ALL'
+        ? jobDescriptionId.trim()
+        : undefined;
 
-    const [kpis, funnel, departmentFulfillment, offers, trends, activities, velocity] = await Promise.all([
-      this.analyticsService.getOverviewKpis(cleanDeptId),
-      this.analyticsService.getRecruitmentFunnel(cleanDeptId),
+    const [
+      kpis,
+      funnel,
+      departmentFulfillment,
+      offers,
+      trends,
+      activities,
+      velocity,
+      alerts,
+      compensation,
+    ] = await Promise.all([
+      this.analyticsService.getOverviewKpis(cleanDeptId, cleanJobId),
+      this.analyticsService.getRecruitmentFunnel(cleanDeptId, cleanJobId),
       this.analyticsService.getDepartmentFulfillment(cleanDeptId),
-      this.analyticsService.getOfferBreakdown(cleanDeptId),
-      this.analyticsService.getApplicationTrends(safeMonths, cleanDeptId),
+      this.analyticsService.getOfferBreakdown(cleanDeptId, cleanJobId),
+      this.analyticsService.getApplicationTrends(safeMonths, cleanDeptId, cleanJobId),
       this.analyticsService.getRecentActivities(limit, cleanDeptId),
-      this.analyticsService.getHiringVelocityMetrics(cleanDeptId),
+      this.analyticsService.getHiringVelocityMetrics(cleanDeptId, cleanJobId),
+      this.analyticsService.getActionableAlerts(cleanDeptId, cleanJobId),
+      this.analyticsService.getCompensationAndRequisitionStats(cleanDeptId),
     ]);
 
     return {
@@ -130,6 +221,8 @@ export class AnalyticsController {
         trends,
         activities,
         velocity,
+        alerts,
+        compensation,
       },
     };
   }
