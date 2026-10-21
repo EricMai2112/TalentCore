@@ -1,6 +1,26 @@
 import { apiClient } from './api.client';
 
+export interface HeadcountPlan {
+  target: number;
+  hired: number;
+  percentage: number;
+  remaining: number;
+}
+
+export interface TimeToHire {
+  avgDays: number | null;
+  sampleSize: number;
+  isEmpty: boolean;
+}
+
+export interface TimeToFill {
+  avgDays: number | null;
+  targetDays: number;
+  isEmpty: boolean;
+}
+
 export interface OverviewKpis {
+  headcountPlan: HeadcountPlan;
   candidates: {
     total: number;
     growth: number;
@@ -27,11 +47,8 @@ export interface OverviewKpis {
     rateText: string;
     overdueCount: number;
   };
-  timeToHire: {
-    avgDays: number | null;
-    sampleSize: number;
-    isEmpty: boolean;
-  };
+  timeToHire: TimeToHire;
+  timeToFill?: TimeToFill;
 }
 
 export interface FunnelStage {
@@ -39,7 +56,21 @@ export interface FunnelStage {
   name: string;
   count: number;
   percentage: number;
+  stepConversionRate?: number;
   color: string;
+}
+
+export interface RecruitmentFunnel {
+  isEmpty: boolean;
+  totalApplications: number;
+  stages: FunnelStage[];
+  conversionRates?: {
+    appliedToScreened: number;
+    screenedToInterviewed: number;
+    interviewedToOffered: number;
+    offeredToHired: number;
+    overallRate: number;
+  };
 }
 
 export interface DepartmentFulfillment {
@@ -52,46 +83,100 @@ export interface DepartmentFulfillment {
   percentage: number;
 }
 
+export interface OfferChartItem {
+  name: string;
+  count: number;
+  color: string;
+}
+
 export interface OfferBreakdown {
+  isEmpty: boolean;
   totalOffers: number;
   acceptanceRate: number;
   statusCounts: Record<string, number>;
-  chartData: Array<{ name: string; count: number; color: string }>;
+  chartData: OfferChartItem[];
+  declineReasons?: Array<{ reason: string; count: number }>;
 }
 
-export interface RecentActivities {
-  applications: Array<{
-    id: string;
-    candidateName: string;
-    jobTitle: string;
-    appliedAt: string;
-  }>;
-  interviews: Array<{
-    id: string;
-    candidateName: string;
-    jobTitle: string;
-    startTime: string;
-    status: string;
-  }>;
-  offers: Array<{
-    id: string;
-    candidateName: string;
-    positionTitle: string;
-    salary: number;
-    status: string;
-    createdAt: string;
-  }>;
+export interface TrendMonth {
+  month: string;
+  applications: number;
+  interviews: number;
+  hired: number;
+}
+
+export interface ApplicationTrends {
+  isEmpty: boolean;
+  data: TrendMonth[];
+}
+
+export interface ExpiringOfferAlert {
+  id: string;
+  candidateName: string;
+  positionTitle: string;
+  expiresAt: string;
+  daysLeft: number;
+  isOverdue: boolean;
+  salary: number;
+}
+
+export interface StaleApplicationAlert {
+  id: string;
+  candidateName: string;
+  jobTitle: string;
+  stageName: string;
+  daysInStage: number;
+  appliedAt: string;
+}
+
+export interface PendingJobAlert {
+  id: string;
+  title: string;
+  deadline: string | null;
+  daysLeft: number | null;
+  isOverdue: boolean;
+  applicationCount: number;
+  targetHeadcount: number;
+  hiredCount: number;
+}
+
+export interface TodayInterviewAlert {
+  id: string;
+  candidateName: string;
+  jobTitle: string;
+  startTime: string;
+  endTime: string;
+  interviewerName: string;
+  locationType: string;
+}
+
+export interface ActionableAlerts {
+  summary: {
+    totalAlerts: number;
+    expiringOffers: number;
+    staleApplications: number;
+    pendingJobs: number;
+    todayInterviews: number;
+  };
+  expiringOffers: ExpiringOfferAlert[];
+  staleApplications: StaleApplicationAlert[];
+  pendingJobs: PendingJobAlert[];
+  todayInterviews: TodayInterviewAlert[];
+}
+
+export interface DepartmentItem {
+  _id: string;
+  name: string;
+  code?: string;
 }
 
 export interface DashboardData {
   kpis: OverviewKpis;
-  funnel: {
-    stages: FunnelStage[];
-    totalApplications: number;
-  };
+  funnel: RecruitmentFunnel;
   departmentFulfillment: DepartmentFulfillment[];
-  offersBreakdown: OfferBreakdown;
-  recentActivities: RecentActivities;
+  offers: OfferBreakdown;
+  alerts: ActionableAlerts;
+  trends: ApplicationTrends;
 }
 
 export interface CandidateApplication {
@@ -160,7 +245,18 @@ export interface JobDescriptionItem {
   status: 'PENDING' | 'APPROVED' | 'REJECTED' | 'JD_CREATED' | 'COMPLETED' | string;
   priority?: 'HIGH' | 'MEDIUM' | 'LOW' | string;
   applicantCount?: number;
+  postedById?: {
+    _id: string;
+    name: string;
+    email?: string;
+  } | string;
+  description?: string;
+  requirements?: string;
+  benefits?: string;
+  note?: string;
+  requiredSkills?: Array<{ _id: string; name: string } | string>;
   createdAt?: string;
+  updatedAt?: string;
 }
 
 export interface InterviewItem {
@@ -248,9 +344,28 @@ export interface AdminNotification {
 }
 
 export const adminService = {
-  async getDashboardData(): Promise<DashboardData> {
-    const res = await apiClient.get<any>('/analytics/all', { months: 6, limit: 10 });
+  async getDashboardData(params?: {
+    departmentId?: string;
+    jobDescriptionId?: string;
+    months?: number;
+    limit?: number;
+  }): Promise<DashboardData> {
+    const queryParams: Record<string, any> = {
+      months: params?.months ?? 6,
+      limit: params?.limit ?? 10,
+    };
+    if (params?.departmentId) queryParams.departmentId = params.departmentId;
+    if (params?.jobDescriptionId) queryParams.jobDescriptionId = params.jobDescriptionId;
+
+    const res = await apiClient.get<any>('/analytics/all', queryParams);
     return res;
+  },
+
+  async getDepartments(): Promise<DepartmentItem[]> {
+    const data = await apiClient.get<any>('/departments');
+    if (Array.isArray(data)) return data;
+    if (Array.isArray(data?.data)) return data.data;
+    return [];
   },
 
   async getCandidates(params?: { search?: string; departmentId?: string; jobId?: string }): Promise<CandidateApplication[]> {
@@ -300,6 +415,13 @@ export const adminService = {
 
   async updateOfferStatus(id: string, status: string): Promise<any> {
     return apiClient.patch(`/offers/${id}`, { status });
+  },
+
+  async updateJob(
+    jobId: string,
+    payload: { status?: string; note?: string; [key: string]: any }
+  ): Promise<any> {
+    return apiClient.put(`/job-descriptions/${jobId}`, payload);
   },
 
   async updateJobStatus(jobId: string, status: string): Promise<any> {
