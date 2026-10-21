@@ -30,17 +30,22 @@ export default function OfferDonutChart({ offers }: Props) {
   const accepted = offers.statusCounts?.ACCEPTED || 0;
   const declined = offers.statusCounts?.DECLINED || 0;
   const sent = offers.statusCounts?.SENT || 0;
-  const totalTracked = accepted + declined + sent;
+  const cancelled = offers.statusCounts?.CANCELLED || 0;
+  const expired = offers.statusCounts?.EXPIRED || 0;
+  const draft = offers.statusCounts?.DRAFT || 0;
+
+  const totalTracked = accepted + declined + sent + cancelled + expired + draft;
 
   const pct = (val: number) => (totalTracked > 0 ? Math.round((val / totalTracked) * 100) : 0);
 
-  const displayData = [
+  const items = [
     {
       name: 'Đã Tuyển',
       count: accepted,
       color: '#10B981',
       percentage: pct(accepted),
       bgBadge: 'bg-emerald-50 text-emerald-700 border-emerald-200/80',
+      alwaysShow: true,
     },
     {
       name: 'Đang phản hồi',
@@ -48,6 +53,7 @@ export default function OfferDonutChart({ offers }: Props) {
       color: '#F59E0B',
       percentage: pct(sent),
       bgBadge: 'bg-amber-50 text-amber-700 border-amber-200/80',
+      alwaysShow: true,
     },
     {
       name: 'Đã từ chối',
@@ -55,9 +61,35 @@ export default function OfferDonutChart({ offers }: Props) {
       color: '#EF4444',
       percentage: pct(declined),
       bgBadge: 'bg-rose-50 text-rose-700 border-rose-200/80',
+      alwaysShow: true,
+    },
+    {
+      name: 'Đã hủy',
+      count: cancelled,
+      color: '#64748B',
+      percentage: pct(cancelled),
+      bgBadge: 'bg-slate-100 text-slate-700 border-slate-200/80',
+      alwaysShow: false,
+    },
+    {
+      name: 'Hết hạn',
+      count: expired,
+      color: '#8B5CF6',
+      percentage: pct(expired),
+      bgBadge: 'bg-purple-50 text-purple-700 border-purple-200/80',
+      alwaysShow: false,
+    },
+    {
+      name: 'Bản nháp',
+      count: draft,
+      color: '#0284C7',
+      percentage: pct(draft),
+      bgBadge: 'bg-sky-50 text-sky-700 border-sky-200/80',
+      alwaysShow: false,
     },
   ];
 
+  const displayData = items.filter((d) => d.alwaysShow || d.count > 0);
   const chartData = displayData.filter((d) => d.count > 0);
 
   return (
@@ -122,12 +154,12 @@ export default function OfferDonutChart({ offers }: Props) {
             </ResponsiveContainer>
           </div>
 
-          {/* Right: Legend 3 trạng thái (7/12 cols) */}
-          <div className="col-span-7 flex flex-col justify-around h-full py-1 space-y-1.5 min-h-0">
+          {/* Right: Legend trạng thái (7/12 cols) */}
+          <div className="col-span-7 flex flex-col justify-center gap-1.5 h-full py-0.5 overflow-y-auto pr-0.5 custom-scrollbar min-h-0">
             {displayData.map((item, idx) => (
               <div
                 key={idx}
-                className="flex items-center justify-between p-2 rounded-xl bg-slate-50/70 border border-slate-100/80 text-[11px] hover:bg-slate-50 transition-colors"
+                className="flex items-center justify-between px-2 py-1.5 rounded-xl bg-slate-50/70 border border-slate-100/80 text-[11px] hover:bg-slate-50 transition-colors"
               >
                 <div className="flex items-center gap-2 min-w-0">
                   <span
@@ -144,7 +176,7 @@ export default function OfferDonutChart({ offers }: Props) {
                     {item.count}
                   </span>
                   <span
-                    className={`text-[9.5px] font-bold px-1.5 py-0.2 rounded-md border leading-none ${item.bgBadge}`}
+                    className={`text-[9.5px] font-bold px-1.5 py-0.5 rounded-md border leading-none ${item.bgBadge}`}
                   >
                     {item.percentage}%
                   </span>

@@ -78,6 +78,25 @@ export class AnalyticsService {
     return deptJobs.map((j) => j._id as Types.ObjectId);
   }
 
+  private async getActiveJobIds(
+    departmentId?: string,
+    jobDescriptionId?: string,
+  ): Promise<Types.ObjectId[]> {
+    const activeJdFilter: any = {
+      status: { $in: [JobStatus.JD_CREATED, JobStatus.APPROVED] },
+    };
+    if (jobDescriptionId && Types.ObjectId.isValid(jobDescriptionId)) {
+      activeJdFilter._id = new Types.ObjectId(jobDescriptionId);
+    } else if (departmentId && Types.ObjectId.isValid(departmentId)) {
+      activeJdFilter.departmentId = new Types.ObjectId(departmentId);
+    }
+    const activeJds = await this.jobDescriptionModel
+      .find(activeJdFilter)
+      .select('_id')
+      .lean();
+    return activeJds.map((j) => j._id as Types.ObjectId);
+  }
+
   // ─────────────────────────────────────────────────────────────
   // KPI TỔNG QUAN
   // ─────────────────────────────────────────────────────────────
@@ -187,35 +206,39 @@ export class AnalyticsService {
       ...intDeptFilter,
     });
 
-    // 4. Offer Stats
-    const offerDeptFilter = deptObjId
-      ? {
-          $or: [
-            { departmentId: deptObjId },
-            ...(hasDeptFilter ? [{ jobDescriptionId: { $in: deptJobIds } }] : []),
-          ],
-        }
-      : {};
+    // 4. Offer Stats (đồng bộ với OfferDonutChart: chỉ tính trên các JD đang mở tuyển)
+    const activeJdIds = await this.getActiveJobIds(departmentId, jobDescriptionId);
+    const offerActiveFilter = { jobDescriptionId: { $in: activeJdIds } };
 
-    const totalOffers = await this.offerModel.countDocuments(offerDeptFilter);
-    const acceptedOffers = await this.offerModel.countDocuments({
-      status: OfferStatus.ACCEPTED,
-      ...offerDeptFilter,
-    });
-    const decidedOffers = await this.offerModel.countDocuments({
-      status: {
-        $in: [OfferStatus.ACCEPTED, OfferStatus.DECLINED, OfferStatus.EXPIRED],
-      },
-      ...offerDeptFilter,
-    });
+    const totalOffers =
+      activeJdIds.length > 0 ? await this.offerModel.countDocuments(offerActiveFilter) : 0;
+    const acceptedOffers =
+      activeJdIds.length > 0
+        ? await this.offerModel.countDocuments({
+            status: OfferStatus.ACCEPTED,
+            ...offerActiveFilter,
+          })
+        : 0;
+    const decidedOffers =
+      activeJdIds.length > 0
+        ? await this.offerModel.countDocuments({
+            status: {
+              $in: [OfferStatus.ACCEPTED, OfferStatus.DECLINED, OfferStatus.EXPIRED],
+            },
+            ...offerActiveFilter,
+          })
+        : 0;
     const acceptanceRate =
       decidedOffers > 0
         ? Math.round((acceptedOffers / decidedOffers) * 100)
         : 0;
-    const sentOffers = await this.offerModel.countDocuments({
-      status: OfferStatus.SENT,
-      ...offerDeptFilter,
-    });
+    const sentOffers =
+      activeJdIds.length > 0
+        ? await this.offerModel.countDocuments({
+            status: OfferStatus.SENT,
+            ...offerActiveFilter,
+          })
+        : 0;
 
     // 5. Total Employees (non-candidate users)
     const totalEmployees = await this.userModel.countDocuments({
@@ -226,7 +249,7 @@ export class AnalyticsService {
     const tthMatch: any = {
       status: OfferStatus.ACCEPTED,
       respondedAt: { $exists: true, $ne: null },
-      ...offerDeptFilter,
+      ...offerActiveFilter,
     };
     const tthAgg = await this.offerModel.aggregate([
       {
@@ -329,7 +352,6 @@ export class AnalyticsService {
     const hiredActiveOffers = await this.offerModel.countDocuments({
       status: OfferStatus.ACCEPTED,
       jobDescriptionId: { $in: activePlanJdIds },
-      ...offerDeptFilter,
     });
     const effectiveTargetHeadcount = Math.max(targetHeadcount, 1);
     const headcountFulfillmentRate = Math.min(
@@ -342,7 +364,7 @@ export class AnalyticsService {
     const overdueOffers = await this.offerModel.countDocuments({
       status: OfferStatus.SENT,
       sentAt: { $lt: threeDaysAgo },
-      ...offerDeptFilter,
+      ...offerActiveFilter,
     });
 
     // 10. Interviews chưa có kết quả (COMPLETED nhưng result = PENDING)
@@ -404,20 +426,7 @@ export class AnalyticsService {
   // ─────────────────────────────────────────────────────────────
   async getRecruitmentFunnel(departmentId?: string, jobDescriptionId?: string) {
     // Chỉ tính trên các vị trí đang mở tuyển (JD_CREATED, APPROVED) để đồng bộ với Card 1 và Tiến độ Phòng ban
-    const activeJdFilter: any = {
-      status: { $in: [JobStatus.JD_CREATED, JobStatus.APPROVED] },
-    };
-    if (jobDescriptionId && Types.ObjectId.isValid(jobDescriptionId)) {
-      activeJdFilter._id = new Types.ObjectId(jobDescriptionId);
-    } else if (departmentId && Types.ObjectId.isValid(departmentId)) {
-      activeJdFilter.departmentId = new Types.ObjectId(departmentId);
-    }
-    const activeJds = await this.jobDescriptionModel
-      .find(activeJdFilter)
-      .select('_id')
-      .lean();
-    const activeJdIds = activeJds.map((j) => j._id);
-
+    const activeJdIds = await this.getActiveJobIds(departmentId, jobDescriptionId);
     const appFilter = { jobDescriptionId: { $in: activeJdIds } };
 
     const totalApplications =
@@ -598,14 +607,29 @@ export class AnalyticsService {
   // PHÂN TÍCH OFFER
   // ─────────────────────────────────────────────────────────────
   async getOfferBreakdown(departmentId?: string, jobDescriptionId?: string) {
-    const deptJobIds = await this.getDepartmentJobIds(departmentId, jobDescriptionId);
-    const deptObjId =
-      departmentId && Types.ObjectId.isValid(departmentId)
-        ? new Types.ObjectId(departmentId)
-        : null;
-    const offerDeptFilter = deptJobIds !== null
-      ? { jobDescriptionId: { $in: deptJobIds } }
-      : (deptObjId ? { departmentId: deptObjId } : {});
+    // Chỉ tính trên các vị trí đang mở tuyển (JD_CREATED, APPROVED) để đồng bộ với Phễu và KPI
+    const activeJdIds = await this.getActiveJobIds(departmentId, jobDescriptionId);
+
+    if (activeJdIds.length === 0) {
+      return {
+        isEmpty: true,
+        totalOffers: 0,
+        acceptanceRate: 0,
+        statusCounts: {
+          ACCEPTED: 0,
+          DECLINED: 0,
+          SENT: 0,
+          DRAFT: 0,
+          EXPIRED: 0,
+          CANCELLED: 0,
+        },
+        chartData: [],
+        declineReasons: [],
+        salaryMetrics: null,
+      };
+    }
+
+    const offerDeptFilter = { jobDescriptionId: { $in: activeJdIds } };
 
     const totalOffers = await this.offerModel.countDocuments(offerDeptFilter);
 
@@ -898,16 +922,8 @@ export class AnalyticsService {
     const intDeptFilter = jobObjId
       ? { jobDescriptionId: jobObjId }
       : (hasDeptFilter ? { jobDescriptionId: { $in: deptJobIds } } : {});
-    const offerDeptFilter = jobObjId
-      ? { jobDescriptionId: jobObjId }
-      : (deptObjId
-          ? {
-              $or: [
-                { departmentId: deptObjId },
-                ...(hasDeptFilter ? [{ jobDescriptionId: { $in: deptJobIds } }] : []),
-              ],
-            }
-          : {});
+    const activeJdIds = await this.getActiveJobIds(departmentId, jobDescriptionId);
+    const offerDeptFilter = { jobDescriptionId: { $in: activeJdIds } };
 
     // 1. Time-to-Hire: số ngày trung bình từ appliedAt -> accepted offer respondedAt
     const tthAgg = await this.offerModel.aggregate([
@@ -1220,16 +1236,8 @@ export class AnalyticsService {
         ? new Types.ObjectId(jobDescriptionId)
         : null;
 
-    const offerDeptFilter = jobObjId
-      ? { jobDescriptionId: jobObjId }
-      : (deptObjId
-          ? {
-              $or: [
-                { departmentId: deptObjId },
-                ...(hasDeptFilter ? [{ jobDescriptionId: { $in: deptJobIds } }] : []),
-              ],
-            }
-          : {});
+    const activeJdIds = await this.getActiveJobIds(departmentId, jobDescriptionId);
+    const offerDeptFilter = { jobDescriptionId: { $in: activeJdIds } };
 
     const jobDeptFilter = jobObjId
       ? { _id: jobObjId }
