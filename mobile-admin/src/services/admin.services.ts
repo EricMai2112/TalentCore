@@ -190,6 +190,21 @@ export interface CandidateApplication {
     currentLevel?: string;
     summary?: string;
     avatar?: string;
+    resumeUrl?: string;
+    skills?: any[];
+    experiences?: Array<{
+      company?: string;
+      position?: string;
+      startDate?: string;
+      endDate?: string;
+      description?: string;
+    }>;
+    educations?: Array<{
+      school?: string;
+      major?: string;
+      degree?: string;
+      graduationYear?: number | string;
+    }>;
     userId?: {
       _id: string;
       name: string;
@@ -212,13 +227,25 @@ export interface CandidateApplication {
   stageColor?: string;
   appliedAt: string;
   status?: 'ACTIVE' | 'REJECTED' | 'HIRED' | string;
+  reviewStatus?: string;
+  rejectReason?: string;
+  rejectedAt?: string;
   aiFitScore?: number | null;
   isMissingMandatory?: boolean;
-  notes?: any[];
+  notes?: Array<{
+    _id?: string;
+    authorName?: string;
+    authorRole?: string;
+    content: string;
+    createdAt?: string;
+  }>;
   aiEvaluation?: {
     overallRecommendation?: string;
     matchingScore?: number;
     summary?: string;
+    strengths?: string[];
+    weaknesses?: string[];
+    missingSkills?: string[];
   };
 }
 
@@ -388,6 +415,18 @@ export const adminService = {
 
   async rejectCandidate(applicationId: string, reason: string): Promise<any> {
     return apiClient.post(`/applications/${applicationId}/reject`, { reason });
+  },
+
+  async addCandidateNote(
+    applicationId: string,
+    payload: { authorName: string; authorRole: string; content: string }
+  ): Promise<any> {
+    return apiClient.post(`/applications/${applicationId}/notes`, payload);
+  },
+
+  async getApplicationById(applicationId: string): Promise<CandidateApplication> {
+    const res = await apiClient.get<any>(`/applications/${applicationId}`);
+    return res?.data || res;
   },
 
   async getInterviews(status?: string): Promise<InterviewItem[]> {
