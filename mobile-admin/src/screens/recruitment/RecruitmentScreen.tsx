@@ -11,6 +11,7 @@ import {
   Modal,
   Alert,
   Pressable,
+  Linking,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import {
@@ -51,16 +52,18 @@ export const RecruitmentScreen: React.FC<RecruitmentScreenProps> = ({ initialSeg
   }, [initialSegment]);
 
   const [searchQuery, setSearchQuery] = useState<string>('');
-  const [selectedStage, setSelectedStage] = useState<string>('ALL');
+  const [selectedCandDept, setSelectedCandDept] = useState<string>(
+    isDeptManager && userDeptId ? userDeptId : 'ALL'
+  );
+  const [selectedCandPosition, setSelectedCandPosition] = useState<string>('ALL');
+  const [selectedCandStage, setSelectedCandStage] = useState<string>('ALL');
 
-  // Filters dành riêng cho Tin Tuyển Dụng
   const [selectedJobStatus, setSelectedJobStatus] = useState<string>('ALL');
   const [selectedJobDept, setSelectedJobDept] = useState<string>(
     isDeptManager && userDeptId ? userDeptId : 'ALL'
   );
   const [selectedJobPriority, setSelectedJobPriority] = useState<string>('ALL');
 
-  // Data states
   const [candidates, setCandidates] = useState<CandidateApplication[]>([]);
   const [jobs, setJobs] = useState<JobDescriptionItem[]>([]);
   const [departments, setDepartments] = useState<DepartmentItem[]>([]);
@@ -69,18 +72,12 @@ export const RecruitmentScreen: React.FC<RecruitmentScreenProps> = ({ initialSeg
   const [refreshing, setRefreshing] = useState<boolean>(false);
   const [actionLoading, setActionLoading] = useState<boolean>(false);
 
-  // Modal Selection states
-  const [selectedCandidate, setSelectedCandidate] = useState<CandidateApplication | null>(null);
   const [selectedJob, setSelectedJob] = useState<JobDescriptionItem | null>(null);
 
-  // Candidate Modals
-  const [showStageModal, setShowStageModal] = useState<boolean>(false);
-  const [showRejectModal, setShowRejectModal] = useState<boolean>(false);
-  const [rejectReason, setRejectReason] = useState<string>(
-    'Hồ sơ chưa phù hợp với yêu cầu vị trí thời điểm hiện tại.'
-  );
+  const [showCandDeptPickerModal, setShowCandDeptPickerModal] = useState<boolean>(false);
+  const [showCandPositionPickerModal, setShowCandPositionPickerModal] = useState<boolean>(false);
+  const [showCandStagePickerModal, setShowCandStagePickerModal] = useState<boolean>(false);
 
-  // Job Filters Pickers Modal
   const [showDeptPickerModal, setShowDeptPickerModal] = useState<boolean>(false);
   const [showPriorityPickerModal, setShowPriorityPickerModal] = useState<boolean>(false);
 
@@ -156,27 +153,127 @@ export const RecruitmentScreen: React.FC<RecruitmentScreenProps> = ({ initialSeg
     return map;
   }, [candidates]);
 
-  // Lọc danh sách ứng viên
+  const candidatePositionOptions = useMemo(() => {
+    const set = new Set<string>();
+    candidates.forEach((c) => {
+      const deptId =
+        typeof c.jobDescriptionId?.departmentId === 'object'
+          ? c.jobDescriptionId?.departmentId?._id
+          : c.jobDescriptionId?.departmentId;
+      if (selectedCandDept === 'ALL' || deptId === selectedCandDept) {
+        const title = c.jobDescriptionId?.title;
+        if (title) set.add(title);
+      }
+    });
+    jobs.forEach((j) => {
+      const deptId =
+        typeof j.departmentId === 'object' ? j.departmentId?._id : j.departmentId;
+      if (selectedCandDept === 'ALL' || deptId === selectedCandDept) {
+        if (j.title) set.add(j.title);
+      }
+    });
+    return Array.from(set).sort();
+  }, [candidates, jobs, selectedCandDept]);
+
+  const candidateStageOptions = useMemo(() => {
+    const list: string[] = [];
+    pipelineStages.forEach((st) => {
+      if (st.name && !list.includes(st.name)) {
+        list.push(st.name);
+      }
+    });
+    candidates.forEach((c) => {
+      if (c.stageName && !list.includes(c.stageName)) {
+        list.push(c.stageName);
+      }
+    });
+    return list;
+  }, [pipelineStages, candidates]);
+
+  const selectedCandDeptName = useMemo(() => {
+    if (selectedCandDept === 'ALL') return 'Tất cả phòng ban';
+    const d = departments.find((item) => item._id === selectedCandDept);
+    return d ? d.name : 'Phòng ban';
+  }, [selectedCandDept, departments]);
+
+  const selectedCandPosName = useMemo(() => {
+    if (selectedCandPosition === 'ALL') return 'Tất cả vị trí';
+    return selectedCandPosition;
+  }, [selectedCandPosition]);
+
+  const selectedCandStageName = useMemo(() => {
+    if (selectedCandStage === 'ALL') return 'Tất cả giai đoạn';
+    return selectedCandStage;
+  }, [selectedCandStage]);
+
+  const isCandFiltered =
+    (!isDeptManager && selectedCandDept !== 'ALL') ||
+    selectedCandPosition !== 'ALL' ||
+    selectedCandStage !== 'ALL';
+
+  const handleSelectCandDept = (deptId: string) => {
+    setSelectedCandDept(deptId);
+    setShowCandDeptPickerModal(false);
+    if (deptId !== 'ALL' && selectedCandPosition !== 'ALL') {
+      const isValid =
+        jobs.some((j) => {
+          const jDeptId =
+            typeof j.departmentId === 'object' ? j.departmentId?._id : j.departmentId;
+          return jDeptId === deptId && j.title === selectedCandPosition;
+        }) ||
+        candidates.some((c) => {
+          const cDeptId =
+            typeof c.jobDescriptionId?.departmentId === 'object'
+              ? c.jobDescriptionId?.departmentId?._id
+              : c.jobDescriptionId?.departmentId;
+          return cDeptId === deptId && c.jobDescriptionId?.title === selectedCandPosition;
+        });
+      if (!isValid) {
+        setSelectedCandPosition('ALL');
+      }
+    }
+  };
+
+  const handleResetCandFilters = () => {
+    if (!isDeptManager) {
+      setSelectedCandDept('ALL');
+    }
+    setSelectedCandPosition('ALL');
+    setSelectedCandStage('ALL');
+  };
+
   const filteredCandidates = useMemo(() => {
     return candidates.filter((item) => {
       const name = getCandidateName(item);
       const email = getCandidateEmail(item);
       const pos = item.jobDescriptionId?.title || '';
-      const q = searchQuery.toLowerCase();
+      const deptId =
+        typeof item.jobDescriptionId?.departmentId === 'object'
+          ? item.jobDescriptionId?.departmentId?._id
+          : item.jobDescriptionId?.departmentId;
+      const stage = item.stageName || '';
+      const q = searchQuery.toLowerCase().trim();
 
       const matchSearch =
-        !searchQuery ||
+        !q ||
         name.toLowerCase().includes(q) ||
         email.toLowerCase().includes(q) ||
         pos.toLowerCase().includes(q);
 
-      const matchStage =
-        selectedStage === 'ALL' ||
-        (item.stageName?.toLowerCase().includes(selectedStage.toLowerCase()) ?? false);
+      const matchDept =
+        selectedCandDept === 'ALL' || deptId === selectedCandDept;
 
-      return matchSearch && matchStage;
+      const matchPos =
+        selectedCandPosition === 'ALL' || pos === selectedCandPosition;
+
+      const matchStage =
+        selectedCandStage === 'ALL' ||
+        stage.toLowerCase() === selectedCandStage.toLowerCase() ||
+        stage.toLowerCase().includes(selectedCandStage.toLowerCase());
+
+      return matchSearch && matchDept && matchPos && matchStage;
     });
-  }, [candidates, searchQuery, selectedStage]);
+  }, [candidates, searchQuery, selectedCandDept, selectedCandPosition, selectedCandStage]);
 
   // Thống kê 6 trạng thái JD (Stat Cards như Web)
   const jobStats = useMemo(() => {
@@ -333,48 +430,6 @@ export const RecruitmentScreen: React.FC<RecruitmentScreenProps> = ({ initialSeg
     }
   };
 
-  // Chuyển giai đoạn ứng viên
-  const handleMoveStage = async (stage: StageItem) => {
-    if (!selectedCandidate) return;
-    try {
-      setActionLoading(true);
-      await adminService.updateCandidateStage(selectedCandidate._id, stage._id);
-      Alert.alert('Thành công', `Đã chuyển ứng viên sang vòng: ${stage.name}`);
-      setSelectedCandidate((prev) =>
-        prev
-          ? {
-              ...prev,
-              currentStageId: stage._id,
-              stageName: stage.name,
-              stageColor: stage.color,
-            }
-          : null
-      );
-      setShowStageModal(false);
-      fetchData();
-    } catch (err: any) {
-      Alert.alert('Lỗi', err.message || 'Không thể chuyển giai đoạn');
-    } finally {
-      setActionLoading(false);
-    }
-  };
-
-  // Từ chối ứng viên
-  const handleConfirmReject = async () => {
-    if (!selectedCandidate) return;
-    try {
-      setActionLoading(true);
-      await adminService.rejectCandidate(selectedCandidate._id, rejectReason);
-      Alert.alert('Thành công', 'Đã cập nhật trạng thái từ chối ứng viên.');
-      setShowRejectModal(false);
-      setSelectedCandidate(null);
-      fetchData();
-    } catch (err: any) {
-      Alert.alert('Lỗi', err.message || 'Không thể từ chối ứng viên');
-    } finally {
-      setActionLoading(false);
-    }
-  };
 
   // Cập nhật trạng thái tin tuyển dụng (Duyệt, Mở tuyển, Đóng)
   const handleUpdateJobStatus = async (status: string, label: string) => {
@@ -538,40 +593,143 @@ export const RecruitmentScreen: React.FC<RecruitmentScreenProps> = ({ initialSeg
           )}
         </View>
 
-        {/* ─── FILTERS CHO TAB ỨNG VIÊN ─── */}
         {activeSegment === 'candidates' ? (
-          <ScrollView
-            horizontal
-            showsHorizontalScrollIndicator={false}
-            contentContainerStyle={styles.filterChipRow}
-          >
-            {[
-              { id: 'ALL', label: `Tất cả (${candidates.length})` },
-              ...pipelineStages.map((st) => ({
-                id: st.name,
-                label: st.name,
-              })),
-            ].map((chip) => {
-              const isSelected = selectedStage === chip.id;
-              return (
+          <View>
+            <ScrollView
+              horizontal
+              showsHorizontalScrollIndicator={false}
+              contentContainerStyle={styles.filterChipRow}
+            >
+              {[
+                { id: 'ALL', label: `Tất cả (${candidates.length})` },
+                ...candidateStageOptions.map((stg) => ({
+                  id: stg,
+                  label: stg,
+                })),
+              ].map((chip) => {
+                const isSelected = selectedCandStage === chip.id;
+                return (
+                  <TouchableOpacity
+                    key={chip.id}
+                    style={[styles.filterChip, isSelected && styles.filterChipActive]}
+                    onPress={() => setSelectedCandStage(chip.id)}
+                    activeOpacity={0.7}
+                  >
+                    <Text
+                      style={[
+                        styles.filterChipText,
+                        isSelected && styles.filterChipTextActive,
+                      ]}
+                    >
+                      {chip.label}
+                    </Text>
+                  </TouchableOpacity>
+                );
+              })}
+            </ScrollView>
+
+            <View style={styles.subFilterRow}>
+              <TouchableOpacity
+                style={[
+                  styles.subFilterPill,
+                  (selectedCandDept !== 'ALL' || showCandDeptPickerModal) && styles.subFilterPillActive,
+                ]}
+                onPress={() => !isDeptManager && setShowCandDeptPickerModal(true)}
+                activeOpacity={isDeptManager ? 1 : 0.7}
+              >
+                <Ionicons
+                  name="business-outline"
+                  size={13}
+                  color={selectedCandDept !== 'ALL' || showCandDeptPickerModal ? '#2563EB' : '#64748B'}
+                />
+                <Text
+                  style={[
+                    styles.subFilterPillText,
+                    selectedCandDept !== 'ALL' && styles.subFilterPillTextActive,
+                  ]}
+                  numberOfLines={1}
+                >
+                  {selectedCandDeptName}
+                </Text>
+                {!isDeptManager && (
+                  <Ionicons
+                    name={showCandDeptPickerModal ? 'chevron-up' : 'chevron-down'}
+                    size={13}
+                    color={showCandDeptPickerModal ? '#2563EB' : '#64748B'}
+                  />
+                )}
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                style={[
+                  styles.subFilterPill,
+                  (selectedCandPosition !== 'ALL' || showCandPositionPickerModal) && styles.subFilterPillActive,
+                ]}
+                onPress={() => setShowCandPositionPickerModal(true)}
+                activeOpacity={0.7}
+              >
+                <Ionicons
+                  name="briefcase-outline"
+                  size={13}
+                  color={selectedCandPosition !== 'ALL' || showCandPositionPickerModal ? '#2563EB' : '#64748B'}
+                />
+                <Text
+                  style={[
+                    styles.subFilterPillText,
+                    selectedCandPosition !== 'ALL' && styles.subFilterPillTextActive,
+                  ]}
+                  numberOfLines={1}
+                >
+                  {selectedCandPosName}
+                </Text>
+                <Ionicons
+                  name={showCandPositionPickerModal ? 'chevron-up' : 'chevron-down'}
+                  size={13}
+                  color={showCandPositionPickerModal ? '#2563EB' : '#64748B'}
+                />
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                style={[
+                  styles.subFilterPill,
+                  (selectedCandStage !== 'ALL' || showCandStagePickerModal) && styles.subFilterPillActive,
+                ]}
+                onPress={() => setShowCandStagePickerModal(true)}
+                activeOpacity={0.7}
+              >
+                <Ionicons
+                  name="layers-outline"
+                  size={13}
+                  color={selectedCandStage !== 'ALL' || showCandStagePickerModal ? '#2563EB' : '#64748B'}
+                />
+                <Text
+                  style={[
+                    styles.subFilterPillText,
+                    selectedCandStage !== 'ALL' && styles.subFilterPillTextActive,
+                  ]}
+                  numberOfLines={1}
+                >
+                  {selectedCandStageName}
+                </Text>
+                <Ionicons
+                  name={showCandStagePickerModal ? 'chevron-up' : 'chevron-down'}
+                  size={13}
+                  color={showCandStagePickerModal ? '#2563EB' : '#64748B'}
+                />
+              </TouchableOpacity>
+
+              {isCandFiltered && (
                 <TouchableOpacity
-                  key={chip.id}
-                  style={[styles.filterChip, isSelected && styles.filterChipActive]}
-                  onPress={() => setSelectedStage(chip.id)}
+                  style={styles.subFilterResetBtn}
+                  onPress={handleResetCandFilters}
                   activeOpacity={0.7}
                 >
-                  <Text
-                    style={[
-                      styles.filterChipText,
-                      isSelected && styles.filterChipTextActive,
-                    ]}
-                  >
-                    {chip.label}
-                  </Text>
+                  <Ionicons name="refresh" size={12} color="#DC2626" />
+                  <Text style={styles.subFilterResetText}>Đặt lại</Text>
                 </TouchableOpacity>
-              );
-            })}
-          </ScrollView>
+              )}
+            </View>
+          </View>
         ) : (
           /* ─── FILTERS CHO TAB TIN TUYỂN DỤNG (Khớp Ảnh 1) ─── */
           <View>
@@ -723,12 +881,7 @@ export const RecruitmentScreen: React.FC<RecruitmentScreenProps> = ({ initialSeg
                     : undefined;
 
                 return (
-                  <TouchableOpacity
-                    key={c._id}
-                    style={styles.candidateCard}
-                    onPress={() => setSelectedCandidate(c)}
-                    activeOpacity={0.8}
-                  >
+                  <View key={c._id} style={styles.candidateCard}>
                     <View style={styles.candidateTopRow}>
                       <View style={styles.candidateAvatar}>
                         <Text style={styles.candidateAvatarText}>
@@ -760,6 +913,27 @@ export const RecruitmentScreen: React.FC<RecruitmentScreenProps> = ({ initialSeg
                       )}
                     </View>
 
+                    {(!!getCandidateEmail(c) || !!getCandidatePhone(c)) && (
+                      <View style={styles.candidateContactRow}>
+                        {!!getCandidateEmail(c) && (
+                          <View style={styles.candidateContactItem}>
+                            <Ionicons name="mail-outline" size={12} color="#64748B" />
+                            <Text style={styles.candidateContactText} numberOfLines={1}>
+                              {getCandidateEmail(c)}
+                            </Text>
+                          </View>
+                        )}
+                        {!!getCandidatePhone(c) && (
+                          <View style={styles.candidateContactItem}>
+                            <Ionicons name="call-outline" size={12} color="#64748B" />
+                            <Text style={styles.candidateContactText}>
+                              {getCandidatePhone(c)}
+                            </Text>
+                          </View>
+                        )}
+                      </View>
+                    )}
+
                     <View style={styles.candidateMetaRow}>
                       <View
                         style={[
@@ -789,7 +963,7 @@ export const RecruitmentScreen: React.FC<RecruitmentScreenProps> = ({ initialSeg
                         </Text>
                       )}
                     </View>
-                  </TouchableOpacity>
+                  </View>
                 );
               })
             )
@@ -1531,117 +1705,220 @@ export const RecruitmentScreen: React.FC<RecruitmentScreenProps> = ({ initialSeg
         </Pressable>
       </Modal>
 
-      {/* ─── MODAL CHUYỂN VÒNG ỨNG VIÊN ─── */}
       <Modal
-        visible={showStageModal}
+        visible={showCandDeptPickerModal}
+        transparent={true}
         animationType="fade"
-        transparent
-        onRequestClose={() => setShowStageModal(false)}
+        onRequestClose={() => setShowCandDeptPickerModal(false)}
       >
-        <View style={styles.stageModalOverlay}>
-          <View style={styles.stageModalContent}>
-            <View style={styles.stageModalHeader}>
-              <Text style={styles.stageModalTitle}>Chuyển giai đoạn tuyển dụng</Text>
-              <TouchableOpacity onPress={() => setShowStageModal(false)}>
-                <Ionicons name="close" size={22} color="#64748B" />
-              </TouchableOpacity>
-            </View>
-            <Text style={styles.stageModalSubtitle}>
-              Chọn vòng tuyển dụng mới cho ứng viên {getCandidateName(selectedCandidate)}
-            </Text>
-
-            {pipelineStages.map((stage) => {
-              const isCurrent =
-                selectedCandidate?.currentStageId === stage._id ||
-                selectedCandidate?.stageName === stage.name;
-              return (
-                <TouchableOpacity
-                  key={stage._id}
+        <Pressable
+          style={styles.webDropdownOverlay}
+          onPress={() => setShowCandDeptPickerModal(false)}
+        >
+          <Pressable
+            style={styles.webDropdownCard}
+            onPress={(e) => e.stopPropagation()}
+          >
+            <ScrollView
+              style={styles.webDropdownList}
+              showsVerticalScrollIndicator={false}
+            >
+              <TouchableOpacity
+                style={[
+                  styles.webDropdownItem,
+                  selectedCandDept === 'ALL' && styles.webDropdownItemActive,
+                ]}
+                onPress={() => handleSelectCandDept('ALL')}
+                activeOpacity={0.7}
+              >
+                <Text
                   style={[
-                    styles.stageOptionItem,
-                    isCurrent && styles.stageOptionItemCurrent,
+                    styles.webDropdownItemText,
+                    selectedCandDept === 'ALL' && styles.webDropdownItemTextActive,
                   ]}
-                  onPress={() => handleMoveStage(stage)}
-                  disabled={actionLoading || isCurrent}
                 >
-                  <View
-                    style={[
-                      styles.stageOptionDot,
-                      { backgroundColor: stage.color || '#2563EB' },
-                    ]}
-                  />
-                  <Text
-                    style={[
-                      styles.stageOptionName,
-                      isCurrent && styles.stageOptionNameCurrent,
-                    ]}
-                  >
-                    {stage.name}
-                  </Text>
-                  {isCurrent && (
-                    <Ionicons name="checkmark-circle" size={18} color="#2563EB" />
-                  )}
-                </TouchableOpacity>
-              );
-            })}
-          </View>
-        </View>
-      </Modal>
-
-      {/* ─── MODAL TỪ CHỐI ỨNG VIÊN ─── */}
-      <Modal
-        visible={showRejectModal}
-        animationType="fade"
-        transparent
-        onRequestClose={() => setShowRejectModal(false)}
-      >
-        <View style={styles.stageModalOverlay}>
-          <View style={styles.stageModalContent}>
-            <View style={styles.stageModalHeader}>
-              <Text style={[styles.stageModalTitle, { color: '#EF4444' }]}>
-                Từ chối ứng viên
-              </Text>
-              <TouchableOpacity onPress={() => setShowRejectModal(false)}>
-                <Ionicons name="close" size={22} color="#64748B" />
-              </TouchableOpacity>
-            </View>
-            <Text style={styles.stageModalSubtitle}>
-              Lý do loại hồ sơ {getCandidateName(selectedCandidate)}:
-            </Text>
-
-            <TextInput
-              style={styles.reasonInput}
-              placeholder="Nhập lý do từ chối..."
-              placeholderTextColor="#94A3B8"
-              multiline
-              numberOfLines={3}
-              value={rejectReason}
-              onChangeText={setRejectReason}
-            />
-
-            <View style={styles.confirmRejectRow}>
-              <TouchableOpacity
-                style={styles.cancelRejectBtn}
-                onPress={() => setShowRejectModal(false)}
-              >
-                <Text style={styles.cancelRejectText}>Hủy</Text>
-              </TouchableOpacity>
-
-              <TouchableOpacity
-                style={styles.confirmRejectBtn}
-                onPress={handleConfirmReject}
-                disabled={actionLoading}
-              >
-                {actionLoading ? (
-                  <ActivityIndicator size="small" color="#FFFFFF" />
-                ) : (
-                  <Text style={styles.confirmRejectText}>Xác nhận từ chối</Text>
+                  Tất cả phòng ban
+                </Text>
+                {selectedCandDept === 'ALL' && (
+                  <Ionicons name="checkmark" size={17} color="#2563EB" />
                 )}
               </TouchableOpacity>
-            </View>
-          </View>
-        </View>
+
+              {departments.map((d) => (
+                <TouchableOpacity
+                  key={d._id}
+                  style={[
+                    styles.webDropdownItem,
+                    selectedCandDept === d._id && styles.webDropdownItemActive,
+                  ]}
+                  onPress={() => handleSelectCandDept(d._id)}
+                  activeOpacity={0.7}
+                >
+                  <Text
+                    style={[
+                      styles.webDropdownItemText,
+                      selectedCandDept === d._id && styles.webDropdownItemTextActive,
+                    ]}
+                  >
+                    {d.name}
+                  </Text>
+                  {selectedCandDept === d._id && (
+                    <Ionicons name="checkmark" size={17} color="#2563EB" />
+                  )}
+                </TouchableOpacity>
+              ))}
+            </ScrollView>
+          </Pressable>
+        </Pressable>
       </Modal>
+
+      <Modal
+        visible={showCandPositionPickerModal}
+        transparent={true}
+        animationType="fade"
+        onRequestClose={() => setShowCandPositionPickerModal(false)}
+      >
+        <Pressable
+          style={styles.webDropdownOverlay}
+          onPress={() => setShowCandPositionPickerModal(false)}
+        >
+          <Pressable
+            style={styles.webDropdownCard}
+            onPress={(e) => e.stopPropagation()}
+          >
+            <ScrollView
+              style={styles.webDropdownList}
+              showsVerticalScrollIndicator={false}
+            >
+              <TouchableOpacity
+                style={[
+                  styles.webDropdownItem,
+                  selectedCandPosition === 'ALL' && styles.webDropdownItemActive,
+                ]}
+                onPress={() => {
+                  setSelectedCandPosition('ALL');
+                  setShowCandPositionPickerModal(false);
+                }}
+                activeOpacity={0.7}
+              >
+                <Text
+                  style={[
+                    styles.webDropdownItemText,
+                    selectedCandPosition === 'ALL' && styles.webDropdownItemTextActive,
+                  ]}
+                >
+                  Tất cả vị trí
+                </Text>
+                {selectedCandPosition === 'ALL' && (
+                  <Ionicons name="checkmark" size={17} color="#2563EB" />
+                )}
+              </TouchableOpacity>
+
+              {candidatePositionOptions.map((pos) => (
+                <TouchableOpacity
+                  key={pos}
+                  style={[
+                    styles.webDropdownItem,
+                    selectedCandPosition === pos && styles.webDropdownItemActive,
+                  ]}
+                  onPress={() => {
+                    setSelectedCandPosition(pos);
+                    setShowCandPositionPickerModal(false);
+                  }}
+                  activeOpacity={0.7}
+                >
+                  <Text
+                    style={[
+                      styles.webDropdownItemText,
+                      selectedCandPosition === pos && styles.webDropdownItemTextActive,
+                    ]}
+                  >
+                    {pos}
+                  </Text>
+                  {selectedCandPosition === pos && (
+                    <Ionicons name="checkmark" size={17} color="#2563EB" />
+                  )}
+                </TouchableOpacity>
+              ))}
+            </ScrollView>
+          </Pressable>
+        </Pressable>
+      </Modal>
+
+      <Modal
+        visible={showCandStagePickerModal}
+        transparent={true}
+        animationType="fade"
+        onRequestClose={() => setShowCandStagePickerModal(false)}
+      >
+        <Pressable
+          style={styles.webDropdownOverlay}
+          onPress={() => setShowCandStagePickerModal(false)}
+        >
+          <Pressable
+            style={styles.webDropdownCard}
+            onPress={(e) => e.stopPropagation()}
+          >
+            <ScrollView
+              style={styles.webDropdownList}
+              showsVerticalScrollIndicator={false}
+            >
+              <TouchableOpacity
+                style={[
+                  styles.webDropdownItem,
+                  selectedCandStage === 'ALL' && styles.webDropdownItemActive,
+                ]}
+                onPress={() => {
+                  setSelectedCandStage('ALL');
+                  setShowCandStagePickerModal(false);
+                }}
+                activeOpacity={0.7}
+              >
+                <Text
+                  style={[
+                    styles.webDropdownItemText,
+                    selectedCandStage === 'ALL' && styles.webDropdownItemTextActive,
+                  ]}
+                >
+                  Tất cả giai đoạn
+                </Text>
+                {selectedCandStage === 'ALL' && (
+                  <Ionicons name="checkmark" size={17} color="#2563EB" />
+                )}
+              </TouchableOpacity>
+
+              {candidateStageOptions.map((stg) => (
+                <TouchableOpacity
+                  key={stg}
+                  style={[
+                    styles.webDropdownItem,
+                    selectedCandStage === stg && styles.webDropdownItemActive,
+                  ]}
+                  onPress={() => {
+                    setSelectedCandStage(stg);
+                    setShowCandStagePickerModal(false);
+                  }}
+                  activeOpacity={0.7}
+                >
+                  <Text
+                    style={[
+                      styles.webDropdownItemText,
+                      selectedCandStage === stg && styles.webDropdownItemTextActive,
+                    ]}
+                  >
+                    {stg}
+                  </Text>
+                  {selectedCandStage === stg && (
+                    <Ionicons name="checkmark" size={17} color="#2563EB" />
+                  )}
+                </TouchableOpacity>
+              ))}
+            </ScrollView>
+          </Pressable>
+        </Pressable>
+      </Modal>
+
+
     </View>
   );
 };
@@ -1941,6 +2218,24 @@ const styles = StyleSheet.create({
     color: '#FFFFFF',
     fontSize: 10.5,
     fontWeight: '800',
+  },
+  candidateContactRow: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 12,
+    marginBottom: 8,
+    paddingTop: 8,
+    borderTopWidth: 1,
+    borderTopColor: '#F8FAFC',
+  },
+  candidateContactItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+  },
+  candidateContactText: {
+    fontSize: 11.5,
+    color: '#64748B',
   },
   candidateMetaRow: {
     flexDirection: 'row',
@@ -2555,6 +2850,457 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   confirmRejectText: {
+    fontSize: 13,
+    fontWeight: '700',
+    color: '#FFFFFF',
+  },
+  candidateStatusBanner: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingVertical: 10,
+    borderBottomWidth: 1,
+    borderBottomColor: '#F1F5F9',
+    marginBottom: 8,
+  },
+  candidateStatusLeft: {
+    flexDirection: 'column',
+    gap: 4,
+  },
+  candidateStageBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 12,
+    gap: 5,
+    alignSelf: 'flex-start',
+  },
+  candidateStageDot: {
+    width: 7,
+    height: 7,
+    borderRadius: 3.5,
+  },
+  candidateStageText: {
+    fontSize: 12,
+    fontWeight: '700',
+  },
+  candidateAppliedDate: {
+    fontSize: 11,
+    color: '#64748B',
+  },
+  rejectedPill: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#FEF2F2',
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 12,
+    gap: 4,
+    alignSelf: 'flex-start',
+  },
+  rejectedPillText: {
+    fontSize: 11.5,
+    fontWeight: '700',
+    color: '#DC2626',
+  },
+  aiBadgeLarge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    borderRadius: 12,
+  },
+  aiBadgeLargeText: {
+    fontSize: 13,
+    fontWeight: '800',
+  },
+  aiBadgeGreen: {
+    backgroundColor: '#ECFDF5',
+    borderWidth: 1,
+    borderColor: '#A7F3D0',
+  },
+  aiBadgeBlue: {
+    backgroundColor: '#EFF6FF',
+    borderWidth: 1,
+    borderColor: '#BFDBFE',
+  },
+  aiBadgeOrange: {
+    backgroundColor: '#FFFBEB',
+    borderWidth: 1,
+    borderColor: '#FDE68A',
+  },
+  aiTextGreen: {
+    color: '#059669',
+  },
+  aiTextBlue: {
+    color: '#2563EB',
+  },
+  aiTextOrange: {
+    color: '#D97706',
+  },
+  contactQuickBar: {
+    flexDirection: 'row',
+    gap: 8,
+    paddingVertical: 8,
+    borderBottomWidth: 1,
+    borderBottomColor: '#F1F5F9',
+  },
+  contactBtn: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 6,
+    paddingVertical: 7,
+    backgroundColor: '#F8FAFC',
+    borderRadius: 10,
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
+  },
+  contactBtnHighlight: {
+    backgroundColor: '#F0FDF4',
+    borderColor: '#BBF7D0',
+  },
+  contactBtnText: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: '#2563EB',
+  },
+  candidateModalTabRow: {
+    flexDirection: 'row',
+    backgroundColor: '#F1F5F9',
+    borderRadius: 10,
+    padding: 3,
+    marginVertical: 10,
+  },
+  candidateModalTabBtn: {
+    flex: 1,
+    paddingVertical: 7,
+    alignItems: 'center',
+    borderRadius: 8,
+  },
+  candidateModalTabBtnActive: {
+    backgroundColor: '#FFFFFF',
+    elevation: 1,
+    shadowColor: '#000',
+    shadowOpacity: 0.05,
+    shadowOffset: { width: 0, height: 1 },
+    shadowRadius: 2,
+  },
+  candidateModalTabText: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: '#64748B',
+  },
+  candidateModalTabTextActive: {
+    color: '#2563EB',
+    fontWeight: '700',
+  },
+  tabContentContainer: {
+    paddingBottom: 16,
+  },
+  rejectedReasonBox: {
+    backgroundColor: '#FEF2F2',
+    borderWidth: 1,
+    borderColor: '#FECACA',
+    borderRadius: 12,
+    padding: 12,
+    marginBottom: 14,
+  },
+  rejectedReasonHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    marginBottom: 4,
+  },
+  rejectedReasonTitle: {
+    fontSize: 12.5,
+    fontWeight: '700',
+    color: '#DC2626',
+  },
+  rejectedReasonText: {
+    fontSize: 12,
+    color: '#991B1B',
+    lineHeight: 17,
+  },
+  aiEvalBox: {
+    backgroundColor: '#F8FAFC',
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
+    borderRadius: 14,
+    padding: 12,
+    marginBottom: 14,
+  },
+  aiEvalHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    marginBottom: 10,
+  },
+  aiEvalTitle: {
+    fontSize: 13,
+    fontWeight: '700',
+    color: '#1E293B',
+  },
+  aiRecBox: {
+    backgroundColor: '#EFF6FF',
+    borderRadius: 10,
+    padding: 10,
+    marginBottom: 10,
+    borderWidth: 1,
+    borderColor: '#DBEAFE',
+  },
+  aiRecLabel: {
+    fontSize: 11.5,
+    fontWeight: '700',
+    color: '#1D4ED8',
+    marginBottom: 2,
+  },
+  aiRecText: {
+    fontSize: 12,
+    color: '#1E3A8A',
+    lineHeight: 17,
+  },
+  aiListSection: {
+    marginTop: 8,
+  },
+  aiListTitleGreen: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: '#15803D',
+    marginBottom: 4,
+  },
+  aiListTitleOrange: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: '#B45309',
+    marginBottom: 4,
+  },
+  aiListTitleRed: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: '#B91C1C',
+    marginBottom: 4,
+  },
+  aiBulletRow: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: 6,
+    marginBottom: 4,
+  },
+  aiBulletText: {
+    flex: 1,
+    fontSize: 11.5,
+    color: '#334155',
+    lineHeight: 16,
+  },
+  skillsChipWrapper: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 6,
+  },
+  candidateSkillChip: {
+    backgroundColor: '#EFF6FF',
+    borderWidth: 1,
+    borderColor: '#DBEAFE',
+    borderRadius: 14,
+    paddingHorizontal: 9,
+    paddingVertical: 4,
+  },
+  candidateSkillText: {
+    fontSize: 11.5,
+    color: '#2563EB',
+    fontWeight: '500',
+  },
+  missingSkillChip: {
+    backgroundColor: '#FEF2F2',
+    borderWidth: 1,
+    borderColor: '#FECACA',
+    borderRadius: 14,
+    paddingHorizontal: 9,
+    paddingVertical: 4,
+  },
+  missingSkillText: {
+    fontSize: 11.5,
+    color: '#DC2626',
+    fontWeight: '500',
+  },
+  cvDownloadBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+    backgroundColor: '#EFF6FF',
+    borderWidth: 1,
+    borderColor: '#BFDBFE',
+    borderRadius: 12,
+    padding: 12,
+    marginBottom: 14,
+  },
+  cvDownloadTitle: {
+    fontSize: 12.5,
+    fontWeight: '700',
+    color: '#1E40AF',
+  },
+  cvDownloadSubtitle: {
+    fontSize: 11,
+    color: '#3B82F6',
+    marginTop: 1,
+  },
+  expCardItem: {
+    flexDirection: 'row',
+    gap: 10,
+    marginBottom: 12,
+  },
+  expCardDot: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    backgroundColor: '#2563EB',
+    marginTop: 5,
+  },
+  expCardContent: {
+    flex: 1,
+  },
+  expCardPosition: {
+    fontSize: 12.5,
+    fontWeight: '700',
+    color: '#0F172A',
+  },
+  expCardCompany: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: '#475569',
+  },
+  expCardDate: {
+    fontSize: 11,
+    color: '#94A3B8',
+    marginTop: 1,
+  },
+  expCardDesc: {
+    fontSize: 11.5,
+    color: '#334155',
+    marginTop: 3,
+    lineHeight: 16,
+  },
+  eduCardItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+    backgroundColor: '#F8FAFC',
+    borderRadius: 10,
+    padding: 10,
+    marginBottom: 8,
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
+  },
+  eduSchoolText: {
+    fontSize: 12.5,
+    fontWeight: '700',
+    color: '#0F172A',
+  },
+  eduMajorText: {
+    fontSize: 11.5,
+    color: '#64748B',
+    marginTop: 2,
+  },
+  addNoteSection: {
+    marginBottom: 14,
+  },
+  addNoteInput: {
+    backgroundColor: '#F8FAFC',
+    borderRadius: 12,
+    padding: 10,
+    fontSize: 12.5,
+    color: '#0F172A',
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
+    textAlignVertical: 'top',
+    minHeight: 70,
+    marginBottom: 8,
+  },
+  saveNoteBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 6,
+    backgroundColor: '#2563EB',
+    borderRadius: 10,
+    paddingVertical: 9,
+  },
+  saveNoteBtnDisabled: {
+    backgroundColor: '#94A3B8',
+  },
+  saveNoteBtnText: {
+    fontSize: 12.5,
+    fontWeight: '700',
+    color: '#FFFFFF',
+  },
+  noteItemCard: {
+    backgroundColor: '#F8FAFC',
+    borderRadius: 10,
+    padding: 10,
+    marginBottom: 8,
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
+  },
+  noteItemHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 4,
+  },
+  noteItemAuthor: {
+    fontSize: 11.5,
+    fontWeight: '700',
+    color: '#1E293B',
+  },
+  noteItemTime: {
+    fontSize: 10.5,
+    color: '#94A3B8',
+  },
+  noteItemContent: {
+    fontSize: 12,
+    color: '#334155',
+    lineHeight: 17,
+  },
+  emptySmallSection: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 20,
+  },
+  emptySmallText: {
+    fontSize: 12,
+    color: '#94A3B8',
+    textAlign: 'center',
+    marginTop: 4,
+  },
+  candidateModalFooter: {
+    flexDirection: 'row',
+    gap: 10,
+    paddingTop: 10,
+    borderTopWidth: 1,
+    borderTopColor: '#F1F5F9',
+  },
+  candidateFooterBtn: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 6,
+    paddingVertical: 11,
+    borderRadius: 12,
+  },
+  candidateFooterMoveBtn: {
+    backgroundColor: '#2563EB',
+  },
+  candidateFooterRejectBtn: {
+    backgroundColor: '#FEF2F2',
+    borderWidth: 1,
+    borderColor: '#FECACA',
+  },
+  candidateFooterBtnText: {
     fontSize: 13,
     fontWeight: '700',
     color: '#FFFFFF',
