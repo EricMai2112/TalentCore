@@ -15,6 +15,8 @@ import { InterviewsModule } from './modules/interviews/interviews.module';
 import { NotificationsModule } from './modules/notifications/notifications.module';
 import { OffersModule } from './modules/offers/offers.module';
 import { AnalyticsModule } from './modules/analytics/analytics.module';
+import { MockInterviewModule } from './modules/mock-interview/mock-interview.module';
+import { SmsModule } from './modules/sms/sms.module';
 
 import { APP_GUARD } from '@nestjs/core';
 import { JwtAuthGuard } from './modules/auth/guards/jwt-auth.guard';
@@ -44,6 +46,8 @@ import { RolesGuard } from './modules/auth/guards/roles.guard';
     NotificationsModule,
     OffersModule,
     AnalyticsModule,
+    MockInterviewModule,
+    SmsModule,
   ],
   controllers: [],
   providers: [

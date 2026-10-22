@@ -666,7 +666,6 @@ export class EmailService {
     companyName?: string;
     customSubject?: string;
     customLetterHtml?: string;
-    otpCode?: string;
     salary?: string;
     startDate?: string;
     expirationDate?: string;
@@ -696,16 +695,14 @@ export class EmailService {
       `.trim();
     }
 
-    if (params.otpCode) {
-      const otpHtml = `
-        <div style="background-color: #faf5ff; border: 1.5px dashed #c084fc; border-radius: 14px; padding: 20px; margin: 24px 0; text-align: center;">
-          <p style="margin: 0 0 6px 0; font-size: 13px; font-weight: 700; color: #6b21a8; text-transform: uppercase; letter-spacing: 0.8px;">Mã OTP xác thực chấp nhận nhận việc</p>
-          <div style="font-size: 32px; font-weight: 800; color: #7c3aed; letter-spacing: 6px; font-family: monospace; padding: 6px 0;">${params.otpCode}</div>
-          <p style="margin: 8px 0 0 0; font-size: 12px; color: #6b7280; line-height: 18px;">Khi bấm đồng ý nhận việc trên hệ thống TalentCore, vui lòng nhập chính xác mã OTP này để hoàn tất xác nhận.</p>
-        </div>
-      `;
-      bodyContent = `${bodyContent}\n${otpHtml}`;
-    }
+    const smsNoticeHtml = `
+      <div style="background-color: #f0fdf4; border: 1.5px dashed #86efac; border-radius: 14px; padding: 16px 20px; margin: 24px 0;">
+        <p style="margin: 0; font-size: 13px; color: #166534; line-height: 20px;">
+          <strong>Lưu ý bảo mật:</strong> Để đảm bảo tính xác thực, mã OTP xác nhận nhận việc sẽ được gửi trực tiếp đến số điện thoại di động của bạn qua tin nhắn SMS khi bạn thao tác trên hệ thống.
+        </p>
+      </div>
+    `;
+    bodyContent = `${bodyContent}\n${smsNoticeHtml}`;
 
     const renderedHtml = this.generateGeneralHtmlEmail({
       title: subject,

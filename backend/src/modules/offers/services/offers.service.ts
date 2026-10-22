@@ -15,6 +15,7 @@ import { Department, DepartmentDocument } from '../../departments/schemas/depart
 import { User, UserDocument, UserRole } from '../../users/schemas/user.schema';
 import { NotificationsService } from '../../notifications/services/notifications.service';
 import { EmailService } from '../../email-template/services/email.service';
+import { SmsService } from '../../sms/sms.service';
 import { CreateOfferDto } from '../dtos/create-offer.dto';
 import { UpdateOfferDto } from '../dtos/update-offer.dto';
 import { RespondOfferDto } from '../dtos/respond-offer.dto';
@@ -42,6 +43,7 @@ export class OffersService {
     private readonly connection: Connection,
     private readonly notificationsService: NotificationsService,
     private readonly emailService: EmailService,
+    private readonly smsService: SmsService,
   ) {}
 
   async create(dto: CreateOfferDto, userId: string): Promise<OfferDocument> {
@@ -100,6 +102,7 @@ export class OffersService {
       await savedOffer.save();
       await this.notifyCandidateForOffer(savedOffer);
       await this.sendOfferEmailToCandidate(savedOffer);
+      await this.sendOfferSmsToCandidate(savedOffer);
     }
 
     return savedOffer;
@@ -257,8 +260,9 @@ export class OffersService {
 
     await this.notifyCandidateForOffer(updatedOffer);
     await this.sendOfferEmailToCandidate(updatedOffer);
+    await this.sendOfferSmsToCandidate(updatedOffer);
 
-    this.logger.log(`Offer ${id} marked as SENT. Notification & email dispatched.`);
+    this.logger.log(`Offer ${id} marked as SENT. Notification, email & SMS dispatched.`);
 
     return updatedOffer;
   }
@@ -325,15 +329,17 @@ export class OffersService {
     if (dto.action === 'ACCEPT') {
       if (offer.otpCode) {
         const inputOtp = dto.otp ? String(dto.otp).trim() : '';
-        if (!inputOtp) {
-          throw new BadRequestException('Vui lòng nhập mã OTP được gửi trong email để xác nhận nhận việc');
+        if (!inputOtp && !dto.firebaseVerified) {
+          throw new BadRequestException('Vui lòng nhập mã OTP được gửi qua tin nhắn SMS số điện thoại để xác nhận nhận việc');
         }
-        if (inputOtp !== offer.otpCode) {
-          throw new BadRequestException('Mã OTP không chính xác. Vui lòng kiểm tra lại email nhận việc.');
+        const isVerified = dto.firebaseVerified === true || inputOtp === offer.otpCode;
+        if (!isVerified) {
+          throw new BadRequestException('Mã OTP không chính xác. Vui lòng kiểm tra lại tin nhắn SMS trên điện thoại của bạn.');
         }
         if (offer.otpExpiresAt && new Date() > new Date(offer.otpExpiresAt)) {
-          throw new BadRequestException('Mã OTP đã hết hạn. Vui lòng liên hệ nhà tuyển dụng.');
+          throw new BadRequestException('Mã OTP đã hết hạn. Vui lòng bấm gửi lại mã xác thực SMS.');
         }
+        offer.isOtpVerified = true;
       }
 
       const session = await this.connection.startSession();
@@ -636,7 +642,6 @@ export class OffersService {
         companyName: 'TalentCore',
         customSubject: offer.emailSubject,
         customLetterHtml: offer.offerLetterHtml,
-        otpCode: offer.otpCode,
       });
 
       this.logger.log(
@@ -647,6 +652,89 @@ export class OffersService {
         `Lỗi gửi email Offer cho ứng viên (offerId: ${offer._id}): ${error?.message || error}`,
       );
     }
+  }
+
+  async sendOfferSmsToCandidate(offer: OfferDocument, candidateUserId?: string): Promise<any> {
+    if (!offer.otpCode) return;
+    try {
+      let candidatePhone: string | undefined;
+
+      if (candidateUserId) {
+        const loggedUser = await this.userModel.findById(candidateUserId).exec();
+        if (loggedUser && loggedUser.phone) {
+          candidatePhone = loggedUser.phone;
+        }
+      }
+
+      if (!candidatePhone && offer.applicationId) {
+        const app = await this.applicationModel
+          .findById(offer.applicationId)
+          .populate('candidateId')
+          .exec();
+        if (app && app.candidateId) {
+          const candidate = app.candidateId as any;
+          if (candidate.phone) {
+            candidatePhone = candidate.phone;
+          }
+          if (!candidatePhone && candidate.userId) {
+            const userObj = await this.userModel.findById(candidate.userId).exec();
+            if (userObj && userObj.phone) {
+              candidatePhone = userObj.phone;
+            }
+          }
+        }
+      }
+
+      if (!candidatePhone && offer.candidateId) {
+        const directUser = await this.userModel.findById(offer.candidateId).exec();
+        if (directUser && directUser.phone) {
+          candidatePhone = directUser.phone;
+        }
+      }
+
+      if (!candidatePhone) {
+        candidatePhone = offer.candidatePhone;
+      }
+
+      if (!candidatePhone) {
+        throw new BadRequestException('Không tìm thấy số điện thoại của ứng viên để gửi OTP');
+      }
+
+      offer.candidatePhone = candidatePhone;
+      await offer.save();
+
+      return await this.smsService.sendOtpSms(
+        candidatePhone,
+        offer.otpCode,
+        offer.positionTitle,
+      );
+    } catch (err: any) {
+      this.logger.error(`Lỗi gửi SMS OTP cho Offer ${offer._id}: ${err.message}`);
+    }
+  }
+
+  async requestOtp(id: string, candidateUserId: string): Promise<any> {
+    if (!Types.ObjectId.isValid(id)) {
+      throw new BadRequestException('Offer ID không hợp lệ');
+    }
+    const offer = await this.offerModel.findById(id).exec();
+    if (!offer) {
+      throw new NotFoundException('Không tìm thấy lời mời nhận việc');
+    }
+    if (offer.status === OfferStatus.ACCEPTED) {
+      throw new BadRequestException('Offer này đã được chấp nhận');
+    }
+
+    offer.otpCode = this.generateOtp();
+    offer.otpExpiresAt = new Date(Date.now() + 5 * 60 * 1000);
+    await offer.save();
+
+    const result = await this.sendOfferSmsToCandidate(offer, candidateUserId);
+    return {
+      message: 'Mã xác thực OTP đã được gửi đến số điện thoại của bạn.',
+      maskedPhone: result?.maskedPhone || this.smsService.maskPhoneNumber(offer.candidatePhone),
+      phone: offer.candidatePhone,
+    };
   }
 
   private generateOtp(): string {

@@ -12,6 +12,7 @@ import { OffersService } from './services/offers.service';
 import { OffersController } from './controllers/offers.controller';
 import { NotificationsModule } from '../notifications/notifications.module';
 import { EmailTemplateModule } from '../email-template/email-template.module';
+import { SmsModule } from '../sms/sms.module';
 
 @Module({
   imports: [
@@ -32,6 +33,7 @@ import { EmailTemplateModule } from '../email-template/email-template.module';
     }),
     NotificationsModule,
     EmailTemplateModule,
+    SmsModule,
   ],
   controllers: [OffersController],
   providers: [OffersService],

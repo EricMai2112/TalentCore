@@ -92,6 +92,12 @@ export class Offer {
 
   @Prop({ required: false, type: Date })
   otpExpiresAt?: Date;
+
+  @Prop({ required: false, trim: true })
+  candidatePhone?: string;
+
+  @Prop({ required: false, default: false })
+  isOtpVerified?: boolean;
 }
 
 export const OfferSchema = SchemaFactory.createForClass(Offer);

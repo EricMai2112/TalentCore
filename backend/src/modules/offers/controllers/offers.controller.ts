@@ -65,6 +65,16 @@ export class OffersController {
     };
   }
 
+  @Post(':id/request-otp')
+  async requestOtp(@Req() req: Request, @Param('id') id: string) {
+    const user = this.extractUserFromReq(req);
+    const data = await this.offersService.requestOtp(id, user.id);
+    return {
+      message: data.message,
+      data,
+    };
+  }
+
   @Post(':id/respond')
   async candidateRespond(
     @Req() req: Request,

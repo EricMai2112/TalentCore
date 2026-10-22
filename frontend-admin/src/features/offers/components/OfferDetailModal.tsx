@@ -228,7 +228,7 @@ export const OfferDetailModal: React.FC<OfferDetailModalProps> = ({
                 <div>
                   <h4 className="font-bold text-emerald-900">Ứng viên đã chấp nhận Offer!</h4>
                   <p className="mt-1">
-                    Hồ sơ ứng viên đã được tự động chuyển sang trạng thái{' '}
+                    Đã xác thực chữ ký điện tử qua mã SMS OTP gửi đến số điện thoại ứng viên. Hồ sơ đã được tự động chuyển sang trạng thái{' '}
                     <strong>Nhận việc (HIRED)</strong>.
                   </p>
                   {offer.respondedAt && (
