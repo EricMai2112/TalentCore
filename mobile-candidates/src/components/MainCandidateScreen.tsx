@@ -10,7 +10,7 @@ import {
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
-import { ApplicationsScreen } from '../screens/applications';
+import { ApplicationsNavOptions, ApplicationsScreen } from '../screens/applications';
 import { JobsScreen } from './JobsScreen';
 import { NotificationsScreen } from './NotificationsScreen';
 import { ProfileScreen } from './ProfileScreen';
@@ -36,6 +36,7 @@ export const MainCandidateScreen: React.FC = () => {
   const { unreadCount } = useNotification();
   const [activeTab, setActiveTab] = useState<TabKey>('jobs');
   const [tabBarWidth, setTabBarWidth] = useState(0);
+  const [appNavOptions, setAppNavOptions] = useState<ApplicationsNavOptions | null>(null);
 
   const translateX = useRef(new Animated.Value(0)).current;
   const scaleAnim = useRef(new Animated.Value(1)).current;
@@ -101,6 +102,25 @@ export const MainCandidateScreen: React.FC = () => {
     }
   };
 
+  const handleNavigateFromNotification = (
+    tabKey: TabKey,
+    destination?: {
+      subTab?: 'my_applications' | 'interviews' | 'offers';
+      targetId?: string;
+    },
+  ) => {
+    if (destination?.subTab || destination?.targetId) {
+      setAppNavOptions({
+        subTab: destination.subTab,
+        targetId: destination.targetId,
+        timestamp: Date.now(),
+      });
+    }
+    const targetIndex = TABS.findIndex((t) => t.key === tabKey);
+    const index = targetIndex >= 0 ? targetIndex : 1;
+    handleSelectTab(tabKey, index);
+  };
+
   const renderActiveTabContent = () => {
     switch (activeTab) {
       case 'jobs':
@@ -113,11 +133,18 @@ export const MainCandidateScreen: React.FC = () => {
       case 'applications':
         return (
           <ApplicationsScreen
+            navOptions={appNavOptions}
+            onClearNavOptions={() => setAppNavOptions(null)}
             onRequireLogin={() => handleSelectTab('profile', 3)}
           />
         );
       case 'notifications':
-        return <NotificationsScreen />;
+        return (
+          <NotificationsScreen
+            onNavigate={handleNavigateFromNotification}
+            onRequireLogin={() => handleSelectTab('profile', 3)}
+          />
+        );
       case 'profile':
         return <ProfileScreen />;
       default:

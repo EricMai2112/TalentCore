@@ -11,14 +11,88 @@ import {
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { adminService, AdminNotification } from '../../services/admin.services';
+import { AdminTabKey } from '../../components/AdminTabBar';
+
+export interface NotificationNavOptions {
+  segment?: 'jobs' | 'candidates';
+  targetId?: string;
+}
+
+export interface NotificationsScreenProps {
+  onNavigate?: (tab: AdminTabKey, options?: NotificationNavOptions) => void;
+  onRefreshBadge?: () => void;
+}
 
 type TabFilter = 'all' | 'unread' | 'jd' | 'candidate' | 'interview_offer';
 
-export const NotificationsScreen: React.FC = () => {
+export const NotificationsScreen: React.FC<NotificationsScreenProps> = ({
+  onNavigate,
+  onRefreshBadge,
+}) => {
   const [notifications, setNotifications] = useState<AdminNotification[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
   const [refreshing, setRefreshing] = useState<boolean>(false);
   const [activeTab, setActiveTab] = useState<TabFilter>('all');
+
+  const getNotificationDestination = (item: AdminNotification): {
+    tab: AdminTabKey;
+    segment?: 'jobs' | 'candidates';
+    targetId?: string;
+  } => {
+    const url = (item.actionUrl || '').toLowerCase();
+    const cat = (item.category || '').toUpperCase();
+    const type = (item.type || '').toUpperCase();
+
+    if (
+      url.includes('/offers') ||
+      cat === 'OFFER' ||
+      type.startsWith('OFFER')
+    ) {
+      return { tab: 'offers' };
+    }
+
+    if (
+      url.includes('/interviews') ||
+      cat === 'INTERVIEW' ||
+      type.startsWith('INTERVIEW')
+    ) {
+      return { tab: 'interviews' };
+    }
+
+    if (
+      url.includes('/job-description') ||
+      cat === 'JD' ||
+      cat === 'RECRUITMENT' ||
+      type.includes('JD')
+    ) {
+      return { tab: 'recruitment', segment: 'jobs' };
+    }
+
+    if (
+      url.includes('/kanban') ||
+      cat === 'CANDIDATE' ||
+      type.includes('CANDIDATE') ||
+      type.includes('DEPARTMENT_REVIEW') ||
+      type.includes('STAGE')
+    ) {
+      return { tab: 'recruitment', segment: 'candidates' };
+    }
+
+    return { tab: 'recruitment', segment: 'jobs' };
+  };
+
+  const handleNotificationPress = async (item: AdminNotification) => {
+    if (!item.isRead) {
+      await handleMarkAsRead(item._id);
+    }
+    if (onNavigate) {
+      const dest = getNotificationDestination(item);
+      onNavigate(dest.tab, {
+        segment: dest.segment,
+        targetId: (item as any).metadata?.targetId,
+      });
+    }
+  };
 
   const fetchData = useCallback(async () => {
     try {
@@ -44,11 +118,13 @@ export const NotificationsScreen: React.FC = () => {
     setNotifications((prev) =>
       prev.map((n) => (n._id === id ? { ...n, isRead: true } : n))
     );
+    if (onRefreshBadge) onRefreshBadge();
   };
 
   const handleMarkAll = async () => {
     await adminService.markAllNotificationsAsRead();
     setNotifications((prev) => prev.map((n) => ({ ...n, isRead: true })));
+    if (onRefreshBadge) onRefreshBadge();
   };
 
   const unreadCount = useMemo(() => {
@@ -203,7 +279,7 @@ export const NotificationsScreen: React.FC = () => {
                     styles.notifCard,
                     !item.isRead && styles.notifCardUnread,
                   ]}
-                  onPress={() => !item.isRead && handleMarkAsRead(item._id)}
+                  onPress={() => handleNotificationPress(item)}
                   activeOpacity={0.8}
                 >
                   <View style={[styles.iconBox, { backgroundColor: theme.bg }]}>
@@ -244,6 +320,13 @@ export const NotificationsScreen: React.FC = () => {
                     >
                       {item.message}
                     </Text>
+
+                    <View style={styles.cardBottomRow}>
+                      <View style={styles.viewDetailPill}>
+                        <Text style={styles.viewDetailText}>Xem chi tiết</Text>
+                        <Ionicons name="chevron-forward" size={12} color="#2563EB" />
+                      </View>
+                    </View>
                   </View>
 
                   {!item.isRead && <View style={styles.unreadIndicatorDot} />}
@@ -470,5 +553,28 @@ const styles = StyleSheet.create({
     borderRadius: 4,
     backgroundColor: '#2563EB',
     marginTop: 6,
+  },
+  cardBottomRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'flex-start',
+    marginTop: 8,
+    paddingTop: 6,
+    borderTopWidth: 1,
+    borderTopColor: '#F1F5F9',
+  },
+  viewDetailPill: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    backgroundColor: '#EFF6FF',
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: 8,
+  },
+  viewDetailText: {
+    fontSize: 11,
+    fontWeight: '700',
+    color: '#2563EB',
   },
 });
