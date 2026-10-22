@@ -203,6 +203,7 @@ export const applicationService = {
     action: 'ACCEPT' | 'DECLINE',
     declineReason?: string,
     otp?: string,
+    firebaseVerified?: boolean,
   ): Promise<{ success: boolean; message?: string }> => {
     try {
       const res = await request<ApiResponse<CandidateOfferItem>>(
@@ -213,6 +214,7 @@ export const applicationService = {
             action,
             declineReason,
             otp,
+            firebaseVerified,
           }),
         },
       );
@@ -222,6 +224,30 @@ export const applicationService = {
       return {
         success: false,
         message: error.message || 'Không thể gửi phản hồi lúc này',
+      };
+    }
+  },
+
+  requestOtp: async (
+    offerId: string,
+  ): Promise<{ success: boolean; message: string; maskedPhone?: string; phone?: string }> => {
+    try {
+      const res = await request<ApiResponse<{ message: string; maskedPhone: string; phone?: string }>>(
+        `/offers/${offerId}/request-otp`,
+        {
+          method: 'POST',
+        },
+      );
+      return {
+        success: true,
+        message: res.message || 'Đã gửi mã OTP đến số điện thoại của bạn.',
+        maskedPhone: res.data?.maskedPhone,
+        phone: res.data?.phone,
+      };
+    } catch (error: any) {
+      return {
+        success: false,
+        message: error.message || 'Không thể gửi lại mã OTP lúc này',
       };
     }
   },

@@ -1,8 +1,11 @@
-import React, { useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import {
   ActivityIndicator,
   Alert,
+  Keyboard,
+  KeyboardAvoidingView,
   Modal,
+  Platform,
   Pressable,
   ScrollView,
   StyleSheet,
@@ -13,6 +16,7 @@ import {
 import { Ionicons } from '@expo/vector-icons';
 import { CandidateOfferItem, CandidateOfferStatus } from '../../../types/application.types';
 import { applicationService } from '../../../services/application.service';
+import { firebaseAuthService } from '../../../services/firebase-auth.service';
 
 interface OfferDetailModalProps {
   visible: boolean;
@@ -27,12 +31,152 @@ export const OfferDetailModal: React.FC<OfferDetailModalProps> = ({
   offer,
   onSuccess,
 }) => {
+  const scrollViewRef = useRef<ScrollView>(null);
   const [isAcceptMode, setIsAcceptMode] = useState(false);
   const [isDeclineMode, setIsDeclineMode] = useState(false);
   const [otp, setOtp] = useState('');
+  const [firebaseSessionInfo, setFirebaseSessionInfo] = useState<string | null>(null);
+  const [maskedPhone, setMaskedPhone] = useState(
+    (offer as any)?.candidatePhone
+      ? String((offer as any).candidatePhone).replace(/(\d{3})\d+(\d{4})/, '$1***$2')
+      : ''
+  );
+  const [countdown, setCountdown] = useState(0);
+  const [resendingOtp, setResendingOtp] = useState(false);
   const [declineReason, setDeclineReason] = useState('');
   const [submitting, setSubmitting] = useState(false);
   const [errorMessage, setErrorMessage] = useState('');
+
+  useEffect(() => {
+    if (!visible) {
+      setIsAcceptMode(false);
+      setIsDeclineMode(false);
+      setOtp('');
+      setCountdown(0);
+      setErrorMessage('');
+      setDeclineReason('');
+      setFirebaseSessionInfo(null);
+    } else if (offer && (offer as any)?.candidatePhone) {
+      setMaskedPhone(
+        String((offer as any).candidatePhone).replace(/(\d{3})\d+(\d{4})/, '$1***$2')
+      );
+    }
+  }, [visible, offer]);
+
+  useEffect(() => {
+    if (!isAcceptMode) return;
+    if (countdown <= 0) return;
+    const timer = setInterval(() => {
+      setCountdown((prev) => (prev > 0 ? prev - 1 : 0));
+    }, 1000);
+    return () => clearInterval(timer);
+  }, [isAcceptMode, countdown]);
+
+  useEffect(() => {
+    const showSub = Keyboard.addListener(
+      Platform.OS === 'ios' ? 'keyboardWillShow' : 'keyboardDidShow',
+      () => {
+        if (isAcceptMode || isDeclineMode) {
+          setTimeout(() => {
+            scrollViewRef.current?.scrollToEnd({ animated: true });
+          }, 100);
+        }
+      },
+    );
+    return () => {
+      showSub.remove();
+    };
+  }, [isAcceptMode, isDeclineMode]);
+
+  useEffect(() => {
+    if (isAcceptMode || isDeclineMode) {
+      setTimeout(() => {
+        scrollViewRef.current?.scrollToEnd({ animated: true });
+      }, 150);
+    }
+  }, [isAcceptMode, isDeclineMode]);
+
+  const handleRequestOtp = async () => {
+    if (!offer) return;
+    try {
+      setResendingOtp(true);
+      setErrorMessage('');
+      const res = await applicationService.requestOtp(offer._id);
+      if (res.success) {
+        if (res.maskedPhone) setMaskedPhone(res.maskedPhone);
+        setCountdown(60);
+        const targetPhone = res.phone || (offer as any)?.candidatePhone;
+        if (!targetPhone) {
+          setErrorMessage('Không tìm thấy số điện thoại của ứng viên để gửi mã SMS.');
+          return;
+        }
+        const fbRes = await firebaseAuthService.sendVerificationCode(targetPhone);
+        if (fbRes.success && fbRes.sessionInfo) {
+          setFirebaseSessionInfo(fbRes.sessionInfo);
+        }
+      } else {
+        setErrorMessage(res.message);
+      }
+    } finally {
+      setResendingOtp(false);
+    }
+  };
+
+  const handleRespond = async (action: 'ACCEPT' | 'DECLINE') => {
+    if (!offer) return;
+    if (action === 'ACCEPT' && (!otp || otp.trim().length === 0)) {
+      setErrorMessage('Vui lòng nhập mã OTP được gửi qua tin nhắn SMS để xác nhận nhận việc.');
+      return;
+    }
+
+    try {
+      setSubmitting(true);
+      setErrorMessage('');
+
+      let firebaseVerified = false;
+      if (action === 'ACCEPT') {
+        const trimmedOtp = otp.trim();
+        if (firebaseSessionInfo) {
+          const verifyRes = await firebaseAuthService.verifyCode(firebaseSessionInfo, trimmedOtp);
+          if (verifyRes.success) {
+            firebaseVerified = true;
+          } else {
+            setErrorMessage(verifyRes.message || 'Mã OTP không chính xác hoặc đã hết hạn.');
+            setSubmitting(false);
+            return;
+          }
+        }
+      }
+
+      const res = await applicationService.respondOffer(
+        offer._id,
+        action,
+        action === 'DECLINE' ? declineReason : undefined,
+        action === 'ACCEPT' ? otp.trim() : undefined,
+        firebaseVerified,
+      );
+
+      if (res.success) {
+        Alert.alert(
+          'Thành công',
+          action === 'ACCEPT'
+            ? 'Chúc mừng bạn đã đồng ý nhận việc thành công!'
+            : 'Bạn đã từ chối lời mời nhận việc.',
+        );
+        onSuccess();
+        setIsAcceptMode(false);
+        setIsDeclineMode(false);
+        setOtp('');
+        setDeclineReason('');
+        setFirebaseSessionInfo(null);
+        onClose();
+      } else {
+        setErrorMessage(res.message || 'Không thể phản hồi lúc này.');
+      }
+    } finally {
+      setSubmitting(false);
+    }
+  };
 
   if (!offer) return null;
 
@@ -66,7 +210,6 @@ export const OfferDetailModal: React.FC<OfferDetailModalProps> = ({
     }
   };
 
-  // Extract candidate name from HTML letter or offer metadata
   const getCandidateName = (): string => {
     if (offer.offerLetterHtml) {
       const match = offer.offerLetterHtml.match(/Kính gửi\s*(?:<strong>)?(.*?)(?:<\/strong>)?\s*,/i);
@@ -84,7 +227,6 @@ export const OfferDetailModal: React.FC<OfferDetailModalProps> = ({
     );
   };
 
-  // Extract benefits list from offer or HTML
   const getBenefitsList = (): string[] => {
     if (Array.isArray(offer.benefits) && offer.benefits.length > 0) {
       return offer.benefits.map((b) => String(b).replace(/^[-•*]\s*/, '').trim()).filter(Boolean);
@@ -105,43 +247,6 @@ export const OfferDetailModal: React.FC<OfferDetailModalProps> = ({
     return ['Bảo hiểm PTI', 'Thưởng lương tháng 13'];
   };
 
-  const handleRespond = async (action: 'ACCEPT' | 'DECLINE') => {
-    if (action === 'ACCEPT' && (!otp || otp.trim().length === 0)) {
-      setErrorMessage('Vui lòng nhập mã OTP được gửi trong email để xác nhận nhận việc.');
-      return;
-    }
-
-    try {
-      setSubmitting(true);
-      setErrorMessage('');
-      const res = await applicationService.respondOffer(
-        offer._id,
-        action,
-        action === 'DECLINE' ? declineReason : undefined,
-        action === 'ACCEPT' ? otp.trim() : undefined,
-      );
-
-      if (res.success) {
-        Alert.alert(
-          'Thành công',
-          action === 'ACCEPT'
-            ? 'Chúc mừng bạn đã đồng ý nhận việc thành công!'
-            : 'Bạn đã từ chối lời mời nhận việc.',
-        );
-        onSuccess();
-        setIsAcceptMode(false);
-        setIsDeclineMode(false);
-        setOtp('');
-        setDeclineReason('');
-        onClose();
-      } else {
-        setErrorMessage(res.message || 'Không thể phản hồi lúc này.');
-      }
-    } finally {
-      setSubmitting(false);
-    }
-  };
-
   const candidateName = getCandidateName();
   const benefitsList = getBenefitsList();
 
@@ -152,7 +257,10 @@ export const OfferDetailModal: React.FC<OfferDetailModalProps> = ({
       animationType="slide"
       onRequestClose={onClose}
     >
-      <View style={styles.overlay}>
+      <KeyboardAvoidingView
+        style={styles.overlay}
+        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+      >
         <View style={styles.content}>
           {/* Header */}
           <View style={styles.header}>
@@ -172,7 +280,16 @@ export const OfferDetailModal: React.FC<OfferDetailModalProps> = ({
             </Pressable>
           </View>
 
-          <ScrollView style={styles.scrollArea} showsVerticalScrollIndicator={false}>
+          <ScrollView
+            ref={scrollViewRef}
+            style={styles.scrollArea}
+            contentContainerStyle={[
+              styles.scrollContent,
+              (isAcceptMode || isDeclineMode) && { paddingBottom: 160 },
+            ]}
+            keyboardShouldPersistTaps="handled"
+            showsVerticalScrollIndicator={false}
+          >
             {/* 4 Summary Cards Grid */}
             <View style={styles.gridBox}>
               {/* Card 1: Mức lương chính thức */}
@@ -371,9 +488,23 @@ export const OfferDetailModal: React.FC<OfferDetailModalProps> = ({
                   <Ionicons name="shield-checkmark" size={18} color="#059669" />
                   <Text style={styles.formTitle}>Xác nhận Nhận Việc</Text>
                 </View>
-                <Text style={styles.formDesc}>
-                  Vui lòng kiểm tra email để lấy mã OTP (6 chữ số) và nhập vào ô bên dưới để xác nhận:
-                </Text>
+
+                <View style={styles.smsNoticeBox}>
+                  <View style={styles.smsNoticeHeader}>
+                    <Ionicons name="chatbox-ellipses" size={14} color="#059669" />
+                    <Text style={styles.smsNoticeTitle}>Xác thực chữ ký điện tử qua SMS OTP</Text>
+                  </View>
+                  <Text style={styles.formDesc}>
+                    Mã xác thực (6 chữ số) đã được gửi qua tin nhắn SMS đến số điện thoại của bạn:
+                  </Text>
+                  {!!maskedPhone && (
+                    <View style={styles.phoneBadgeRow}>
+                      <Ionicons name="phone-portrait-outline" size={13} color="#059669" />
+                      <Text style={styles.phoneBadgeText}>{maskedPhone}</Text>
+                    </View>
+                  )}
+                </View>
+
                 <TextInput
                   style={styles.otpInput}
                   keyboardType="number-pad"
@@ -381,11 +512,39 @@ export const OfferDetailModal: React.FC<OfferDetailModalProps> = ({
                   placeholder="000000"
                   placeholderTextColor="#94a3b8"
                   value={otp}
+                  onFocus={() => {
+                    setTimeout(() => {
+                      scrollViewRef.current?.scrollToEnd({ animated: true });
+                    }, 150);
+                  }}
                   onChangeText={(val) => {
-                    setOtp(val);
+                    setOtp(val.replace(/\D/g, ''));
                     if (errorMessage) setErrorMessage('');
                   }}
                 />
+
+                <View style={styles.resendRow}>
+                  <Text style={styles.resendHint}>Chưa nhận được tin nhắn SMS?</Text>
+                  <Pressable
+                    onPress={handleRequestOtp}
+                    disabled={countdown > 0 || resendingOtp}
+                    hitSlop={8}
+                  >
+                    <Text
+                      style={[
+                        styles.resendBtnText,
+                        (countdown > 0 || resendingOtp) && styles.resendBtnTextDisabled,
+                      ]}
+                    >
+                      {resendingOtp
+                        ? 'Đang gửi...'
+                        : countdown > 0
+                        ? `Gửi lại mã (${countdown}s)`
+                        : 'Gửi lại mã SMS'}
+                    </Text>
+                  </Pressable>
+                </View>
+
                 {!!errorMessage && <Text style={styles.formErrorText}>{errorMessage}</Text>}
 
                 <View style={styles.formBtnRow}>
@@ -485,6 +644,7 @@ export const OfferDetailModal: React.FC<OfferDetailModalProps> = ({
                   onPress={() => {
                     setErrorMessage('');
                     setIsAcceptMode(true);
+                    handleRequestOtp();
                   }}
                 >
                   <Ionicons name="checkmark-circle" size={14} color="#ffffff" />
@@ -494,7 +654,7 @@ export const OfferDetailModal: React.FC<OfferDetailModalProps> = ({
             )}
           </View>
         </View>
-      </View>
+      </KeyboardAvoidingView>
     </Modal>
   );
 };
@@ -561,6 +721,9 @@ const styles = StyleSheet.create({
   scrollArea: {
     paddingHorizontal: 16,
     paddingTop: 14,
+  },
+  scrollContent: {
+    paddingBottom: 24,
   },
 
   // 4 Summary Cards Grid
@@ -831,10 +994,67 @@ const styles = StyleSheet.create({
     fontWeight: '800',
     color: '#059669',
   },
+  smsNoticeBox: {
+    backgroundColor: '#ecfdf5',
+    borderWidth: 1,
+    borderColor: '#a7f3d0',
+    borderRadius: 14,
+    padding: 10,
+    marginBottom: 10,
+  },
+  smsNoticeHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    marginBottom: 4,
+  },
+  smsNoticeTitle: {
+    fontSize: 11.5,
+    fontWeight: '700',
+    color: '#065f46',
+  },
+  phoneBadgeRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 5,
+    marginTop: 6,
+    backgroundColor: '#ffffff',
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 8,
+    alignSelf: 'flex-start',
+    borderWidth: 1,
+    borderColor: '#d1fae5',
+  },
+  phoneBadgeText: {
+    fontSize: 11,
+    fontWeight: '700',
+    color: '#047857',
+  },
+  resendRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginTop: 8,
+    paddingHorizontal: 2,
+  },
+  resendHint: {
+    fontSize: 11,
+    color: '#64748b',
+  },
+  resendBtnText: {
+    fontSize: 11.5,
+    fontWeight: '700',
+    color: '#059669',
+  },
+  resendBtnTextDisabled: {
+    color: '#94a3b8',
+    fontWeight: '500',
+  },
   formDesc: {
     fontSize: 11.5,
     color: '#64748b',
-    marginBottom: 10,
+    marginBottom: 6,
     lineHeight: 16,
   },
   otpInput: {

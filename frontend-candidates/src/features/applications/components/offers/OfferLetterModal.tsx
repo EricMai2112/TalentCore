@@ -101,7 +101,11 @@ export const OfferLetterModal: React.FC<OfferLetterModalProps> = ({
         if (res.maskedPhone) setMaskedPhone(res.maskedPhone);
         setCountdown(60);
         setTimeout(() => setOtpSentNotice(''), 4000);
-        const targetPhone = res.phone || (offer as any)?.candidatePhone || '0837000222';
+        const targetPhone = res.phone || (offer as any)?.candidatePhone;
+        if (!targetPhone) {
+          setErrorMessage('Không tìm thấy số điện thoại của ứng viên để gửi mã SMS.');
+          return;
+        }
         await triggerFirebaseSms(targetPhone);
       } else {
         setErrorMessage(res.message);
