@@ -28,7 +28,11 @@ interface StageItem {
   color?: string;
 }
 
-export const RecruitmentScreen: React.FC = () => {
+export interface RecruitmentScreenProps {
+  initialSegment?: 'jobs' | 'candidates';
+}
+
+export const RecruitmentScreen: React.FC<RecruitmentScreenProps> = ({ initialSegment }) => {
   const { user } = useAuth();
   const isDeptManager = user?.role === UserRole.DEPARTMENT_MANAGER;
   const userDeptId =
@@ -36,10 +40,16 @@ export const RecruitmentScreen: React.FC = () => {
       ? (user.departmentId as any)._id
       : user?.departmentId;
 
-  // Tab chuyển đổi: Tin tuyển dụng vs Ứng viên (Tin tuyển dụng lên trước)
-  const [activeSegment, setActiveSegment] = useState<'jobs' | 'candidates'>('jobs');
+  const [activeSegment, setActiveSegment] = useState<'jobs' | 'candidates'>(
+    initialSegment || 'jobs'
+  );
 
-  // Search & Filters chung
+  useEffect(() => {
+    if (initialSegment && initialSegment !== activeSegment) {
+      setActiveSegment(initialSegment);
+    }
+  }, [initialSegment]);
+
   const [searchQuery, setSearchQuery] = useState<string>('');
   const [selectedStage, setSelectedStage] = useState<string>('ALL');
 

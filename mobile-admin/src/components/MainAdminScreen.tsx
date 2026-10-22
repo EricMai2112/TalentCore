@@ -12,6 +12,7 @@ import { adminService } from '../services/admin.services';
 
 export const MainAdminScreen: React.FC = () => {
   const [activeTab, setActiveTab] = useState<AdminTabKey>('dashboard');
+  const [recruitmentSegment, setRecruitmentSegment] = useState<'jobs' | 'candidates'>('jobs');
   const [unreadCount, setUnreadCount] = useState<number>(0);
 
   const fetchBadgeCount = useCallback(async () => {
@@ -27,18 +28,34 @@ export const MainAdminScreen: React.FC = () => {
     fetchBadgeCount();
   }, [fetchBadgeCount]);
 
+  const handleNavigateFromNotification = (
+    tab: AdminTabKey,
+    options?: { segment?: 'jobs' | 'candidates'; targetId?: string },
+  ) => {
+    if (options?.segment) {
+      setRecruitmentSegment(options.segment);
+    }
+    setActiveTab(tab);
+    fetchBadgeCount();
+  };
+
   const renderScreen = () => {
     switch (activeTab) {
       case 'dashboard':
         return <DashboardScreen />;
       case 'recruitment':
-        return <RecruitmentScreen />;
+        return <RecruitmentScreen initialSegment={recruitmentSegment} />;
       case 'interviews':
         return <InterviewsScreen />;
       case 'offers':
         return <OffersScreen />;
       case 'notifications':
-        return <NotificationsScreen />;
+        return (
+          <NotificationsScreen
+            onNavigate={handleNavigateFromNotification}
+            onRefreshBadge={fetchBadgeCount}
+          />
+        );
       default:
         return <DashboardScreen />;
     }

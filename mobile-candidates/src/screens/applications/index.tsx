@@ -38,15 +38,27 @@ import { RescheduleInterviewModal } from './components/RescheduleInterviewModal'
 import { OfferCardItem } from './components/OfferCardItem';
 import { OfferDetailModal } from './components/OfferDetailModal';
 
+export interface ApplicationsNavOptions {
+  subTab?: ApplicationSubTab;
+  targetId?: string;
+  timestamp?: number;
+}
+
 interface ApplicationsScreenProps {
   onRequireLogin?: () => void;
+  navOptions?: ApplicationsNavOptions | null;
+  onClearNavOptions?: () => void;
 }
 
 export const ApplicationsScreen: React.FC<ApplicationsScreenProps> = ({
   onRequireLogin,
+  navOptions,
+  onClearNavOptions,
 }) => {
   const { user } = useAuth();
-  const [activeTab, setActiveTab] = useState<ApplicationSubTab>('my_applications');
+  const [activeTab, setActiveTab] = useState<ApplicationSubTab>(
+    navOptions?.subTab || 'my_applications'
+  );
 
   // Applications Tab State
   const [applications, setApplications] = useState<CandidateApplicationItem[]>([]);
@@ -108,6 +120,88 @@ export const ApplicationsScreen: React.FC<ApplicationsScreenProps> = ({
   useEffect(() => {
     loadAllData();
   }, [loadAllData]);
+
+  useEffect(() => {
+    if (!navOptions) return;
+
+    if (navOptions.subTab && navOptions.subTab !== activeTab) {
+      setActiveTab(navOptions.subTab);
+    }
+
+    if (!navOptions.targetId) return;
+
+    if (!loading) {
+      if (navOptions.subTab === 'offers') {
+        const found = offers.find(
+          (o) =>
+            o._id === navOptions.targetId ||
+            (typeof o.applicationId === 'object' && o.applicationId?._id === navOptions.targetId) ||
+            o.applicationId === navOptions.targetId,
+        );
+        if (found) {
+          setSelectedOffer(found);
+          setIsOfferModalOpen(true);
+          onClearNavOptions?.();
+        } else {
+          applicationService
+            .getMyOffers()
+            .then((freshOffers) => {
+              if (freshOffers && freshOffers.length > 0) {
+                setOffers(freshOffers);
+                const freshFound = freshOffers.find(
+                  (o) =>
+                    o._id === navOptions.targetId ||
+                    (typeof o.applicationId === 'object' && o.applicationId?._id === navOptions.targetId) ||
+                    o.applicationId === navOptions.targetId,
+                );
+                if (freshFound) {
+                  setSelectedOffer(freshFound);
+                  setIsOfferModalOpen(true);
+                }
+              }
+              onClearNavOptions?.();
+            })
+            .catch(() => {
+              onClearNavOptions?.();
+            });
+        }
+      } else if (navOptions.subTab === 'interviews') {
+        const found = interviews.find(
+          (i) =>
+            i._id === navOptions.targetId ||
+            i.applicationId === navOptions.targetId,
+        );
+        if (found) {
+          setSelectedInterview(found);
+          setIsConfirmModalOpen(true);
+          onClearNavOptions?.();
+        } else {
+          applicationService
+            .getMyInterviews()
+            .then((freshInterviews) => {
+              if (freshInterviews && freshInterviews.length > 0) {
+                setInterviews(freshInterviews);
+                const freshFound = freshInterviews.find(
+                  (i) =>
+                    i._id === navOptions.targetId ||
+                    i.applicationId === navOptions.targetId,
+                );
+                if (freshFound) {
+                  setSelectedInterview(freshFound);
+                  setIsConfirmModalOpen(true);
+                }
+              }
+              onClearNavOptions?.();
+            })
+            .catch(() => {
+              onClearNavOptions?.();
+            });
+        }
+      } else {
+        onClearNavOptions?.();
+      }
+    }
+  }, [navOptions, loading, offers, interviews, activeTab, onClearNavOptions]);
 
   const handleRefresh = () => {
     setRefreshing(true);

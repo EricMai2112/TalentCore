@@ -12,17 +12,28 @@ import {
   View,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import { useRouter } from 'expo-router';
 import { useAuth } from '../context/AuthContext';
 import { useNotification } from '../context/NotificationContext';
 import { MobileNotificationItem } from '../services/notification.service';
 
+export type CandidateTabKey = 'jobs' | 'applications' | 'notifications' | 'profile';
+
+export interface NotificationNavigationDestination {
+  subTab?: 'my_applications' | 'interviews' | 'offers';
+  targetId?: string;
+  jobId?: string;
+}
+
 interface NotificationsScreenProps {
   onRequireLogin?: () => void;
+  onNavigate?: (tab: CandidateTabKey, destination?: NotificationNavigationDestination) => void;
 }
 
 type TabType = 'all' | 'unread' | 'interview' | 'stage' | 'offer';
 
-export const NotificationsScreen: React.FC<NotificationsScreenProps> = ({ onRequireLogin }) => {
+export const NotificationsScreen: React.FC<NotificationsScreenProps> = ({ onRequireLogin, onNavigate }) => {
+  const router = useRouter();
   const { user } = useAuth();
   const {
     notifications,
@@ -37,6 +48,97 @@ export const NotificationsScreen: React.FC<NotificationsScreenProps> = ({ onRequ
   const [refreshing, setRefreshing] = useState(false);
   const [activeTab, setActiveTab] = useState<TabType>('all');
   const [searchQuery, setSearchQuery] = useState('');
+
+  const getNotificationDestination = (item: MobileNotificationItem): {
+    tab: CandidateTabKey;
+    subTab?: 'my_applications' | 'interviews' | 'offers';
+    targetId?: string;
+    jobId?: string;
+  } => {
+    const t = (item.type || '').toUpperCase();
+    const c = (item.category || '').toUpperCase();
+    const url = (item.actionUrl || '').toLowerCase();
+    const meta = item.metadata || {};
+
+    if (
+      c === 'OFFER' ||
+      t.startsWith('OFFER') ||
+      meta.offerId ||
+      url.includes('tab=offers')
+    ) {
+      return {
+        tab: 'applications',
+        subTab: 'offers',
+        targetId: meta.offerId || meta.applicationId,
+      };
+    }
+
+    if (
+      c === 'INTERVIEW' ||
+      t.startsWith('INTERVIEW') ||
+      meta.interviewId ||
+      url.includes('tab=interviews')
+    ) {
+      return {
+        tab: 'applications',
+        subTab: 'interviews',
+        targetId: meta.interviewId,
+      };
+    }
+
+    if (
+      c === 'CANDIDATE' ||
+      t === 'STAGE_CHANGED' ||
+      t === 'CANDIDATE_REJECTED' ||
+      t === 'CANDIDATE_HIRED' ||
+      meta.applicationId ||
+      url.startsWith('/user/applications')
+    ) {
+      return {
+        tab: 'applications',
+        subTab: 'my_applications',
+        targetId: meta.applicationId,
+      };
+    }
+
+    if (c === 'JOB' || meta.jobId || url.startsWith('/jobs')) {
+      return {
+        tab: 'jobs',
+        jobId: meta.jobId,
+      };
+    }
+
+    if (c === 'PROFILE' || url.startsWith('/profile')) {
+      return {
+        tab: 'profile',
+      };
+    }
+
+    return {
+      tab: 'applications',
+      subTab: 'my_applications',
+    };
+  };
+
+  const handleNotificationPress = (item: MobileNotificationItem) => {
+    if (!item.isRead) {
+      markAsRead(item._id);
+    }
+
+    const dest = getNotificationDestination(item);
+    if (dest.tab === 'jobs' && dest.jobId) {
+      router.push(`/job/${dest.jobId}` as any);
+      return;
+    }
+
+    if (onNavigate) {
+      onNavigate(dest.tab, {
+        subTab: dest.subTab,
+        targetId: dest.targetId,
+        jobId: dest.jobId,
+      });
+    }
+  };
 
   const onRefresh = async () => {
     setRefreshing(true);
@@ -499,9 +601,7 @@ export const NotificationsScreen: React.FC<NotificationsScreenProps> = ({ onRequ
                     styles.notifCard,
                     isUnread ? styles.notifCardUnread : styles.notifCardRead,
                   ]}
-                  onPress={() => {
-                    if (isUnread) markAsRead(item._id);
-                  }}
+                  onPress={() => handleNotificationPress(item)}
                 >
                   <View style={[styles.categoryIconBox, { backgroundColor: meta.iconBg }]}>
                     <Ionicons name={meta.icon} size={20} color="#ffffff" />
@@ -563,26 +663,37 @@ export const NotificationsScreen: React.FC<NotificationsScreenProps> = ({ onRequ
                     )}
 
                     <View style={styles.cardBottomRow}>
-                      {isUnread ? (
+                      <View style={styles.viewDetailPill}>
+                        <Text style={styles.viewDetailText}>Xem chi tiết</Text>
+                        <Ionicons name="chevron-forward" size={12} color="#7c3aed" />
+                      </View>
+
+                      <View style={styles.cardActionsRight}>
+                        {isUnread && (
+                          <Pressable
+                            style={styles.actionBtn}
+                            onPress={(e) => {
+                              e.stopPropagation();
+                              markAsRead(item._id);
+                            }}
+                            hitSlop={8}
+                          >
+                            <Ionicons name="checkmark-circle-outline" size={17} color="#2563eb" />
+                            <Text style={styles.actionBtnTextBlue}>Đã đọc</Text>
+                          </Pressable>
+                        )}
+
                         <Pressable
                           style={styles.actionBtn}
-                          onPress={() => markAsRead(item._id)}
+                          onPress={(e) => {
+                            e.stopPropagation();
+                            deleteNotification(item._id);
+                          }}
                           hitSlop={8}
                         >
-                          <Ionicons name="checkmark-circle-outline" size={17} color="#2563eb" />
-                          <Text style={styles.actionBtnTextBlue}>Đã đọc</Text>
+                          <Ionicons name="trash-outline" size={16} color="#94a3b8" />
                         </Pressable>
-                      ) : (
-                        <View />
-                      )}
-
-                      <Pressable
-                        style={styles.actionBtn}
-                        onPress={() => deleteNotification(item._id)}
-                        hitSlop={8}
-                      >
-                        <Ionicons name="trash-outline" size={16} color="#94a3b8" />
-                      </Pressable>
+                      </View>
                     </View>
                   </View>
                 </Pressable>
@@ -937,6 +1048,25 @@ const styles = StyleSheet.create({
     paddingTop: 8,
     borderTopWidth: 1,
     borderTopColor: '#f1f5f9',
+  },
+  viewDetailPill: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 3,
+    backgroundColor: '#f5f3ff',
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: 8,
+  },
+  viewDetailText: {
+    fontSize: 11,
+    fontWeight: '700',
+    color: '#7c3aed',
+  },
+  cardActionsRight: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
   },
   actionBtn: {
     flexDirection: 'row',
