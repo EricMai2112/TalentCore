@@ -7,9 +7,7 @@ import {
   RefreshControl,
   ActivityIndicator,
   TouchableOpacity,
-  Modal,
   FlatList,
-  Pressable,
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
@@ -21,10 +19,22 @@ import {
   JobDescriptionItem,
 } from '../../services/admin.services';
 import { UserRole } from '../../features/auth/types/auth.types';
+import CustomSelect from '../../components/common/CustomSelect';
+import KpiStatsGrid from './components/KpiStatsGrid';
+import RecruitmentFunnel from './components/RecruitmentFunnel';
+import TimelineTrend from './components/TimelineTrend';
+import OfferDonut from './components/OfferDonut';
 
-type AlertTab = 'offers' | 'stale' | 'pending' | 'interviews';
+type AlertTab = 'offers' | 'pending' | 'interviews';
 
-export const DashboardScreen: React.FC = () => {
+export interface DashboardScreenProps {
+  onNavigateTab?: (
+    tab: 'dashboard' | 'recruitment' | 'interviews' | 'offers' | 'notifications',
+    options?: { segment?: 'jobs' | 'candidates' }
+  ) => void;
+}
+
+export const DashboardScreen: React.FC<DashboardScreenProps> = ({ onNavigateTab }) => {
   const { user } = useAuth();
   const isDeptManager = user?.role === UserRole.DEPARTMENT_MANAGER;
   const userDeptId =
@@ -38,9 +48,6 @@ export const DashboardScreen: React.FC = () => {
   const [departments, setDepartments] = useState<DepartmentItem[]>([]);
   const [allJobs, setAllJobs] = useState<JobDescriptionItem[]>([]);
 
-  // Modal selector states
-  const [deptModalVisible, setDeptModalVisible] = useState<boolean>(false);
-  const [jobModalVisible, setJobModalVisible] = useState<boolean>(false);
 
   // Dashboard Data states
   const [data, setData] = useState<DashboardData | null>(null);
@@ -99,6 +106,22 @@ export const DashboardScreen: React.FC = () => {
     return found ? found.title : 'Vị trí đã chọn';
   }, [allJobs, selectedJobId]);
 
+  const deptOptions = useMemo(
+    () => [
+      { value: '', label: 'Tất cả phòng ban' },
+      ...departments.map((d) => ({ value: d._id, label: d.name })),
+    ],
+    [departments]
+  );
+
+  const jobOptions = useMemo(
+    () => [
+      { value: '', label: 'Tất cả vị trí' },
+      ...availableJobs.map((j) => ({ value: j._id, label: j.title })),
+    ],
+    [availableJobs]
+  );
+
   // Gọi API lấy dữ liệu thống kê
   const fetchData = useCallback(async () => {
     try {
@@ -125,6 +148,22 @@ export const DashboardScreen: React.FC = () => {
   const onRefresh = () => {
     setRefreshing(true);
     fetchData();
+  };
+
+  const handleSelectMonths = async (months: number) => {
+    try {
+      const res = await adminService.getDashboardData({
+        departmentId: activeDeptId || undefined,
+        jobDescriptionId: selectedJobId || undefined,
+        months,
+        limit: 10,
+      });
+      if (res?.trends) {
+        setData((prev) => (prev ? { ...prev, trends: res.trends } : res));
+      }
+    } catch (err) {
+      console.error('Lỗi cập nhật xu hướng theo tháng:', err);
+    }
   };
 
   // Reset bộ lọc
@@ -155,6 +194,7 @@ export const DashboardScreen: React.FC = () => {
     pendingJobs: 0,
     todayInterviews: 0,
   };
+  const totalAlertsCount = (alertSummary.expiringOffers || 0) + (alertSummary.pendingJobs || 0);
 
   // Tính SLA badge cho Time-to-Hire
   const tthDays = kpis?.timeToHire?.avgDays ?? 0;
@@ -195,8 +235,8 @@ export const DashboardScreen: React.FC = () => {
               {user?.role === UserRole.DEPARTMENT_MANAGER
                 ? `Trưởng phòng • ${currentDeptName}`
                 : user?.role === UserRole.EMPLOYEE
-                ? 'Hội đồng Phỏng vấn'
-                : 'Giám đốc Nhân sự (HR Admin)'}
+                ? 'Interviewer'
+                : 'Quản trị Nhân sự (HR Admin)'}
             </Text>
           </View>
         </View>
@@ -223,200 +263,57 @@ export const DashboardScreen: React.FC = () => {
 
         <View style={styles.filterButtonsRow}>
           {/* Nút lọc Phòng ban */}
-          <TouchableOpacity
-            style={[
-              styles.filterPill,
-              (activeDeptId || deptModalVisible) ? styles.filterPillActive : null,
-              isDeptManager ? styles.filterPillDisabled : null,
-            ]}
-            onPress={() => !isDeptManager && setDeptModalVisible(true)}
-            activeOpacity={isDeptManager ? 1 : 0.7}
-          >
-            <Ionicons
-              name="business"
-              size={14}
-              color={activeDeptId || deptModalVisible ? '#1E3A8A' : '#64748B'}
-            />
-            <Text
-              style={[
-                styles.filterPillText,
-                (activeDeptId || deptModalVisible) ? styles.filterPillTextActive : null,
-              ]}
-              numberOfLines={1}
-            >
-              {currentDeptName}
-            </Text>
-            {!isDeptManager && (
-              <Ionicons
-                name={deptModalVisible ? 'chevron-up' : 'chevron-down'}
-                size={14}
-                color={deptModalVisible ? '#1E3A8A' : '#64748B'}
-              />
-            )}
-          </TouchableOpacity>
+          <CustomSelect
+            containerStyle={{ flex: 1 }}
+            value={selectedDeptId}
+            onChange={(val) => {
+              setSelectedDeptId(val);
+              setSelectedJobId('');
+            }}
+            options={deptOptions}
+            placeholder={currentDeptName}
+            icon="business"
+            disabled={isDeptManager}
+            triggerStyle={styles.filterPill}
+            triggerTextStyle={styles.filterPillText}
+            activeTriggerStyle={styles.filterPillActive}
+            activeTriggerTextStyle={styles.filterPillTextActive}
+          />
 
           {/* Nút lọc Vị trí tuyển dụng */}
-          <TouchableOpacity
-            style={[
-              styles.filterPill,
-              (selectedJobId || jobModalVisible) ? styles.filterPillActive : null,
-              !activeDeptId ? styles.filterPillDisabled : null,
-            ]}
-            onPress={() => activeDeptId && setJobModalVisible(true)}
-            activeOpacity={!activeDeptId ? 1 : 0.7}
-          >
-            <Ionicons
-              name="briefcase"
-              size={14}
-              color={selectedJobId || jobModalVisible ? '#1E3A8A' : '#64748B'}
-            />
-            <Text
-              style={[
-                styles.filterPillText,
-                (selectedJobId || jobModalVisible) ? styles.filterPillTextActive : null,
-              ]}
-              numberOfLines={1}
-            >
-              {currentJobTitle}
-            </Text>
-            <Ionicons
-              name={jobModalVisible ? 'chevron-up' : 'chevron-down'}
-              size={14}
-              color={jobModalVisible ? '#1E3A8A' : '#64748B'}
-            />
-          </TouchableOpacity>
+          <CustomSelect
+            containerStyle={{ flex: 1 }}
+            value={selectedJobId}
+            onChange={(val) => setSelectedJobId(val)}
+            options={jobOptions}
+            placeholder="Tất cả vị trí"
+            icon="briefcase"
+            disabled={!activeDeptId}
+            triggerStyle={styles.filterPill}
+            triggerTextStyle={styles.filterPillText}
+            activeTriggerStyle={styles.filterPillActive}
+            activeTriggerTextStyle={styles.filterPillTextActive}
+          />
         </View>
       </View>
 
-      {/* ─── TẦNG 1: 4 THẺ KPI CHIẾN LƯỢC (STRATEGIC KPIS) ─────────────── */}
+      {/* ─── TẦNG 1: 4 THẺ KPI CHIẾN LƯỢC (KHỚP 100% ẢNH 3 WEB) ─────────── */}
       <View style={styles.sectionHeader}>
         <Text style={styles.sectionTitle}>Chỉ số Hiệu suất Chính (KPIs)</Text>
       </View>
-
-      <View style={styles.kpiGrid}>
-        {/* KPI 1: Định biên Tuyển dụng */}
-        <View style={styles.kpiCard}>
-          <View style={styles.kpiTopRow}>
-            <View style={[styles.kpiIconBox, { backgroundColor: '#EFF6FF' }]}>
-              <Ionicons name="flag" size={18} color="#2563EB" />
-            </View>
-            <View style={[styles.badge, { backgroundColor: '#DBEAFE' }]}>
-              <Text style={[styles.badgeText, { color: '#1E40AF' }]}>
-                {kpis?.headcountPlan?.percentage || 0}% đạt
-              </Text>
-            </View>
-          </View>
-          <Text style={styles.kpiLabel}>CHỈ TIÊU TUYỂN DỤNG</Text>
-          <View style={styles.kpiValueRow}>
-            <Text style={styles.kpiValue}>
-              {kpis?.headcountPlan?.hired || 0}
-              <Text style={styles.kpiSubValue}> / {kpis?.headcountPlan?.target || 0}</Text>
-            </Text>
-            <Text style={styles.kpiUnit}>người</Text>
-          </View>
-          <View style={styles.miniProgressBarTrack}>
-            <View
-              style={[
-                styles.miniProgressBarFill,
-                { width: `${Math.min(100, kpis?.headcountPlan?.percentage || 0)}%` },
-              ]}
-            />
-          </View>
-        </View>
-
-        {/* KPI 2: Vị trí Đang mở */}
-        <View style={styles.kpiCard}>
-          <View style={styles.kpiTopRow}>
-            <View style={[styles.kpiIconBox, { backgroundColor: '#F5F3FF' }]}>
-              <Ionicons name="briefcase" size={18} color="#7C3AED" />
-            </View>
-            <View style={[styles.badge, { backgroundColor: '#EDE9FE' }]}>
-              <Text style={[styles.badgeText, { color: '#6D28D9' }]}>
-                {kpis?.headcountPlan?.target || 0} cần tuyển
-              </Text>
-            </View>
-          </View>
-          <Text style={styles.kpiLabel}>VỊ TRÍ ĐANG MỞ</Text>
-          <View style={styles.kpiValueRow}>
-            <Text style={styles.kpiValue}>{kpis?.jobs?.active || 0}</Text>
-            <Text style={styles.kpiUnit}>vị trí</Text>
-          </View>
-          <Text style={styles.kpiSubText}>
-            +{kpis?.jobs?.newCount || 0} JD tạo mới trong tháng
-          </Text>
-        </View>
-
-        {/* KPI 3: Tốc độ Tuyển dụng TB (Time-to-Hire) */}
-        <View style={styles.kpiCard}>
-          <View style={styles.kpiTopRow}>
-            <View style={[styles.kpiIconBox, { backgroundColor: '#FFF7ED' }]}>
-              <Ionicons name="timer" size={18} color="#EA580C" />
-            </View>
-            <View
-              style={[
-                styles.badge,
-                { backgroundColor: isTthGood ? '#DCFCE7' : '#FEE2E2' },
-              ]}
-            >
-              <Text
-                style={[
-                  styles.badgeText,
-                  { color: isTthGood ? '#166534' : '#991B1B' },
-                ]}
-              >
-                {isTthGood ? 'SLA ≤ 25 ngày' : 'Cần đẩy nhanh'}
-              </Text>
-            </View>
-          </View>
-          <Text style={styles.kpiLabel}>TỐC ĐỘ TUYỂN DỤNG</Text>
-          <View style={styles.kpiValueRow}>
-            <Text style={styles.kpiValue}>{tthDays}</Text>
-            <Text style={styles.kpiUnit}>ngày / người</Text>
-          </View>
-          <Text style={styles.kpiSubText}>
-            Mẫu tính trên {kpis?.timeToHire?.sampleSize || 0} ứng viên đã nhận việc
-          </Text>
-        </View>
-
-        {/* KPI 4: Tỷ lệ Nhận Offer */}
-        <View style={styles.kpiCard}>
-          <View style={styles.kpiTopRow}>
-            <View style={[styles.kpiIconBox, { backgroundColor: '#ECFDF5' }]}>
-              <Ionicons name="checkmark-done-circle" size={18} color="#059669" />
-            </View>
-            <View
-              style={[
-                styles.badge,
-                { backgroundColor: isOfferGood ? '#DCFCE7' : '#FEF3C7' },
-              ]}
-            >
-              <Text
-                style={[
-                  styles.badgeText,
-                  { color: isOfferGood ? '#166534' : '#92400E' },
-                ]}
-              >
-                {isOfferGood ? 'Chuẩn ≥ 80%' : 'Chưa đạt 80%'}
-              </Text>
-            </View>
-          </View>
-          <Text style={styles.kpiLabel}>TỶ LỆ NHẬN OFFER</Text>
-          <View style={styles.kpiValueRow}>
-            <Text style={styles.kpiValue}>{offerRate}%</Text>
-            <Text style={styles.kpiUnit}>đồng ý</Text>
-          </View>
-          <Text style={styles.kpiSubText}>
-            {kpis?.offers?.accepted || 0} đã nhận việc • {kpis?.offers?.sent || 0} chờ phản hồi
-          </Text>
-        </View>
-      </View>
+      <KpiStatsGrid
+        headcountPlan={kpis?.headcountPlan}
+        jobs={kpis?.jobs}
+        timeToHire={kpis?.timeToHire}
+        offers={kpis?.offers}
+      />
 
       {/* ─── TẦNG 2: CẦN XỬ LÝ NGAY (ACTIONABLE ALERTS) ───────────────── */}
       <View style={styles.blockCard}>
         <View style={styles.blockHeaderBetween}>
           <View style={styles.alertHeaderLeft}>
             <View style={styles.alertIconCircle}>
-              <Ionicons name="warning" size={16} color="#D97706" />
+              <Ionicons name="warning" size={15} color="#D97706" />
             </View>
             <View>
               <Text style={styles.blockTitle}>Cần Xử Lý Ngay</Text>
@@ -426,7 +323,7 @@ export const DashboardScreen: React.FC = () => {
           <View
             style={[
               styles.alertCountBadge,
-              alertSummary.totalAlerts > 0
+              totalAlertsCount > 0
                 ? styles.alertCountBadgeWarning
                 : styles.alertCountBadgeSuccess,
             ]}
@@ -434,13 +331,13 @@ export const DashboardScreen: React.FC = () => {
             <Text
               style={[
                 styles.alertCountBadgeText,
-                alertSummary.totalAlerts > 0
+                totalAlertsCount > 0
                   ? styles.alertCountBadgeTextWarning
                   : styles.alertCountBadgeTextSuccess,
               ]}
             >
-              {alertSummary.totalAlerts > 0
-                ? `${alertSummary.totalAlerts} việc ưu tiên`
+              {totalAlertsCount > 0
+                ? `${totalAlertsCount} việc ưu tiên`
                 : 'Ổn định'}
             </Text>
           </View>
@@ -465,31 +362,8 @@ export const DashboardScreen: React.FC = () => {
               Offer
             </Text>
             {alertSummary.expiringOffers > 0 && (
-              <View style={styles.tabBadge}>
+              <View style={[styles.tabBadge, { backgroundColor: '#EF4444' }]}>
                 <Text style={styles.tabBadgeText}>{alertSummary.expiringOffers}</Text>
-              </View>
-            )}
-          </TouchableOpacity>
-
-          <TouchableOpacity
-            style={[
-              styles.alertTabButton,
-              activeAlertTab === 'stale' && styles.alertTabButtonActive,
-            ]}
-            onPress={() => setActiveAlertTab('stale')}
-            activeOpacity={0.7}
-          >
-            <Text
-              style={[
-                styles.alertTabButtonText,
-                activeAlertTab === 'stale' && styles.alertTabButtonTextActive,
-              ]}
-            >
-              CV tồn
-            </Text>
-            {alertSummary.staleApplications > 0 && (
-              <View style={styles.tabBadge}>
-                <Text style={styles.tabBadgeText}>{alertSummary.staleApplications}</Text>
               </View>
             )}
           </TouchableOpacity>
@@ -511,7 +385,7 @@ export const DashboardScreen: React.FC = () => {
               JD
             </Text>
             {alertSummary.pendingJobs > 0 && (
-              <View style={styles.tabBadge}>
+              <View style={[styles.tabBadge, { backgroundColor: '#6366F1' }]}>
                 <Text style={styles.tabBadgeText}>{alertSummary.pendingJobs}</Text>
               </View>
             )}
@@ -534,7 +408,7 @@ export const DashboardScreen: React.FC = () => {
               Phỏng vấn
             </Text>
             {alertSummary.todayInterviews > 0 && (
-              <View style={styles.tabBadge}>
+              <View style={[styles.tabBadge, { backgroundColor: '#10B981' }]}>
                 <Text style={styles.tabBadgeText}>{alertSummary.todayInterviews}</Text>
               </View>
             )}
@@ -548,9 +422,11 @@ export const DashboardScreen: React.FC = () => {
               alerts.expiringOffers.map((item) => (
                 <View key={item.id} style={styles.alertItemRow}>
                   <View style={styles.alertItemLeft}>
-                    <Text style={styles.alertItemTitle}>{item.candidateName}</Text>
-                    <Text style={styles.alertItemDesc}>
-                      {item.positionTitle} • Lương {item.salary?.toLocaleString('vi-VN')} ₫
+                    <Text style={styles.alertItemTitle} numberOfLines={1}>
+                      {item.candidateName}
+                    </Text>
+                    <Text style={styles.alertItemDesc} numberOfLines={1}>
+                      {item.positionTitle || item.jobTitle} • {item.salary?.toLocaleString('vi-VN')} ₫
                     </Text>
                   </View>
                   <View
@@ -565,75 +441,75 @@ export const DashboardScreen: React.FC = () => {
                         item.isOverdue ? styles.textRose : styles.textAmber,
                       ]}
                     >
-                      {item.isOverdue ? 'Quá hạn phản hồi' : `Còn ${item.daysLeft} ngày`}
+                      {item.isOverdue ? 'Quá hạn' : `Còn ${(item).hoursLeft ?? item.daysLeft ?? 10}h`}
                     </Text>
                   </View>
                 </View>
               ))
             ) : (
               <View style={styles.emptyAlertBox}>
-                <Ionicons name="checkmark-circle-outline" size={26} color="#10B981" />
+                <Ionicons name="checkmark-circle-outline" size={24} color="#10B981" />
                 <Text style={styles.emptyAlertText}>Không có Offer nào sắp hết hạn</Text>
-              </View>
-            )
-          )}
-
-          {activeAlertTab === 'stale' && (
-            alerts?.staleApplications?.length ? (
-              alerts.staleApplications.map((item) => (
-                <View key={item.id} style={styles.alertItemRow}>
-                  <View style={styles.alertItemLeft}>
-                    <Text style={styles.alertItemTitle}>{item.candidateName}</Text>
-                    <Text style={styles.alertItemDesc}>
-                      {item.jobTitle} • Vòng: {item.stageName}
-                    </Text>
-                  </View>
-                  <View style={[styles.alertBadgeSmall, styles.badgeRose]}>
-                    <Text style={[styles.alertBadgeSmallText, styles.textRose]}>
-                      Tồn {item.daysInStage} ngày
-                    </Text>
-                  </View>
-                </View>
-              ))
-            ) : (
-              <View style={styles.emptyAlertBox}>
-                <Ionicons name="checkmark-circle-outline" size={26} color="#10B981" />
-                <Text style={styles.emptyAlertText}>Không có CV nào tồn đọng quá 5 ngày</Text>
               </View>
             )
           )}
 
           {activeAlertTab === 'pending' && (
             alerts?.pendingJobs?.length ? (
-              alerts.pendingJobs.map((item) => (
-                <View key={item.id} style={styles.alertItemRow}>
-                  <View style={styles.alertItemLeft}>
-                    <Text style={styles.alertItemTitle}>{item.title}</Text>
-                    <Text style={styles.alertItemDesc}>
-                      Đã tuyển {item.hiredCount}/{item.targetHeadcount} • {item.applicationCount} đơn nộp
-                    </Text>
-                  </View>
-                  <View
-                    style={[
-                      styles.alertBadgeSmall,
-                      item.isOverdue ? styles.badgeRose : styles.badgeAmber,
-                    ]}
-                  >
-                    <Text
+              alerts.pendingJobs.map((item) => {
+                let daysLeft = item.daysLeft;
+                const deadlineStr = item.deadline || item.applicationDeadline;
+                if ((daysLeft === undefined || daysLeft === null) && deadlineStr) {
+                  const deadlineTime = new Date(deadlineStr).getTime();
+                  if (!isNaN(deadlineTime)) {
+                    daysLeft = Math.ceil((deadlineTime - Date.now()) / (1000 * 60 * 60 * 24));
+                  }
+                }
+
+                const isOverdue = item.isOverdue || (daysLeft !== null && daysLeft !== undefined && daysLeft < 0);
+                const targetCount = item.targetHeadcount ?? item.headcount ?? 1;
+                const hired = item.hiredCount ?? 0;
+                const appCount = item.applicationCount ?? 0;
+
+                let badgeText = '';
+                if (daysLeft !== null && daysLeft !== undefined) {
+                  badgeText = isOverdue ? 'Đã hết hạn' : `Còn ${daysLeft} ngày`;
+                } else {
+                  badgeText = `${targetCount} chỉ tiêu`;
+                }
+
+                return (
+                  <View key={item.id} style={styles.alertItemRow}>
+                    <View style={styles.alertItemLeft}>
+                      <Text style={styles.alertItemTitle} numberOfLines={1}>
+                        {item.title}
+                      </Text>
+                      <Text style={styles.alertItemDesc} numberOfLines={1}>
+                        {item.departmentName ? `${item.departmentName} • ` : ''}Đã tuyển {hired}/{targetCount} • {appCount} đơn nộp
+                      </Text>
+                    </View>
+                    <View
                       style={[
-                        styles.alertBadgeSmallText,
-                        item.isOverdue ? styles.textRose : styles.textAmber,
+                        styles.alertBadgeSmall,
+                        isOverdue ? styles.badgeRose : styles.badgeAmber,
                       ]}
                     >
-                      {item.isOverdue ? 'Đã hết hạn' : `Còn ${item.daysLeft} ngày`}
-                    </Text>
+                      <Text
+                        style={[
+                          styles.alertBadgeSmallText,
+                          isOverdue ? styles.textRose : styles.textAmber,
+                        ]}
+                      >
+                        {badgeText}
+                      </Text>
+                    </View>
                   </View>
-                </View>
-              ))
+                );
+              })
             ) : (
               <View style={styles.emptyAlertBox}>
-                <Ionicons name="checkmark-circle-outline" size={26} color="#10B981" />
-                <Text style={styles.emptyAlertText}>Tất cả các tin JD đều trong hạn tuyển</Text>
+                <Ionicons name="checkmark-circle-outline" size={24} color="#10B981" />
+                <Text style={styles.emptyAlertText}>Tất cả tin JD đều trong hạn tuyển</Text>
               </View>
             )
           )}
@@ -643,8 +519,10 @@ export const DashboardScreen: React.FC = () => {
               alerts.todayInterviews.map((item) => (
                 <View key={item.id} style={styles.alertItemRow}>
                   <View style={styles.alertItemLeft}>
-                    <Text style={styles.alertItemTitle}>{item.candidateName}</Text>
-                    <Text style={styles.alertItemDesc}>
+                    <Text style={styles.alertItemTitle} numberOfLines={1}>
+                      {item.candidateName}
+                    </Text>
+                    <Text style={styles.alertItemDesc} numberOfLines={1}>
                       {item.jobTitle} • {item.startTime} - {item.endTime}
                     </Text>
                   </View>
@@ -657,378 +535,115 @@ export const DashboardScreen: React.FC = () => {
               ))
             ) : (
               <View style={styles.emptyAlertBox}>
-                <Ionicons name="checkmark-circle-outline" size={26} color="#10B981" />
+                <Ionicons name="checkmark-circle-outline" size={24} color="#10B981" />
                 <Text style={styles.emptyAlertText}>Không có lịch phỏng vấn tồn đọng</Text>
               </View>
             )
           )}
         </View>
+
+        {/* Footer: Link xem chi tiết danh sách */}
+        <TouchableOpacity
+          style={styles.alertFooterLink}
+          activeOpacity={0.7}
+          onPress={() => {
+            if (activeAlertTab === 'offers') {
+              onNavigateTab?.('offers');
+            } else if (activeAlertTab === 'pending') {
+              onNavigateTab?.('recruitment', { segment: 'jobs' });
+            } else if (activeAlertTab === 'interviews') {
+              onNavigateTab?.('interviews');
+            }
+          }}
+        >
+          <Text style={styles.alertFooterLinkText}>Xem chi tiết danh sách</Text>
+          <Ionicons name="chevron-forward" size={13} color="#2563EB" />
+        </TouchableOpacity>
       </View>
 
-      {/* ─── TẦNG 3: PHỄU TUYỂN DỤNG (RECRUITMENT FUNNEL) ──────────────── */}
+      {/* ─── TẦNG 3: TIẾN ĐỘ PHÒNG BAN (KHỚP 100% ẢNH 3 WEB) ───────────── */}
       <View style={styles.blockCard}>
         <View style={styles.blockHeaderBetween}>
           <View style={styles.alertHeaderLeft}>
-            <View style={[styles.alertIconCircle, { backgroundColor: '#EFF6FF' }]}>
-              <Ionicons name="filter" size={16} color="#2563EB" />
+            <View style={[styles.alertIconCircle, { backgroundColor: '#F5F3FF', borderColor: '#EDE9FE' }]}>
+              <Ionicons name="business" size={15} color="#7C3AED" />
             </View>
             <View>
-              <Text style={styles.blockTitle}>Phễu Tuyển Dụng</Text>
-              <Text style={styles.blockSubtitle}>Tỷ lệ chuyển đổi qua các vòng</Text>
+              <Text style={styles.blockTitle}>Tiến độ Phòng ban</Text>
+              <Text style={styles.blockSubtitle}>Chỉ tiêu nhân sự tuyển dụng</Text>
             </View>
           </View>
-          <Text style={styles.funnelTotalText}>
-            {data?.funnel?.totalApplications || 0} hồ sơ
+          <Text style={styles.deptCountBadgeText}>
+            {data?.departmentFulfillment?.length || 0} phòng ban
           </Text>
-        </View>
-
-        <View style={styles.funnelContainer}>
-          {data?.funnel?.stages?.map((stage, idx) => {
-            const isLast = idx === (data.funnel.stages.length - 1);
-            return (
-              <View key={stage.id} style={styles.funnelStageBox}>
-                <View style={styles.funnelRow}>
-                  <View style={styles.funnelStageNameBox}>
-                    <Text style={styles.funnelStageIndex}>{idx + 1}.</Text>
-                    <Text style={styles.funnelStageName}>{stage.name}</Text>
-                  </View>
-                  <View style={styles.funnelMetricsBox}>
-                    <Text style={styles.funnelStageCount}>
-                      {stage.count} <Text style={styles.funnelStageUnit}>người</Text>
-                    </Text>
-                    <Text style={styles.funnelStagePct}>({stage.percentage}%)</Text>
-                  </View>
-                </View>
-
-                {/* Progress bar */}
-                <View style={styles.funnelTrack}>
-                  <View
-                    style={[
-                      styles.funnelBar,
-                      {
-                        width: `${Math.max(6, Math.min(100, stage.percentage))}%`,
-                        backgroundColor: stage.color || '#2563EB',
-                      },
-                    ]}
-                  />
-                </View>
-
-                {/* Step conversion rate arrow */}
-                {!isLast && stage.stepConversionRate !== undefined && (
-                  <View style={styles.stepConversionRow}>
-                    <Ionicons name="arrow-down" size={11} color="#94A3B8" />
-                    <Text style={styles.stepConversionText}>
-                      Chuyển vòng: {stage.stepConversionRate}%
-                    </Text>
-                  </View>
-                )}
-              </View>
-            );
-          })}
-        </View>
-      </View>
-
-      {/* ─── TẦNG 4: TIẾN ĐỘ THEO PHÒNG BAN ───────────────────────────── */}
-      <View style={styles.blockCard}>
-        <View style={styles.blockHeaderBetween}>
-          <View style={styles.alertHeaderLeft}>
-            <View style={[styles.alertIconCircle, { backgroundColor: '#F5F3FF' }]}>
-              <Ionicons name="business" size={16} color="#7C3AED" />
-            </View>
-            <View>
-              <Text style={styles.blockTitle}>Tiến độ Tuyển dụng Phòng ban</Text>
-              <Text style={styles.blockSubtitle}>Tỷ lệ lấp đầy định biên nhân sự</Text>
-            </View>
-          </View>
         </View>
 
         <View style={styles.deptList}>
           {data?.departmentFulfillment?.map((dept) => {
-            const isFull = dept.percentage >= 100;
-            const isSelected = activeDeptId === dept.id;
+            const pct = dept.percentage || 0;
+            const barColor = pct >= 80 ? '#10B981' : pct >= 50 ? '#F59E0B' : '#F43F5E';
+            const badgeBg = pct >= 80 ? '#ECFDF5' : pct >= 50 ? '#FFFBEB' : '#FEF2F2';
+            const badgeBorder = pct >= 80 ? '#A7F3D0' : pct >= 50 ? '#FEF3C7' : '#FECACA';
+            const badgeText = pct >= 80 ? '#047857' : pct >= 50 ? '#B45309' : '#DC2626';
+
             return (
-              <TouchableOpacity
-                key={dept.id}
-                style={[
-                  styles.deptItemCard,
-                  isSelected && styles.deptItemCardSelected,
-                ]}
-                onPress={() => {
-                  if (!isDeptManager) {
-                    setSelectedDeptId(isSelected ? '' : dept.id);
-                    setSelectedJobId('');
-                  }
-                }}
-                activeOpacity={isDeptManager ? 1 : 0.7}
-              >
+              <View key={dept.id} style={styles.deptItemBox}>
                 <View style={styles.deptHeaderRow}>
-                  <View style={styles.deptNameLeft}>
-                    <Text style={styles.deptNameText}>{dept.name}</Text>
-                    <Text style={styles.deptJobsText}>
-                      {dept.activeJobs} vị trí đang mở
+                  <Text style={styles.deptNameText} numberOfLines={1}>
+                    {dept.name}
+                  </Text>
+                  <View style={styles.deptRightMetrics}>
+                    <Text style={styles.deptHiredRatio}>
+                      {dept.hiredCount}/{dept.targetHeadcount}
                     </Text>
-                  </View>
-                  <View
-                    style={[
-                      styles.deptBadge,
-                      isFull ? styles.badgeGreen : styles.badgeBlue,
-                    ]}
-                  >
-                    <Text
+                    <View
                       style={[
-                        styles.deptBadgeText,
-                        isFull ? styles.textGreen : styles.textBlue,
+                        styles.deptPctBadge,
+                        { backgroundColor: badgeBg, borderColor: badgeBorder },
                       ]}
                     >
-                      {dept.hiredCount} / {dept.targetHeadcount} ({dept.percentage}%)
-                    </Text>
+                      <Text style={[styles.deptPctText, { color: badgeText }]}>{pct}%</Text>
+                    </View>
                   </View>
                 </View>
 
-                <View style={styles.deptTrack}>
+                {/* Progress bar */}
+                <View style={styles.deptProgressTrack}>
                   <View
                     style={[
-                      styles.deptBar,
+                      styles.deptProgressBar,
                       {
-                        width: `${Math.min(100, dept.percentage)}%`,
-                        backgroundColor: isFull ? '#10B981' : '#3B82F6',
+                        width: `${Math.min(100, Math.max(2, pct))}%`,
+                        backgroundColor: barColor,
                       },
                     ]}
                   />
                 </View>
-              </TouchableOpacity>
+              </View>
             );
           })}
         </View>
       </View>
 
-      {/* ─── TẦNG 5: XU HƯỚNG TUYỂN DỤNG CÁC THÁNG ─────────────────────── */}
-      <View style={styles.blockCard}>
-        <View style={styles.blockHeaderBetween}>
-          <View style={styles.alertHeaderLeft}>
-            <View style={[styles.alertIconCircle, { backgroundColor: '#ECFDF5' }]}>
-              <Ionicons name="trending-up" size={16} color="#059669" />
-            </View>
-            <View>
-              <Text style={styles.blockTitle}>Xu Hướng Tuyển Dụng</Text>
-              <Text style={styles.blockSubtitle}>Biến động hồ sơ & nhân sự nhận việc</Text>
-            </View>
-          </View>
-        </View>
+      {/* ─── TẦNG 4: PHỄU TUYỂN DỤNG (KHỚP 100% ẢNH 3 WEB) ─────────────── */}
+      <RecruitmentFunnel
+        stages={data?.funnel?.stages}
+        totalApplications={data?.funnel?.totalApplications}
+        overallRate={data?.funnel?.conversionRates?.overallRate}
+      />
 
-        <View style={styles.trendList}>
-          {data?.trends?.data?.map((m) => (
-            <View key={m.month} style={styles.trendRow}>
-              <Text style={styles.trendMonthLabel}>{m.month}</Text>
-              <View style={styles.trendBarsBox}>
-                <View style={styles.trendBarItem}>
-                  <View
-                    style={[
-                      styles.trendBarFill,
-                      {
-                        width: `${Math.min(100, Math.max(8, m.applications * 1.5))}%`,
-                        backgroundColor: '#3B82F6',
-                      },
-                    ]}
-                  />
-                  <Text style={styles.trendBarText}>{m.applications} ứng tuyển</Text>
-                </View>
-                <View style={styles.trendBarItem}>
-                  <View
-                    style={[
-                      styles.trendBarFill,
-                      {
-                        width: `${Math.min(100, Math.max(8, m.hired * 8))}%`,
-                        backgroundColor: '#10B981',
-                      },
-                    ]}
-                  />
-                  <Text style={styles.trendBarText}>{m.hired} nhận việc</Text>
-                </View>
-              </View>
-            </View>
-          ))}
-        </View>
-      </View>
+      {/* ─── TẦNG 5: XU HƯỚNG TUYỂN DỤNG (SVG AREA CHART) ──────────────── */}
+      <TimelineTrend
+        data={data?.trends?.data}
+        onSelectMonths={handleSelectMonths}
+      />
 
-      {/* ─── TẦNG 6: PHÂN TÍCH KẾT QUẢ OFFER ───────────────────────────── */}
-      <View style={styles.blockCard}>
-        <View style={styles.blockHeaderBetween}>
-          <View style={styles.alertHeaderLeft}>
-            <View style={[styles.alertIconCircle, { backgroundColor: '#EFF6FF' }]}>
-              <Ionicons name="pie-chart" size={16} color="#1E3A8A" />
-            </View>
-            <View>
-              <Text style={styles.blockTitle}>Cơ cấu Thư mời Nhận việc</Text>
-              <Text style={styles.blockSubtitle}>
-                Tổng số {data?.offers?.totalOffers || 0} Offer • Chấp nhận {data?.offers?.acceptanceRate || 0}%
-              </Text>
-            </View>
-          </View>
-        </View>
-
-        <View style={styles.offerBreakdownGrid}>
-          {data?.offers?.chartData?.map((item, idx) => (
-            <View key={idx} style={styles.offerStatBox}>
-              <View style={styles.offerStatTop}>
-                <View style={[styles.offerDot, { backgroundColor: item.color }]} />
-                <Text style={styles.offerStatName}>{item.name}</Text>
-              </View>
-              <Text style={styles.offerStatCount}>{item.count}</Text>
-              <Text style={styles.offerStatPct}>
-                {data.offers.totalOffers > 0
-                  ? Math.round((item.count / data.offers.totalOffers) * 100)
-                  : 0}
-                %
-              </Text>
-            </View>
-          ))}
-        </View>
-      </View>
-
-      {/* ─── MODAL CHỌN PHÒNG BAN (GIỐNG WEB) ───────────────────────── */}
-      <Modal
-        visible={deptModalVisible}
-        transparent={true}
-        animationType="fade"
-        onRequestClose={() => setDeptModalVisible(false)}
-      >
-        <Pressable
-          style={styles.webDropdownOverlay}
-          onPress={() => setDeptModalVisible(false)}
-        >
-          <Pressable
-            style={styles.webDropdownCard}
-            onPress={(e) => e.stopPropagation()}
-          >
-            <ScrollView
-              style={styles.webDropdownList}
-              showsVerticalScrollIndicator={false}
-            >
-              <TouchableOpacity
-                style={[
-                  styles.webDropdownItem,
-                  !selectedDeptId && styles.webDropdownItemActive,
-                ]}
-                onPress={() => {
-                  setSelectedDeptId('');
-                  setSelectedJobId('');
-                  setDeptModalVisible(false);
-                }}
-              >
-                <Text
-                  style={[
-                    styles.webDropdownItemText,
-                    !selectedDeptId && styles.webDropdownItemTextActive,
-                  ]}
-                >
-                  Tất cả phòng ban
-                </Text>
-                {!selectedDeptId && (
-                  <Ionicons name="checkmark" size={17} color="#2563EB" />
-                )}
-              </TouchableOpacity>
-              {departments.map((dept) => (
-                <TouchableOpacity
-                  key={dept._id}
-                  style={[
-                    styles.webDropdownItem,
-                    selectedDeptId === dept._id && styles.webDropdownItemActive,
-                  ]}
-                  onPress={() => {
-                    setSelectedDeptId(dept._id);
-                    setSelectedJobId('');
-                    setDeptModalVisible(false);
-                  }}
-                >
-                  <Text
-                    style={[
-                      styles.webDropdownItemText,
-                      selectedDeptId === dept._id && styles.webDropdownItemTextActive,
-                    ]}
-                  >
-                    {dept.name}
-                  </Text>
-                  {selectedDeptId === dept._id && (
-                    <Ionicons name="checkmark" size={17} color="#2563EB" />
-                  )}
-                </TouchableOpacity>
-              ))}
-            </ScrollView>
-          </Pressable>
-        </Pressable>
-      </Modal>
-
-      {/* ─── MODAL CHỌN VỊ TRÍ TUYỂN DỤNG (GIỐNG WEB) ───────────────── */}
-      <Modal
-        visible={jobModalVisible}
-        transparent={true}
-        animationType="fade"
-        onRequestClose={() => setJobModalVisible(false)}
-      >
-        <Pressable
-          style={styles.webDropdownOverlay}
-          onPress={() => setJobModalVisible(false)}
-        >
-          <Pressable
-            style={styles.webDropdownCard}
-            onPress={(e) => e.stopPropagation()}
-          >
-            <ScrollView
-              style={styles.webDropdownList}
-              showsVerticalScrollIndicator={false}
-            >
-              <TouchableOpacity
-                style={[
-                  styles.webDropdownItem,
-                  !selectedJobId && styles.webDropdownItemActive,
-                ]}
-                onPress={() => {
-                  setSelectedJobId('');
-                  setJobModalVisible(false);
-                }}
-              >
-                <Text
-                  style={[
-                    styles.webDropdownItemText,
-                    !selectedJobId && styles.webDropdownItemTextActive,
-                  ]}
-                >
-                  Tất cả vị trí
-                </Text>
-                {!selectedJobId && (
-                  <Ionicons name="checkmark" size={17} color="#2563EB" />
-                )}
-              </TouchableOpacity>
-              {availableJobs.map((job) => (
-                <TouchableOpacity
-                  key={job._id}
-                  style={[
-                    styles.webDropdownItem,
-                    selectedJobId === job._id && styles.webDropdownItemActive,
-                  ]}
-                  onPress={() => {
-                    setSelectedJobId(job._id);
-                    setJobModalVisible(false);
-                  }}
-                >
-                  <Text
-                    style={[
-                      styles.webDropdownItemText,
-                      selectedJobId === job._id && styles.webDropdownItemTextActive,
-                    ]}
-                  >
-                    {job.title}
-                  </Text>
-                  {selectedJobId === job._id && (
-                    <Ionicons name="checkmark" size={17} color="#2563EB" />
-                  )}
-                </TouchableOpacity>
-              ))}
-            </ScrollView>
-          </Pressable>
-        </Pressable>
-      </Modal>
+      {/* ─── TẦNG 6: PHÂN TÍCH OFFER (SVG DONUT CHART) ─────────────────── */}
+      <OfferDonut
+        totalOffers={data?.offers?.totalOffers}
+        acceptanceRate={data?.offers?.acceptanceRate}
+        statusCounts={data?.offers?.statusCounts}
+      />
     </ScrollView>
   );
 };
@@ -1199,108 +814,19 @@ const styles = StyleSheet.create({
     color: '#0F172A',
   },
 
-  // KPI Grid
-  kpiGrid: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 10,
-    marginBottom: 14,
-  },
-  kpiCard: {
-    width: '48.5%',
-    backgroundColor: '#FFFFFF',
-    borderRadius: 16,
-    padding: 12,
-    borderWidth: 1,
-    borderColor: '#E2E8F0',
-    shadowColor: '#64748B',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.05,
-    shadowRadius: 6,
-    elevation: 2,
-  },
-  kpiTopRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    marginBottom: 8,
-  },
-  kpiIconBox: {
-    width: 32,
-    height: 32,
-    borderRadius: 8,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  badge: {
-    paddingHorizontal: 6,
-    paddingVertical: 2,
-    borderRadius: 6,
-  },
-  badgeText: {
-    fontSize: 10,
-    fontWeight: '700',
-  },
-  kpiLabel: {
-    fontSize: 9.5,
-    fontWeight: '700',
-    color: '#64748B',
-    textTransform: 'uppercase',
-    marginBottom: 2,
-  },
-  kpiValueRow: {
-    flexDirection: 'row',
-    alignItems: 'baseline',
-    gap: 3,
-    marginBottom: 4,
-  },
-  kpiValue: {
-    fontSize: 17,
-    fontWeight: '800',
-    color: '#0F172A',
-  },
-  kpiSubValue: {
-    fontSize: 12,
-    fontWeight: '600',
-    color: '#64748B',
-  },
-  kpiUnit: {
-    fontSize: 10,
-    fontWeight: '600',
-    color: '#94A3B8',
-  },
-  kpiSubText: {
-    fontSize: 10,
-    color: '#64748B',
-    fontWeight: '500',
-    lineHeight: 13,
-  },
-  miniProgressBarTrack: {
-    height: 4,
-    backgroundColor: '#F1F5F9',
-    borderRadius: 2,
-    overflow: 'hidden',
-    marginTop: 4,
-  },
-  miniProgressBarFill: {
-    height: '100%',
-    backgroundColor: '#2563EB',
-    borderRadius: 2,
-  },
-
   // Block Card
   blockCard: {
     backgroundColor: '#FFFFFF',
-    borderRadius: 18,
-    padding: 14,
+    borderRadius: 20,
+    padding: 16,
     marginBottom: 14,
     borderWidth: 1,
     borderColor: '#E2E8F0',
-    shadowColor: '#64748B',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.06,
-    shadowRadius: 8,
-    elevation: 2,
+    shadowColor: '#2563EB',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.05,
+    shadowRadius: 12,
+    elevation: 3,
   },
   blockHeaderBetween: {
     flexDirection: 'row',
@@ -1317,60 +843,63 @@ const styles = StyleSheet.create({
     width: 32,
     height: 32,
     borderRadius: 10,
-    backgroundColor: '#FEF3C7',
+    backgroundColor: '#FFFBEB',
+    borderWidth: 1,
+    borderColor: '#FEF3C7',
     alignItems: 'center',
     justifyContent: 'center',
   },
   blockTitle: {
-    fontSize: 13.5,
+    fontSize: 13,
     fontWeight: '800',
     color: '#0F172A',
   },
   blockSubtitle: {
-    fontSize: 10.5,
-    color: '#64748B',
-    fontWeight: '500',
+    fontSize: 10,
+    color: '#94A3B8',
+    marginTop: 1,
   },
   alertCountBadge: {
-    paddingHorizontal: 8,
-    paddingVertical: 3,
-    borderRadius: 12,
+    paddingHorizontal: 7,
+    paddingVertical: 2.5,
+    borderRadius: 6,
     borderWidth: 1,
   },
   alertCountBadgeWarning: {
-    backgroundColor: '#FEF3C7',
-    borderColor: '#FDE68A',
+    backgroundColor: '#FFFBEB',
+    borderColor: '#FEF3C7',
   },
   alertCountBadgeSuccess: {
-    backgroundColor: '#DCFCE7',
-    borderColor: '#BBF7D0',
+    backgroundColor: '#ECFDF5',
+    borderColor: '#A7F3D0',
   },
   alertCountBadgeText: {
-    fontSize: 10,
+    fontSize: 9.5,
     fontWeight: '700',
   },
   alertCountBadgeTextWarning: {
     color: '#B45309',
   },
   alertCountBadgeTextSuccess: {
-    color: '#15803D',
+    color: '#047857',
   },
 
   // Alert Tabs
   alertTabContainer: {
     flexDirection: 'row',
     backgroundColor: '#F1F5F9',
-    borderRadius: 10,
+    borderRadius: 8,
     padding: 2,
     marginBottom: 10,
+    gap: 2,
   },
   alertTabButton: {
     flex: 1,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    paddingVertical: 6,
-    borderRadius: 8,
+    paddingVertical: 5.5,
+    borderRadius: 6,
     gap: 4,
   },
   alertTabButtonActive: {
@@ -1382,7 +911,7 @@ const styles = StyleSheet.create({
     elevation: 1,
   },
   alertTabButtonText: {
-    fontSize: 11,
+    fontSize: 10.5,
     fontWeight: '600',
     color: '#64748B',
   },
@@ -1391,48 +920,47 @@ const styles = StyleSheet.create({
     fontWeight: '700',
   },
   tabBadge: {
-    minWidth: 16,
-    height: 16,
-    borderRadius: 8,
-    backgroundColor: '#EF4444',
+    minWidth: 15,
+    height: 15,
+    borderRadius: 7.5,
     alignItems: 'center',
     justifyContent: 'center',
     paddingHorizontal: 3,
   },
   tabBadgeText: {
     color: '#FFFFFF',
-    fontSize: 9,
+    fontSize: 8.5,
     fontWeight: '800',
   },
   alertContentBox: {
-    minHeight: 80,
+    minHeight: 60,
   },
   alertItemRow: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    paddingVertical: 8,
+    paddingVertical: 7,
     borderBottomWidth: 1,
-    borderBottomColor: '#F1F5F9',
+    borderBottomColor: '#F8FAFC',
   },
   alertItemLeft: {
     flex: 1,
     marginRight: 8,
   },
   alertItemTitle: {
-    fontSize: 12,
+    fontSize: 11.5,
     fontWeight: '700',
     color: '#1E293B',
   },
   alertItemDesc: {
-    fontSize: 10.5,
+    fontSize: 10,
     color: '#64748B',
-    marginTop: 2,
+    marginTop: 1.5,
   },
   alertBadgeSmall: {
-    paddingHorizontal: 7,
-    paddingVertical: 3,
-    borderRadius: 6,
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    borderRadius: 5,
   },
   alertBadgeSmallText: {
     fontSize: 9.5,
@@ -1449,267 +977,82 @@ const styles = StyleSheet.create({
   emptyAlertBox: {
     alignItems: 'center',
     justifyContent: 'center',
-    paddingVertical: 20,
-    gap: 6,
+    paddingVertical: 18,
+    gap: 4,
   },
   emptyAlertText: {
-    fontSize: 12,
+    fontSize: 11,
     color: '#10B981',
     fontWeight: '600',
   },
-
-  // Funnel
-  funnelTotalText: {
-    fontSize: 12,
-    fontWeight: '700',
-    color: '#2563EB',
-  },
-  funnelContainer: {
-    gap: 8,
-  },
-  funnelStageBox: {
-    marginBottom: 4,
-  },
-  funnelRow: {
+  alertFooterLink: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'space-between',
-    marginBottom: 4,
-  },
-  funnelStageNameBox: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    justifyContent: 'center',
     gap: 4,
+    paddingTop: 10,
+    marginTop: 4,
+    borderTopWidth: 1,
+    borderTopColor: '#F8FAFC',
   },
-  funnelStageIndex: {
-    fontSize: 11,
-    fontWeight: '700',
-    color: '#94A3B8',
-  },
-  funnelStageName: {
-    fontSize: 11.5,
-    fontWeight: '700',
-    color: '#1E293B',
-  },
-  funnelMetricsBox: {
-    flexDirection: 'row',
-    alignItems: 'baseline',
-    gap: 4,
-  },
-  funnelStageCount: {
-    fontSize: 12,
-    fontWeight: '800',
-    color: '#0F172A',
-  },
-  funnelStageUnit: {
-    fontSize: 10,
-    fontWeight: '500',
-    color: '#64748B',
-  },
-  funnelStagePct: {
+  alertFooterLinkText: {
     fontSize: 11,
     fontWeight: '700',
     color: '#2563EB',
-  },
-  funnelTrack: {
-    height: 7,
-    backgroundColor: '#F1F5F9',
-    borderRadius: 4,
-    overflow: 'hidden',
-  },
-  funnelBar: {
-    height: '100%',
-    borderRadius: 4,
-  },
-  stepConversionRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 3,
-    marginTop: 3,
-    marginLeft: 14,
-  },
-  stepConversionText: {
-    fontSize: 9.5,
-    color: '#64748B',
-    fontWeight: '600',
   },
 
   // Department List
+  deptCountBadgeText: {
+    fontSize: 10.5,
+    fontWeight: '600',
+    color: '#94A3B8',
+  },
   deptList: {
-    gap: 8,
+    gap: 9,
   },
-  deptItemCard: {
-    padding: 10,
-    backgroundColor: '#F8FAFC',
-    borderRadius: 12,
-    borderWidth: 1,
-    borderColor: '#E2E8F0',
-  },
-  deptItemCardSelected: {
-    backgroundColor: '#EFF6FF',
-    borderColor: '#93C5FD',
+  deptItemBox: {
+    gap: 5,
   },
   deptHeaderRow: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    marginBottom: 6,
-  },
-  deptNameLeft: {
-    flex: 1,
-    marginRight: 6,
   },
   deptNameText: {
-    fontSize: 12,
-    fontWeight: '700',
-    color: '#0F172A',
-  },
-  deptJobsText: {
-    fontSize: 10,
-    color: '#64748B',
-    fontWeight: '500',
-  },
-  deptBadge: {
-    paddingHorizontal: 7,
-    paddingVertical: 2,
-    borderRadius: 6,
-  },
-  deptBadgeText: {
-    fontSize: 10,
-    fontWeight: '700',
-  },
-  deptTrack: {
-    height: 6,
-    backgroundColor: '#E2E8F0',
-    borderRadius: 3,
-    overflow: 'hidden',
-  },
-  deptBar: {
-    height: '100%',
-    borderRadius: 3,
-  },
-
-  // Trend
-  trendList: {
-    gap: 8,
-  },
-  trendRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingVertical: 4,
-  },
-  trendMonthLabel: {
-    width: 60,
-    fontSize: 11,
+    fontSize: 11.5,
     fontWeight: '700',
     color: '#334155',
-  },
-  trendBarsBox: {
     flex: 1,
-    gap: 4,
+    marginRight: 8,
   },
-  trendBarItem: {
+  deptRightMetrics: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 6,
   },
-  trendBarFill: {
-    height: 6,
-    borderRadius: 3,
-  },
-  trendBarText: {
-    fontSize: 9.5,
-    color: '#64748B',
+  deptHiredRatio: {
+    fontSize: 10.5,
+    color: '#94A3B8',
     fontWeight: '600',
   },
-
-  // Offer breakdown
-  offerBreakdownGrid: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 8,
-  },
-  offerStatBox: {
-    width: '31.3%',
-    backgroundColor: '#F8FAFC',
-    borderRadius: 10,
-    padding: 8,
+  deptPctBadge: {
+    paddingHorizontal: 5,
+    paddingVertical: 1.5,
+    borderRadius: 5,
     borderWidth: 1,
-    borderColor: '#E2E8F0',
-    alignItems: 'center',
   },
-  offerStatTop: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 4,
-    marginBottom: 4,
-  },
-  offerDot: {
-    width: 6,
-    height: 6,
-    borderRadius: 3,
-  },
-  offerStatName: {
+  deptPctText: {
     fontSize: 9.5,
     fontWeight: '700',
-    color: '#475569',
   },
-  offerStatCount: {
-    fontSize: 14,
-    fontWeight: '800',
-    color: '#0F172A',
+  deptProgressTrack: {
+    height: 5,
+    backgroundColor: '#F1F5F9',
+    borderRadius: 2.5,
+    overflow: 'hidden',
   },
-  offerStatPct: {
-    fontSize: 9.5,
-    fontWeight: '700',
-    color: '#2563EB',
-    marginTop: 1,
-  },
-
-  // ─── WEB-STYLE FLOATING DROPDOWN MODAL (KHỚP 100% WEB & RECRUITMENT) ───
-  webDropdownOverlay: {
-    flex: 1,
-    backgroundColor: 'rgba(15, 23, 42, 0.35)',
-    justifyContent: 'center',
-    alignItems: 'center',
-    paddingHorizontal: 24,
-  },
-  webDropdownCard: {
-    width: '100%',
-    maxWidth: 320,
-    backgroundColor: '#FFFFFF',
-    borderRadius: 20,
-    padding: 6,
-    borderWidth: 1,
-    borderColor: '#E2E8F0',
-    shadowColor: '#2563EB',
-    shadowOffset: { width: 0, height: 8 },
-    shadowOpacity: 0.15,
-    shadowRadius: 20,
-    elevation: 12,
-  },
-  webDropdownList: {
-    maxHeight: 280,
-  },
-  webDropdownItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingVertical: 10,
-    paddingHorizontal: 12,
-    borderRadius: 12,
-    marginBottom: 2,
-  },
-  webDropdownItemActive: {
-    backgroundColor: '#EFF6FF',
-  },
-  webDropdownItemText: {
-    fontSize: 13,
-    fontWeight: '600',
-    color: '#1E293B',
-  },
-  webDropdownItemTextActive: {
-    color: '#2563EB',
-    fontWeight: '700',
+  deptProgressBar: {
+    height: '100%',
+    borderRadius: 2.5,
   },
 });

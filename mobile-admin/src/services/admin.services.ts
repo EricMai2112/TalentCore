@@ -113,9 +113,11 @@ export interface ApplicationTrends {
 export interface ExpiringOfferAlert {
   id: string;
   candidateName: string;
-  positionTitle: string;
+  positionTitle?: string;
+  jobTitle?: string;
   expiresAt: string;
-  daysLeft: number;
+  daysLeft?: number;
+  hoursLeft?: number;
   isOverdue: boolean;
   salary: number;
 }
@@ -132,12 +134,18 @@ export interface StaleApplicationAlert {
 export interface PendingJobAlert {
   id: string;
   title: string;
-  deadline: string | null;
-  daysLeft: number | null;
-  isOverdue: boolean;
-  applicationCount: number;
-  targetHeadcount: number;
-  hiredCount: number;
+  departmentName?: string;
+  headcount?: number;
+  priority?: string;
+  creatorName?: string;
+  createdAt?: string;
+  deadline?: string | null;
+  applicationDeadline?: string | null;
+  daysLeft?: number | null;
+  isOverdue?: boolean;
+  applicationCount?: number;
+  targetHeadcount?: number;
+  hiredCount?: number;
 }
 
 export interface TodayInterviewAlert {

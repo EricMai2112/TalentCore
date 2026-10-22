@@ -1,6 +1,24 @@
 import { API_CONFIG } from '../config/api.config';
 import { authService } from '../features/auth/services/auth.service';
 
+type UnauthorizedCallback = () => void;
+let onUnauthorizedCallback: UnauthorizedCallback | null = null;
+
+export const setOnUnauthorizedCallback = (cb: UnauthorizedCallback | null) => {
+  onUnauthorizedCallback = cb;
+};
+
+const handleUnauthorized = async () => {
+  try {
+    await authService.logout();
+  } catch (e) {
+    console.error('Error logging out on 401:', e);
+  }
+  if (onUnauthorizedCallback) {
+    onUnauthorizedCallback();
+  }
+};
+
 const getAuthHeaders = async (): Promise<Record<string, string>> => {
   const session = await authService.getStoredSession();
   const headers: Record<string, string> = {
@@ -31,6 +49,9 @@ export const apiClient = {
     const response = await fetch(url, { method: 'GET', headers });
     const data = await response.json();
     if (!response.ok) {
+      if (response.status === 401) {
+        handleUnauthorized();
+      }
       throw new Error(data?.message || 'Yêu cầu không thành công');
     }
     return data?.data !== undefined ? data.data : data;
@@ -46,6 +67,9 @@ export const apiClient = {
     });
     const data = await response.json();
     if (!response.ok) {
+      if (response.status === 401) {
+        handleUnauthorized();
+      }
       throw new Error(data?.message || 'Thao tác không thành công');
     }
     return data?.data !== undefined ? data.data : data;
@@ -61,6 +85,9 @@ export const apiClient = {
     });
     const data = await response.json();
     if (!response.ok) {
+      if (response.status === 401) {
+        handleUnauthorized();
+      }
       throw new Error(data?.message || 'Cập nhật không thành công');
     }
     return data?.data !== undefined ? data.data : data;
@@ -76,6 +103,9 @@ export const apiClient = {
     });
     const data = await response.json();
     if (!response.ok) {
+      if (response.status === 401) {
+        handleUnauthorized();
+      }
       throw new Error(data?.message || 'Cập nhật không thành công');
     }
     return data?.data !== undefined ? data.data : data;
@@ -87,6 +117,9 @@ export const apiClient = {
     const response = await fetch(url, { method: 'DELETE', headers });
     const data = await response.json();
     if (!response.ok) {
+      if (response.status === 401) {
+        handleUnauthorized();
+      }
       throw new Error(data?.message || 'Xóa không thành công');
     }
     return data?.data !== undefined ? data.data : data;
