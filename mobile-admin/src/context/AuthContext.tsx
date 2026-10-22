@@ -1,6 +1,7 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { User, LoginPayload } from '../types/auth.types';
 import { authService } from '../services/auth.service';
+import { setOnUnauthorizedCallback } from '../services/api.client';
 
 interface AuthContextType {
   user: User | null;
@@ -16,6 +17,14 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [user, setUser] = useState<User | null>(null);
   const [token, setToken] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState<boolean>(true);
+
+  useEffect(() => {
+    setOnUnauthorizedCallback(() => {
+      setToken(null);
+      setUser(null);
+    });
+    return () => setOnUnauthorizedCallback(null);
+  }, []);
 
   useEffect(() => {
     const restoreSession = async () => {

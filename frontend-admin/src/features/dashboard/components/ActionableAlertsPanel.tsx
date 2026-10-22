@@ -16,7 +16,7 @@ interface Props {
   alerts?: ActionableAlerts;
 }
 
-type TabType = 'offers' | 'stale' | 'pending' | 'interviews';
+type TabType = 'offers' | 'pending' | 'interviews';
 
 export default function ActionableAlertsPanel({ alerts }: Props) {
   const [activeTab, setActiveTab] = useState<TabType>('offers');
@@ -33,6 +33,7 @@ export default function ActionableAlertsPanel({ alerts }: Props) {
   const staleApplications = alerts?.staleApplications || [];
   const pendingJobs = alerts?.pendingJobs || [];
   const todayInterviews = alerts?.todayInterviews || [];
+  const totalAlerts = (summary.expiringOffers || 0) + (summary.pendingJobs || 0);
 
   return (
     <div className="bg-white/60 backdrop-blur-md border border-white/80 rounded-2xl p-3 
@@ -55,12 +56,12 @@ export default function ActionableAlertsPanel({ alerts }: Props) {
 
         <span
           className={`text-[10px] font-bold px-2 py-0.5 rounded-full border ${
-            summary.totalAlerts > 0
+            totalAlerts > 0
               ? 'bg-amber-50 text-amber-700 border-amber-200/80 animate-pulse'
               : 'bg-emerald-50 text-emerald-700 border-emerald-200/80'
           }`}
         >
-          {summary.totalAlerts > 0 ? `${summary.totalAlerts} việc ưu tiên` : 'Ổn định'}
+          {totalAlerts > 0 ? `${totalAlerts} việc ưu tiên` : 'Ổn định'}
         </span>
       </div>
 
@@ -78,22 +79,6 @@ export default function ActionableAlertsPanel({ alerts }: Props) {
           {summary.expiringOffers > 0 && (
             <span className="w-4 h-4 rounded-full bg-rose-500 text-white text-[9px] flex items-center justify-center font-bold">
               {summary.expiringOffers}
-            </span>
-          )}
-        </button>
-
-        <button
-          onClick={() => setActiveTab('stale')}
-          className={`flex-1 flex items-center justify-center gap-1 py-1 rounded-md text-[10px] font-semibold transition-all cursor-pointer ${
-            activeTab === 'stale'
-              ? 'bg-white text-slate-800 shadow-2xs'
-              : 'text-slate-500 hover:text-slate-700'
-          }`}
-        >
-          <span>CV tồn</span>
-          {summary.staleApplications > 0 && (
-            <span className="w-4 h-4 rounded-full bg-amber-500 text-white text-[9px] flex items-center justify-center font-bold">
-              {summary.staleApplications}
             </span>
           )}
         </button>
@@ -167,38 +152,6 @@ export default function ActionableAlertsPanel({ alerts }: Props) {
                     <span className="font-semibold text-slate-700">
                       {off.salary.toLocaleString('vi-VN')} ₫
                     </span>
-                  </div>
-                </Link>
-              ))
-            )}
-          </>
-        )}
-
-        {/* TAB 2: HỒ SƠ TỒN ĐỌNG */}
-        {activeTab === 'stale' && (
-          <>
-            {staleApplications.length === 0 ? (
-              <div className="h-full flex flex-col items-center justify-center text-slate-400 py-3">
-                <CheckCircle2 size={20} className="text-emerald-500 mb-1" />
-                <p className="text-[10px]">Không có hồ sơ nào bị tồn đọng</p>
-              </div>
-            ) : (
-              staleApplications.map((app) => (
-                <Link
-                  key={app.id}
-                  href={`/candidates`}
-                  className="block p-1.5 rounded-xl border border-amber-100 bg-amber-50/40 hover:bg-amber-50/80 transition-colors"
-                >
-                  <div className="flex items-center justify-between">
-                    <span className="font-bold text-slate-800 truncate max-w-[130px]">
-                      {app.candidateName}
-                    </span>
-                    <span className="text-[9.5px] font-bold px-1.5 py-0.2 rounded-md bg-amber-100 text-amber-800">
-                      Tồn {app.daysStale} ngày
-                    </span>
-                  </div>
-                  <div className="flex items-center justify-between text-[10px] text-slate-500 mt-0.5">
-                    <span className="truncate max-w-[180px]">{app.jobTitle}</span>
                   </div>
                 </Link>
               ))
@@ -281,11 +234,9 @@ export default function ActionableAlertsPanel({ alerts }: Props) {
           href={
             activeTab === 'offers'
               ? '/offers'
-              : activeTab === 'stale'
-                ? '/candidates'
-                : activeTab === 'pending'
-                  ? '/job-description'
-                  : '/interviews'
+              : activeTab === 'pending'
+                ? '/job-description'
+                : '/interviews'
           }
           className="inline-flex items-center gap-1 text-[10.5px] font-semibold text-blue-600 hover:text-blue-800 transition-colors"
         >

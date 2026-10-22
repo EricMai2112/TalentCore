@@ -1343,10 +1343,16 @@ export class AnalyticsService {
       return cand.profileName || 'Ứng viên';
     };
 
+    const pendingJobIds = pendingJobs.map((j: any) => j._id);
+    const appCounts = await this.applicationModel.aggregate([
+      { $match: { jobDescriptionId: { $in: pendingJobIds } } },
+      { $group: { _id: '$jobDescriptionId', count: { $sum: 1 } } },
+    ]);
+    const appCountMap = new Map(appCounts.map((a: any) => [a._id.toString(), a.count]));
+
     return {
       summary: {
-        totalAlerts:
-          expiringOfferCount + staleApplicationCount + pendingJobCount,
+        totalAlerts: expiringOfferCount + pendingJobCount,
         expiringOffers: expiringOfferCount,
         staleApplications: staleApplicationCount,
         pendingJobs: pendingJobCount,
@@ -1383,16 +1389,34 @@ export class AnalyticsService {
           daysStale,
         };
       }),
-      pendingJobs: pendingJobs.map((j: any) => ({
-        id: j._id.toString(),
-        title: j.title,
-        departmentName: j.departmentId?.name || '',
-        headcount: j.headcount || 1,
-        priority: j.priority,
-        creatorName:
-          j.postedById?.fullName || j.postedById?.name || 'Quản lý',
-        createdAt: j.createdAt,
-      })),
+      pendingJobs: pendingJobs.map((j: any) => {
+        const deadlineDate = j.applicationDeadline ? new Date(j.applicationDeadline) : null;
+        let daysLeft: number | null = null;
+        let isOverdue = false;
+        if (deadlineDate && !isNaN(deadlineDate.getTime())) {
+          const diffMs = deadlineDate.getTime() - now.getTime();
+          daysLeft = Math.ceil(diffMs / (1000 * 60 * 60 * 24));
+          isOverdue = daysLeft < 0;
+        }
+
+        return {
+          id: j._id.toString(),
+          title: j.title,
+          departmentName: j.departmentId?.name || '',
+          headcount: j.headcount || 1,
+          targetHeadcount: j.headcount || 1,
+          hiredCount: 0,
+          applicationCount: appCountMap.get(j._id.toString()) || 0,
+          priority: j.priority,
+          creatorName:
+            j.postedById?.fullName || j.postedById?.name || 'Quản lý',
+          deadline: j.applicationDeadline || null,
+          applicationDeadline: j.applicationDeadline || null,
+          daysLeft: daysLeft !== null ? daysLeft : 0,
+          isOverdue,
+          createdAt: j.createdAt,
+        };
+      }),
       todayInterviews: todayInterviews.map((int: any) => ({
         id: int._id.toString(),
         candidateName: resolveCandidateName(int.candidateId),

@@ -22,6 +22,7 @@ import {
 } from '../../services/admin.services';
 import { useAuth } from '../../context/AuthContext';
 import { UserRole } from '../../features/auth/types/auth.types';
+import CustomSelect from '../../components/common/CustomSelect';
 
 interface StageItem {
   _id: string;
@@ -74,12 +75,7 @@ export const RecruitmentScreen: React.FC<RecruitmentScreenProps> = ({ initialSeg
 
   const [selectedJob, setSelectedJob] = useState<JobDescriptionItem | null>(null);
 
-  const [showCandDeptPickerModal, setShowCandDeptPickerModal] = useState<boolean>(false);
-  const [showCandPositionPickerModal, setShowCandPositionPickerModal] = useState<boolean>(false);
-  const [showCandStagePickerModal, setShowCandStagePickerModal] = useState<boolean>(false);
 
-  const [showDeptPickerModal, setShowDeptPickerModal] = useState<boolean>(false);
-  const [showPriorityPickerModal, setShowPriorityPickerModal] = useState<boolean>(false);
 
   // Review Modal states (Khớp 100% Ảnh 3)
   const [reviewJob, setReviewJob] = useState<JobDescriptionItem | null>(null);
@@ -213,7 +209,6 @@ export const RecruitmentScreen: React.FC<RecruitmentScreenProps> = ({ initialSeg
 
   const handleSelectCandDept = (deptId: string) => {
     setSelectedCandDept(deptId);
-    setShowCandDeptPickerModal(false);
     if (deptId !== 'ALL' && selectedCandPosition !== 'ALL') {
       const isValid =
         jobs.some((j) => {
@@ -371,8 +366,6 @@ export const RecruitmentScreen: React.FC<RecruitmentScreenProps> = ({ initialSeg
       let matchStatus = true;
       if (selectedJobStatus === 'ALL') {
         matchStatus = true;
-      } else if (selectedJobStatus === 'ACTIVE') {
-        matchStatus = item.status === 'JD_CREATED' || item.status === 'APPROVED';
       } else {
         matchStatus = item.status === selectedJobStatus;
       }
@@ -526,6 +519,62 @@ export const RecruitmentScreen: React.FC<RecruitmentScreenProps> = ({ initialSeg
     return selectedJobPriority;
   }, [selectedJobPriority]);
 
+  const deptFilterOptions = useMemo(
+    () => [
+      { value: 'ALL', label: 'Tất cả phòng ban' },
+      ...departments.map((d) => ({ value: d._id, label: d.name })),
+    ],
+    [departments]
+  );
+
+  const candPosFilterOptions = useMemo(
+    () => [
+      { value: 'ALL', label: 'Tất cả vị trí' },
+      ...candidatePositionOptions.map((p) => ({ value: p, label: p })),
+    ],
+    [candidatePositionOptions]
+  );
+
+  const candStageFilterOptions = useMemo(
+    () => [
+      { value: 'ALL', label: 'Tất cả giai đoạn' },
+      ...candidateStageOptions.map((s) => ({ value: s, label: s })),
+    ],
+    [candidateStageOptions]
+  );
+
+  const jobPriorityFilterOptions = useMemo(
+    () => [
+      { value: 'ALL', label: 'Tất cả mức ưu tiên' },
+      { value: 'HIGH', label: 'Ưu tiên cao (Gấp)' },
+      { value: 'MEDIUM', label: 'Trung bình' },
+      { value: 'LOW', label: 'Tiêu chuẩn' },
+    ],
+    []
+  );
+
+  const jobStatusFilterOptions = useMemo(
+    () => [
+      { value: 'ALL', label: 'Tất cả trạng thái' },
+      { value: 'PENDING', label: 'Chờ duyệt' },
+      { value: 'APPROVED', label: 'Đã duyệt' },
+      { value: 'JD_CREATED', label: 'Đã tạo JD' },
+      { value: 'COMPLETED', label: 'Hoàn thành' },
+      { value: 'REJECTED', label: 'Từ chối' },
+    ],
+    []
+  );
+
+  const selectedJobStatusName = useMemo(() => {
+    if (selectedJobStatus === 'ALL') return 'Tất cả trạng thái';
+    if (selectedJobStatus === 'PENDING') return 'Chờ duyệt';
+    if (selectedJobStatus === 'APPROVED') return 'Đã duyệt';
+    if (selectedJobStatus === 'JD_CREATED') return 'Đã tạo JD';
+    if (selectedJobStatus === 'COMPLETED') return 'Hoàn thành';
+    if (selectedJobStatus === 'REJECTED') return 'Từ chối';
+    return selectedJobStatus;
+  }, [selectedJobStatus]);
+
   return (
     <View style={styles.container}>
       {/* ─── THANH ĐIỀU HƯỚNG SUB-TABS (Ứng viên vs Tin tuyển dụng) ─────── */}
@@ -629,222 +678,113 @@ export const RecruitmentScreen: React.FC<RecruitmentScreenProps> = ({ initialSeg
             </ScrollView>
 
             <View style={styles.subFilterRow}>
-              <TouchableOpacity
-                style={[
-                  styles.subFilterPill,
-                  (selectedCandDept !== 'ALL' || showCandDeptPickerModal) && styles.subFilterPillActive,
-                ]}
-                onPress={() => !isDeptManager && setShowCandDeptPickerModal(true)}
-                activeOpacity={isDeptManager ? 1 : 0.7}
-              >
-                <Ionicons
-                  name="business-outline"
-                  size={13}
-                  color={selectedCandDept !== 'ALL' || showCandDeptPickerModal ? '#2563EB' : '#64748B'}
-                />
-                <Text
-                  style={[
-                    styles.subFilterPillText,
-                    selectedCandDept !== 'ALL' && styles.subFilterPillTextActive,
-                  ]}
-                  numberOfLines={1}
-                >
-                  {selectedCandDeptName}
-                </Text>
-                {!isDeptManager && (
-                  <Ionicons
-                    name={showCandDeptPickerModal ? 'chevron-up' : 'chevron-down'}
-                    size={13}
-                    color={showCandDeptPickerModal ? '#2563EB' : '#64748B'}
-                  />
-                )}
-              </TouchableOpacity>
+              <CustomSelect
+                value={selectedCandDept}
+                onChange={handleSelectCandDept}
+                options={deptFilterOptions}
+                placeholder={selectedCandDeptName}
+                icon="business-outline"
+                disabled={isDeptManager}
+                triggerStyle={styles.subFilterPill}
+                triggerTextStyle={styles.subFilterPillText}
+                activeTriggerStyle={styles.subFilterPillActive}
+                activeTriggerTextStyle={styles.subFilterPillTextActive}
+              />
 
-              <TouchableOpacity
-                style={[
-                  styles.subFilterPill,
-                  (selectedCandPosition !== 'ALL' || showCandPositionPickerModal) && styles.subFilterPillActive,
-                ]}
-                onPress={() => setShowCandPositionPickerModal(true)}
-                activeOpacity={0.7}
-              >
-                <Ionicons
-                  name="briefcase-outline"
-                  size={13}
-                  color={selectedCandPosition !== 'ALL' || showCandPositionPickerModal ? '#2563EB' : '#64748B'}
-                />
-                <Text
-                  style={[
-                    styles.subFilterPillText,
-                    selectedCandPosition !== 'ALL' && styles.subFilterPillTextActive,
-                  ]}
-                  numberOfLines={1}
-                >
-                  {selectedCandPosName}
-                </Text>
-                <Ionicons
-                  name={showCandPositionPickerModal ? 'chevron-up' : 'chevron-down'}
-                  size={13}
-                  color={showCandPositionPickerModal ? '#2563EB' : '#64748B'}
-                />
-              </TouchableOpacity>
+              <CustomSelect
+                value={selectedCandPosition}
+                onChange={(val) => setSelectedCandPosition(val)}
+                options={candPosFilterOptions}
+                placeholder={selectedCandPosName}
+                icon="briefcase-outline"
+                triggerStyle={styles.subFilterPill}
+                triggerTextStyle={styles.subFilterPillText}
+                activeTriggerStyle={styles.subFilterPillActive}
+                activeTriggerTextStyle={styles.subFilterPillTextActive}
+              />
 
-              <TouchableOpacity
-                style={[
-                  styles.subFilterPill,
-                  (selectedCandStage !== 'ALL' || showCandStagePickerModal) && styles.subFilterPillActive,
-                ]}
-                onPress={() => setShowCandStagePickerModal(true)}
-                activeOpacity={0.7}
-              >
-                <Ionicons
-                  name="layers-outline"
-                  size={13}
-                  color={selectedCandStage !== 'ALL' || showCandStagePickerModal ? '#2563EB' : '#64748B'}
-                />
-                <Text
-                  style={[
-                    styles.subFilterPillText,
-                    selectedCandStage !== 'ALL' && styles.subFilterPillTextActive,
-                  ]}
-                  numberOfLines={1}
-                >
-                  {selectedCandStageName}
-                </Text>
-                <Ionicons
-                  name={showCandStagePickerModal ? 'chevron-up' : 'chevron-down'}
-                  size={13}
-                  color={showCandStagePickerModal ? '#2563EB' : '#64748B'}
-                />
-              </TouchableOpacity>
+              <CustomSelect
+                value={selectedCandStage}
+                onChange={(val) => setSelectedCandStage(val)}
+                options={candStageFilterOptions}
+                placeholder={selectedCandStageName}
+                icon="layers-outline"
+                triggerStyle={styles.subFilterPill}
+                triggerTextStyle={styles.subFilterPillText}
+                activeTriggerStyle={styles.subFilterPillActive}
+                activeTriggerTextStyle={styles.subFilterPillTextActive}
+              />
+            </View>
 
-              {isCandFiltered && (
+            {isCandFiltered && (
+              <View style={styles.resetBarRow}>
                 <TouchableOpacity
                   style={styles.subFilterResetBtn}
                   onPress={handleResetCandFilters}
                   activeOpacity={0.7}
                 >
                   <Ionicons name="refresh" size={12} color="#DC2626" />
-                  <Text style={styles.subFilterResetText}>Đặt lại</Text>
+                  <Text style={styles.subFilterResetText}>Đặt lại bộ lọc</Text>
                 </TouchableOpacity>
-              )}
-            </View>
+              </View>
+            )}
           </View>
         ) : (
           /* ─── FILTERS CHO TAB TIN TUYỂN DỤNG (Khớp Ảnh 1) ─── */
           <View>
-            {/* Filter pills ngang các trạng thái */}
-            <ScrollView
-              horizontal
-              showsHorizontalScrollIndicator={false}
-              contentContainerStyle={styles.filterChipRow}
-            >
-              {[
-                { id: 'ALL', label: `Tất cả (${jobs.length})` },
-                { id: 'ACTIVE', label: 'Đang mở tuyển' },
-                { id: 'PENDING', label: 'Chờ duyệt' },
-                { id: 'APPROVED', label: 'Đã duyệt' },
-                { id: 'JD_CREATED', label: 'Đã tạo JD' },
-                { id: 'COMPLETED', label: 'Hoàn thành' },
-                { id: 'REJECTED', label: 'Từ chối' },
-              ].map((chip) => {
-                const isSelected = selectedJobStatus === chip.id;
-                return (
-                  <TouchableOpacity
-                    key={chip.id}
-                    style={[styles.filterChip, isSelected && styles.filterChipActive]}
-                    onPress={() => setSelectedJobStatus(chip.id)}
-                    activeOpacity={0.7}
-                  >
-                    <Text
-                      style={[
-                        styles.filterChipText,
-                        isSelected && styles.filterChipTextActive,
-                      ]}
-                    >
-                      {chip.label}
-                    </Text>
-                  </TouchableOpacity>
-                );
-              })}
-            </ScrollView>
-
-            {/* Dòng bộ lọc phụ: Phòng ban + Ưu tiên + Đặt lại */}
+            {/* Dòng bộ lọc phụ: Trạng thái + Phòng ban + Ưu tiên + Đặt lại */}
             <View style={styles.subFilterRow}>
+              {/* Nút lọc Trạng thái */}
+              <CustomSelect
+                value={selectedJobStatus}
+                onChange={(val) => setSelectedJobStatus(val)}
+                options={jobStatusFilterOptions}
+                placeholder={selectedJobStatusName}
+                triggerStyle={styles.subFilterPill}
+                triggerTextStyle={styles.subFilterPillText}
+                activeTriggerStyle={styles.subFilterPillActive}
+                activeTriggerTextStyle={styles.subFilterPillTextActive}
+              />
+
               {/* Nút lọc Phòng ban */}
-              <TouchableOpacity
-                style={[
-                  styles.subFilterPill,
-                  (selectedJobDept !== 'ALL' || showDeptPickerModal) && styles.subFilterPillActive,
-                ]}
-                onPress={() => !isDeptManager && setShowDeptPickerModal(true)}
-                activeOpacity={isDeptManager ? 1 : 0.7}
-              >
-                <Ionicons
-                  name="business-outline"
-                  size={13}
-                  color={selectedJobDept !== 'ALL' || showDeptPickerModal ? '#2563EB' : '#64748B'}
-                />
-                <Text
-                  style={[
-                    styles.subFilterPillText,
-                    selectedJobDept !== 'ALL' && styles.subFilterPillTextActive,
-                  ]}
-                  numberOfLines={1}
-                >
-                  {selectedDeptName}
-                </Text>
-                {!isDeptManager && (
-                  <Ionicons
-                    name={showDeptPickerModal ? 'chevron-up' : 'chevron-down'}
-                    size={13}
-                    color={showDeptPickerModal ? '#2563EB' : '#64748B'}
-                  />
-                )}
-              </TouchableOpacity>
+              <CustomSelect
+                value={selectedJobDept}
+                onChange={(val) => setSelectedJobDept(val)}
+                options={deptFilterOptions}
+                placeholder={selectedDeptName}
+                disabled={isDeptManager}
+                triggerStyle={styles.subFilterPill}
+                triggerTextStyle={styles.subFilterPillText}
+                activeTriggerStyle={styles.subFilterPillActive}
+                activeTriggerTextStyle={styles.subFilterPillTextActive}
+              />
 
               {/* Nút lọc Mức ưu tiên */}
-              <TouchableOpacity
-                style={[
-                  styles.subFilterPill,
-                  (selectedJobPriority !== 'ALL' || showPriorityPickerModal) && styles.subFilterPillActive,
-                ]}
-                onPress={() => setShowPriorityPickerModal(true)}
-                activeOpacity={0.7}
-              >
-                <Ionicons
-                  name="flag-outline"
-                  size={13}
-                  color={selectedJobPriority !== 'ALL' || showPriorityPickerModal ? '#2563EB' : '#64748B'}
-                />
-                <Text
-                  style={[
-                    styles.subFilterPillText,
-                    selectedJobPriority !== 'ALL' && styles.subFilterPillTextActive,
-                  ]}
-                  numberOfLines={1}
-                >
-                  {selectedPriorityName}
-                </Text>
-                <Ionicons
-                  name={showPriorityPickerModal ? 'chevron-up' : 'chevron-down'}
-                  size={13}
-                  color={showPriorityPickerModal ? '#2563EB' : '#64748B'}
-                />
-              </TouchableOpacity>
+              <CustomSelect
+                value={selectedJobPriority}
+                onChange={(val) => setSelectedJobPriority(val)}
+                options={jobPriorityFilterOptions}
+                placeholder={selectedPriorityName}
+                triggerStyle={styles.subFilterPill}
+                triggerTextStyle={styles.subFilterPillText}
+                activeTriggerStyle={styles.subFilterPillActive}
+                activeTriggerTextStyle={styles.subFilterPillTextActive}
+              />
+            </View>
 
-              {/* Nút Đặt lại bộ lọc */}
-              {isJobFiltered && (
+            {/* Dòng Đặt lại bộ lọc gọn gàng, không tràn ngang */}
+            {isJobFiltered && (
+              <View style={styles.resetBarRow}>
                 <TouchableOpacity
                   style={styles.subFilterResetBtn}
                   onPress={handleResetJobFilters}
                   activeOpacity={0.7}
                 >
                   <Ionicons name="refresh" size={12} color="#DC2626" />
-                  <Text style={styles.subFilterResetText}>Đặt lại</Text>
+                  <Text style={styles.subFilterResetText}>Đặt lại bộ lọc</Text>
                 </TouchableOpacity>
-              )}
-            </View>
+              </View>
+            )}
           </View>
         )}
       </View>
@@ -970,12 +910,8 @@ export const RecruitmentScreen: React.FC<RecruitmentScreenProps> = ({ initialSeg
           ) : (
             /* ─── PHẦN TIN TUYỂN DỤNG (JD) ─── */
             <View>
-              {/* Dải 6 Stat Cards cuộn ngang (Giống Web Ảnh 2) */}
-              <ScrollView
-                horizontal
-                showsHorizontalScrollIndicator={false}
-                contentContainerStyle={styles.statCardsRow}
-              >
+              {/* Lưới 6 Stat Cards (2 hàng x 3 cột) */}
+              <View style={styles.statCardsGrid}>
                 {jobStats.map((stat) => {
                   const isSelected = selectedJobStatus === stat.id;
                   return (
@@ -998,7 +934,7 @@ export const RecruitmentScreen: React.FC<RecruitmentScreenProps> = ({ initialSeg
                         >
                           <Ionicons
                             name={stat.icon as any}
-                            size={14}
+                            size={12}
                             color={stat.color}
                           />
                         </View>
@@ -1018,14 +954,16 @@ export const RecruitmentScreen: React.FC<RecruitmentScreenProps> = ({ initialSeg
                           </Text>
                         </View>
                       </View>
-                      <Text style={styles.statCardLabel}>{stat.label}</Text>
+                      <Text style={styles.statCardLabel} numberOfLines={1}>
+                        {stat.label}
+                      </Text>
                       <Text style={[styles.statCardCount, { color: stat.color }]}>
                         {stat.count}
                       </Text>
                     </TouchableOpacity>
                   );
                 })}
-              </ScrollView>
+              </View>
 
               {/* Danh sách Thẻ Tin tuyển dụng (Khớp Ảnh 1 & 4) */}
               {filteredJobs.length === 0 ? (
@@ -1576,349 +1514,6 @@ export const RecruitmentScreen: React.FC<RecruitmentScreenProps> = ({ initialSeg
         </View>
       </Modal>
 
-      {/* ─── MODAL CHỌN PHÒNG BAN CHO BỘ LỌC JD (GIỐNG WEB) ─────────── */}
-      <Modal
-        visible={showDeptPickerModal}
-        transparent={true}
-        animationType="fade"
-        onRequestClose={() => setShowDeptPickerModal(false)}
-      >
-        <Pressable
-          style={styles.webDropdownOverlay}
-          onPress={() => setShowDeptPickerModal(false)}
-        >
-          <Pressable
-            style={styles.webDropdownCard}
-            onPress={(e) => e.stopPropagation()}
-          >
-            <ScrollView
-              style={styles.webDropdownList}
-              showsVerticalScrollIndicator={false}
-            >
-              <TouchableOpacity
-                style={[
-                  styles.webDropdownItem,
-                  selectedJobDept === 'ALL' && styles.webDropdownItemActive,
-                ]}
-                onPress={() => {
-                  setSelectedJobDept('ALL');
-                  setShowDeptPickerModal(false);
-                }}
-                activeOpacity={0.7}
-              >
-                <Text
-                  style={[
-                    styles.webDropdownItemText,
-                    selectedJobDept === 'ALL' && styles.webDropdownItemTextActive,
-                  ]}
-                >
-                  Tất cả phòng ban
-                </Text>
-                {selectedJobDept === 'ALL' && (
-                  <Ionicons name="checkmark" size={17} color="#2563EB" />
-                )}
-              </TouchableOpacity>
-
-              {departments.map((d) => (
-                <TouchableOpacity
-                  key={d._id}
-                  style={[
-                    styles.webDropdownItem,
-                    selectedJobDept === d._id && styles.webDropdownItemActive,
-                  ]}
-                  onPress={() => {
-                    setSelectedJobDept(d._id);
-                    setShowDeptPickerModal(false);
-                  }}
-                  activeOpacity={0.7}
-                >
-                  <Text
-                    style={[
-                      styles.webDropdownItemText,
-                      selectedJobDept === d._id && styles.webDropdownItemTextActive,
-                    ]}
-                  >
-                    {d.name}
-                  </Text>
-                  {selectedJobDept === d._id && (
-                    <Ionicons name="checkmark" size={17} color="#2563EB" />
-                  )}
-                </TouchableOpacity>
-              ))}
-            </ScrollView>
-          </Pressable>
-        </Pressable>
-      </Modal>
-
-      {/* ─── MODAL CHỌN MỨC ƯU TIÊN CHO BỘ LỌC JD (GIỐNG WEB) ───────── */}
-      <Modal
-        visible={showPriorityPickerModal}
-        transparent={true}
-        animationType="fade"
-        onRequestClose={() => setShowPriorityPickerModal(false)}
-      >
-        <Pressable
-          style={styles.webDropdownOverlay}
-          onPress={() => setShowPriorityPickerModal(false)}
-        >
-          <Pressable
-            style={styles.webDropdownCard}
-            onPress={(e) => e.stopPropagation()}
-          >
-            <ScrollView
-              style={styles.webDropdownList}
-              showsVerticalScrollIndicator={false}
-            >
-              {[
-                { id: 'ALL', label: 'Tất cả ưu tiên' },
-                { id: 'HIGH', label: '▲ Gấp' },
-                { id: 'MEDIUM', label: 'Bình thường' },
-                { id: 'LOW', label: 'Thấp' },
-              ].map((p) => (
-                <TouchableOpacity
-                  key={p.id}
-                  style={[
-                    styles.webDropdownItem,
-                    selectedJobPriority === p.id && styles.webDropdownItemActive,
-                  ]}
-                  onPress={() => {
-                    setSelectedJobPriority(p.id);
-                    setShowPriorityPickerModal(false);
-                  }}
-                  activeOpacity={0.7}
-                >
-                  <Text
-                    style={[
-                      styles.webDropdownItemText,
-                      selectedJobPriority === p.id && styles.webDropdownItemTextActive,
-                    ]}
-                  >
-                    {p.label}
-                  </Text>
-                  {selectedJobPriority === p.id && (
-                    <Ionicons name="checkmark" size={17} color="#2563EB" />
-                  )}
-                </TouchableOpacity>
-              ))}
-            </ScrollView>
-          </Pressable>
-        </Pressable>
-      </Modal>
-
-      <Modal
-        visible={showCandDeptPickerModal}
-        transparent={true}
-        animationType="fade"
-        onRequestClose={() => setShowCandDeptPickerModal(false)}
-      >
-        <Pressable
-          style={styles.webDropdownOverlay}
-          onPress={() => setShowCandDeptPickerModal(false)}
-        >
-          <Pressable
-            style={styles.webDropdownCard}
-            onPress={(e) => e.stopPropagation()}
-          >
-            <ScrollView
-              style={styles.webDropdownList}
-              showsVerticalScrollIndicator={false}
-            >
-              <TouchableOpacity
-                style={[
-                  styles.webDropdownItem,
-                  selectedCandDept === 'ALL' && styles.webDropdownItemActive,
-                ]}
-                onPress={() => handleSelectCandDept('ALL')}
-                activeOpacity={0.7}
-              >
-                <Text
-                  style={[
-                    styles.webDropdownItemText,
-                    selectedCandDept === 'ALL' && styles.webDropdownItemTextActive,
-                  ]}
-                >
-                  Tất cả phòng ban
-                </Text>
-                {selectedCandDept === 'ALL' && (
-                  <Ionicons name="checkmark" size={17} color="#2563EB" />
-                )}
-              </TouchableOpacity>
-
-              {departments.map((d) => (
-                <TouchableOpacity
-                  key={d._id}
-                  style={[
-                    styles.webDropdownItem,
-                    selectedCandDept === d._id && styles.webDropdownItemActive,
-                  ]}
-                  onPress={() => handleSelectCandDept(d._id)}
-                  activeOpacity={0.7}
-                >
-                  <Text
-                    style={[
-                      styles.webDropdownItemText,
-                      selectedCandDept === d._id && styles.webDropdownItemTextActive,
-                    ]}
-                  >
-                    {d.name}
-                  </Text>
-                  {selectedCandDept === d._id && (
-                    <Ionicons name="checkmark" size={17} color="#2563EB" />
-                  )}
-                </TouchableOpacity>
-              ))}
-            </ScrollView>
-          </Pressable>
-        </Pressable>
-      </Modal>
-
-      <Modal
-        visible={showCandPositionPickerModal}
-        transparent={true}
-        animationType="fade"
-        onRequestClose={() => setShowCandPositionPickerModal(false)}
-      >
-        <Pressable
-          style={styles.webDropdownOverlay}
-          onPress={() => setShowCandPositionPickerModal(false)}
-        >
-          <Pressable
-            style={styles.webDropdownCard}
-            onPress={(e) => e.stopPropagation()}
-          >
-            <ScrollView
-              style={styles.webDropdownList}
-              showsVerticalScrollIndicator={false}
-            >
-              <TouchableOpacity
-                style={[
-                  styles.webDropdownItem,
-                  selectedCandPosition === 'ALL' && styles.webDropdownItemActive,
-                ]}
-                onPress={() => {
-                  setSelectedCandPosition('ALL');
-                  setShowCandPositionPickerModal(false);
-                }}
-                activeOpacity={0.7}
-              >
-                <Text
-                  style={[
-                    styles.webDropdownItemText,
-                    selectedCandPosition === 'ALL' && styles.webDropdownItemTextActive,
-                  ]}
-                >
-                  Tất cả vị trí
-                </Text>
-                {selectedCandPosition === 'ALL' && (
-                  <Ionicons name="checkmark" size={17} color="#2563EB" />
-                )}
-              </TouchableOpacity>
-
-              {candidatePositionOptions.map((pos) => (
-                <TouchableOpacity
-                  key={pos}
-                  style={[
-                    styles.webDropdownItem,
-                    selectedCandPosition === pos && styles.webDropdownItemActive,
-                  ]}
-                  onPress={() => {
-                    setSelectedCandPosition(pos);
-                    setShowCandPositionPickerModal(false);
-                  }}
-                  activeOpacity={0.7}
-                >
-                  <Text
-                    style={[
-                      styles.webDropdownItemText,
-                      selectedCandPosition === pos && styles.webDropdownItemTextActive,
-                    ]}
-                  >
-                    {pos}
-                  </Text>
-                  {selectedCandPosition === pos && (
-                    <Ionicons name="checkmark" size={17} color="#2563EB" />
-                  )}
-                </TouchableOpacity>
-              ))}
-            </ScrollView>
-          </Pressable>
-        </Pressable>
-      </Modal>
-
-      <Modal
-        visible={showCandStagePickerModal}
-        transparent={true}
-        animationType="fade"
-        onRequestClose={() => setShowCandStagePickerModal(false)}
-      >
-        <Pressable
-          style={styles.webDropdownOverlay}
-          onPress={() => setShowCandStagePickerModal(false)}
-        >
-          <Pressable
-            style={styles.webDropdownCard}
-            onPress={(e) => e.stopPropagation()}
-          >
-            <ScrollView
-              style={styles.webDropdownList}
-              showsVerticalScrollIndicator={false}
-            >
-              <TouchableOpacity
-                style={[
-                  styles.webDropdownItem,
-                  selectedCandStage === 'ALL' && styles.webDropdownItemActive,
-                ]}
-                onPress={() => {
-                  setSelectedCandStage('ALL');
-                  setShowCandStagePickerModal(false);
-                }}
-                activeOpacity={0.7}
-              >
-                <Text
-                  style={[
-                    styles.webDropdownItemText,
-                    selectedCandStage === 'ALL' && styles.webDropdownItemTextActive,
-                  ]}
-                >
-                  Tất cả giai đoạn
-                </Text>
-                {selectedCandStage === 'ALL' && (
-                  <Ionicons name="checkmark" size={17} color="#2563EB" />
-                )}
-              </TouchableOpacity>
-
-              {candidateStageOptions.map((stg) => (
-                <TouchableOpacity
-                  key={stg}
-                  style={[
-                    styles.webDropdownItem,
-                    selectedCandStage === stg && styles.webDropdownItemActive,
-                  ]}
-                  onPress={() => {
-                    setSelectedCandStage(stg);
-                    setShowCandStagePickerModal(false);
-                  }}
-                  activeOpacity={0.7}
-                >
-                  <Text
-                    style={[
-                      styles.webDropdownItemText,
-                      selectedCandStage === stg && styles.webDropdownItemTextActive,
-                    ]}
-                  >
-                    {stg}
-                  </Text>
-                  {selectedCandStage === stg && (
-                    <Ionicons name="checkmark" size={17} color="#2563EB" />
-                  )}
-                </TouchableOpacity>
-              ))}
-            </ScrollView>
-          </Pressable>
-        </Pressable>
-      </Modal>
-
-
     </View>
   );
 };
@@ -2048,12 +1643,18 @@ const styles = StyleSheet.create({
     color: '#1E3A8A',
     fontWeight: '700',
   },
+  resetBarRow: {
+    flexDirection: 'row',
+    justifyContent: 'flex-end',
+    alignItems: 'center',
+    marginTop: 6,
+  },
   subFilterResetBtn: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 4,
-    paddingHorizontal: 8,
-    paddingVertical: 6,
+    paddingHorizontal: 10,
+    paddingVertical: 5,
     backgroundColor: '#FEE2E2',
     borderRadius: 8,
   },
@@ -2063,57 +1664,60 @@ const styles = StyleSheet.create({
     color: '#DC2626',
   },
 
-  // Stat Cards Row
-  statCardsRow: {
+  // Stat Cards Grid (2 rows x 3 columns)
+  statCardsGrid: {
     flexDirection: 'row',
-    gap: 8,
+    flexWrap: 'wrap',
+    justifyContent: 'space-between',
+    rowGap: 7,
     marginBottom: 12,
   },
   statCardItem: {
-    width: 105,
-    padding: 10,
+    width: '31.8%',
+    paddingVertical: 7,
+    paddingHorizontal: 7,
     backgroundColor: '#FFFFFF',
-    borderRadius: 14,
-    borderWidth: 1,
+    borderRadius: 12,
+    borderWidth: 1.5,
     borderColor: '#E2E8F0',
     shadowColor: '#64748B',
     shadowOffset: { width: 0, height: 1 },
     shadowOpacity: 0.04,
-    shadowRadius: 4,
+    shadowRadius: 3,
     elevation: 1,
   },
   statCardHeader: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    marginBottom: 6,
+    marginBottom: 4,
   },
   statCardIconBox: {
-    width: 24,
-    height: 24,
-    borderRadius: 6,
+    width: 20,
+    height: 20,
+    borderRadius: 5,
     alignItems: 'center',
     justifyContent: 'center',
   },
   statCardBadge: {
-    paddingHorizontal: 4,
+    paddingHorizontal: 3.5,
     paddingVertical: 1,
-    borderRadius: 4,
+    borderRadius: 3,
   },
   statCardBadgeText: {
-    fontSize: 9,
+    fontSize: 8.5,
     fontWeight: '800',
   },
   statCardLabel: {
-    fontSize: 9,
+    fontSize: 8.5,
     fontWeight: '700',
     color: '#64748B',
     textTransform: 'uppercase',
   },
   statCardCount: {
-    fontSize: 16,
+    fontSize: 15,
     fontWeight: '800',
-    marginTop: 2,
+    marginTop: 1,
   },
 
   loadingBox: {
@@ -2271,14 +1875,15 @@ const styles = StyleSheet.create({
   jobCard: {
     backgroundColor: '#FFFFFF',
     borderRadius: 16,
-    padding: 14,
+    padding: 15,
+    marginBottom: 14,
     borderWidth: 1,
     borderColor: '#E2E8F0',
-    shadowColor: '#64748B',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.04,
-    shadowRadius: 6,
-    elevation: 2,
+    shadowColor: '#0F172A',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.08,
+    shadowRadius: 10,
+    elevation: 3,
   },
   jobTopRow: {
     flexDirection: 'row',
@@ -2359,9 +1964,9 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    paddingTop: 6,
+    paddingTop: 8,
     borderTopWidth: 1,
-    borderTopColor: '#F8FAFC',
+    borderTopColor: '#F1F5F9',
   },
   jobDeadlineRow: {
     flexDirection: 'row',
@@ -2703,53 +2308,6 @@ const styles = StyleSheet.create({
     fontSize: 13,
     fontWeight: '700',
     color: '#FFFFFF',
-  },
-
-  // ─── WEB-STYLE FLOATING DROPDOWN MODAL (KHỚP 100% ẢNH 3) ───
-  webDropdownOverlay: {
-    flex: 1,
-    backgroundColor: 'rgba(15, 23, 42, 0.35)',
-    justifyContent: 'center',
-    alignItems: 'center',
-    paddingHorizontal: 24,
-  },
-  webDropdownCard: {
-    width: '100%',
-    maxWidth: 320,
-    backgroundColor: '#FFFFFF',
-    borderRadius: 20,
-    padding: 6,
-    borderWidth: 1,
-    borderColor: '#E2E8F0',
-    shadowColor: '#2563EB',
-    shadowOffset: { width: 0, height: 8 },
-    shadowOpacity: 0.15,
-    shadowRadius: 20,
-    elevation: 12,
-  },
-  webDropdownList: {
-    maxHeight: 280,
-  },
-  webDropdownItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingVertical: 10,
-    paddingHorizontal: 12,
-    borderRadius: 12,
-    marginBottom: 2,
-  },
-  webDropdownItemActive: {
-    backgroundColor: '#EFF6FF',
-  },
-  webDropdownItemText: {
-    fontSize: 13,
-    fontWeight: '600',
-    color: '#1E293B',
-  },
-  webDropdownItemTextActive: {
-    color: '#2563EB',
-    fontWeight: '700',
   },
 
   // Stage Modal styles

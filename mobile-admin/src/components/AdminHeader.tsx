@@ -49,13 +49,13 @@ export const AdminHeader: React.FC<AdminHeaderProps> = ({
   const getRoleTitle = (role?: UserRole) => {
     switch (role) {
       case UserRole.HR_ADMIN:
-        return 'HR Admin';
+        return 'Quản trị Nhân sự';
       case UserRole.DEPARTMENT_MANAGER:
-        return 'Manager';
+        return 'Trưởng phòng';
       case UserRole.EMPLOYEE:
         return 'Interviewer';
       default:
-        return 'Admin';
+        return 'Quản trị Nhân sự';
     }
   };
 

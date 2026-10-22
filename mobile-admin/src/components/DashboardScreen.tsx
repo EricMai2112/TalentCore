@@ -27,13 +27,13 @@ export default function DashboardScreen() {
   const getRoleBadge = (role?: UserRole) => {
     switch (role) {
       case UserRole.HR_ADMIN:
-        return { label: 'Quản trị nhân sự (HR Admin)', color: '#2563EB', bg: '#EFF6FF' };
+        return { label: 'Quản trị Nhân sự (HR Admin)', color: '#2563EB', bg: '#EFF6FF' };
       case UserRole.DEPARTMENT_MANAGER:
-        return { label: 'Trưởng phòng ban', color: '#7C3AED', bg: '#F5F3FF' };
+        return { label: 'Trưởng phòng', color: '#7C3AED', bg: '#F5F3FF' };
       case UserRole.EMPLOYEE:
-        return { label: 'Nhân viên / Người phỏng vấn', color: '#059669', bg: '#ECFDF5' };
+        return { label: 'Interviewer', color: '#059669', bg: '#ECFDF5' };
       default:
-        return { label: 'Quản trị viên', color: '#475569', bg: '#F1F5F9' };
+        return { label: 'Quản trị Nhân sự', color: '#475569', bg: '#F1F5F9' };
     }
   };
 

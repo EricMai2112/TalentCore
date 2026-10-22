@@ -42,7 +42,7 @@ export const MainAdminScreen: React.FC = () => {
   const renderScreen = () => {
     switch (activeTab) {
       case 'dashboard':
-        return <DashboardScreen />;
+        return <DashboardScreen onNavigateTab={handleNavigateFromNotification} />;
       case 'recruitment':
         return <RecruitmentScreen initialSegment={recruitmentSegment} />;
       case 'interviews':
