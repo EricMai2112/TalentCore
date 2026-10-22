@@ -15,9 +15,12 @@ import {
   AlertTriangle,
   Send,
   Loader2,
+  Smartphone,
 } from 'lucide-react';
 import { CandidateOfferItem, CandidateOfferStatus } from '../../types/application.types';
 import { candidateOffersApi } from '../../services/candidate-offers.api';
+import { RecaptchaVerifier, signInWithPhoneNumber, ConfirmationResult } from 'firebase/auth';
+import { firebaseAuth } from '@/src/lib/firebase';
 
 interface OfferLetterModalProps {
   isOpen: boolean;
@@ -39,6 +42,74 @@ export const OfferLetterModal: React.FC<OfferLetterModalProps> = ({
   const [declineReason, setDeclineReason] = useState('');
   const [otp, setOtp] = useState('');
   const [errorMessage, setErrorMessage] = useState('');
+  const [resendingOtp, setResendingOtp] = useState(false);
+  const [otpSentNotice, setOtpSentNotice] = useState('');
+  const [countdown, setCountdown] = useState(60);
+  const [confirmationResult, setConfirmationResult] = useState<ConfirmationResult | null>(null);
+  const [maskedPhone, setMaskedPhone] = useState(
+    (offer as any)?.candidatePhone
+      ? String((offer as any).candidatePhone).replace(/(\d{3})\d+(\d{4})/, '$1***$2')
+      : '083***0222'
+  );
+
+  useEffect(() => {
+    if (!confirmAcceptMode) return;
+    if (countdown <= 0) return;
+    const timer = setInterval(() => {
+      setCountdown((prev) => (prev > 0 ? prev - 1 : 0));
+    }, 1000);
+    return () => clearInterval(timer);
+  }, [confirmAcceptMode, countdown]);
+
+  const triggerFirebaseSms = async (phone: string) => {
+    try {
+      const clean = phone.replace(/\D/g, '');
+      const formatted = clean.startsWith('84')
+        ? `+${clean}`
+        : clean.startsWith('0')
+        ? `+84${clean.slice(1)}`
+        : `+84${clean}`;
+
+      if ((window as any).recaptchaVerifier) {
+        try {
+          (window as any).recaptchaVerifier.clear();
+        } catch {}
+        (window as any).recaptchaVerifier = null;
+      }
+
+      const verifier = new RecaptchaVerifier(firebaseAuth, 'firebase-recaptcha-anchor', {
+        size: 'invisible',
+      });
+      (window as any).recaptchaVerifier = verifier;
+
+      const confirmation = await signInWithPhoneNumber(firebaseAuth, formatted, verifier);
+      setConfirmationResult(confirmation);
+    } catch (fbErr: any) {
+      console.warn('Firebase Phone Auth error:', fbErr);
+    }
+  };
+
+  const handleResendOtp = async () => {
+    if (countdown > 0 && confirmAcceptMode && !resendingOtp) return;
+    if (resendingOtp || !offer) return;
+    setResendingOtp(true);
+    setErrorMessage('');
+    try {
+      const res = await candidateOffersApi.requestOtp(offer._id);
+      if (res.success) {
+        setOtpSentNotice('Đã gửi lại mã OTP SMS thành công!');
+        if (res.maskedPhone) setMaskedPhone(res.maskedPhone);
+        setCountdown(60);
+        setTimeout(() => setOtpSentNotice(''), 4000);
+        const targetPhone = res.phone || (offer as any)?.candidatePhone || '0837000222';
+        await triggerFirebaseSms(targetPhone);
+      } else {
+        setErrorMessage(res.message);
+      }
+    } finally {
+      setResendingOtp(false);
+    }
+  };
 
   useEffect(() => {
     setMounted(true);
@@ -81,7 +152,7 @@ export const OfferLetterModal: React.FC<OfferLetterModalProps> = ({
 
   const handleRespond = async (action: 'ACCEPT' | 'DECLINE') => {
     if (action === 'ACCEPT' && (!otp || otp.trim().length === 0)) {
-      setErrorMessage('Vui lòng nhập mã OTP được gửi trong email để xác nhận nhận việc');
+      setErrorMessage('Vui lòng nhập mã OTP được gửi qua tin nhắn SMS số điện thoại để xác nhận nhận việc');
       return;
     }
 
@@ -89,11 +160,27 @@ export const OfferLetterModal: React.FC<OfferLetterModalProps> = ({
       setSubmitting(true);
       setErrorMessage('');
 
+      let firebaseVerified = false;
+      if (action === 'ACCEPT') {
+        const trimmedOtp = otp.trim();
+        if (confirmationResult) {
+          try {
+            await confirmationResult.confirm(trimmedOtp);
+            firebaseVerified = true;
+          } catch (err: any) {
+            console.warn('Firebase confirmation failed:', err);
+            setErrorMessage('Mã OTP không chính xác hoặc đã hết hạn.');
+            return;
+          }
+        }
+      }
+
       const res = await candidateOffersApi.respondOffer(
         offer._id,
         action,
         action === 'DECLINE' ? declineReason : undefined,
         action === 'ACCEPT' ? otp.trim() : undefined,
+        firebaseVerified,
       );
 
       if (res.success) {
@@ -300,6 +387,7 @@ export const OfferLetterModal: React.FC<OfferLetterModalProps> = ({
                   onClick={() => {
                     setErrorMessage('');
                     setConfirmAcceptMode(true);
+                    handleResendOtp();
                   }}
                   className="px-5 py-2.5 rounded-2xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs shadow-sm shadow-emerald-500/20 transition-all flex items-center gap-1.5 cursor-pointer"
                 >
@@ -358,11 +446,16 @@ export const OfferLetterModal: React.FC<OfferLetterModalProps> = ({
               </div>
             </div>
 
-            <div className="space-y-1.5 p-3.5 bg-slate-50 rounded-2xl border border-slate-200">
-              <label className="text-xs font-bold text-slate-800 flex items-center justify-between">
-                <span>Mã OTP xác thực (6 chữ số):</span>
-                <span className="text-[11px] font-normal text-slate-500">Đã gửi về email của bạn</span>
-              </label>
+            <div className="space-y-2 p-3.5 bg-slate-50 rounded-2xl border border-slate-200">
+              <div className="flex items-center justify-between">
+                <span className="text-xs font-bold text-slate-800 flex items-center gap-1.5">
+                  <Smartphone className="w-4 h-4 text-emerald-600" />
+                  Mã xác thực SMS (6 chữ số):
+                </span>
+                <span className="text-[11px] font-semibold text-emerald-700 bg-emerald-50 px-2.5 py-0.5 rounded-full border border-emerald-200">
+                  {maskedPhone}
+                </span>
+              </div>
               <input
                 type="text"
                 maxLength={6}
@@ -374,9 +467,28 @@ export const OfferLetterModal: React.FC<OfferLetterModalProps> = ({
                 placeholder="Nhập 6 chữ số OTP"
                 className="w-full px-4 py-2.5 text-center text-lg font-mono font-bold tracking-[6px] rounded-xl border border-slate-300 bg-white focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-600 text-slate-900 transition-all placeholder:tracking-normal placeholder:font-sans placeholder:text-xs placeholder:text-slate-400"
               />
-              <p className="text-[11px] text-slate-500 text-center">
-                Vui lòng kiểm tra email của bạn để lấy mã OTP xác nhận việc nhận offer.
-              </p>
+              <div className="flex items-center justify-between pt-0.5 text-[11px]">
+                <span className="text-slate-500">
+                  Kiểm tra tin nhắn SMS trên điện thoại của bạn
+                </span>
+                <button
+                  type="button"
+                  onClick={handleResendOtp}
+                  disabled={countdown > 0 || resendingOtp}
+                  className="font-semibold text-emerald-600 hover:text-emerald-700 disabled:text-slate-400 cursor-pointer disabled:cursor-not-allowed transition-colors"
+                >
+                  {resendingOtp
+                    ? 'Đang gửi...'
+                    : countdown > 0
+                    ? `Gửi lại mã (${countdown}s)`
+                    : 'Gửi lại mã SMS'}
+                </button>
+              </div>
+              {otpSentNotice && (
+                <p className="text-[11px] text-emerald-600 font-medium text-center">
+                  {otpSentNotice}
+                </p>
+              )}
             </div>
 
             <p className="text-xs text-slate-600 leading-relaxed">
@@ -484,6 +596,7 @@ export const OfferLetterModal: React.FC<OfferLetterModalProps> = ({
           </div>
         </div>
       )}
+      <div id="firebase-recaptcha-anchor"></div>
     </>,
     document.body
   );

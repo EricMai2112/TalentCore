@@ -1,4 +1,4 @@
-import { IsNotEmpty, IsIn, IsOptional, IsString } from 'class-validator';
+import { IsNotEmpty, IsIn, IsOptional, IsString, IsBoolean } from 'class-validator';
 
 export class RespondOfferDto {
   @IsNotEmpty({ message: 'Hành động không được để trống' })
@@ -12,4 +12,8 @@ export class RespondOfferDto {
   @IsOptional()
   @IsString({ message: 'Mã OTP phải là chuỗi ký tự' })
   otp?: string;
+
+  @IsOptional()
+  @IsBoolean()
+  firebaseVerified?: boolean;
 }

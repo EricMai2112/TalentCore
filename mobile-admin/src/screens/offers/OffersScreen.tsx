@@ -250,7 +250,7 @@ export const OffersScreen: React.FC = () => {
                     <View style={styles.otpBadge}>
                       <Ionicons name="shield-checkmark" size={14} color="#059669" />
                       <Text style={styles.otpBadgeText}>
-                        Đã xác thực chữ ký điện tử qua mã OTP ứng viên
+                        Đã xác thực chữ ký điện tử qua SMS OTP số điện thoại
                       </Text>
                     </View>
                   )}
