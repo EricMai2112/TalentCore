@@ -358,11 +358,13 @@ export interface OfferItem {
   contractType: 'FULL_TIME' | 'PART_TIME' | 'INTERNSHIP' | 'FREELANCE' | string;
   workLocation: string;
   salary: number;
+  probationSalaryPercentage?: number;
   startDate: string;
   expirationDate: string;
   status: 'DRAFT' | 'SENT' | 'ACCEPTED' | 'DECLINED' | 'CANCELLED' | 'EXPIRED' | string;
   isOtpVerified?: boolean;
   verifiedAt?: string;
+  declineReason?: string;
   createdAt: string;
 }
 
