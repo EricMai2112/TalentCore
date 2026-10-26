@@ -130,7 +130,7 @@ export default function ActionableAlertsPanel({ alerts }: Props) {
               expiringOffers.map((off) => (
                 <Link
                   key={off.id}
-                  href={`/offers`}
+                  href={`/offers?search=${encodeURIComponent(off.candidateName)}`}
                   className="block p-1.5 rounded-xl border border-rose-100 bg-rose-50/40 hover:bg-rose-50/80 transition-colors"
                 >
                   <div className="flex items-center justify-between">

@@ -1,19 +1,19 @@
-'use client';
+'use client'
 
-import React from 'react';
-import { Target, Briefcase, Zap, CheckCircle2 } from 'lucide-react';
-import { OverviewKpis } from '../types/dashboard.types';
+import React from 'react'
+import { Target, Briefcase, Zap, CheckCircle2 } from 'lucide-react'
+import { OverviewKpis } from '../types/dashboard.types'
 
 interface KpiCardProps {
-  icon: React.ReactNode;
-  iconBg: string;
-  blobGradient: string;
-  label: string;
-  value: string | number;
-  unit: string;
-  badgeText: string;
-  badgeColor: string;
-  tooltip?: string;
+  icon: React.ReactNode
+  iconBg: string
+  blobGradient: string
+  label: string
+  value: string | number
+  unit: string
+  badgeText: string
+  badgeColor: string
+  tooltip?: string
 }
 
 function KpiCard({
@@ -25,7 +25,7 @@ function KpiCard({
   unit,
   badgeText,
   badgeColor,
-  tooltip,
+  tooltip
 }: KpiCardProps) {
   return (
     <div
@@ -70,15 +70,15 @@ function KpiCard({
         </div>
       </div>
     </div>
-  );
+  )
 }
 
 interface Props {
-  kpis: OverviewKpis;
+  kpis: OverviewKpis
 }
 
 export default function KpiStatsRow({ kpis }: Props) {
-  const { headcountPlan, jobs, timeToHire, offers } = kpis;
+  const { headcountPlan, jobs, timeToHire, offers } = kpis
 
   const cards: KpiCardProps[] = [
     {
@@ -90,7 +90,7 @@ export default function KpiStatsRow({ kpis }: Props) {
       unit: 'người',
       badgeText: `${headcountPlan?.percentage || 0}% đạt`,
       badgeColor: 'bg-blue-50 text-[#3B82F6] border-blue-100',
-      tooltip: `Đã tuyển được ${headcountPlan?.hired || 0} trên tổng chỉ tiêu ${headcountPlan?.target || 0} nhân sự`,
+      tooltip: `Đã tuyển được ${headcountPlan?.hired || 0} trên tổng chỉ tiêu ${headcountPlan?.target || 0} nhân sự`
     },
     {
       icon: <Briefcase size={16} className="stroke-[2.2]" />,
@@ -101,7 +101,7 @@ export default function KpiStatsRow({ kpis }: Props) {
       unit: 'vị trí',
       badgeText: `+${jobs?.newCount ?? 0} trong 30 ngày`,
       badgeColor: 'bg-indigo-50 text-indigo-700 border-indigo-100',
-      tooltip: `Có ${jobs?.active || 0} vị trí đang mở nhận hồ sơ (+${jobs?.newCount ?? 0} vị trí tạo mới trong 30 ngày qua trên tổng số ${jobs?.total || 0} tin tuyển dụng)`,
+      tooltip: `Có ${jobs?.active || 0} vị trí đang mở nhận hồ sơ (+${jobs?.newCount ?? 0} vị trí tạo mới trong 30 ngày qua trên tổng số ${jobs?.total || 0} tin tuyển dụng)`
     },
     {
       icon: <Zap size={16} className="stroke-[2.2]" />,
@@ -110,12 +110,13 @@ export default function KpiStatsRow({ kpis }: Props) {
       label: 'TỐC ĐỘ TUYỂN DỤNG',
       value: timeToHire?.isEmpty || timeToHire?.avgDays === null ? '—' : timeToHire.avgDays,
       unit: timeToHire?.isEmpty ? '' : 'ngày',
-      badgeText: 'Mục tiêu ≤ 25 ngày',
+      badgeText: '',
       badgeColor:
         timeToHire?.avgDays && timeToHire.avgDays > 25
           ? 'bg-rose-50 text-rose-700 border-rose-100'
           : 'bg-amber-50 text-amber-700 border-amber-100',
-      tooltip: 'Thời gian trung bình từ lúc ứng viên nộp đơn đến khi chấp nhận Offer (Mục tiêu chuẩn ≤ 25 ngày)',
+      tooltip:
+        'Thời gian trung bình từ lúc ứng viên nộp đơn đến khi chấp nhận Offer (Mục tiêu chuẩn ≤ 25 ngày)'
     },
     {
       icon: <CheckCircle2 size={16} className="stroke-[2.2]" />,
@@ -126,9 +127,9 @@ export default function KpiStatsRow({ kpis }: Props) {
       unit: 'chấp thuận',
       badgeText: 'Mục tiêu ≥ 80%',
       badgeColor: 'bg-emerald-50 text-emerald-700 border-emerald-100',
-      tooltip: `${offers?.accepted || 0} offer đồng ý trên tổng số offer đã có phản hồi (Mục tiêu chuẩn ≥ 80%)`,
-    },
-  ];
+      tooltip: `${offers?.accepted || 0} offer đồng ý trên tổng số offer đã có phản hồi (Mục tiêu chuẩn ≥ 80%)`
+    }
+  ]
 
   return (
     <div className="grid grid-cols-2 lg:grid-cols-4 gap-2.5 shrink-0">
@@ -136,5 +137,5 @@ export default function KpiStatsRow({ kpis }: Props) {
         <KpiCard key={i} {...card} />
       ))}
     </div>
-  );
+  )
 }

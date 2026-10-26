@@ -199,6 +199,14 @@ export default function KanbanContainer({
     return DEFAULT_STAGES;
   }, [selectedJobId, initialJobs]);
 
+  // Index của cột mà ứng viên đang được kéo thuộc về (để chặn kéo ngược về các cột trước)
+  const activeAppStageIndex = useMemo(() => {
+    if (!activeApplication) return -1;
+    return activeStages.findIndex(
+      (s) => s._id === activeApplication.currentStageId || s.name === activeApplication.currentStageId
+    );
+  }, [activeApplication, activeStages]);
+
   // Max carousel index (ensures 4 stages fit without screen scroll)
   const maxCarouselIndex = useMemo(
     () => Math.max(0, activeStages.length - 4),
@@ -430,6 +438,19 @@ export default function KanbanContainer({
     const currentApp = applications.find((a) => a._id === appId);
     if (!currentApp || currentApp.currentStageId === targetStageId) return;
 
+    // Chặn chuyển về giai đoạn trước đó (chỉ cho phép tiến lên)
+    const currentIdx = activeStages.findIndex(
+      (s) => s._id === currentApp.currentStageId || s.name === currentApp.currentStageId
+    );
+    const targetIdx = activeStages.findIndex(
+      (s) => s._id === targetStageId || s.name === targetStageId
+    );
+
+    if (currentIdx !== -1 && targetIdx !== -1 && targetIdx < currentIdx) {
+      showToast("Không thể chuyển ứng viên về giai đoạn tuyển dụng trước đó!", "error");
+      return;
+    }
+
     // Optimistic UI Update
     setApplications((prev) =>
       prev.map((app) =>
@@ -471,11 +492,29 @@ export default function KanbanContainer({
     const appId = String(active.id);
     const overId = String(over.id);
 
+    const currentApp = applications.find((a) => a._id === appId);
+    if (!currentApp) return;
+
     // Over item can be a stage ID or an application ID inside a column
     let targetStageId = overId;
     const overApp = applications.find((a) => a._id === overId);
     if (overApp) {
       targetStageId = overApp.currentStageId;
+    }
+
+    if (currentApp.currentStageId === targetStageId) return;
+
+    // Chặn kéo thả về cột trước đó
+    const currentIdx = activeStages.findIndex(
+      (s) => s._id === currentApp.currentStageId || s.name === currentApp.currentStageId
+    );
+    const targetIdx = activeStages.findIndex(
+      (s) => s._id === targetStageId || s.name === targetStageId
+    );
+
+    if (currentIdx !== -1 && targetIdx !== -1 && targetIdx < currentIdx) {
+      showToast("Không thể kéo ứng viên về giai đoạn tuyển dụng trước đó!", "error");
+      return;
     }
 
     await handleMoveStage(appId, targetStageId);
@@ -676,7 +715,7 @@ export default function KanbanContainer({
                     : "none",
               }}
             >
-              {activeStages.map((stage) => (
+              {activeStages.map((stage, colIdx) => (
                 <KanbanColumn
                   key={stage._id || stage.name}
                   stage={stage}
@@ -688,6 +727,8 @@ export default function KanbanContainer({
                   onCreateOffer={(app) => router.push(`/offers/create?applicationId=${app._id}`)}
                   onCreateInterview={handleCreateInterview}
                   style={{ width: columnWidthStyle }}
+                  isDropDisabled={activeAppStageIndex !== -1 && colIdx < activeAppStageIndex}
+                  isDraggingAny={Boolean(activeApplication)}
                 />
               ))}
             </div>

@@ -346,6 +346,27 @@ export class ApplicationService {
       throw new NotFoundException('Không tìm thấy đơn ứng tuyển');
     }
 
+    // Không cho phép chuyển ứng viên về giai đoạn trước đó (chỉ cho phép tiến lên)
+    const currentStageId = application.currentStageId?.toString();
+    if (currentStageId && currentStageId !== stageId) {
+      const job = await this.jobModel.findById(application.jobDescriptionId).exec();
+      if (job?.pipelineTemplateId) {
+        const pipeline = await this.pipelineModel.findById(job.pipelineTemplateId).exec();
+        if (pipeline && Array.isArray(pipeline.stages) && pipeline.stages.length > 0) {
+          const sortedStages = [...pipeline.stages].sort((a, b) => (a.order ?? 0) - (b.order ?? 0));
+          const currentIdx = sortedStages.findIndex(
+            (s: any) => s._id?.toString() === currentStageId || s.name === currentStageId,
+          );
+          const targetIdx = sortedStages.findIndex(
+            (s: any) => s._id?.toString() === stageId || s.name === stageId,
+          );
+          if (currentIdx !== -1 && targetIdx !== -1 && targetIdx < currentIdx) {
+            throw new BadRequestException('Không thể chuyển ứng viên về giai đoạn tuyển dụng trước đó');
+          }
+        }
+      }
+    }
+
     application.currentStageId = stageId as any;
     const updated = await application.save();
 

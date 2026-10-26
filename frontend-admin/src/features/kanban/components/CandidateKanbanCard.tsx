@@ -103,16 +103,20 @@ export default function CandidateKanbanCard({
     return found?.color || "#6366f1";
   }, [isRejected, isInterviewCancelled, stageColor, stages, application.currentStageId]);
 
-  // Current, previous, and next stage calculation for Left/Right mover buttons
+  // Current, forward, and next stage calculation (chỉ cho phép tiến lên, không thể quay lại)
   const currentStageIndex = useMemo(() => {
     if (!stages || stages.length === 0) return -1;
-    return stages.findIndex((s) => s._id === application.currentStageId);
+    return stages.findIndex((s) => s._id === application.currentStageId || s.name === application.currentStageId);
   }, [stages, application.currentStageId]);
 
-  const prevStage = useMemo(() => {
-    if (!stages || currentStageIndex <= 0) return null;
-    return stages[currentStageIndex - 1];
+  // Chỉ lấy các giai đoạn từ giai đoạn hiện tại trở đi (loại bỏ các cột trước đó)
+  const forwardStages = useMemo(() => {
+    if (!stages || stages.length === 0) return [];
+    if (currentStageIndex === -1) return stages;
+    return stages.slice(currentStageIndex);
   }, [stages, currentStageIndex]);
+
+  const prevStage = null; // Khóa quay lại: không cho phép lùi về cột trước
 
   const nextStage = useMemo(() => {
     if (!stages || currentStageIndex === -1 || currentStageIndex >= stages.length - 1) return null;
@@ -400,29 +404,21 @@ export default function CandidateKanbanCard({
           className="pt-2.5 border-t border-slate-100 flex items-center gap-2 justify-between w-full"
           onClick={(e) => e.stopPropagation()}
         >
-          {/* Left Arrow Button */}
+          {/* Left Arrow Button (Khóa: không thể lùi về giai đoạn trước) */}
           <button
             type="button"
-            disabled={!prevStage || isRejected || isInterviewCancelled}
-            onClick={(e) => {
-              e.stopPropagation();
-              if (prevStage && !isRejected && !isInterviewCancelled) onMoveStage && onMoveStage(application._id, prevStage._id!);
-            }}
-            className={`w-8 h-8 rounded-xl border flex items-center justify-center transition-all duration-150 shrink-0 ${
-              !prevStage || isRejected || isInterviewCancelled
-                ? "bg-slate-50 text-slate-300 border-slate-200/60 cursor-not-allowed opacity-35"
-                : "bg-indigo-50/80 hover:bg-indigo-600 text-indigo-600 hover:text-white border-indigo-200/70 hover:border-indigo-600 shadow-2xs hover:shadow-xs active:scale-90 cursor-pointer"
-            }`}
-            title={isInterviewCancelled ? "Không thể chuyển giai đoạn khi lịch phỏng vấn đã bị hủy" : isRejected ? "Không thể chuyển giai đoạn hồ sơ đã từ chối" : prevStage ? `Lùi về: ${prevStage.name}` : "Đang ở giai đoạn đầu tiên"}
+            disabled={true}
+            className="w-8 h-8 rounded-xl border flex items-center justify-center transition-all shrink-0 bg-slate-50 text-slate-300 border-slate-200/60 cursor-not-allowed opacity-35 select-none"
+            title="Quy trình tuyển dụng chỉ cho phép chuyển tiếp, không thể quay lại giai đoạn trước"
           >
             <ChevronLeft size={16} strokeWidth={2.4} />
           </button>
 
-          {/* Stage Select Dropdown */}
+          {/* Stage Select Dropdown (Chỉ hiển thị giai đoạn hiện tại và các giai đoạn tiếp theo) */}
           <div className="flex-1 min-w-0" onClick={(e) => e.stopPropagation()}>
             <CustomSelect
               size="sm"
-              disabled={isRejected || isInterviewCancelled}
+              disabled={isRejected || isInterviewCancelled || forwardStages.length <= 1}
               value={application.currentStageId || ""}
               onChange={(val) => {
                 if (val && val !== application.currentStageId && !isRejected && !isInterviewCancelled) {
@@ -430,8 +426,8 @@ export default function CandidateKanbanCard({
                 }
               }}
               options={
-                stages && stages.length > 0
-                  ? stages.map((stg) => ({
+                forwardStages && forwardStages.length > 0
+                  ? forwardStages.map((stg) => ({
                       value: stg._id || stg.name,
                       label: stg.name,
                     }))

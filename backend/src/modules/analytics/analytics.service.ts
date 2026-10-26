@@ -1621,6 +1621,99 @@ export class AnalyticsService {
       .sort({ createdAt: -1 })
       .lean();
 
+    // Danh sách chi tiết các hồ sơ ứng tuyển theo phễu tuyển dụng
+    const appFilter =
+      jobDescriptionId && Types.ObjectId.isValid(jobDescriptionId)
+        ? { jobDescriptionId: new Types.ObjectId(jobDescriptionId) }
+        : hasDeptFilter
+          ? { jobDescriptionId: { $in: deptJobIds } }
+          : {};
+
+    const rawApplications = await this.applicationModel
+      .find(appFilter)
+      .populate({
+        path: 'candidateId',
+        populate: {
+          path: 'userId',
+          select: 'fullName name email phone',
+        },
+      })
+      .populate({
+        path: 'jobDescriptionId',
+        select: 'title departmentId pipelineTemplateId',
+        populate: [
+          { path: 'departmentId', select: 'name code' },
+          { path: 'pipelineTemplateId', select: 'name stages' },
+        ],
+      })
+      .sort({ appliedAt: -1, createdAt: -1 })
+      .lean();
+
+    const appIds = rawApplications.map((a: any) => a._id);
+    const aiEvals = await this.aiEvaluationModel
+      .find({ applicationId: { $in: appIds } })
+      .select('applicationId aiFitScore')
+      .lean();
+    const evalMap = new Map<string, number>();
+    aiEvals.forEach((e: any) => {
+      if (e.applicationId && typeof e.aiFitScore === 'number') {
+        evalMap.set(e.applicationId.toString(), e.aiFitScore);
+      }
+    });
+
+    const applications = rawApplications.map((app: any) => {
+      const cand = app.candidateId;
+      const u = cand?.userId;
+      const candidateName =
+        u?.fullName || u?.name || cand?.profileName || 'Ứng viên';
+      const candidateEmail = u?.email || '';
+      const candidatePhone = u?.phone || '';
+      const job = app.jobDescriptionId;
+      const jobTitle = job?.title || 'Vị trí tuyển dụng';
+      const departmentName = job?.departmentId?.name || '';
+      const pipeline = job?.pipelineTemplateId;
+      const stages = Array.isArray(pipeline?.stages) ? pipeline.stages : [];
+
+      let currentStageName = 'Tiếp nhận';
+      let currentStageOrder = 1;
+
+      if (app.status === 'HIRED') {
+        currentStageName = 'Đã tuyển';
+        currentStageOrder = stages.length || 6;
+      } else if (app.currentStageId && stages.length > 0) {
+        const found = stages.find(
+          (s: any) => s._id?.toString() === app.currentStageId?.toString(),
+        );
+        if (found) {
+          currentStageName = found.name;
+          currentStageOrder = found.order || 1;
+        }
+      }
+
+      const aiScore = evalMap.get(app._id.toString()) ?? null;
+      const statusText =
+        app.status === 'HIRED'
+          ? 'Đã tuyển'
+          : app.status === 'REJECTED'
+            ? 'Đã từ chối'
+            : 'Đang xử lý';
+
+      return {
+        id: app._id.toString(),
+        candidateName,
+        candidateEmail,
+        candidatePhone,
+        jobTitle,
+        departmentName,
+        aiFitScore: aiScore,
+        currentStageName,
+        currentStageOrder,
+        appliedAt: app.appliedAt || app.createdAt,
+        status: statusText,
+        rejectReason: app.rejectReason || '',
+      };
+    });
+
     const resolveCandidateName = (cand: any) => {
       if (!cand) return 'Ứng viên';
       const u = cand.userId;
@@ -1633,6 +1726,7 @@ export class AnalyticsService {
     return {
       exportedAt: new Date().toISOString(),
       funnel,
+      applications,
       offersBreakdown,
       summary: {
         targetHeadcount: kpis.headcountPlan?.target || 0,

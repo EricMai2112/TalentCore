@@ -298,6 +298,21 @@ export interface CompensationAndRequisitions {
 // ─── EXPORT REPORT DATA ──────────────────────────────────────────────────────
 export interface ExportReportData {
   exportedAt: string;
+  funnel?: any;
+  applications?: {
+    id: string;
+    candidateName: string;
+    candidateEmail: string;
+    candidatePhone: string;
+    jobTitle: string;
+    departmentName: string;
+    aiFitScore: number | null;
+    currentStageName: string;
+    currentStageOrder: number;
+    appliedAt: string;
+    status: string;
+    rejectReason: string;
+  }[];
   summary: {
     targetHeadcount: number;
     hiredHeadcount: number;

@@ -127,8 +127,54 @@ export class OffersService {
       filter.jobDescriptionId = new Types.ObjectId(jobDescriptionId);
     }
 
-    if (search) {
-      filter.positionTitle = { $regex: search, $options: 'i' };
+    if (search && search.trim()) {
+      const searchRegex = { $regex: search.trim(), $options: 'i' };
+
+      // 1. Search matching users (name, email, phone)
+      const matchingUsers = await this.userModel
+        .find({
+          $or: [
+            { name: searchRegex },
+            { email: searchRegex },
+            { phone: searchRegex },
+          ],
+        })
+        .select('_id')
+        .lean()
+        .exec();
+      const userIds = matchingUsers.map((u) => u._id);
+
+      // 2. Search matching candidates (by profileName or matching userId)
+      const matchingCandidates = await this.candidateModel
+        .find({
+          $or: [
+            { profileName: searchRegex },
+            ...(userIds.length > 0 ? [{ userId: { $in: userIds } }] : []),
+          ],
+        })
+        .select('_id')
+        .lean()
+        .exec();
+      const candidateIds = matchingCandidates.map((c) => c._id);
+
+      // 3. Search matching JDs (by title)
+      const matchingJds = await this.jobDescriptionModel
+        .find({ title: searchRegex })
+        .select('_id')
+        .lean()
+        .exec();
+      const jdIds = matchingJds.map((j) => j._id);
+
+      // Combine conditions with $or
+      const searchOrConditions: any[] = [{ positionTitle: searchRegex }];
+      if (candidateIds.length > 0) {
+        searchOrConditions.push({ candidateId: { $in: candidateIds } });
+      }
+      if (jdIds.length > 0) {
+        searchOrConditions.push({ jobDescriptionId: { $in: jdIds } });
+      }
+
+      filter.$or = searchOrConditions;
     }
 
     const skip = (page - 1) * limit;
