@@ -1,7 +1,7 @@
 'use client'
 
 import React, { useState, useMemo } from 'react'
-import { useRouter } from 'next/navigation'
+import { useRouter, useSearchParams } from 'next/navigation'
 import {
   Plus,
   Search,
@@ -50,13 +50,30 @@ export const OffersManager: React.FC<OffersManagerProps> = ({
   initialApplications = []
 }) => {
   const router = useRouter()
+  const searchParams = useSearchParams()
   const { toast, showToast, hideToast } = useToast()
 
-  const [search, setSearch] = useState('')
-  const [selectedStatus, setSelectedStatus] = useState<string>('ALL')
+  const initialSearchParam = searchParams.get('search') || ''
+  const initialStatusParam = searchParams.get('status') || 'ALL'
+
+  const [search, setSearch] = useState(initialSearchParam)
+  const [selectedStatus, setSelectedStatus] = useState<string>(initialStatusParam)
   const [selectedDepartment, setSelectedDepartment] = useState<string>('ALL')
   const [currentPage, setCurrentPage] = useState(1)
   const pageSize = 10
+
+  React.useEffect(() => {
+    const s = searchParams.get('search')
+    if (s !== null && s !== search) {
+      setSearch(s)
+      setCurrentPage(1)
+    }
+    const st = searchParams.get('status')
+    if (st !== null && st !== selectedStatus) {
+      setSelectedStatus(st)
+      setCurrentPage(1)
+    }
+  }, [searchParams])
 
   // Active action menu id
   const [activeMenuId, setActiveMenuId] = useState<string | null>(null)
@@ -247,7 +264,8 @@ export const OffersManager: React.FC<OffersManagerProps> = ({
               { value: OfferStatus.SENT, label: 'Chờ phản hồi' },
               { value: OfferStatus.ACCEPTED, label: 'Đã chấp nhận' },
               { value: OfferStatus.DECLINED, label: 'Đã từ chối' },
-              { value: OfferStatus.CANCELLED, label: 'Đã thu hồi' }
+              { value: OfferStatus.CANCELLED, label: 'Đã thu hồi' },
+              { value: OfferStatus.EXPIRED, label: 'Đã quá hạn' }
             ]}
             icon={<Clock size={14} />}
           />

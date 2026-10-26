@@ -14,25 +14,30 @@ interface Props {
 
 const FONT_FAMILY = 'Calibri';
 
-// Bảng màu thiết kế chuyên nghiệp
+// Bảng màu thiết kế chuyên nghiệp Executive Corporate
 const COLORS = {
-  navyDark: '1E3A8A',    // Header chính (Xanh navy đậm)
-  navyLight: 'EFF6FF',   // Title background
-  slateDark: '0F172A',   // Chữ đậm
-  slateMuted: '64748B',  // Chữ phụ / Subtitle
-  borderGray: 'CBD5E1',  // Viền bảng (slate-300)
-  zebraBg: 'F8FAFC',     // Hàng xen kẽ (slate-50)
+  headerBg: '0F172A',      // Midnight Slate Navy (Header chính)
+  headerText: 'FFFFFF',    // Chữ trắng trên nền header
+  titleBg: 'F8FAFC',       // Banner tiêu đề (slate-50)
+  titleText: '0F172A',     // Tiêu đề đậm
+  sectionBg: 'F1F5F9',     // Section divider (slate-100)
+  sectionText: '1E293B',   // Section header text
+  textDark: '1E293B',      // Chữ nội dung chính (slate-800)
+  textMuted: '64748B',     // Chữ phụ / Subtitle (slate-500)
+  border: 'E2E8F0',        // Viền bảng thanh lịch (slate-200)
+  borderDark: '0F172A',    // Đường kẻ phân cách chính
+  zebraBg: 'F8FAFC',       // Hàng xen kẽ (slate-50)
   white: 'FFFFFF',
 
-  // Badges màu trạng thái
+  // Badges màu trạng thái Pastel cao cấp
   greenBg: 'DCFCE7',
   greenText: '166534',
   amberBg: 'FEF3C7',
   amberText: '92400E',
   roseBg: 'FEE2E2',
   roseText: '991B1B',
-  blueBg: 'DBEAFE',
-  blueText: '1E40AF',
+  blueBg: 'E0E7FF',
+  blueText: '3730A3',
   purpleBg: 'EDE9FE',
   purpleText: '5B21B6',
   grayBg: 'F1F5F9',
@@ -40,10 +45,10 @@ const COLORS = {
 };
 
 const BORDER_THIN: Partial<ExcelJS.Borders> = {
-  top: { style: 'thin', color: { argb: `FF${COLORS.borderGray}` } },
-  left: { style: 'thin', color: { argb: `FF${COLORS.borderGray}` } },
-  bottom: { style: 'thin', color: { argb: `FF${COLORS.borderGray}` } },
-  right: { style: 'thin', color: { argb: `FF${COLORS.borderGray}` } },
+  top: { style: 'thin', color: { argb: `FF${COLORS.border}` } },
+  left: { style: 'thin', color: { argb: `FF${COLORS.border}` } },
+  bottom: { style: 'thin', color: { argb: `FF${COLORS.border}` } },
+  right: { style: 'thin', color: { argb: `FF${COLORS.border}` } },
 };
 
 const ZEBRA_FILL: ExcelJS.FillPattern = {
@@ -58,7 +63,7 @@ const WHITE_FILL: ExcelJS.FillPattern = {
   fgColor: { argb: `FF${COLORS.white}` },
 };
 
-/** Áp dụng banner tiêu đề trang nhã cho đầu mỗi sheet */
+/** Áp dụng banner tiêu đề trang nhã chuẩn quản trị cho đầu mỗi sheet */
 function applyBanner(
   ws: ExcelJS.Worksheet,
   title: string,
@@ -67,66 +72,88 @@ function applyBanner(
 ) {
   ws.views = [{ showGridLines: true }];
 
-  // Hàng 1: Tiêu đề báo cáo
+  // Hàng 1: Tiêu đề báo cáo to rõ
   ws.mergeCells(`A1:${mergeToCol}1`);
   const titleCell = ws.getCell('A1');
   titleCell.value = title;
-  titleCell.font = { name: FONT_FAMILY, size: 13, bold: true, color: { argb: `FF${COLORS.navyDark}` } };
+  titleCell.font = { name: FONT_FAMILY, size: 15, bold: true, color: { argb: `FF${COLORS.titleText}` } };
   titleCell.fill = {
     type: 'pattern',
     pattern: 'solid',
-    fgColor: { argb: `FF${COLORS.navyLight}` },
+    fgColor: { argb: `FF${COLORS.titleBg}` },
   };
   titleCell.alignment = { vertical: 'middle', horizontal: 'left', indent: 1 };
   titleCell.border = {
-    bottom: { style: 'medium', color: { argb: `FF${COLORS.navyDark}` } },
+    bottom: { style: 'medium', color: { argb: `FF${COLORS.borderDark}` } },
   };
-  ws.getRow(1).height = 32;
+  ws.getRow(1).height = 40;
 
-  // Hàng metadata (Thời điểm, Phòng ban, Vị trí)
+  // Hàng metadata (Thời điểm, Phạm vi phòng ban, Vị trí)
   metaLines.forEach((line, idx) => {
     const rowNum = idx + 2;
     const cell = ws.getCell(`A${rowNum}`);
     cell.value = line;
-    cell.font = { name: FONT_FAMILY, size: 9.5, italic: true, color: { argb: `FF${COLORS.slateMuted}` } };
-    ws.getRow(rowNum).height = 18;
+    cell.font = { name: FONT_FAMILY, size: 10, color: { argb: `FF${COLORS.textMuted}` } };
+    cell.alignment = { vertical: 'middle', horizontal: 'left', indent: 1 };
+    ws.getRow(rowNum).height = 20;
   });
+
+  ws.getRow(metaLines.length + 2).height = 12; // Khoảng đệm trống
 }
 
-/** Định dạng hàng tiêu đề bảng dữ liệu */
+/** Định dạng hàng tiêu đề bảng dữ liệu to rõ, chuyên nghiệp */
 function styleHeaderRow(row: ExcelJS.Row, colCount: number) {
-  row.height = 28;
+  row.height = 34;
   for (let c = 1; c <= colCount; c++) {
     const cell = row.getCell(c);
     cell.fill = {
       type: 'pattern',
       pattern: 'solid',
-      fgColor: { argb: `FF${COLORS.navyDark}` },
+      fgColor: { argb: `FF${COLORS.headerBg}` },
     };
     cell.font = {
       name: FONT_FAMILY,
-      size: 10,
+      size: 11,
       bold: true,
-      color: { argb: `FF${COLORS.white}` },
+      color: { argb: `FF${COLORS.headerText}` },
     };
     cell.alignment = { vertical: 'middle', horizontal: 'center', wrapText: true };
     cell.border = BORDER_THIN;
   }
 }
 
-/** Tự động căn chỉnh độ rộng cột có padding */
+/** Định dạng hàng tiêu đề phân mục (Section Header) */
+function styleSectionHeader(ws: ExcelJS.Worksheet, rowNum: number, title: string, mergeToCol: string) {
+  ws.mergeCells(`A${rowNum}:${mergeToCol}${rowNum}`);
+  const cell = ws.getCell(`A${rowNum}`);
+  cell.value = title;
+  cell.font = { name: FONT_FAMILY, size: 12, bold: true, color: { argb: `FF${COLORS.sectionText}` } };
+  cell.fill = {
+    type: 'pattern',
+    pattern: 'solid',
+    fgColor: { argb: `FF${COLORS.sectionBg}` },
+  };
+  cell.alignment = { vertical: 'middle', horizontal: 'left', indent: 1 };
+  cell.border = {
+    top: { style: 'thin', color: { argb: `FF${COLORS.border}` } },
+    bottom: { style: 'medium', color: { argb: `FF${COLORS.borderDark}` } },
+  };
+  ws.getRow(rowNum).height = 32;
+}
+
+/** Tự động căn chỉnh độ rộng cột có padding an toàn không bị lỗi ### */
 function autoFitColumns(ws: ExcelJS.Worksheet, minWidths: number[] = []) {
   ws.columns.forEach((col, idx) => {
-    let maxLen = minWidths[idx] || 12;
+    let maxLen = minWidths[idx] || 14;
     col.eachCell?.({ includeEmpty: false }, (cell, rowNum) => {
-      if (rowNum > 1) {
+      if (rowNum > 1 && !cell.isMerged) {
         const valStr = cell.value ? String(cell.value) : '';
         if (valStr.length > maxLen) {
           maxLen = valStr.length;
         }
       }
     });
-    col.width = Math.min(Math.max(maxLen + 4, minWidths[idx] || 12), 48);
+    col.width = Math.min(Math.max(maxLen + 4, minWidths[idx] || 14), 52);
   });
 }
 
@@ -166,17 +193,18 @@ export default function ExportExcelButton({
       summaryHeaderRow.values = ['CHỈ SỐ ĐIỀU HÀNH CHÍNH', 'GIÁ TRỊ THỰC TẾ', 'MỤC TIÊU & ĐÁNH GIÁ CHUẨN'];
       styleHeaderRow(summaryHeaderRow, 3);
 
+      // Loại bỏ mục 5 (Time-to-Fill) vì Dashboard không có chỉ số này
       const kpiItems = [
         {
           metric: '1. Chỉ tiêu tuyển dụng (Headcount Plan)',
-          value: `${data.summary.hiredHeadcount} / ${data.summary.targetHeadcount} người`,
+          value: `${data.summary.hiredHeadcount} / ${data.summary.targetHeadcount} nhân sự`,
           note: `Đạt ${data.summary.fulfillmentRate}% kế hoạch định biên`,
           highlight: data.summary.fulfillmentRate >= 80 ? 'green' : 'amber',
         },
         {
           metric: '2. Số vị trí tuyển dụng đang mở (Active Positions)',
           value: `${data.summary.activeJobs} vị trí`,
-          note: 'Tin tuyển dụng đang mở tiếp nhận hồ sơ',
+          note: 'Tin tuyển dụng đang mở tiếp nhận hồ sơ ứng tuyển',
           highlight: 'blue',
         },
         {
@@ -192,15 +220,9 @@ export default function ExportExcelButton({
           highlight: data.summary.offerAcceptanceRate >= 80 ? 'green' : 'amber',
         },
         {
-          metric: '5. Tốc độ đóng vị trí tuyển dụng (Time-to-Fill)',
-          value: `${data.summary.timeToFillDays} ngày`,
-          note: 'Thời gian từ mở JD đến khi tuyển thành công (Mục tiêu <= 30 ngày)',
-          highlight: data.summary.timeToFillDays <= 30 ? 'green' : 'amber',
-        },
-        {
-          metric: '6. Tổng hồ sơ ứng viên tiếp nhận trong kỳ',
+          metric: '5. Tổng hồ sơ ứng viên tiếp nhận trong kỳ',
           value: `${data.summary.totalCandidates} hồ sơ`,
-          note: 'Tổng ứng viên đã nộp đơn qua các kênh',
+          note: 'Tổng lượng ứng viên đã nộp đơn qua tất cả các nguồn',
           highlight: 'gray',
         },
       ];
@@ -209,18 +231,18 @@ export default function ExportExcelButton({
         const rowNum = idx + 7;
         const row = wsSummary.getRow(rowNum);
         row.values = [item.metric, item.value, item.note];
-        row.height = 24;
+        row.height = 28;
 
-        // Cell 1: Metric name
+        // Cell 1: Tên chỉ số (cỡ chữ 11pt bold)
         const c1 = row.getCell(1);
-        c1.font = { name: FONT_FAMILY, size: 10, bold: true, color: { argb: `FF${COLORS.slateDark}` } };
+        c1.font = { name: FONT_FAMILY, size: 11, bold: true, color: { argb: `FF${COLORS.textDark}` } };
         c1.alignment = { vertical: 'middle', horizontal: 'left', indent: 1 };
         c1.border = BORDER_THIN;
         c1.fill = idx % 2 === 1 ? ZEBRA_FILL : WHITE_FILL;
 
-        // Cell 2: Value
+        // Cell 2: Giá trị thực tế (cỡ chữ 11.5pt bold)
         const c2 = row.getCell(2);
-        c2.font = { name: FONT_FAMILY, size: 10.5, bold: true, color: { argb: `FF${COLORS.navyDark}` } };
+        c2.font = { name: FONT_FAMILY, size: 11.5, bold: true, color: { argb: `FF${COLORS.textDark}` } };
         c2.alignment = { vertical: 'middle', horizontal: 'center' };
         c2.border = BORDER_THIN;
         if (item.highlight === 'green') {
@@ -229,22 +251,28 @@ export default function ExportExcelButton({
         } else if (item.highlight === 'amber') {
           c2.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: `FF${COLORS.amberBg}` } };
           c2.font = { ...c2.font, color: { argb: `FF${COLORS.amberText}` } };
+        } else if (item.highlight === 'rose') {
+          c2.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: `FF${COLORS.roseBg}` } };
+          c2.font = { ...c2.font, color: { argb: `FF${COLORS.roseText}` } };
+        } else if (item.highlight === 'blue') {
+          c2.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: `FF${COLORS.blueBg}` } };
+          c2.font = { ...c2.font, color: { argb: `FF${COLORS.blueText}` } };
         } else {
           c2.fill = idx % 2 === 1 ? ZEBRA_FILL : WHITE_FILL;
         }
 
-        // Cell 3: Note
+        // Cell 3: Ghi chú mục tiêu
         const c3 = row.getCell(3);
-        c3.font = { name: FONT_FAMILY, size: 9.5, color: { argb: `FF${COLORS.slateMuted}` } };
+        c3.font = { name: FONT_FAMILY, size: 10.5, color: { argb: `FF${COLORS.textMuted}` } };
         c3.alignment = { vertical: 'middle', horizontal: 'left', indent: 1 };
         c3.border = BORDER_THIN;
         c3.fill = idx % 2 === 1 ? ZEBRA_FILL : WHITE_FILL;
       });
 
-      autoFitColumns(wsSummary, [46, 22, 50]);
+      autoFitColumns(wsSummary, [46, 26, 54]);
 
       // ─────────────────────────────────────────────────────────────
-      // SHEET 2: PHỄU TUYỂN DỤNG (RECRUITMENT FUNNEL)
+      // SHEET 2: PHỄU TUYỂN DỤNG & DANH SÁCH ỨNG VIÊN CHI TIẾT
       // ─────────────────────────────────────────────────────────────
       const wsFunnel = wb.addWorksheet('Pheu_Tuyen_Dung');
       const funnelMeta = [
@@ -252,38 +280,41 @@ export default function ExportExcelButton({
         `• Tổng hồ sơ tiếp nhận: ${(data as any).funnel?.totalApplications || 0} hồ sơ`,
         `• Tỷ lệ trúng tuyển toàn phễu: ${(data as any).funnel?.conversionRates?.overallRate || 0}%`,
       ];
-      applyBanner(wsFunnel, 'BÁO CÁO PHỄU TUYỂN DỤNG THEO PIPELINE CHUẨN', 'F', funnelMeta);
+      applyBanner(wsFunnel, 'BÁO CÁO PHỄU TUYỂN DỤNG & CHI TIẾT ỨNG VIÊN THEO PIPELINE', 'L', funnelMeta);
+
+      // PHẦN A: BẢNG TỔNG HỢP CÁC BƯỚC TRONG PHỄU
+      styleSectionHeader(wsFunnel, 6, 'I. TỔNG HỢP CHUYỂN ĐỔI QUA CÁC GIAI ĐOẠN PHỄU (PIPELINE CONVERSION)', 'F');
 
       const funnelHeaderRow = wsFunnel.getRow(7);
       funnelHeaderRow.values = [
         'STT',
         'Giai đoạn Pipeline',
-        'Ứng viên lũy kế',
+        'Ứng viên lũy kế qua vòng',
         'Tỷ lệ toàn phễu (%)',
-        'Đang xử lý tại bước này',
+        'Đang dừng tại bước này',
         'Chuyển tiếp từ bước trước (%)',
       ];
       styleHeaderRow(funnelHeaderRow, 6);
 
       const funnelStages = (data as any).funnel?.stages || [];
+      let currentRow = 8;
       funnelStages.forEach((s: any, idx: number) => {
-        const rowNum = idx + 8;
-        const row = wsFunnel.getRow(rowNum);
+        const row = wsFunnel.getRow(currentRow);
         row.values = [
           idx + 1,
           s.name,
           s.count,
           `${s.percentage}%`,
-          s.currentCount ?? 'N/A',
+          s.currentCount ?? 0,
           s.order > 1 ? `${s.stepConversionRate}%` : '100%',
         ];
-        row.height = 24;
+        row.height = 28;
 
         for (let c = 1; c <= 6; c++) {
           const cell = row.getCell(c);
           cell.border = BORDER_THIN;
           cell.fill = idx % 2 === 1 ? ZEBRA_FILL : WHITE_FILL;
-          cell.font = { name: FONT_FAMILY, size: 10, color: { argb: `FF${COLORS.slateDark}` } };
+          cell.font = { name: FONT_FAMILY, size: 11, color: { argb: `FF${COLORS.textDark}` } };
 
           if (c === 1) cell.alignment = { vertical: 'middle', horizontal: 'center' };
           else if (c === 2) {
@@ -297,9 +328,140 @@ export default function ExportExcelButton({
             cell.font = { ...cell.font, bold: true };
           }
         }
+        currentRow++;
       });
 
-      autoFitColumns(wsFunnel, [8, 28, 20, 20, 24, 28]);
+      // Khoảng đệm giữa 2 bảng
+      currentRow += 2;
+
+      // PHẦN B: DANH SÁCH CHI TIẾT ỨNG VIÊN VÀ TRẠNG THÁI PIPELINE HIỆN TẠI
+      const applicationsList = data.applications || [];
+      styleSectionHeader(
+        wsFunnel,
+        currentRow,
+        `II. DANH SÁCH CHI TIẾT ỨNG VIÊN & TRẠNG THÁI PIPELINE HIỆN TẠI (TỔNG: ${applicationsList.length} ỨNG VIÊN)`,
+        'L'
+      );
+      currentRow++;
+
+      const appHeaderRow = wsFunnel.getRow(currentRow);
+      appHeaderRow.values = [
+        'STT',
+        'Mã hồ sơ',
+        'Họ và tên ứng viên',
+        'Email liên hệ',
+        'Số điện thoại',
+        'Vị trí ứng tuyển',
+        'Phòng ban',
+        'Điểm AI Match',
+        'Giai đoạn Pipeline hiện tại',
+        'Ngày nộp hồ sơ',
+        'Trạng thái hồ sơ',
+        'Lý do từ chối (nếu có)',
+      ];
+      styleHeaderRow(appHeaderRow, 12);
+      currentRow++;
+
+      if (applicationsList.length === 0) {
+        const emptyRow = wsFunnel.getRow(currentRow);
+        emptyRow.getCell(1).value = 'Không có dữ liệu ứng viên trong phạm vi đã chọn.';
+        emptyRow.getCell(1).font = { name: FONT_FAMILY, size: 11, italic: true, color: { argb: `FF${COLORS.textMuted}` } };
+        wsFunnel.mergeCells(`A${currentRow}:L${currentRow}`);
+        emptyRow.height = 32;
+        emptyRow.alignment = { vertical: 'middle', horizontal: 'center' };
+      } else {
+        applicationsList.forEach((app: any, idx: number) => {
+          const row = wsFunnel.getRow(currentRow);
+          const aiScoreText = app.aiFitScore !== null && app.aiFitScore !== undefined ? app.aiFitScore : 'Chưa chấm';
+          const appliedDateText = app.appliedAt ? new Date(app.appliedAt).toLocaleDateString('vi-VN') : 'N/A';
+
+          row.values = [
+            idx + 1,
+            app.id.slice(-6).toUpperCase(),
+            app.candidateName,
+            app.candidateEmail,
+            app.candidatePhone || 'N/A',
+            app.jobTitle,
+            app.departmentName,
+            aiScoreText,
+            app.currentStageName,
+            appliedDateText,
+            app.status,
+            app.rejectReason || '',
+          ];
+          row.height = 28;
+
+          for (let c = 1; c <= 12; c++) {
+            const cell = row.getCell(c);
+            cell.border = BORDER_THIN;
+            cell.fill = idx % 2 === 1 ? ZEBRA_FILL : WHITE_FILL;
+            cell.font = { name: FONT_FAMILY, size: 10.5, color: { argb: `FF${COLORS.textDark}` } };
+
+            if (c === 1 || c === 2 || c === 5 || c === 10) {
+              cell.alignment = { vertical: 'middle', horizontal: 'center' };
+            } else if (c === 3) {
+              cell.alignment = { vertical: 'middle', horizontal: 'left', indent: 1 };
+              cell.font = { ...cell.font, bold: true };
+            } else if (c === 8) {
+              // Điểm AI Matching
+              cell.alignment = { vertical: 'middle', horizontal: 'center' };
+              cell.font = { ...cell.font, bold: true };
+              if (typeof app.aiFitScore === 'number') {
+                if (app.aiFitScore >= 70) {
+                  cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: `FF${COLORS.greenBg}` } };
+                  cell.font = { ...cell.font, color: { argb: `FF${COLORS.greenText}` } };
+                } else if (app.aiFitScore >= 50) {
+                  cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: `FF${COLORS.amberBg}` } };
+                  cell.font = { ...cell.font, color: { argb: `FF${COLORS.amberText}` } };
+                } else {
+                  cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: `FF${COLORS.roseBg}` } };
+                  cell.font = { ...cell.font, color: { argb: `FF${COLORS.roseText}` } };
+                }
+              }
+            } else if (c === 9) {
+              // Giai đoạn Pipeline hiện tại (làm nổi bật trang nhã)
+              cell.alignment = { vertical: 'middle', horizontal: 'center' };
+              cell.font = { ...cell.font, bold: true };
+              const stLower = (app.currentStageName || '').toLowerCase();
+              if (stLower.includes('tuyển') || stLower.includes('hired')) {
+                cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: `FF${COLORS.purpleBg}` } };
+                cell.font = { ...cell.font, color: { argb: `FF${COLORS.purpleText}` } };
+              } else if (stLower.includes('offer')) {
+                cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: `FF${COLORS.greenBg}` } };
+                cell.font = { ...cell.font, color: { argb: `FF${COLORS.greenText}` } };
+              } else if (stLower.includes('phỏng vấn') || stLower.includes('interview')) {
+                cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: `FF${COLORS.blueBg}` } };
+                cell.font = { ...cell.font, color: { argb: `FF${COLORS.blueText}` } };
+              } else if (stLower.includes('phòng ban') || stLower.includes('đánh giá')) {
+                cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: `FF${COLORS.amberBg}` } };
+                cell.font = { ...cell.font, color: { argb: `FF${COLORS.amberText}` } };
+              } else {
+                cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: `FF${COLORS.grayBg}` } };
+                cell.font = { ...cell.font, color: { argb: `FF${COLORS.grayText}` } };
+              }
+            } else if (c === 11) {
+              // Trạng thái hồ sơ
+              cell.alignment = { vertical: 'middle', horizontal: 'center' };
+              cell.font = { ...cell.font, bold: true };
+              if (app.status === 'Đã tuyển') {
+                cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: `FF${COLORS.greenBg}` } };
+                cell.font = { ...cell.font, color: { argb: `FF${COLORS.greenText}` } };
+              } else if (app.status === 'Đã từ chối') {
+                cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: `FF${COLORS.roseBg}` } };
+                cell.font = { ...cell.font, color: { argb: `FF${COLORS.roseText}` } };
+              } else {
+                cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: `FF${COLORS.blueBg}` } };
+                cell.font = { ...cell.font, color: { argb: `FF${COLORS.blueText}` } };
+              }
+            } else {
+              cell.alignment = { vertical: 'middle', horizontal: 'left', indent: 1 };
+            }
+          }
+          currentRow++;
+        });
+      }
+
+      autoFitColumns(wsFunnel, [8, 14, 26, 28, 16, 30, 22, 16, 26, 16, 18, 30]);
 
       // ─────────────────────────────────────────────────────────────
       // SHEET 3: TIẾN ĐỘ THEO PHÒNG BAN (DEPARTMENT FULFILLMENT)
@@ -338,13 +500,13 @@ export default function ExportExcelButton({
           d.activeJobs,
           evalText,
         ];
-        row.height = 24;
+        row.height = 28;
 
         for (let c = 1; c <= 7; c++) {
           const cell = row.getCell(c);
           cell.border = BORDER_THIN;
           cell.fill = idx % 2 === 1 ? ZEBRA_FILL : WHITE_FILL;
-          cell.font = { name: FONT_FAMILY, size: 10, color: { argb: `FF${COLORS.slateDark}` } };
+          cell.font = { name: FONT_FAMILY, size: 11, color: { argb: `FF${COLORS.textDark}` } };
 
           if (c === 1) cell.alignment = { vertical: 'middle', horizontal: 'center' };
           else if (c === 2) {
@@ -358,7 +520,7 @@ export default function ExportExcelButton({
             cell.font = { ...cell.font, bold: true };
           } else if (c === 7) {
             cell.alignment = { vertical: 'middle', horizontal: 'center' };
-            cell.font = { name: FONT_FAMILY, size: 9.5, bold: true };
+            cell.font = { name: FONT_FAMILY, size: 10.5, bold: true };
             if (evalText === 'Hoàn thành') {
               cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: `FF${COLORS.greenBg}` } };
               cell.font = { ...cell.font, color: { argb: `FF${COLORS.greenText}` } };
@@ -373,7 +535,7 @@ export default function ExportExcelButton({
         }
       });
 
-      autoFitColumns(wsDept, [12, 28, 18, 18, 22, 18, 20]);
+      autoFitColumns(wsDept, [14, 30, 20, 20, 24, 20, 22]);
 
       // ─────────────────────────────────────────────────────────────
       // SHEET 4: DANH SÁCH CHI TIẾT CÁC VỊ TRÍ TUYỂN DỤNG (REQUISITIONS)
@@ -417,13 +579,13 @@ export default function ExportExcelButton({
           r.deadline ? new Date(r.deadline).toLocaleDateString('vi-VN') : 'Không giới hạn',
           r.creatorName,
         ];
-        row.height = 24;
+        row.height = 28;
 
         for (let c = 1; c <= 13; c++) {
           const cell = row.getCell(c);
           cell.border = BORDER_THIN;
           cell.fill = idx % 2 === 1 ? ZEBRA_FILL : WHITE_FILL;
-          cell.font = { name: FONT_FAMILY, size: 9.5, color: { argb: `FF${COLORS.slateDark}` } };
+          cell.font = { name: FONT_FAMILY, size: 10.5, color: { argb: `FF${COLORS.textDark}` } };
 
           if (c === 1 || c === 8 || c === 11 || c === 12) {
             cell.alignment = { vertical: 'middle', horizontal: 'center' };
@@ -433,7 +595,7 @@ export default function ExportExcelButton({
           } else if (c === 4) {
             cell.alignment = { vertical: 'middle', horizontal: 'center' };
             cell.font = { ...cell.font, bold: true };
-            if (r.priority === 'HIGH') {
+            if (r.priority === 'Gấp') {
               cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: `FF${COLORS.roseBg}` } };
               cell.font = { ...cell.font, color: { argb: `FF${COLORS.roseText}` } };
             }
@@ -446,13 +608,13 @@ export default function ExportExcelButton({
           } else if (c === 10) {
             cell.alignment = { vertical: 'middle', horizontal: 'center' };
             cell.font = { ...cell.font, bold: true };
-            if (r.status === 'APPROVED') {
+            if (r.status === 'Đang tuyển') {
               cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: `FF${COLORS.greenBg}` } };
               cell.font = { ...cell.font, color: { argb: `FF${COLORS.greenText}` } };
-            } else if (r.status === 'COMPLETED') {
+            } else if (r.status === 'Hoàn thành') {
               cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: `FF${COLORS.blueBg}` } };
               cell.font = { ...cell.font, color: { argb: `FF${COLORS.blueText}` } };
-            } else if (r.status === 'PENDING') {
+            } else if (r.status === 'Chờ duyệt') {
               cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: `FF${COLORS.amberBg}` } };
               cell.font = { ...cell.font, color: { argb: `FF${COLORS.amberText}` } };
             }
@@ -462,21 +624,21 @@ export default function ExportExcelButton({
         }
       });
 
-      autoFitColumns(wsReq, [10, 30, 22, 14, 10, 20, 20, 16, 18, 16, 14, 16, 22]);
+      autoFitColumns(wsReq, [12, 32, 24, 16, 12, 22, 22, 18, 20, 18, 16, 18, 24]);
 
       // ─────────────────────────────────────────────────────────────
       // SHEET 5: DANH SÁCH THƯ MỜI NHẬN VIỆC (OFFERS)
       // ─────────────────────────────────────────────────────────────
       const wsOffers = wb.addWorksheet('Danh_Sach_Offer');
-      applyBanner(wsOffers, 'DANH SÁCH THƯ MỜI NHẬN VIỆC (OFFERS)', 'K', metaInfo);
+      applyBanner(wsOffers, 'DANH SÁCH THƯ MỜI NHẬN VIỆC (OFFERS)', 'L', metaInfo);
 
       const statusMap: Record<string, string> = {
-        ACCEPTED: 'Đã Tuyển',
-        SENT: 'Đang phản hồi',
+        ACCEPTED: 'Đã nhận việc',
+        SENT: 'Chờ phản hồi',
         DECLINED: 'Đã từ chối',
         DRAFT: 'Bản nháp',
-        EXPIRED: 'Hết hạn',
-        CANCELLED: 'Đã hủy',
+        EXPIRED: 'Đã quá hạn',
+        CANCELLED: 'Đã thu hồi',
       };
 
       const offerHeaderRow = wsOffers.getRow(6);
@@ -487,13 +649,14 @@ export default function ExportExcelButton({
         'Vị trí tuyển dụng',
         'Phòng ban',
         'Loại HĐ',
+        'Lương thỏa thuận (VNĐ)',
         'Trạng thái Offer',
         'Ngày gửi',
         'Hạn phản hồi',
         'Ngày phản hồi',
         'Lý do từ chối (nếu có)',
       ];
-      styleHeaderRow(offerHeaderRow, 11);
+      styleHeaderRow(offerHeaderRow, 12);
 
       data.offers.forEach((o, idx) => {
         const rowNum = idx + 7;
@@ -507,35 +670,42 @@ export default function ExportExcelButton({
           o.positionTitle,
           o.departmentName,
           o.contractType,
+          o.salary,
           stLabel,
           new Date(o.sentAt).toLocaleDateString('vi-VN'),
           o.expiresAt ? new Date(o.expiresAt).toLocaleDateString('vi-VN') : 'N/A',
           o.respondedAt ? new Date(o.respondedAt).toLocaleDateString('vi-VN') : 'Chưa phản hồi',
           o.declineReason || '',
         ];
-        row.height = 24;
+        row.height = 28;
 
-        for (let c = 1; c <= 11; c++) {
+        for (let c = 1; c <= 12; c++) {
           const cell = row.getCell(c);
           cell.border = BORDER_THIN;
           cell.fill = idx % 2 === 1 ? ZEBRA_FILL : WHITE_FILL;
-          cell.font = { name: FONT_FAMILY, size: 9.5, color: { argb: `FF${COLORS.slateDark}` } };
+          cell.font = { name: FONT_FAMILY, size: 10.5, color: { argb: `FF${COLORS.textDark}` } };
 
-          if (c === 1 || c === 6 || c === 8 || c === 9 || c === 10) {
+          if (c === 1 || c === 6 || c === 9 || c === 10 || c === 11) {
             cell.alignment = { vertical: 'middle', horizontal: 'center' };
           } else if (c === 2) {
             cell.alignment = { vertical: 'middle', horizontal: 'left', indent: 1 };
             cell.font = { ...cell.font, bold: true };
           } else if (c === 7) {
+            cell.alignment = { vertical: 'middle', horizontal: 'right' };
+            cell.numFmt = '#,##0 "₫"';
+          } else if (c === 8) {
             cell.alignment = { vertical: 'middle', horizontal: 'center' };
             cell.font = { ...cell.font, bold: true };
-            if (o.status === 'ACCEPTED') {
+            if (o.status === 'ACCEPTED' || stLabel === 'Đã nhận việc') {
               cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: `FF${COLORS.greenBg}` } };
               cell.font = { ...cell.font, color: { argb: `FF${COLORS.greenText}` } };
-            } else if (o.status === 'SENT') {
+            } else if (o.status === 'SENT' || stLabel === 'Chờ phản hồi') {
               cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: `FF${COLORS.amberBg}` } };
               cell.font = { ...cell.font, color: { argb: `FF${COLORS.amberText}` } };
-            } else if (o.status === 'DECLINED') {
+            } else if (o.status === 'EXPIRED' || stLabel === 'Đã quá hạn') {
+              cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: `FF${COLORS.roseBg}` } };
+              cell.font = { ...cell.font, color: { argb: `FF${COLORS.roseText}` } };
+            } else if (o.status === 'DECLINED' || stLabel === 'Đã từ chối') {
               cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: `FF${COLORS.roseBg}` } };
               cell.font = { ...cell.font, color: { argb: `FF${COLORS.roseText}` } };
             }
@@ -545,7 +715,7 @@ export default function ExportExcelButton({
         }
       });
 
-      autoFitColumns(wsOffers, [10, 24, 26, 28, 20, 14, 18, 14, 14, 16, 30]);
+      autoFitColumns(wsOffers, [12, 26, 28, 30, 22, 16, 22, 18, 16, 16, 18, 32]);
 
       // ─────────────────────────────────────────────────────────────
       // XUẤT BUFFER & TẢI FILE TRÊN TRÌNH DUYỆT

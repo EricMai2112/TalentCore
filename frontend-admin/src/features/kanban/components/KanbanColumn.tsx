@@ -19,6 +19,8 @@ interface KanbanColumnProps {
   onCreateInterview?: (app: KanbanApplication) => void;
   style?: React.CSSProperties;
   className?: string;
+  isDropDisabled?: boolean;
+  isDraggingAny?: boolean;
 }
 
 export default function KanbanColumn({
@@ -32,10 +34,13 @@ export default function KanbanColumn({
   onCreateInterview,
   style,
   className = "w-[335px]",
+  isDropDisabled = false,
+  isDraggingAny = false,
 }: KanbanColumnProps) {
   const stageId = stage._id || stage.name;
   const { setNodeRef, isOver } = useDroppable({
     id: stageId,
+    disabled: isDropDisabled,
   });
 
   const itemIds = useMemo(
@@ -50,7 +55,9 @@ export default function KanbanColumn({
       ref={setNodeRef}
       style={style}
       className={`bg-white/40 backdrop-blur-md border rounded-3xl overflow-hidden shrink-0 self-stretch flex flex-col transition-all duration-200 ${
-        isOver
+        isDropDisabled && isDraggingAny
+          ? "opacity-50 bg-slate-100/40 border-dashed border-slate-300 pointer-events-none select-none"
+          : isOver
           ? "border-indigo-400 bg-indigo-50/50 ring-2 ring-indigo-500/20 shadow-md"
           : "border-white/60 shadow-xs hover:border-slate-300/80"
       } ${className}`}

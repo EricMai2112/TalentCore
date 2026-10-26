@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState } from 'react';
-import { Filter, Users, TrendingUp } from 'lucide-react';
+import { Filter } from 'lucide-react';
 import { RecruitmentFunnel, FunnelStage } from '../types/dashboard.types';
 import { EmptyState } from './DashboardSkeletons';
 
@@ -68,13 +68,13 @@ export default function RecruitmentFunnelChart({ funnel }: Props) {
             {totalApps.toLocaleString()} hồ sơ
           </span>
           <span className="text-[9.5px] font-bold px-1.5 py-0.2 rounded-md border text-emerald-700 bg-emerald-50 border-emerald-200/80">
-            {overallRate}% trúng tuyển
+            {overallRate}% đã tuyển
           </span>
         </div>
       </div>
 
       {/* ─── Body: 2 Cột (Trái: Tên giai đoạn - Phải: Biểu đồ phễu) ─── */}
-      <div className="flex-1 min-h-0 flex flex-col justify-around py-0.5 space-y-1 relative">
+      <div className="flex-1 min-h-0 flex flex-col justify-around py-1 space-y-1.5 relative">
         {stages.map((stage, index) => {
           const count = stage.count || 0;
           const ratio = maxCount > 0 ? count / maxCount : 0;
@@ -102,7 +102,7 @@ export default function RecruitmentFunnelChart({ funnel }: Props) {
                   style={{ backgroundColor: style.dotColor }}
                 />
                 <span className="text-[10.5px] font-semibold text-slate-700 truncate group-hover:text-slate-900 leading-tight">
-                  {stage.name}
+                  {stage.name === 'Trúng tuyển chính thức' ? 'Đã tuyển' : stage.name}
                 </span>
               </div>
 
@@ -146,7 +146,7 @@ export default function RecruitmentFunnelChart({ funnel }: Props) {
                 className="w-2.5 h-2.5 rounded-full shrink-0"
                 style={{ backgroundColor: hoveredStage.dotColor }}
               />
-              <span className="text-white text-xs">{hoveredStage.stage.name}</span>
+              <span className="text-white text-xs">{hoveredStage.stage.name === 'Trúng tuyển chính thức' ? 'Đã tuyển' : hoveredStage.stage.name}</span>
             </div>
             <div className="space-y-0.5 text-[10px] text-slate-300">
               <div className="flex justify-between">
@@ -174,17 +174,7 @@ export default function RecruitmentFunnelChart({ funnel }: Props) {
         )}
       </div>
 
-      {/* ─── Footer: Tóm tắt chuyển đổi ──────────────────────── */}
-      <div className="pt-2 border-t border-slate-100 flex items-center justify-between text-[10px] text-slate-500 shrink-0">
-        <span className="flex items-center gap-1 text-slate-400">
-          <Users size={11} className="text-indigo-500" />
-          Tiếp nhận: <strong className="text-slate-700">{totalApps}</strong>
-        </span>
-        <span className="flex items-center gap-1 text-slate-400">
-          <TrendingUp size={11} className="text-emerald-500" />
-          Trúng tuyển: <strong className="text-emerald-700">{stages[stages.length - 1]?.count || 0} ({overallRate}%)</strong>
-        </span>
-      </div>
+      
     </div>
   );
 }

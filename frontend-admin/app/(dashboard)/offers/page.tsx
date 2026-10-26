@@ -1,3 +1,4 @@
+import { Suspense } from 'react';
 import { OffersManager } from '@/src/features/offers/components';
 import { createServerApiClient } from '@/src/lib/api-client';
 import { getCachedDepartments } from '@/src/lib/server-cache';
@@ -52,11 +53,13 @@ export default async function OffersPage() {
   }
 
   return (
-    <OffersManager
-      initialOffers={initialOffers}
-      initialTotal={initialTotal}
-      initialDepartments={initialDepartments}
-      initialApplications={initialApplications}
-    />
+    <Suspense fallback={null}>
+      <OffersManager
+        initialOffers={initialOffers}
+        initialTotal={initialTotal}
+        initialDepartments={initialDepartments}
+        initialApplications={initialApplications}
+      />
+    </Suspense>
   );
 }
