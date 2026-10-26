@@ -106,19 +106,39 @@ export const CustomSelect: React.FC<CustomSelectProps> = ({
     }
   };
 
+  const flatContainerStyle = StyleSheet.flatten(containerStyle) as ViewStyle | undefined;
+  const flatTriggerStyle = StyleSheet.flatten(triggerStyle) as ViewStyle | undefined;
+  const hasFlex =
+    (flatContainerStyle && flatContainerStyle.flex !== undefined) ||
+    (flatTriggerStyle && flatTriggerStyle.flex !== undefined);
+
+  const resolvedContainerStyle: StyleProp<ViewStyle> = [
+    Boolean(
+      flatTriggerStyle &&
+        flatTriggerStyle.flex !== undefined &&
+        (!flatContainerStyle || flatContainerStyle.flex === undefined)
+    ) && {
+      flex: flatTriggerStyle?.flex,
+    },
+    containerStyle,
+  ];
+
+  const resolvedTriggerStyle: StyleProp<ViewStyle> = [
+    styles.triggerPill,
+    hasFlex && { width: '100%' },
+    (isActive || isOpen) && styles.triggerPillActive,
+    disabled && styles.triggerPillDisabled,
+    triggerStyle,
+    (isActive || isOpen) && activeTriggerStyle,
+  ];
+
   return (
-    <View style={containerStyle} ref={triggerRef} collapsable={false}>
+    <View style={resolvedContainerStyle} ref={triggerRef} collapsable={false}>
       <TouchableOpacity
         onPress={handleOpen}
         activeOpacity={disabled ? 1 : 0.7}
         disabled={disabled}
-        style={[
-          styles.triggerPill,
-          (isActive || isOpen) && styles.triggerPillActive,
-          disabled && styles.triggerPillDisabled,
-          triggerStyle,
-          (isActive || isOpen) && activeTriggerStyle,
-        ]}
+        style={resolvedTriggerStyle}
       >
         {children ? (
           typeof children === 'function' ? (

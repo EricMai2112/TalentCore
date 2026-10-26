@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback, useMemo } from 'react';
+import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import {
   View,
   Text,
@@ -12,6 +12,7 @@ import {
   Alert,
   Pressable,
   Linking,
+  Image,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import {
@@ -23,6 +24,9 @@ import {
 import { useAuth } from '../../context/AuthContext';
 import { UserRole } from '../../features/auth/types/auth.types';
 import CustomSelect from '../../components/common/CustomSelect';
+import CustomPagination from '../../components/common/CustomPagination';
+import CandidateDetailModal from './components/CandidateDetailModal';
+import RejectCandidateModal from './components/RejectCandidateModal';
 
 interface StageItem {
   _id: string;
@@ -74,6 +78,8 @@ export const RecruitmentScreen: React.FC<RecruitmentScreenProps> = ({ initialSeg
   const [actionLoading, setActionLoading] = useState<boolean>(false);
 
   const [selectedJob, setSelectedJob] = useState<JobDescriptionItem | null>(null);
+  const [selectedCandidate, setSelectedCandidate] = useState<CandidateApplication | null>(null);
+  const [rejectingCandidate, setRejectingCandidate] = useState<CandidateApplication | null>(null);
 
 
 
@@ -82,6 +88,35 @@ export const RecruitmentScreen: React.FC<RecruitmentScreenProps> = ({ initialSeg
   const [reviewDecision, setReviewDecision] = useState<'APPROVED' | 'REJECTED'>('APPROVED');
   const [reviewNote, setReviewNote] = useState<string>('');
   const [reviewLoading, setReviewLoading] = useState<boolean>(false);
+
+  const scrollViewRef = useRef<ScrollView>(null);
+
+  // Phân trang (Pagination)
+  const [candPage, setCandPage] = useState<number>(1);
+  const candPageSize = 10;
+
+  const [jobPage, setJobPage] = useState<number>(1);
+  const jobPageSize = 10;
+
+  // Reset candPage khi bộ lọc ứng viên thay đổi
+  useEffect(() => {
+    setCandPage(1);
+  }, [searchQuery, selectedCandDept, selectedCandPosition, selectedCandStage]);
+
+  // Reset jobPage khi bộ lọc tin tuyển dụng thay đổi
+  useEffect(() => {
+    setJobPage(1);
+  }, [searchQuery, selectedJobStatus, selectedJobDept, selectedJobPriority]);
+
+  const handleCandPageChange = (page: number) => {
+    setCandPage(page);
+    scrollViewRef.current?.scrollTo({ y: 0, animated: true });
+  };
+
+  const handleJobPageChange = (page: number) => {
+    setJobPage(page);
+    scrollViewRef.current?.scrollTo({ y: 0, animated: true });
+  };
 
   // Lấy dữ liệu
   const fetchData = useCallback(async () => {
@@ -132,6 +167,23 @@ export const RecruitmentScreen: React.FC<RecruitmentScreenProps> = ({ initialSeg
   const getCandidatePhone = (item: CandidateApplication | null | undefined): string => {
     if (!item) return '';
     return item.candidateId?.userId?.phone || item.candidateId?.phone || '';
+  };
+
+  const getCandidateInitials = (item: CandidateApplication | null | undefined): string => {
+    const nameStr = getCandidateName(item);
+    if (!nameStr) return 'UV';
+    const parts = nameStr.trim().split(' ').filter(Boolean);
+    if (parts.length === 1) return parts[0].substring(0, 2).toUpperCase();
+    return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
+  };
+
+  const getInterviewerName = (item: CandidateApplication): string | undefined => {
+    const job = item.jobDescriptionId as any;
+    if (job?.interviewerId?.name) return job.interviewerId.name;
+    if (job?.interviewerIds && job.interviewerIds.length > 0 && job.interviewerIds[0]?.name) {
+      return job.interviewerIds[0].name;
+    }
+    return undefined;
   };
 
   // Map số lượng hồ sơ nộp cho từng JD
@@ -270,6 +322,146 @@ export const RecruitmentScreen: React.FC<RecruitmentScreenProps> = ({ initialSeg
     });
   }, [candidates, searchQuery, selectedCandDept, selectedCandPosition, selectedCandStage]);
 
+  const totalCandPages = Math.ceil(filteredCandidates.length / candPageSize);
+  const paginatedCandidates = useMemo(() => {
+    const start = (candPage - 1) * candPageSize;
+    return filteredCandidates.slice(start, start + candPageSize);
+  }, [filteredCandidates, candPage, candPageSize]);
+
+  // Thống kê 6 nhóm ứng viên (Stat Cards đồng bộ Web)
+  const candidateStats = useMemo(() => {
+    const total = candidates.length;
+    const screening = candidates.filter((app) => {
+      const s = (app.stageName || '').toLowerCase();
+      return (
+        s.includes('sàng lọc') ||
+        s.includes('mới') ||
+        s.includes('new') ||
+        s.includes('applied') ||
+        s.includes('filter')
+      );
+    }).length;
+
+    const interview = candidates.filter((app) => {
+      const s = (app.stageName || '').toLowerCase();
+      return (
+        s.includes('tech') ||
+        s.includes('phone') ||
+        s.includes('culture') ||
+        s.includes('phỏng vấn') ||
+        s.includes('interview') ||
+        s.includes('review')
+      );
+    }).length;
+
+    const offer = candidates.filter((app) => {
+      const s = (app.stageName || '').toLowerCase();
+      return s.includes('offer');
+    }).length;
+
+    const hired = candidates.filter((app) => {
+      const s = (app.stageName || '').toLowerCase();
+      return s.includes('hired') || s.includes('trúng tuyển') || s.includes('nhận việc');
+    }).length;
+
+    const rejected = candidates.filter((app) => {
+      const s = (app.stageName || '').toLowerCase();
+      return s.includes('từ chối') || s.includes('reject');
+    }).length;
+
+    const pct = (val: number) => (total > 0 ? Math.round((val / total) * 100) : 0);
+
+    return [
+      {
+        id: 'ALL',
+        label: 'TỔNG ỨNG VIÊN',
+        count: total,
+        percent: 100,
+        color: '#2563EB',
+        bgColor: '#EFF6FF',
+        icon: 'people',
+      },
+      {
+        id: 'SCREENING',
+        label: 'SÀNG LỌC & MỚI',
+        count: screening,
+        percent: pct(screening),
+        color: '#D97706',
+        bgColor: '#FEF3C7',
+        icon: 'funnel',
+      },
+      {
+        id: 'INTERVIEW',
+        label: 'PHỎNG VẤN',
+        count: interview,
+        percent: pct(interview),
+        color: '#7C3AED',
+        bgColor: '#F5F3FF',
+        icon: 'calendar',
+      },
+      {
+        id: 'OFFER',
+        label: 'OFFER',
+        count: offer,
+        percent: pct(offer),
+        color: '#059669',
+        bgColor: '#ECFDF5',
+        icon: 'ribbon',
+      },
+      {
+        id: 'HIRED',
+        label: 'ĐÃ TUYỂN',
+        count: hired,
+        percent: pct(hired),
+        color: '#0284C7',
+        bgColor: '#F0F9FF',
+        icon: 'checkmark-circle',
+      },
+      {
+        id: 'REJECTED',
+        label: 'TỪ CHỐI',
+        count: rejected,
+        percent: pct(rejected),
+        color: '#DC2626',
+        bgColor: '#FEF2F2',
+        icon: 'close-circle',
+      },
+    ];
+  }, [candidates]);
+
+  const handleCandidateStatPress = (statId: string) => {
+    if (statId === 'ALL') {
+      setSelectedCandStage('ALL');
+    } else if (statId === 'SCREENING') {
+      const matched = candidateStageOptions.find((stg) => {
+        const s = stg.toLowerCase();
+        return s.includes('sàng lọc') || s.includes('mới') || s.includes('applied');
+      });
+      setSelectedCandStage(matched || 'Applied');
+    } else if (statId === 'INTERVIEW') {
+      const matched = candidateStageOptions.find((stg) => {
+        const s = stg.toLowerCase();
+        return s.includes('phỏng vấn') || s.includes('interview') || s.includes('tech');
+      });
+      setSelectedCandStage(matched || 'Phỏng vấn');
+    } else if (statId === 'OFFER') {
+      const matched = candidateStageOptions.find((stg) => stg.toLowerCase().includes('offer'));
+      setSelectedCandStage(matched || 'Offer');
+    } else if (statId === 'HIRED') {
+      const matched = candidateStageOptions.find((stg) => {
+        const s = stg.toLowerCase();
+        return s.includes('hired') || s.includes('trúng tuyển');
+      });
+      setSelectedCandStage(matched || 'Hired');
+    } else if (statId === 'REJECTED') {
+      const matched = candidateStageOptions.find((stg) => {
+        const s = stg.toLowerCase();
+        return s.includes('từ chối') || s.includes('reject');
+      });
+      setSelectedCandStage(matched || 'Từ chối');
+    }
+  };
+
   // Thống kê 6 trạng thái JD (Stat Cards như Web)
   const jobStats = useMemo(() => {
     const total = jobs.length;
@@ -381,6 +573,12 @@ export const RecruitmentScreen: React.FC<RecruitmentScreenProps> = ({ initialSeg
     });
   }, [jobs, searchQuery, selectedJobStatus, selectedJobDept, selectedJobPriority]);
 
+  const totalJobPages = Math.ceil(filteredJobs.length / jobPageSize);
+  const paginatedJobs = useMemo(() => {
+    const start = (jobPage - 1) * jobPageSize;
+    return filteredJobs.slice(start, start + jobPageSize);
+  }, [filteredJobs, jobPage, jobPageSize]);
+
   const isJobFiltered =
     selectedJobStatus !== 'ALL' ||
     selectedJobDept !== (isDeptManager && userDeptId ? userDeptId : 'ALL') ||
@@ -470,6 +668,56 @@ export const RecruitmentScreen: React.FC<RecruitmentScreenProps> = ({ initialSeg
       Alert.alert('Lỗi', err.message || 'Lỗi khi lưu quyết định xét duyệt');
     } finally {
       setReviewLoading(false);
+    }
+  };
+
+  // Chuyển giai đoạn ứng viên
+  const handleStageChange = async (candidateId: string, newStageId: string, stageName: string) => {
+    try {
+      setActionLoading(true);
+      await adminService.updateCandidateStage(candidateId, newStageId);
+      Alert.alert('Thành công', `Đã chuyển ứng viên sang giai đoạn: ${stageName}`);
+      setCandidates((prev) =>
+        prev.map((c) =>
+          c._id === candidateId
+            ? { ...c, currentStageId: newStageId, stageName }
+            : c
+        )
+      );
+      if (selectedCandidate?._id === candidateId) {
+        setSelectedCandidate((prev) =>
+          prev ? { ...prev, currentStageId: newStageId, stageName } : null
+        );
+      }
+      fetchData();
+    } catch (err: any) {
+      Alert.alert('Lỗi', err.message || 'Không thể chuyển giai đoạn');
+    } finally {
+      setActionLoading(false);
+    }
+  };
+
+  // Xác nhận từ chối ứng viên
+  const handleConfirmRejectCandidate = async (candidateId: string, reason: string) => {
+    try {
+      setActionLoading(true);
+      await adminService.rejectCandidate(candidateId, reason);
+      Alert.alert('Thành công', 'Đã từ chối ứng viên thành công.');
+      setCandidates((prev) =>
+        prev.map((c) =>
+          c._id === candidateId
+            ? { ...c, status: 'REJECTED', rejectReason: reason }
+            : c
+        )
+      );
+      if (selectedCandidate?._id === candidateId) {
+        setSelectedCandidate(null);
+      }
+      fetchData();
+    } catch (err: any) {
+      Alert.alert('Lỗi', err.message || 'Không thể từ chối ứng viên');
+    } finally {
+      setActionLoading(false);
     }
   };
 
@@ -644,41 +892,11 @@ export const RecruitmentScreen: React.FC<RecruitmentScreenProps> = ({ initialSeg
 
         {activeSegment === 'candidates' ? (
           <View>
-            <ScrollView
-              horizontal
-              showsHorizontalScrollIndicator={false}
-              contentContainerStyle={styles.filterChipRow}
-            >
-              {[
-                { id: 'ALL', label: `Tất cả (${candidates.length})` },
-                ...candidateStageOptions.map((stg) => ({
-                  id: stg,
-                  label: stg,
-                })),
-              ].map((chip) => {
-                const isSelected = selectedCandStage === chip.id;
-                return (
-                  <TouchableOpacity
-                    key={chip.id}
-                    style={[styles.filterChip, isSelected && styles.filterChipActive]}
-                    onPress={() => setSelectedCandStage(chip.id)}
-                    activeOpacity={0.7}
-                  >
-                    <Text
-                      style={[
-                        styles.filterChipText,
-                        isSelected && styles.filterChipTextActive,
-                      ]}
-                    >
-                      {chip.label}
-                    </Text>
-                  </TouchableOpacity>
-                );
-              })}
-            </ScrollView>
-
+            {/* Dòng 3 bộ lọc bằng Select (Phòng ban + Vị trí + Giai đoạn) */}
             <View style={styles.subFilterRow}>
+              {/* Nút lọc Phòng ban */}
               <CustomSelect
+                containerStyle={styles.subFilterCol}
                 value={selectedCandDept}
                 onChange={handleSelectCandDept}
                 options={deptFilterOptions}
@@ -691,7 +909,9 @@ export const RecruitmentScreen: React.FC<RecruitmentScreenProps> = ({ initialSeg
                 activeTriggerTextStyle={styles.subFilterPillTextActive}
               />
 
+              {/* Nút lọc Vị trí */}
               <CustomSelect
+                containerStyle={styles.subFilterCol}
                 value={selectedCandPosition}
                 onChange={(val) => setSelectedCandPosition(val)}
                 options={candPosFilterOptions}
@@ -703,7 +923,10 @@ export const RecruitmentScreen: React.FC<RecruitmentScreenProps> = ({ initialSeg
                 activeTriggerTextStyle={styles.subFilterPillTextActive}
               />
 
+              {/* Nút lọc Giai đoạn */}
               <CustomSelect
+                containerStyle={styles.subFilterCol}
+                align="right"
                 value={selectedCandStage}
                 onChange={(val) => setSelectedCandStage(val)}
                 options={candStageFilterOptions}
@@ -736,6 +959,7 @@ export const RecruitmentScreen: React.FC<RecruitmentScreenProps> = ({ initialSeg
             <View style={styles.subFilterRow}>
               {/* Nút lọc Trạng thái */}
               <CustomSelect
+                containerStyle={styles.subFilterCol}
                 value={selectedJobStatus}
                 onChange={(val) => setSelectedJobStatus(val)}
                 options={jobStatusFilterOptions}
@@ -748,6 +972,7 @@ export const RecruitmentScreen: React.FC<RecruitmentScreenProps> = ({ initialSeg
 
               {/* Nút lọc Phòng ban */}
               <CustomSelect
+                containerStyle={styles.subFilterCol}
                 value={selectedJobDept}
                 onChange={(val) => setSelectedJobDept(val)}
                 options={deptFilterOptions}
@@ -761,6 +986,8 @@ export const RecruitmentScreen: React.FC<RecruitmentScreenProps> = ({ initialSeg
 
               {/* Nút lọc Mức ưu tiên */}
               <CustomSelect
+                containerStyle={styles.subFilterCol}
+                align="right"
                 value={selectedJobPriority}
                 onChange={(val) => setSelectedJobPriority(val)}
                 options={jobPriorityFilterOptions}
@@ -797,6 +1024,7 @@ export const RecruitmentScreen: React.FC<RecruitmentScreenProps> = ({ initialSeg
         </View>
       ) : (
         <ScrollView
+          ref={scrollViewRef}
           style={styles.scrollArea}
           contentContainerStyle={styles.scrollContent}
           showsVerticalScrollIndicator={false}
@@ -806,107 +1034,197 @@ export const RecruitmentScreen: React.FC<RecruitmentScreenProps> = ({ initialSeg
         >
           {activeSegment === 'candidates' ? (
             /* ─── DANH SÁCH ỨNG VIÊN ─── */
-            filteredCandidates.length === 0 ? (
-              <View style={styles.emptyBox}>
-                <Ionicons name="people-outline" size={44} color="#CBD5E1" />
-                <Text style={styles.emptyTitle}>Không tìm thấy ứng viên</Text>
-                <Text style={styles.emptySubtitle}>Thử thay đổi từ khóa hoặc bộ lọc trạng thái</Text>
-              </View>
-            ) : (
-              filteredCandidates.map((c) => {
-                const candName = getCandidateName(c);
-                const deptName =
-                  typeof c.jobDescriptionId?.departmentId === 'object'
-                    ? c.jobDescriptionId?.departmentId?.name
-                    : undefined;
-
-                return (
-                  <View key={c._id} style={styles.candidateCard}>
-                    <View style={styles.candidateTopRow}>
-                      <View style={styles.candidateAvatar}>
-                        <Text style={styles.candidateAvatarText}>
-                          {candName.charAt(0).toUpperCase()}
-                        </Text>
-                      </View>
-                      <View style={styles.candidateMainInfo}>
-                        <Text style={styles.candidateName}>{candName}</Text>
-                        <Text style={styles.candidatePos} numberOfLines={1}>
-                          {c.jobDescriptionId?.title || 'Vị trí tuyển dụng'}
-                        </Text>
-                        {deptName && <Text style={styles.candidateDept}>{deptName}</Text>}
-                      </View>
-
-                      {c.aiFitScore !== null && c.aiFitScore !== undefined && (
+            <View>
+              {/* Lưới 6 Stat Cards ứng viên (2 hàng x 3 cột) */}
+              <View style={styles.statCardsGrid}>
+                {candidateStats.map((stat) => {
+                  return (
+                    <TouchableOpacity
+                      key={stat.id}
+                      style={[
+                        styles.statCardItem,
+                        { borderColor: '#E2E8F0' },
+                      ]}
+                      onPress={() => handleCandidateStatPress(stat.id)}
+                      activeOpacity={0.7}
+                    >
+                      <View style={styles.statCardHeader}>
                         <View
                           style={[
-                            styles.aiBadge,
-                            c.aiFitScore >= 85
-                              ? styles.aiBadgeHigh
-                              : c.aiFitScore >= 70
-                              ? styles.aiBadgeMedium
-                              : styles.aiBadgeLow,
+                            styles.statCardIconBox,
+                            { backgroundColor: stat.bgColor },
                           ]}
                         >
-                          <Ionicons name="sparkles" size={11} color="#FFFFFF" />
-                          <Text style={styles.aiBadgeText}>{c.aiFitScore}%</Text>
+                          <Ionicons
+                            name={stat.icon as any}
+                            size={12}
+                            color={stat.color}
+                          />
                         </View>
-                      )}
-                    </View>
-
-                    {(!!getCandidateEmail(c) || !!getCandidatePhone(c)) && (
-                      <View style={styles.candidateContactRow}>
-                        {!!getCandidateEmail(c) && (
-                          <View style={styles.candidateContactItem}>
-                            <Ionicons name="mail-outline" size={12} color="#64748B" />
-                            <Text style={styles.candidateContactText} numberOfLines={1}>
-                              {getCandidateEmail(c)}
-                            </Text>
-                          </View>
-                        )}
-                        {!!getCandidatePhone(c) && (
-                          <View style={styles.candidateContactItem}>
-                            <Ionicons name="call-outline" size={12} color="#64748B" />
-                            <Text style={styles.candidateContactText}>
-                              {getCandidatePhone(c)}
-                            </Text>
-                          </View>
-                        )}
-                      </View>
-                    )}
-
-                    <View style={styles.candidateMetaRow}>
-                      <View
-                        style={[
-                          styles.stageBadge,
-                          { backgroundColor: c.stageColor ? `${c.stageColor}20` : '#EFF6FF' },
-                        ]}
-                      >
                         <View
                           style={[
-                            styles.stageDot,
-                            { backgroundColor: c.stageColor || '#2563EB' },
-                          ]}
-                        />
-                        <Text
-                          style={[
-                            styles.stageBadgeText,
-                            { color: c.stageColor || '#2563EB' },
+                            styles.statCardBadge,
+                            { backgroundColor: `${stat.color}15` },
                           ]}
                         >
-                          {c.stageName || 'Applied'}
-                        </Text>
+                          <Text
+                            style={[
+                              styles.statCardBadgeText,
+                              { color: stat.color },
+                            ]}
+                          >
+                            {stat.percent}%
+                          </Text>
+                        </View>
                       </View>
+                      <Text style={styles.statCardLabel} numberOfLines={1}>
+                        {stat.label}
+                      </Text>
+                      <Text style={[styles.statCardCount, { color: stat.color }]}>
+                        {stat.count}
+                      </Text>
+                    </TouchableOpacity>
+                  );
+                })}
+              </View>
 
-                      {c.appliedAt && (
-                        <Text style={styles.appliedDate}>
-                          Nộp: {formatDate(c.appliedAt)}
-                        </Text>
-                      )}
-                    </View>
-                  </View>
-                );
-              })
-            )
+              {filteredCandidates.length === 0 ? (
+                <View style={styles.emptyBox}>
+                  <Ionicons name="people-outline" size={44} color="#CBD5E1" />
+                  <Text style={styles.emptyTitle}>Không tìm thấy ứng viên</Text>
+                  <Text style={styles.emptySubtitle}>Thử thay đổi từ khóa hoặc bộ lọc trạng thái</Text>
+                </View>
+              ) : (
+                <View style={{ gap: 12 }}>
+                  {paginatedCandidates.map((c) => {
+                    const candName = getCandidateName(c);
+                    const deptName =
+                      typeof c.jobDescriptionId?.departmentId === 'object'
+                        ? c.jobDescriptionId?.departmentId?.name
+                        : undefined;
+                    const interviewer = getInterviewerName(c);
+
+                    return (
+                      <TouchableOpacity
+                        key={c._id}
+                        style={styles.candidateCard}
+                        onPress={() => setSelectedCandidate(c)}
+                        activeOpacity={0.75}
+                      >
+                        <View style={styles.candidateTopRow}>
+                          <View style={styles.candidateAvatar}>
+                            {c.candidateId?.avatar || c.candidateId?.userId?.avatar ? (
+                              <Image
+                                source={{ uri: c.candidateId?.avatar || c.candidateId?.userId?.avatar }}
+                                style={styles.candidateAvatarImg}
+                              />
+                            ) : (
+                              <Text style={styles.candidateAvatarText}>
+                                {getCandidateInitials(c)}
+                              </Text>
+                            )}
+                          </View>
+                          <View style={styles.candidateMainInfo}>
+                            <Text style={styles.candidateName}>{candName}</Text>
+                            <Text style={styles.candidatePos} numberOfLines={1}>
+                              {c.jobDescriptionId?.title || 'Vị trí tuyển dụng'}
+                            </Text>
+                            {deptName && <Text style={styles.candidateDept}>{deptName}</Text>}
+                          </View>
+
+                          {c.aiFitScore !== null && c.aiFitScore !== undefined && (
+                            <View
+                              style={[
+                                styles.aiBadge,
+                                c.aiFitScore >= 80
+                                  ? styles.aiBadgeHigh
+                                  : c.aiFitScore >= 60
+                                  ? styles.aiBadgeMedium
+                                  : styles.aiBadgeLow,
+                              ]}
+                            >
+                              <Ionicons name="sparkles" size={11} color="#FFFFFF" />
+                              <Text style={styles.aiBadgeText}>{c.aiFitScore}%</Text>
+                            </View>
+                          )}
+                        </View>
+
+                        {(!!getCandidateEmail(c) || !!getCandidatePhone(c)) && (
+                          <View style={styles.candidateContactRow}>
+                            {!!getCandidateEmail(c) && (
+                              <View style={styles.candidateContactItem}>
+                                <Ionicons name="mail-outline" size={12} color="#64748B" />
+                                <Text style={styles.candidateContactText} numberOfLines={1}>
+                                  {getCandidateEmail(c)}
+                                </Text>
+                              </View>
+                            )}
+                            {!!getCandidatePhone(c) && (
+                              <View style={styles.candidateContactItem}>
+                                <Ionicons name="call-outline" size={12} color="#64748B" />
+                                <Text style={styles.candidateContactText}>
+                                  {getCandidatePhone(c)}
+                                </Text>
+                              </View>
+                            )}
+                          </View>
+                        )}
+
+                        <View style={styles.candidateMetaRow}>
+                          <View
+                            style={[
+                              styles.stageBadge,
+                              { backgroundColor: c.stageColor ? `${c.stageColor}20` : '#EFF6FF' },
+                            ]}
+                          >
+                            <View
+                              style={[
+                                styles.stageDot,
+                                { backgroundColor: c.stageColor || '#2563EB' },
+                              ]}
+                            />
+                            <Text
+                              style={[
+                                styles.stageBadgeText,
+                                { color: c.stageColor || '#2563EB' },
+                              ]}
+                            >
+                              {c.stageName || 'Applied'}
+                            </Text>
+                          </View>
+
+                          {interviewer && (
+                            <View style={styles.interviewerPill}>
+                              <Ionicons name="person-outline" size={10} color="#64748B" />
+                              <Text style={styles.interviewerPillText} numberOfLines={1}>
+                                {interviewer}
+                              </Text>
+                            </View>
+                          )}
+
+                          {c.appliedAt && (
+                            <Text style={styles.appliedDate}>
+                              Nộp: {formatDate(c.appliedAt)}
+                            </Text>
+                          )}
+
+                          <Ionicons name="chevron-forward" size={14} color="#94A3B8" />
+                        </View>
+                      </TouchableOpacity>
+                    );
+                  })}
+
+                  {/* Phân trang ứng viên */}
+                  <CustomPagination
+                    currentPage={candPage}
+                    totalPages={totalCandPages}
+                    totalItems={filteredCandidates.length}
+                    pageSize={candPageSize}
+                    onPageChange={handleCandPageChange}
+                  />
+                </View>
+              )}
+            </View>
           ) : (
             /* ─── PHẦN TIN TUYỂN DỤNG (JD) ─── */
             <View>
@@ -973,7 +1291,8 @@ export const RecruitmentScreen: React.FC<RecruitmentScreenProps> = ({ initialSeg
                   <Text style={styles.emptySubtitle}>Thử thay đổi từ khóa hoặc bộ lọc trạng thái</Text>
                 </View>
               ) : (
-                filteredJobs.map((j) => {
+                <View>
+                  {paginatedJobs.map((j) => {
                   const statusInfo = getJobStatusInfo(j.status);
                   const priorityInfo = getPriorityInfo(j.priority);
                   const deptName =
@@ -1102,8 +1421,18 @@ export const RecruitmentScreen: React.FC<RecruitmentScreenProps> = ({ initialSeg
                       </View>
                     </TouchableOpacity>
                   );
-                })
-              )}
+                })}
+
+                {/* Phân trang tin tuyển dụng */}
+                <CustomPagination
+                  currentPage={jobPage}
+                  totalPages={totalJobPages}
+                  totalItems={filteredJobs.length}
+                  pageSize={jobPageSize}
+                  onPageChange={handleJobPageChange}
+                />
+              </View>
+            )}
             </View>
           )}
         </ScrollView>
@@ -1514,6 +1843,25 @@ export const RecruitmentScreen: React.FC<RecruitmentScreenProps> = ({ initialSeg
         </View>
       </Modal>
 
+      {/* ─── MODAL CHI TIẾT ỨNG VIÊN ─── */}
+      <CandidateDetailModal
+        visible={!!selectedCandidate && !rejectingCandidate}
+        candidate={selectedCandidate}
+        onClose={() => setSelectedCandidate(null)}
+        stages={pipelineStages}
+        onStageChange={handleStageChange}
+        onReject={(c) => setRejectingCandidate(c)}
+        onNoteAdded={fetchData}
+      />
+
+      {/* ─── MODAL TỪ CHỐI ỨNG VIÊN ─── */}
+      <RejectCandidateModal
+        visible={!!rejectingCandidate}
+        candidate={rejectingCandidate}
+        onClose={() => setRejectingCandidate(null)}
+        onConfirm={handleConfirmRejectCandidate}
+      />
+
     </View>
   );
 };
@@ -1616,13 +1964,16 @@ const styles = StyleSheet.create({
     gap: 8,
     marginTop: 8,
   },
-  subFilterPill: {
+  subFilterCol: {
     flex: 1,
+  },
+  subFilterPill: {
+    width: '100%',
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    paddingHorizontal: 8,
-    paddingVertical: 6,
+    paddingHorizontal: 7,
+    paddingVertical: 6.5,
     backgroundColor: '#F8FAFC',
     borderRadius: 8,
     borderWidth: 1,
@@ -1790,6 +2141,11 @@ const styles = StyleSheet.create({
     fontWeight: '800',
     color: '#2563EB',
   },
+  candidateAvatarImg: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+  },
   candidateMainInfo: {
     flex: 1,
   },
@@ -1865,6 +2221,23 @@ const styles = StyleSheet.create({
   stageBadgeText: {
     fontSize: 10.5,
     fontWeight: '700',
+  },
+  interviewerPill: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 3,
+    backgroundColor: '#F8FAFC',
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    borderRadius: 6,
+    maxWidth: 120,
+  },
+  interviewerPillText: {
+    fontSize: 10,
+    color: '#64748B',
+    fontWeight: '600',
   },
   appliedDate: {
     fontSize: 10.5,
