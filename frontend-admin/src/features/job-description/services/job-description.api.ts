@@ -8,6 +8,8 @@ import {
   PipelineTemplate,
   User,
   Position,
+  JobDescriptionDraft,
+  JobDraftData,
 } from "../types/job-description.types";
 
 interface ApiResponse<T> {
@@ -40,12 +42,50 @@ export const jobDescriptionApi = {
     await apiClient.delete(`/job-descriptions/${id}`);
   },
 
+  suggestCriteriaWeightsWithAi: async (payload: {
+    positionTitle?: string;
+    experienceLevel?: string;
+    departmentName?: string;
+    criteria: any[];
+  }): Promise<{
+    suggestedWeights: { index: number; name: string; weight: number }[];
+    reasoning: string;
+  }> => {
+    const res = await apiClient.post<ApiResponse<{
+      suggestedWeights: { index: number; name: string; weight: number }[];
+      reasoning: string;
+    }>>("/job-descriptions/ai-suggest-weights", payload);
+    return res.data;
+  },
+
+  generateJdContentWithAi: async (payload: {
+    title: string;
+    departmentName?: string;
+    positionName?: string;
+    location?: string;
+    employmentType?: string;
+    experienceLevel?: string;
+    minimumSalary?: number;
+    maximumSalary?: number;
+    skillNames?: string[];
+    criteria?: any[];
+  }): Promise<{
+    description: string;
+    requirements: string;
+    benefits: string;
+  }> => {
+    const res = await apiClient.post<ApiResponse<{
+      description: string;
+      requirements: string;
+      benefits: string;
+    }>>("/job-descriptions/ai-generate-content", payload);
+    return res.data;
+  },
+
   // Auxiliary data fetchers
   getDepartments: async (): Promise<Department[]> => {
-    // We get direct response or wrapped. Let's make it robust:
     try {
       const res = await apiClient.get<any>("/departments");
-      // If backend returns { data: [...] } or direct [...]
       return res.data || res || [];
     } catch {
       return [];
@@ -73,8 +113,6 @@ export const jobDescriptionApi = {
   getEmployees: async (): Promise<User[]> => {
     try {
       const res = await apiClient.get<any>("/users/employees");
-      // Backend users controller returns direct list or { data: [...] }?
-      // Let's check: in controller it returns `return this.userService.getEmployees()`
       return res.data || res || [];
     } catch {
       return [];
@@ -87,6 +125,43 @@ export const jobDescriptionApi = {
       return res.data || res || [];
     } catch {
       return [];
+    }
+  },
+
+  // Job Drafts
+  saveDraft: async (data: {
+    positionId: string;
+    departmentId: string;
+    experienceLevel: string;
+    draftData: JobDraftData;
+  }): Promise<JobDescriptionDraft> => {
+    const res = await apiClient.post<ApiResponse<JobDescriptionDraft>>("/job-descriptions/drafts", data);
+    return res.data;
+  },
+
+  getDraftByPosition: async (
+    positionId: string,
+    experienceLevel?: string,
+  ): Promise<JobDescriptionDraft | null> => {
+    try {
+      const url = experienceLevel
+        ? `/job-descriptions/drafts/${positionId}?experienceLevel=${encodeURIComponent(experienceLevel)}`
+        : `/job-descriptions/drafts/${positionId}`;
+      const res = await apiClient.get<ApiResponse<JobDescriptionDraft>>(url);
+      return res.data || null;
+    } catch {
+      return null;
+    }
+  },
+
+  deleteDraft: async (positionId: string, experienceLevel?: string): Promise<void> => {
+    try {
+      const url = experienceLevel
+        ? `/job-descriptions/drafts/${positionId}?experienceLevel=${encodeURIComponent(experienceLevel)}`
+        : `/job-descriptions/drafts/${positionId}`;
+      await apiClient.delete(url);
+    } catch {
+      // ignore
     }
   },
 };

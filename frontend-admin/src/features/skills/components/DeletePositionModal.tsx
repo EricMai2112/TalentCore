@@ -1,4 +1,8 @@
-import { Trash2, Loader2 } from "lucide-react";
+"use client";
+
+import { useState, useEffect } from "react";
+import { createPortal } from "react-dom";
+import { Trash2, Loader2, X } from "lucide-react";
 
 interface DeletePositionModalProps {
   isOpen: boolean;
@@ -15,45 +19,67 @@ export default function DeletePositionModal({
   positionName,
   isDeleting,
 }: DeletePositionModalProps) {
-  if (!isOpen) return null;
+  const [isMounted, setIsMounted] = useState(false);
 
-  return (
-    <div className="fixed inset-0 z-50 bg-black/45 backdrop-blur-sm flex items-center justify-center p-4 animate-in fade-in duration-200">
+  useEffect(() => {
+    setIsMounted(true);
+  }, []);
+
+  if (!isOpen || !isMounted) return null;
+
+  return createPortal(
+    <div className="fixed inset-0 z-[9999] flex items-center justify-center p-4">
+      {/* Full Backdrop */}
       <div
-        className="bg-white rounded-2xl w-full max-w-sm shadow-2xl p-6 border border-gray-100 animate-in zoom-in-95 duration-200"
+        className="fixed inset-0 bg-slate-950/45 backdrop-blur-xs transition-opacity animate-in fade-in duration-200"
+        onClick={onClose}
+      />
+
+      <div
+        className="relative bg-white/95 backdrop-blur-2xl rounded-3xl w-full max-w-sm shadow-2xl shadow-rose-500/10 border border-white/90 p-6 z-10 text-slate-900 animate-in zoom-in-95 duration-200"
         onClick={(e) => e.stopPropagation()}
       >
         <div className="flex items-start gap-4">
-          <div className="w-10 h-10 rounded-full bg-red-50 border border-red-100 flex items-center justify-center shrink-0 text-red-500">
+          <div className="w-11 h-11 rounded-2xl bg-gradient-to-tr from-rose-500 to-red-600 text-white flex items-center justify-center shrink-0 shadow-md shadow-rose-500/20">
             <Trash2 size={20} />
           </div>
-          <div className="space-y-1.5">
-            <h3 className="text-base font-bold text-gray-900">Xóa vị trí?</h3>
-            <p className="text-sm text-gray-500 leading-relaxed">
-              Xóa vị trí <strong className="text-gray-800">"{positionName}"</strong>?
+          <div className="flex-1 min-w-0 space-y-1">
+            <h3 className="text-base font-bold text-slate-900">Xóa vị trí?</h3>
+            <p className="text-xs text-slate-500 leading-relaxed">
+              Xóa vị trí <strong className="text-slate-800 font-bold">"{positionName}"</strong>?
               Toàn bộ kỹ năng gắn với vị trí này cũng sẽ bị gỡ. Không thể hoàn tác.
             </p>
           </div>
+          <button
+            type="button"
+            onClick={onClose}
+            className="p-1.5 text-slate-400 hover:text-slate-700 hover:bg-slate-100 rounded-xl transition-colors cursor-pointer"
+          >
+            <X size={16} />
+          </button>
         </div>
 
-        <div className="mt-6 flex items-center justify-end gap-3">
+        <div className="mt-6 pt-4 border-t border-slate-100 flex items-center justify-end gap-3">
           <button
+            type="button"
             onClick={onClose}
             disabled={isDeleting}
-            className="px-4 py-2 border border-gray-200 bg-white hover:bg-gray-50 text-gray-700 font-semibold text-sm rounded-xl transition-colors cursor-pointer disabled:opacity-50"
+            className="px-4 py-2 border border-slate-200 bg-white hover:bg-slate-50 text-slate-700 font-bold text-xs sm:text-sm rounded-xl transition-colors cursor-pointer disabled:opacity-50 shadow-3xs"
           >
             Hủy
           </button>
           <button
+            type="button"
             onClick={onConfirm}
             disabled={isDeleting}
-            className="flex items-center gap-1.5 px-4 py-2 bg-red-600 hover:bg-red-700 disabled:bg-red-400 text-white font-semibold text-sm rounded-xl transition-all cursor-pointer"
+            className="flex items-center gap-1.5 px-5 py-2 bg-gradient-to-r from-rose-600 to-red-600 hover:from-rose-700 hover:to-red-700 disabled:opacity-50 text-white font-bold text-xs sm:text-sm rounded-xl transition-all shadow-md shadow-rose-500/20 cursor-pointer"
           >
             {isDeleting ? <Loader2 size={16} className="animate-spin" /> : <Trash2 size={16} />}
-            Xóa vị trí
+            <span>Xóa vị trí</span>
           </button>
         </div>
       </div>
-    </div>
+    </div>,
+    document.body
   );
 }

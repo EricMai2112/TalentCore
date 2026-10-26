@@ -1,0 +1,576 @@
+'use client'
+
+import { useState, useEffect, useMemo } from 'react'
+import dynamic from 'next/dynamic'
+import { Loader2, Calendar as CalendarIcon } from 'lucide-react'
+import { InterviewItem, InterviewStatus, InterviewResult } from '../types/interview.types'
+import { useInterviewsQuery } from '../hooks/useInterviewsQuery'
+import { useDepartmentsQuery } from '@/src/features/departments/hooks/useDepartmentsQuery'
+import { useQueryClient } from '@tanstack/react-query'
+import { Department } from '@/src/features/departments/types/department.types'
+import { candidateApi } from '@/src/features/candidates/services/candidate.api'
+import { useAuth } from '@/src/providers/AuthProvider'
+import { UserRole } from '@/src/features/users/types/user.types'
+
+// Lazy load heavy CandidateDetailModal (43KB) on demand
+const CandidateDetailModal = dynamic(
+  () => import('@/src/features/candidates/components/CandidateDetailModal'),
+  { ssr: false }
+)
+import {
+  InterviewsHeader,
+  InterviewsFilterToolbar,
+  InterviewsListView,
+  InterviewsCalendarView,
+  ApproveInterviewCancelModal,
+  InterviewWorkflowStatusBadge,
+  InterviewResultBadge
+} from './'
+import { RejectCandidateModal } from '@/src/components/common'
+import { InterviewStatCards } from './InterviewStatCards'
+import { TodayScheduleSidebar } from './TodayScheduleSidebar'
+import { DeptScheduleFormModal } from './DeptScheduleFormModal'
+import { HrApproveScheduleModal } from './HrApproveScheduleModal'
+import { useSidebar } from '@/src/providers/SidebarProvider'
+
+/**
+ * Pure helper — no closure deps, safe to call inside useMemo.
+ * todayISO: pre-computed 'YYYY-MM-DD' string from the component.
+ */
+function isMatchingTimeTab(
+  itemDateStr?: string,
+  tab: 'ALL' | 'TODAY' | 'THIS_WEEK' | 'NEXT_WEEK' = 'ALL',
+  todayISO?: string
+): boolean {
+  if (tab === 'ALL' || !itemDateStr) return true
+  const d = new Date(itemDateStr)
+  if (isNaN(d.getTime())) return true
+  const dStr = d.toISOString().split('T')[0]
+
+  if (tab === 'TODAY') {
+    return dStr === (todayISO ?? new Date().toISOString().split('T')[0])
+  }
+
+  const curr = new Date()
+  const dayOfWeek = curr.getDay() === 0 ? 7 : curr.getDay() // Mon = 1, Sun = 7
+
+  const mondayThisWeek = new Date(curr)
+  mondayThisWeek.setDate(curr.getDate() - dayOfWeek + 1)
+  mondayThisWeek.setHours(0, 0, 0, 0)
+
+  const sundayThisWeek = new Date(mondayThisWeek)
+  sundayThisWeek.setDate(mondayThisWeek.getDate() + 6)
+  sundayThisWeek.setHours(23, 59, 59, 999)
+
+  if (tab === 'THIS_WEEK') {
+    return d >= mondayThisWeek && d <= sundayThisWeek
+  }
+
+  const mondayNextWeek = new Date(mondayThisWeek)
+  mondayNextWeek.setDate(mondayThisWeek.getDate() + 7)
+
+  const sundayNextWeek = new Date(sundayThisWeek)
+  sundayNextWeek.setDate(sundayThisWeek.getDate() + 7)
+
+  if (tab === 'NEXT_WEEK') {
+    return d >= mondayNextWeek && d <= sundayNextWeek
+  }
+
+  return true
+}
+
+interface InterviewsManagerProps {
+  /** Pre-fetched interviews from the Server Component (SSR). */
+  initialInterviews?: InterviewItem[]
+  /** Pre-fetched departments from the Server Component (SSR). */
+  initialDepartments?: Department[]
+  /** Pre-fetched candidate applications from the Server Component (SSR). */
+  initialApplications?: any[]
+}
+
+export default function InterviewsManager({
+  initialInterviews = [],
+  initialDepartments = [],
+  initialApplications = []
+}: InterviewsManagerProps) {
+  const { user } = useAuth()
+
+  const isDeptManager = user?.role === UserRole.DEPARTMENT_MANAGER
+  const isEmployee = user?.role === UserRole.EMPLOYEE
+  const userDeptId =
+    typeof user?.departmentId === 'object' ? user?.departmentId?._id : user?.departmentId
+
+  const [viewMode, setViewMode] = useState<'list' | 'calendar'>('list')
+  const { isCollapsed, collapse } = useSidebar()
+
+  const handleViewModeChange = (mode: 'list' | 'calendar') => {
+    setViewMode(mode)
+    if (mode === 'calendar' && !isCollapsed) {
+      collapse()
+    }
+  }
+
+  // Automatically collapse sidebar when calendar view is active to provide maximum space
+  useEffect(() => {
+    if (viewMode === 'calendar' && !isCollapsed) {
+      collapse()
+    }
+  }, [viewMode])
+
+  const [searchQuery, setSearchQuery] = useState<string>('')
+  const [timeTabFilter, setTimeTabFilter] = useState<'ALL' | 'TODAY' | 'THIS_WEEK' | 'NEXT_WEEK'>(
+    'ALL'
+  )
+  const [statusFilter, setStatusFilter] = useState<string>('ALL')
+  const [departmentFilter, setDepartmentFilter] = useState<string>('ALL')
+  const [positionFilter, setPositionFilter] = useState<string>('ALL')
+
+  // Pagination State for List View
+  const [currentPage, setCurrentPage] = useState<number>(1)
+  const pageSize = 10
+
+  // Reset page when filters change
+  useEffect(() => {
+    setCurrentPage(1)
+  }, [departmentFilter, positionFilter, statusFilter, searchQuery, timeTabFilter])
+
+  const handleResetFilters = () => {
+    setSearchQuery('')
+    setTimeTabFilter('ALL')
+    setStatusFilter('ALL')
+    if (!isDeptManager && !isEmployee) {
+      setDepartmentFilter('ALL')
+    }
+    setPositionFilter('ALL')
+  }
+
+  const queryClient = useQueryClient()
+  const { data: deptData } = useDepartmentsQuery({ initialData: initialDepartments })
+  const departments = deptData || initialDepartments
+
+  const { data: interviewData, isLoading } = useInterviewsQuery({
+    initialData: initialInterviews.length > 0 ? initialInterviews : undefined
+  })
+  const interviews = interviewData || []
+
+  const [candidateApplications, setCandidateApplications] = useState<any[]>(initialApplications)
+
+  const refetchInterviews = () => {
+    queryClient.invalidateQueries({ queryKey: ['interviews'] })
+  }
+
+  // Calendar Month Navigation
+  const [currentMonthDate, setCurrentMonthDate] = useState<Date>(new Date()) // Default Current Month
+
+  // Hover Popover State cho Calendar Event
+  const [hoveredInterview, setHoveredInterview] = useState<{
+    item: InterviewItem
+    x: number
+    y: number
+    clusterItems?: InterviewItem[]
+  } | null>(null)
+
+  // State cho Modal Xem chi tiết ứng viên
+  const [selectedDetailInterview, setSelectedDetailInterview] = useState<InterviewItem | null>(null)
+  const [selectedCandidateApp, setSelectedCandidateApp] = useState<any | null>(null)
+  const [isDetailModalOpen, setIsDetailModalOpen] = useState<boolean>(false)
+
+  const handleOpenCandidateDetailModal = (interview: InterviewItem) => {
+    const appId =
+      typeof interview.applicationId === 'object'
+        ? (interview.applicationId as any)._id
+        : interview.applicationId
+    const foundApp = candidateApplications.find((app) => app._id === appId)
+    setSelectedDetailInterview(interview)
+    setSelectedCandidateApp(
+      foundApp || {
+        _id: appId,
+        candidateId: interview.candidateId,
+        jobDescriptionId: interview.jobDescriptionId
+      }
+    )
+    setIsDetailModalOpen(true)
+    setActiveMenuId(null)
+    setHoveredInterview(null)
+  }
+
+  // State cho Modal Xếp lịch của Trưởng phòng
+  const [selectedDeptScheduleInterview, setSelectedDeptScheduleInterview] =
+    useState<InterviewItem | null>(null)
+  const [isDeptScheduleModalOpen, setIsDeptScheduleModalOpen] = useState<boolean>(false)
+
+  const handleOpenDeptScheduleModal = (interview: InterviewItem) => {
+    setSelectedDeptScheduleInterview(interview)
+    setIsDeptScheduleModalOpen(true)
+  }
+
+  // State cho Modal HR Duyệt lịch xem trước
+  const [selectedHrApproveInterview, setSelectedHrApproveInterview] =
+    useState<InterviewItem | null>(null)
+  const [isHrApproveModalOpen, setIsHrApproveModalOpen] = useState<boolean>(false)
+
+  const handleApproveHrSchedule = (interview: InterviewItem) => {
+    setSelectedHrApproveInterview(interview)
+    setIsHrApproveModalOpen(true)
+  }
+
+  // State cho Modal Từ chối CV của Trưởng phòng
+  const [selectedRejectDeptCvInterview, setSelectedRejectDeptCvInterview] =
+    useState<InterviewItem | null>(null)
+  const [isRejectDeptCvModalOpen, setIsRejectDeptCvModalOpen] = useState<boolean>(false)
+
+  const handleRejectDeptCv = (interview: InterviewItem) => {
+    setSelectedRejectDeptCvInterview(interview)
+    setIsRejectDeptCvModalOpen(true)
+  }
+
+  // State cho Modal HR Duyệt hủy lịch phỏng vấn
+  const [selectedApproveCancelInterview, setSelectedApproveCancelInterview] =
+    useState<InterviewItem | null>(null)
+  const [isApproveCancelModalOpen, setIsApproveCancelModalOpen] = useState<boolean>(false)
+
+  const handleApproveCandidateCancellation = (interview: InterviewItem) => {
+    setSelectedApproveCancelInterview(interview)
+    setIsApproveCancelModalOpen(true)
+  }
+
+  // Active dropdown action ID
+  const [activeMenuId, setActiveMenuId] = useState<string | null>(null)
+
+  // Load candidate applications if not hydrated from SSR
+  useEffect(() => {
+    if (initialApplications.length > 0) return
+    const loadApplications = async () => {
+      try {
+        const apps = await candidateApi.getCandidates()
+        setCandidateApplications(apps || [])
+      } catch (err) {
+        console.error('Lỗi khi lấy danh sách ứng viên:', err)
+      }
+    }
+    loadApplications()
+  }, [initialApplications])
+
+  // Lock department filter if user is Department Manager or Employee
+  useEffect(() => {
+    if ((isDeptManager || isEmployee) && userDeptId) {
+      setDepartmentFilter(userDeptId)
+    }
+  }, [userDeptId, isDeptManager, isEmployee])
+
+  // Dynamic positions options based on current interviews & active department filter
+  const availablePositions = useMemo(
+    () =>
+      Array.from(
+        new Set(
+          interviews
+            .filter((item) => {
+              if (!departmentFilter || departmentFilter === 'ALL') return true
+              const itemDeptId =
+                typeof item.jobDescriptionId === 'object' && item.jobDescriptionId?.departmentId
+                  ? typeof item.jobDescriptionId.departmentId === 'object'
+                    ? item.jobDescriptionId.departmentId._id
+                    : item.jobDescriptionId.departmentId
+                  : null
+              return itemDeptId === departmentFilter
+            })
+            .map((item) =>
+              typeof item.jobDescriptionId === 'object' ? item.jobDescriptionId?.title : null
+            )
+            .filter(Boolean)
+        )
+      ) as string[],
+    [interviews, departmentFilter]
+  )
+
+  // Stable today string — only recomputed when component first mounts
+  const todayISO = useMemo(() => new Date().toISOString().split('T')[0], [])
+
+  // Base role & filter scoping — memoized to avoid full recompute on every render
+  const baseFilteredInterviews = useMemo(
+    () =>
+      interviews.filter((item) => {
+        const itemDeptId =
+          typeof item.jobDescriptionId === 'object' && item.jobDescriptionId?.departmentId
+            ? typeof item.jobDescriptionId.departmentId === 'object'
+              ? item.jobDescriptionId.departmentId._id
+              : item.jobDescriptionId.departmentId
+            : null
+
+        const itemInterviewerId =
+          typeof item.interviewerId === 'object' ? item.interviewerId?._id : item.interviewerId
+
+        // 1. Role Scope Filter
+        if (isDeptManager) {
+          if (userDeptId && itemDeptId !== userDeptId) return false
+        } else if (isEmployee) {
+          const isAssigned =
+            itemInterviewerId === user?._id || itemInterviewerId === (user as any)?.id
+          if (!isAssigned) return false
+        }
+
+        // 2. Department Dropdown Filter
+        if (departmentFilter && departmentFilter !== 'ALL') {
+          if (itemDeptId !== departmentFilter) return false
+        }
+
+        // 3. Position Dropdown Filter
+        if (positionFilter && positionFilter !== 'ALL') {
+          const jobTitle =
+            typeof item.jobDescriptionId === 'object' ? item.jobDescriptionId?.title : ''
+          if (jobTitle !== positionFilter) return false
+        }
+
+        // 4. Status Dropdown Filter
+        if (statusFilter && statusFilter !== 'ALL') {
+          const confirmationStatus = item.confirmationStatus
+          const status = item.status
+
+          switch (statusFilter) {
+            case 'WAITING_DEPT_SCHEDULE':
+              if (confirmationStatus !== 'WAITING_DEPT_SCHEDULE') return false
+              break
+            case 'WAITING_HR_APPROVAL':
+              if (confirmationStatus !== 'WAITING_HR_APPROVAL') return false
+              break
+            case 'SCHEDULED':
+              if (
+                confirmationStatus !== 'SCHEDULED' &&
+                !(status === InterviewStatus.SCHEDULED && !confirmationStatus)
+              )
+                return false
+              break
+            case 'CONFIRMED':
+            case 'UPCOMING':
+              if (confirmationStatus !== 'CONFIRMED' && status !== InterviewStatus.UPCOMING)
+                return false
+              break
+            case 'IN_PROGRESS':
+              if (status !== InterviewStatus.IN_PROGRESS) return false
+              break
+            case 'COMPLETED':
+              if (status !== InterviewStatus.COMPLETED) return false
+              break
+            case 'CANCELLED':
+            case 'REJECTED':
+              if (
+                status !== InterviewStatus.CANCELLED &&
+                confirmationStatus !== 'CANCELLED' &&
+                confirmationStatus !== 'REJECTED' &&
+                confirmationStatus !== 'CANCEL_REQUESTED'
+              )
+                return false
+              break
+            default:
+              if (status !== statusFilter && confirmationStatus !== statusFilter) return false
+              break
+          }
+        }
+
+        // 5. Search Query Filter
+        if (searchQuery.trim()) {
+          const q = searchQuery.toLowerCase().trim()
+          const candName =
+            typeof item.candidateId === 'object'
+              ? (item.candidateId?.fullName || item.candidateId?.name || '').toLowerCase()
+              : ''
+          const jobTitle =
+            typeof item.jobDescriptionId === 'object'
+              ? (item.jobDescriptionId?.title || '').toLowerCase()
+              : ''
+          const interviewerName =
+            typeof item.interviewerId === 'object'
+              ? (item.interviewerId?.name || item.interviewerId?.email || '').toLowerCase()
+              : ''
+
+          const matches =
+            candName.includes(q) || jobTitle.includes(q) || interviewerName.includes(q)
+          if (!matches) return false
+        }
+
+        return true
+      }),
+    [
+      interviews,
+      isDeptManager,
+      isEmployee,
+      userDeptId,
+      user,
+      departmentFilter,
+      positionFilter,
+      statusFilter,
+      searchQuery
+    ]
+  )
+
+  // Calculate tab counts — memoized, depends only on baseFilteredInterviews and todayISO
+  const tabCounts = useMemo(
+    () => ({
+      all: baseFilteredInterviews.length,
+      today: baseFilteredInterviews.filter((i) => isMatchingTimeTab(i.date, 'TODAY', todayISO))
+        .length,
+      thisWeek: baseFilteredInterviews.filter((i) =>
+        isMatchingTimeTab(i.date, 'THIS_WEEK', todayISO)
+      ).length,
+      nextWeek: baseFilteredInterviews.filter((i) =>
+        isMatchingTimeTab(i.date, 'NEXT_WEEK', todayISO)
+      ).length
+    }),
+    [baseFilteredInterviews, todayISO]
+  )
+
+  // Final filtered list based on active time tab (Sorted: Newest updated/created first)
+  const filteredInterviews = useMemo(
+    () =>
+      baseFilteredInterviews
+        .filter((item) => isMatchingTimeTab(item.date, timeTabFilter, todayISO))
+        .sort((a, b) => {
+          const timeA = new Date(a.updatedAt || a.date || a.createdAt || 0).getTime()
+          const timeB = new Date(b.updatedAt || b.date || b.createdAt || 0).getTime()
+          return timeB - timeA
+        }),
+    [baseFilteredInterviews, timeTabFilter, todayISO]
+  )
+
+  const formatDate = (dateStr?: string) => {
+    if (!dateStr) return '2026-07-28'
+    const d = new Date(dateStr)
+    const y = d.getFullYear()
+    const m = String(d.getMonth() + 1).padStart(2, '0')
+    const day = String(d.getDate()).padStart(2, '0')
+    return `${y}-${m}-${day}`
+  }
+
+  const getStatusBadge = (status: InterviewStatus, confirmationStatus?: string) => {
+    return <InterviewWorkflowStatusBadge status={status} confirmationStatus={confirmationStatus} />
+  }
+
+  const getResultBadge = (result: InterviewResult) => {
+    return <InterviewResultBadge result={result} />
+  }
+
+  return (
+    <div
+      className={`transition-all duration-300 ${viewMode === 'calendar' ? 'space-y-3.5' : 'space-y-3'}`}
+    >
+      {/* Top Header */}
+      <InterviewsHeader totalCount={filteredInterviews.length} />
+
+      {/* Top Stat Cards (List View Only) */}
+      {viewMode === 'list' && <InterviewStatCards interviews={interviews} />}
+
+      {/* Toolbar / Filters */}
+      <InterviewsFilterToolbar
+        viewMode={viewMode}
+        setViewMode={handleViewModeChange}
+        searchQuery={searchQuery}
+        setSearchQuery={setSearchQuery}
+        departmentFilter={departmentFilter}
+        setDepartmentFilter={setDepartmentFilter}
+        positionFilter={positionFilter}
+        setPositionFilter={setPositionFilter}
+        statusFilter={statusFilter}
+        setStatusFilter={setStatusFilter}
+        departments={departments}
+        availablePositions={availablePositions}
+        isDeptManager={isDeptManager}
+        isEmployee={isEmployee}
+        onResetFilters={handleResetFilters}
+      />
+
+      {/* Main Content Area (Full Width) */}
+      {isLoading ? (
+        <div className="py-20 space-y-3 text-center border bg-white/20 border-white/60 rounded-3xl">
+          <Loader2 size={32} className="animate-spin text-[#3B82F6] mx-auto" />
+          <p className="text-xs font-medium text-slate-500">Đang tải danh sách phỏng vấn...</p>
+        </div>
+      ) : viewMode === 'list' ? (
+        /* LIST VIEW MODE */
+        <InterviewsListView
+          interviews={filteredInterviews}
+          activeMenuId={activeMenuId}
+          setActiveMenuId={setActiveMenuId}
+          onOpenCandidateDetailModal={handleOpenCandidateDetailModal}
+          onApproveCandidateCancellation={handleApproveCandidateCancellation}
+          onOpenDeptScheduleModal={handleOpenDeptScheduleModal}
+          onRejectDeptCv={handleRejectDeptCv}
+          onApproveHrSchedule={handleApproveHrSchedule}
+          formatDate={formatDate}
+          getStatusBadge={getStatusBadge}
+          getResultBadge={getResultBadge}
+          currentPage={currentPage}
+          pageSize={pageSize}
+          onPageChange={setCurrentPage}
+          timeTabFilter={timeTabFilter}
+          setTimeTabFilter={setTimeTabFilter}
+          tabCounts={tabCounts}
+        />
+      ) : (
+        /* CALENDAR VIEW MODE */
+        <InterviewsCalendarView
+          currentMonthDate={currentMonthDate}
+          setCurrentMonthDate={setCurrentMonthDate}
+          interviews={filteredInterviews}
+          hoveredInterview={hoveredInterview}
+          setHoveredInterview={setHoveredInterview}
+          formatDate={formatDate}
+          getStatusBadge={getStatusBadge}
+          getResultBadge={getResultBadge}
+        />
+      )}
+
+      {/* Trưởng phòng Xếp lịch & Chọn Interviewer Modal */}
+      <DeptScheduleFormModal
+        isOpen={isDeptScheduleModalOpen}
+        onClose={() => setIsDeptScheduleModalOpen(false)}
+        interview={selectedDeptScheduleInterview}
+        onSuccess={refetchInterviews}
+      />
+
+      {/* HR Duyệt lịch xem trước Modal */}
+      <HrApproveScheduleModal
+        isOpen={isHrApproveModalOpen}
+        onClose={() => setIsHrApproveModalOpen(false)}
+        interview={selectedHrApproveInterview}
+        onSuccess={refetchInterviews}
+      />
+
+      {/* Modal Từ chối CV của Trưởng phòng */}
+      <RejectCandidateModal
+        isOpen={isRejectDeptCvModalOpen}
+        onClose={() => setIsRejectDeptCvModalOpen(false)}
+        interviewId={selectedRejectDeptCvInterview?._id}
+        candidateName={
+          selectedRejectDeptCvInterview?.candidateId?.fullName ||
+          selectedRejectDeptCvInterview?.candidateId?.name ||
+          'Ứng viên'
+        }
+        jobTitle={selectedRejectDeptCvInterview?.jobDescriptionId?.title || 'Vị trí tuyển dụng'}
+        onSuccess={refetchInterviews}
+      />
+
+      {/* Modal HR Duyệt hủy lịch phỏng vấn */}
+      <ApproveInterviewCancelModal
+        isOpen={isApproveCancelModalOpen}
+        onClose={() => setIsApproveCancelModalOpen(false)}
+        interview={selectedApproveCancelInterview}
+        onSuccess={refetchInterviews}
+      />
+
+      {/* Candidate Detail Modal */}
+      {isDetailModalOpen && selectedCandidateApp && (
+        <CandidateDetailModal
+          application={selectedCandidateApp}
+          interview={selectedDetailInterview}
+          onClose={() => {
+            setIsDetailModalOpen(false)
+            setSelectedDetailInterview(null)
+            setSelectedCandidateApp(null)
+          }}
+          onOpenDeptScheduleModal={handleOpenDeptScheduleModal}
+          onRejectDeptCv={handleRejectDeptCv}
+        />
+      )}
+    </div>
+  )
+}

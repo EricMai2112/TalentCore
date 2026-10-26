@@ -16,6 +16,9 @@ import {
   CreatePipelineTemplateDto,
   UpdatePipelineTemplateDto,
 } from '../dtos/pipeline-template.dto';
+import { Public } from '../../auth/decorators/public.decorator';
+import { Roles } from '../../auth/decorators/roles.decorator';
+import { UserRole } from '../../users/schemas/user.schema';
 
 @Controller('pipeline-templates')
 @UsePipes(new ValidationPipe({ whitelist: true }))
@@ -24,6 +27,7 @@ export class PipelineTemplateController {
     private readonly pipelineTemplateService: PipelineTemplateService,
   ) {}
 
+  @Roles(UserRole.HR_ADMIN)
   @Post()
   async create(@Body() createPipelineTemplateDto: CreatePipelineTemplateDto) {
     const template = await this.pipelineTemplateService.create(
@@ -35,6 +39,7 @@ export class PipelineTemplateController {
     };
   }
 
+  @Public()
   @Get()
   async findAll() {
     const templates = await this.pipelineTemplateService.findAll();
@@ -44,6 +49,7 @@ export class PipelineTemplateController {
     };
   }
 
+  @Public()
   @Get(':id')
   async findById(@Param('id') id: string) {
     const template = await this.pipelineTemplateService.findById(id);
@@ -53,6 +59,7 @@ export class PipelineTemplateController {
     };
   }
 
+  @Roles(UserRole.HR_ADMIN)
   @Put(':id')
   async update(
     @Param('id') id: string,
@@ -68,6 +75,7 @@ export class PipelineTemplateController {
     };
   }
 
+  @Roles(UserRole.HR_ADMIN)
   @Delete(':id')
   @HttpCode(HttpStatus.OK)
   async delete(@Param('id') id: string) {
