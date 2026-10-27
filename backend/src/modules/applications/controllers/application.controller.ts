@@ -9,7 +9,11 @@ import {
   Query,
   UsePipes,
   ValidationPipe,
+  UseInterceptors,
+  UploadedFile,
+  BadRequestException,
 } from '@nestjs/common';
+import { FileInterceptor } from '@nestjs/platform-express';
 import { ApplicationService } from '../services/application.service';
 import { ApplyJobDto } from '../dtos/application.dto';
 import { CurrentUser } from '../../auth/decorators/current-user.decorator';
@@ -21,12 +25,30 @@ export class ApplicationController {
   constructor(private readonly applicationService: ApplicationService) {}
 
   @Post('apply')
+  @UseInterceptors(
+    FileInterceptor('cv', {
+      limits: { fileSize: 15 * 1024 * 1024 },
+      fileFilter: (_req, file, cb) => {
+        const allowed = /\.(pdf|docx|png|jpg|jpeg|webp)$/i;
+        if (!file.originalname.match(allowed)) {
+          return cb(
+            new BadRequestException(
+              'Chỉ chấp nhận file PDF, Word (.docx) hoặc Ảnh (PNG, JPG).',
+            ),
+            false,
+          );
+        }
+        cb(null, true);
+      },
+    }),
+  )
   @UsePipes(new ValidationPipe({ whitelist: true, transform: true }))
   async applyJob(
     @CurrentUser('id') userId: string,
     @Body() dto: ApplyJobDto,
+    @UploadedFile() file?: Express.Multer.File,
   ) {
-    return this.applicationService.applyJob(userId, dto.jobDescriptionId, dto.candidateId);
+    return this.applicationService.applyJob(userId, dto.jobDescriptionId, dto.candidateId, file);
   }
 
   @Get('my-applications')

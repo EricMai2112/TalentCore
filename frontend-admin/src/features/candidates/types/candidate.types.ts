@@ -85,6 +85,10 @@ export interface CandidateApplication {
   aiEvaluation?: any;
   stageName?: string;
   stageColor?: string;
+  cvUrl?: string;
+  cvOriginalName?: string;
+  cvMimeType?: string;
+  cvSize?: number;
   createdAt?: string;
   updatedAt?: string;
 }

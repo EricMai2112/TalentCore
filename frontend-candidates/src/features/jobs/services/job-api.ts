@@ -11,7 +11,8 @@ interface ApiResponse<T> {
 
 export interface ApplyJobPayload {
   jobDescriptionId: string;
-  candidateId: string;
+  candidateId?: string;
+  cvFile?: File | null;
 }
 
 export interface ApplyJobResponse {
@@ -80,7 +81,18 @@ export const candidateJobApi = {
       return [];
     }
   },
-  applyJob: async (payload: ApplyJobPayload): Promise<ApplyJobResponse> => {
-    return apiClient.post<ApplyJobResponse>("/applications/apply", payload);
+  applyJob: async (payload: ApplyJobPayload | FormData): Promise<ApplyJobResponse> => {
+    if (payload instanceof FormData) {
+      return apiClient.post<ApplyJobResponse>("/applications/apply", payload);
+    }
+    const formData = new FormData();
+    formData.append("jobDescriptionId", payload.jobDescriptionId);
+    if (payload.candidateId) {
+      formData.append("candidateId", payload.candidateId);
+    }
+    if (payload.cvFile) {
+      formData.append("cv", payload.cvFile);
+    }
+    return apiClient.post<ApplyJobResponse>("/applications/apply", formData);
   },
 };

@@ -11,6 +11,7 @@ import {
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
+import * as DocumentPicker from 'expo-document-picker';
 import { useAuth } from '../../context/AuthContext';
 import { applicationService } from '../../services/application.service';
 import { profileService } from '../../services/profile.service';
@@ -25,6 +26,14 @@ interface ApplyJobModalProps {
   onRequireLogin?: () => void;
 }
 
+interface PickedCvFile {
+  uri: string;
+  name: string;
+  size?: number;
+  mimeType?: string;
+  file?: any;
+}
+
 export const ApplyJobModal: React.FC<ApplyJobModalProps> = ({
   isOpen,
   onClose,
@@ -33,9 +42,14 @@ export const ApplyJobModal: React.FC<ApplyJobModalProps> = ({
   onRequireLogin,
 }) => {
   const { user } = useAuth();
+  const [activeTab, setActiveTab] = useState<'upload' | 'profile'>('upload');
+
+  const [selectedFile, setSelectedFile] = useState<PickedCvFile | null>(null);
+
   const [profiles, setProfiles] = useState<CandidateProfile[]>([]);
   const [selectedProfileId, setSelectedProfileId] = useState<string>('');
   const [isLoadingProfiles, setIsLoadingProfiles] = useState(false);
+
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [isSuccess, setIsSuccess] = useState(false);
@@ -67,6 +81,41 @@ export const ApplyJobModal: React.FC<ApplyJobModalProps> = ({
 
   if (!isOpen || !job) return null;
 
+  const handlePickDocument = async () => {
+    try {
+      const result = await DocumentPicker.getDocumentAsync({
+        type: [
+          'application/pdf',
+          'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+          'image/png',
+          'image/jpeg',
+          'image/webp',
+        ],
+        copyToCacheDirectory: true,
+      });
+
+      if (!result.canceled && result.assets && result.assets.length > 0) {
+        const asset = result.assets[0];
+        const fileSize = asset.size || 0;
+        if (fileSize > 15 * 1024 * 1024) {
+          setErrorMessage('Kích thước tệp CV vượt quá giới hạn 15MB');
+          return;
+        }
+
+        setSelectedFile({
+          uri: asset.uri,
+          name: asset.name || 'cv_upload.pdf',
+          size: asset.size,
+          mimeType: asset.mimeType,
+          file: (asset as any).file,
+        });
+        setErrorMessage(null);
+      }
+    } catch (err: any) {
+      setErrorMessage(err?.message || 'Không thể chọn tệp tin. Vui lòng thử lại!');
+    }
+  };
+
   const handleApply = async () => {
     if (!user) {
       onClose();
@@ -74,19 +123,33 @@ export const ApplyJobModal: React.FC<ApplyJobModalProps> = ({
       return;
     }
 
-    if (!selectedProfileId) {
-      setErrorMessage('Vui lòng chọn một hồ sơ để ứng tuyển');
-      return;
+    if (activeTab === 'upload') {
+      if (!selectedFile) {
+        setErrorMessage('Vui lòng chọn tệp CV để ứng tuyển');
+        return;
+      }
+    } else {
+      if (!selectedProfileId) {
+        setErrorMessage('Vui lòng chọn một hồ sơ online để ứng tuyển');
+        return;
+      }
     }
 
     setIsSubmitting(true);
     setErrorMessage(null);
 
     try {
-      await applicationService.applyJob({
-        jobDescriptionId: job._id,
-        candidateId: selectedProfileId,
-      });
+      if (activeTab === 'upload') {
+        await applicationService.applyJob({
+          jobDescriptionId: job._id,
+          cvFile: selectedFile,
+        });
+      } else {
+        await applicationService.applyJob({
+          jobDescriptionId: job._id,
+          candidateId: selectedProfileId,
+        });
+      }
 
       setIsSuccess(true);
       if (onAppliedSuccess) {
@@ -146,7 +209,7 @@ export const ApplyJobModal: React.FC<ApplyJobModalProps> = ({
               </View>
               <Text style={styles.successTitle}>Nộp hồ sơ thành công!</Text>
               <Text style={styles.successMessage}>
-                Hồ sơ của bạn đã được gửi trực tiếp đến Nhà tuyển dụng và hệ thống AI đang tiến hành đánh giá độ phù hợp.
+                Hồ sơ mới đã được tạo và gửi trực tiếp đến Nhà tuyển dụng. Hệ thống AI đang tiến hành đánh giá độ phù hợp.
               </Text>
               <TouchableOpacity
                 style={styles.successCloseBtn}
@@ -205,97 +268,186 @@ export const ApplyJobModal: React.FC<ApplyJobModalProps> = ({
                 </View>
               </View>
 
-              <View style={styles.profilesSection}>
-                <View style={styles.sectionHeaderRow}>
-                  <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-                    <Ionicons name="layers-outline" size={16} color="#7c3aed" style={{ marginRight: 6 }} />
-                    <Text style={styles.sectionTitle}>CHỌN HỒ SƠ ỨNG TUYỂN</Text>
-                    <Text style={styles.requiredStar}> *</Text>
+              <View style={styles.tabContainer}>
+                <TouchableOpacity
+                  style={[styles.tabButton, activeTab === 'upload' && styles.tabButtonActive]}
+                  onPress={() => {
+                    setActiveTab('upload');
+                    setErrorMessage(null);
+                  }}
+                  activeOpacity={0.8}
+                >
+                  <Ionicons
+                    name="cloud-upload-outline"
+                    size={15}
+                    color={activeTab === 'upload' ? '#7c3aed' : '#64748b'}
+                    style={{ marginRight: 6 }}
+                  />
+                  <Text style={[styles.tabButtonText, activeTab === 'upload' && styles.tabButtonTextActive]}>
+                    Tải lên tệp CV
+                  </Text>
+                </TouchableOpacity>
+
+                <TouchableOpacity
+                  style={[styles.tabButton, activeTab === 'profile' && styles.tabButtonActive]}
+                  onPress={() => {
+                    setActiveTab('profile');
+                    setErrorMessage(null);
+                  }}
+                  activeOpacity={0.8}
+                >
+                  <Ionicons
+                    name="layers-outline"
+                    size={15}
+                    color={activeTab === 'profile' ? '#7c3aed' : '#64748b'}
+                    style={{ marginRight: 6 }}
+                  />
+                  <Text style={[styles.tabButtonText, activeTab === 'profile' && styles.tabButtonTextActive]}>
+                    Chọn hồ sơ online
+                  </Text>
+                </TouchableOpacity>
+              </View>
+
+              {activeTab === 'upload' && (
+                <View style={styles.uploadSection}>
+                  {selectedFile ? (
+                    <View style={styles.fileSelectedCard}>
+                      <View style={styles.fileIconWrapper}>
+                        <Ionicons name="document-text" size={26} color="#059669" />
+                      </View>
+                      <View style={{ flex: 1, marginRight: 8 }}>
+                        <Text style={styles.fileName} numberOfLines={1}>
+                          {selectedFile.name}
+                        </Text>
+                        <Text style={styles.fileSize}>
+                          {selectedFile.size
+                            ? `${(selectedFile.size / (1024 * 1024)).toFixed(2)} MB`
+                            : 'Tệp đã chọn'}
+                        </Text>
+                      </View>
+                      <TouchableOpacity
+                        style={styles.removeFileBtn}
+                        onPress={() => setSelectedFile(null)}
+                      >
+                        <Ionicons name="trash-outline" size={18} color="#e11d48" />
+                      </TouchableOpacity>
+                    </View>
+                  ) : (
+                    <TouchableOpacity
+                      style={styles.uploadBox}
+                      onPress={handlePickDocument}
+                      activeOpacity={0.7}
+                    >
+                      <View style={styles.uploadIconCircle}>
+                        <Ionicons name="cloud-upload" size={24} color="#7c3aed" />
+                      </View>
+                      <Text style={styles.uploadTitle}>Bấm để chọn tệp CV từ thiết bị</Text>
+                      <Text style={styles.uploadSubtitle}>
+                        Hỗ trợ PDF, Word (.docx) hoặc Ảnh (Tối đa 15MB)
+                      </Text>
+                    </TouchableOpacity>
+                  )}
+
+                  <View style={styles.aiHintBox}>
+                    <Ionicons name="sparkles" size={16} color="#7c3aed" style={{ marginRight: 8, marginTop: 2 }} />
+                    <Text style={styles.aiHintText}>
+                      Khi bạn tải lên CV, hệ thống sẽ <Text style={{ fontWeight: '700' }}>tự động bóc tách và tạo 1 hồ sơ mới</Text> trong tài khoản của bạn, sau đó dùng hồ sơ đó để ứng tuyển và chấm điểm AI Matching tức thì.
+                    </Text>
                   </View>
                 </View>
+              )}
 
-                {!user ? (
-                  <View style={styles.warningBox}>
-                    <Ionicons name="person-circle-outline" size={24} color="#d97706" />
-                    <Text style={styles.warningText}>
-                      Bạn cần đăng nhập tài khoản ứng viên để có thể nộp hồ sơ vào vị trí này.
-                    </Text>
-                    <TouchableOpacity
-                      style={styles.warningActionBtn}
-                      onPress={() => {
-                        onClose();
-                        if (onRequireLogin) onRequireLogin();
-                      }}
-                    >
-                      <Text style={styles.warningActionBtnText}>Đăng nhập ngay</Text>
-                    </TouchableOpacity>
-                  </View>
-                ) : isLoadingProfiles ? (
-                  <View style={styles.loadingBox}>
-                    <ActivityIndicator size="small" color="#7c3aed" />
-                    <Text style={styles.loadingText}>Đang tải danh sách hồ sơ của bạn...</Text>
-                  </View>
-                ) : profiles.length === 0 ? (
-                  <View style={styles.warningBox}>
-                    <Ionicons name="document-text-outline" size={24} color="#d97706" />
-                    <Text style={styles.warningText}>
-                      Bạn chưa tạo hồ sơ ứng tuyển nào. Vui lòng vào trang Hồ sơ để tạo hồ sơ trước khi ứng tuyển.
-                    </Text>
-                  </View>
-                ) : (
-                  <View style={styles.profilesList}>
-                    {profiles.map((p) => {
-                      const isSelected = p._id === selectedProfileId;
-                      return (
-                        <TouchableOpacity
-                          key={p._id}
-                          style={[
-                            styles.profileItem,
-                            isSelected && styles.profileItemActive,
-                          ]}
-                          onPress={() => {
-                            setSelectedProfileId(p._id);
-                            if (errorMessage) setErrorMessage(null);
-                          }}
-                          activeOpacity={0.8}
-                        >
-                          <Ionicons
-                            name={isSelected ? 'radio-button-on' : 'radio-button-off'}
-                            size={20}
-                            color={isSelected ? '#7c3aed' : '#94a3b8'}
-                            style={{ marginRight: 10 }}
-                          />
+              {activeTab === 'profile' && (
+                <View style={styles.profilesSection}>
+                  {!user ? (
+                    <View style={styles.warningBox}>
+                      <Ionicons name="person-circle-outline" size={24} color="#d97706" />
+                      <Text style={styles.warningText}>
+                        Bạn cần đăng nhập tài khoản ứng viên để có thể nộp hồ sơ vào vị trí này.
+                      </Text>
+                      <TouchableOpacity
+                        style={styles.warningActionBtn}
+                        onPress={() => {
+                          onClose();
+                          if (onRequireLogin) onRequireLogin();
+                        }}
+                      >
+                        <Text style={styles.warningActionBtnText}>Đăng nhập ngay</Text>
+                      </TouchableOpacity>
+                    </View>
+                  ) : isLoadingProfiles ? (
+                    <View style={styles.loadingBox}>
+                      <ActivityIndicator size="small" color="#7c3aed" />
+                      <Text style={styles.loadingText}>Đang tải danh sách hồ sơ của bạn...</Text>
+                    </View>
+                  ) : profiles.length === 0 ? (
+                    <View style={styles.warningBox}>
+                      <Ionicons name="document-text-outline" size={24} color="#d97706" />
+                      <Text style={styles.warningText}>
+                        Bạn chưa tạo hồ sơ ứng tuyển nào. Bạn có thể chuyển sang tab &quot;Tải lên tệp CV&quot; để hệ thống tự động tạo hồ sơ ngay lập tức.
+                      </Text>
+                      <TouchableOpacity
+                        style={styles.warningActionBtn}
+                        onPress={() => setActiveTab('upload')}
+                      >
+                        <Text style={styles.warningActionBtnText}>Tải lên tệp CV ngay</Text>
+                      </TouchableOpacity>
+                    </View>
+                  ) : (
+                    <View style={styles.profilesList}>
+                      {profiles.map((p) => {
+                        const isSelected = p._id === selectedProfileId;
+                        return (
+                          <TouchableOpacity
+                            key={p._id}
+                            style={[
+                              styles.profileItem,
+                              isSelected && styles.profileItemActive,
+                            ]}
+                            onPress={() => {
+                              setSelectedProfileId(p._id);
+                              if (errorMessage) setErrorMessage(null);
+                            }}
+                            activeOpacity={0.8}
+                          >
+                            <Ionicons
+                              name={isSelected ? 'radio-button-on' : 'radio-button-off'}
+                              size={20}
+                              color={isSelected ? '#7c3aed' : '#94a3b8'}
+                              style={{ marginRight: 10 }}
+                            />
 
-                          <View style={{ flex: 1 }}>
-                            <View style={styles.profileNameRow}>
-                              <Text
-                                style={[
-                                  styles.profileName,
-                                  isSelected && styles.profileNameActive,
-                                ]}
-                                numberOfLines={1}
-                              >
-                                {p.profileName || 'Hồ sơ tiêu chuẩn'}
-                              </Text>
-                              {p.isDefault && (
-                                <View style={styles.defaultBadge}>
-                                  <Text style={styles.defaultBadgeText}>Mặc định</Text>
-                                </View>
-                              )}
+                            <View style={{ flex: 1 }}>
+                              <View style={styles.profileNameRow}>
+                                <Text
+                                  style={[
+                                    styles.profileName,
+                                    isSelected && styles.profileNameActive,
+                                  ]}
+                                  numberOfLines={1}
+                                >
+                                  {p.profileName || 'Hồ sơ tiêu chuẩn'}
+                                </Text>
+                                {p.isDefault && (
+                                  <View style={styles.defaultBadge}>
+                                    <Text style={styles.defaultBadgeText}>Mặc định</Text>
+                                  </View>
+                                )}
+                              </View>
+
+                              {p.headline ? (
+                                <Text style={styles.profileHeadline} numberOfLines={1}>
+                                  {p.headline}
+                                </Text>
+                              ) : null}
                             </View>
-
-                            {p.headline ? (
-                              <Text style={styles.profileHeadline} numberOfLines={1}>
-                                {p.headline}
-                              </Text>
-                            ) : null}
-                          </View>
-                        </TouchableOpacity>
-                      );
-                    })}
-                  </View>
-                )}
-              </View>
+                          </TouchableOpacity>
+                        );
+                      })}
+                    </View>
+                  )}
+                </View>
+              )}
 
               <View style={styles.actionsRow}>
                 <TouchableOpacity
@@ -310,10 +462,19 @@ export const ApplyJobModal: React.FC<ApplyJobModalProps> = ({
                 <TouchableOpacity
                   style={[
                     styles.submitBtnContainer,
-                    (!selectedProfileId || isSubmitting || !user) && styles.submitBtnDisabled,
+                    (isSubmitting ||
+                      !user ||
+                      (activeTab === 'upload' && !selectedFile) ||
+                      (activeTab === 'profile' && !selectedProfileId)) &&
+                      styles.submitBtnDisabled,
                   ]}
                   onPress={handleApply}
-                  disabled={!selectedProfileId || isSubmitting || !user}
+                  disabled={
+                    isSubmitting ||
+                    !user ||
+                    (activeTab === 'upload' && !selectedFile) ||
+                    (activeTab === 'profile' && !selectedProfileId)
+                  }
                   activeOpacity={0.88}
                 >
                   <LinearGradient
@@ -325,7 +486,9 @@ export const ApplyJobModal: React.FC<ApplyJobModalProps> = ({
                     {isSubmitting ? (
                       <View style={styles.submitContent}>
                         <ActivityIndicator size="small" color="#ffffff" style={{ marginRight: 8 }} />
-                        <Text style={styles.submitBtnText}>Đang nộp hồ sơ...</Text>
+                        <Text style={styles.submitBtnText}>
+                          {activeTab === 'upload' ? 'Đang phân tích & nộp...' : 'Đang nộp...'}
+                        </Text>
                       </View>
                     ) : (
                       <View style={styles.submitContent}>
@@ -431,7 +594,7 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: '#e2e8f0',
     padding: 14,
-    marginBottom: 20,
+    marginBottom: 16,
     gap: 8,
   },
   summaryRow: {
@@ -457,25 +620,121 @@ const styles = StyleSheet.create({
   salaryValue: {
     color: '#059669',
   },
-  profilesSection: {
-    marginBottom: 20,
+  tabContainer: {
+    flexDirection: 'row',
+    backgroundColor: '#f1f5f9',
+    borderRadius: 14,
+    padding: 4,
+    marginBottom: 16,
   },
-  sectionHeaderRow: {
+  tabButton: {
+    flex: 1,
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'space-between',
-    marginBottom: 12,
+    justifyContent: 'center',
+    paddingVertical: 10,
+    borderRadius: 10,
   },
-  sectionTitle: {
-    fontSize: 12,
-    fontWeight: '800',
-    color: '#334155',
-    letterSpacing: 0.4,
+  tabButtonActive: {
+    backgroundColor: '#ffffff',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.1,
+    shadowRadius: 2,
+    elevation: 2,
   },
-  requiredStar: {
-    fontSize: 12,
+  tabButtonText: {
+    fontSize: 12.5,
+    fontWeight: '600',
+    color: '#64748b',
+  },
+  tabButtonTextActive: {
+    color: '#7c3aed',
     fontWeight: '700',
-    color: '#ef4444',
+  },
+  uploadSection: {
+    marginBottom: 20,
+    gap: 12,
+  },
+  uploadBox: {
+    borderWidth: 1.5,
+    borderColor: '#cbd5e1',
+    borderStyle: 'dashed',
+    borderRadius: 16,
+    padding: 20,
+    alignItems: 'center',
+    backgroundColor: '#f8fafc',
+    gap: 6,
+  },
+  uploadIconCircle: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    backgroundColor: '#ede9fe',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 4,
+  },
+  uploadTitle: {
+    fontSize: 13,
+    fontWeight: '700',
+    color: '#1e293b',
+  },
+  uploadSubtitle: {
+    fontSize: 11,
+    color: '#64748b',
+    textAlign: 'center',
+  },
+  fileSelectedCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#ecfdf5',
+    borderWidth: 1.5,
+    borderColor: '#a7f3d0',
+    borderRadius: 16,
+    padding: 12,
+  },
+  fileIconWrapper: {
+    width: 40,
+    height: 40,
+    borderRadius: 10,
+    backgroundColor: '#d1fae5',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginRight: 12,
+  },
+  fileName: {
+    fontSize: 13,
+    fontWeight: '700',
+    color: '#065f46',
+  },
+  fileSize: {
+    fontSize: 11,
+    color: '#047857',
+    marginTop: 2,
+  },
+  removeFileBtn: {
+    padding: 8,
+    borderRadius: 8,
+    backgroundColor: '#fee2e2',
+  },
+  aiHintBox: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    backgroundColor: '#f5f3ff',
+    borderWidth: 1,
+    borderColor: '#ddd6fe',
+    borderRadius: 14,
+    padding: 12,
+  },
+  aiHintText: {
+    flex: 1,
+    fontSize: 11.5,
+    color: '#5b21b6',
+    lineHeight: 17,
+  },
+  profilesSection: {
+    marginBottom: 20,
   },
   loadingBox: {
     flexDirection: 'row',

@@ -8,7 +8,7 @@ interface RequestOptions extends RequestInit {
 }
 
 async function request<T>(endpoint: string, options: RequestOptions = {}): Promise<T> {
-  const { params, headers, ...restOptions } = options;
+  const { params, headers, body, ...restOptions } = options;
 
   let url = `${API_BASE_URL}${endpoint}`;
   if (params) {
@@ -16,9 +16,12 @@ async function request<T>(endpoint: string, options: RequestOptions = {}): Promi
     url += `?${searchParams.toString()}`;
   }
 
-  const defaultHeaders = {
-    "Content-Type": "application/json",
-  };
+  const isFormData = typeof FormData !== "undefined" && body instanceof FormData;
+  const defaultHeaders: Record<string, string> = isFormData
+    ? {}
+    : {
+        "Content-Type": "application/json",
+      };
 
   const config: RequestInit = {
     headers: {
@@ -26,6 +29,11 @@ async function request<T>(endpoint: string, options: RequestOptions = {}): Promi
       ...headers,
     },
     credentials: "include",
+    body: isFormData
+      ? body
+      : typeof body === "object" && body !== null
+      ? JSON.stringify(body)
+      : (body as BodyInit | null | undefined),
     ...restOptions,
   };
 
@@ -60,9 +68,9 @@ export const apiClient = {
   get: <T>(endpoint: string, options?: RequestOptions) =>
     request<T>(endpoint, { ...options, method: "GET" }),
   post: <T>(endpoint: string, body?: any, options?: RequestOptions) =>
-    request<T>(endpoint, { ...options, method: "POST", body: body ? JSON.stringify(body) : undefined }),
+    request<T>(endpoint, { ...options, method: "POST", body }),
   patch: <T>(endpoint: string, body?: any, options?: RequestOptions) =>
-    request<T>(endpoint, { ...options, method: "PATCH", body: body ? JSON.stringify(body) : undefined }),
+    request<T>(endpoint, { ...options, method: "PATCH", body }),
   delete: <T>(endpoint: string, options?: RequestOptions) =>
     request<T>(endpoint, { ...options, method: "DELETE" }),
 };

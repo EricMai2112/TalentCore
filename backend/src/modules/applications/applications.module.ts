@@ -22,6 +22,9 @@ import { CandidateRediscoveryService } from './services/candidate-rediscovery.se
 import { CandidateRediscoveryController } from './controllers/candidate-rediscovery.controller';
 import { InterviewEvaluation, InterviewEvaluationSchema } from '../interviews/schemas/interview-evaluation.schema';
 import { Offer, OfferSchema } from '../offers/schemas/offer.schema';
+import { CandidatesModule } from '../candidates/candidates.module';
+
+import { S3StorageService } from './services/s3-storage.service';
 
 @Module({
     imports: [MongooseModule.forFeature([
@@ -45,6 +48,7 @@ import { Offer, OfferSchema } from '../offers/schemas/offer.schema';
     }),
     NotificationsModule,
     EmailTemplateModule,
+    CandidatesModule,
 ],
     controllers: [ApplicationController, CandidateRediscoveryController],
     providers: [
@@ -53,7 +57,8 @@ import { Offer, OfferSchema } from '../offers/schemas/offer.schema';
       AiMatchingProcessor,
       AiMatchingCronService,
       CandidateRediscoveryService,
+      S3StorageService,
     ],
-    exports: [ApplicationService, AiMatchingCronService, CandidateRediscoveryService]
+    exports: [ApplicationService, AiMatchingCronService, CandidateRediscoveryService, S3StorageService]
 })
 export class ApplicationsModule {}

@@ -23,6 +23,7 @@ import { CvParserService } from './services/cv-parser.service';
             { name: Candidate.name, schema: CandidateSchema },
         ]),
         CandidateService,
+        CvParserService,
     ],
 })
 export class CandidatesModule {}

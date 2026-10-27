@@ -43,6 +43,21 @@ export class Application {
   @Prop({ type: Date, default: Date.now })
   appliedAt: Date;
 
+  @Prop({ type: String, required: false })
+  cvUrl?: string;
+
+  @Prop({ type: String, required: false })
+  cvOriginalName?: string;
+
+  @Prop({ type: String, required: false })
+  cvMimeType?: string;
+
+  @Prop({ type: Number, required: false })
+  cvSize?: number;
+
+  @Prop({ type: String, required: false })
+  parsedCvText?: string;
+
   @Prop({
     type: [
       {

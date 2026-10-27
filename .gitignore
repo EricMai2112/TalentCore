@@ -1,0 +1,5 @@
+# User uploads
+uploads/
+**/uploads/
+*.pdf
+*.docx

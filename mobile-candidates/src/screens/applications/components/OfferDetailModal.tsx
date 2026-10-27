@@ -31,7 +31,7 @@ export const OfferDetailModal: React.FC<OfferDetailModalProps> = ({
   offer,
   onSuccess,
 }) => {
-  const scrollViewRef = useRef<ScrollView>(null);
+  const scrollViewRef = useRef<any>(null);
   const [isAcceptMode, setIsAcceptMode] = useState(false);
   const [isDeclineMode, setIsDeclineMode] = useState(false);
   const [otp, setOtp] = useState('');

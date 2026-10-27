@@ -56,7 +56,10 @@ export class AiMatchingProcessor {
       }
 
       // 1. Trích xuất toàn văn hồ sơ ứng viên thành văn bản chuẩn hóa
-      const fullCvText = this.aiMatchingService.buildFullCvText(candidate);
+      const fullCvText =
+        application.parsedCvText && application.parsedCvText.trim().length > 30
+          ? application.parsedCvText
+          : this.aiMatchingService.buildFullCvText(candidate);
 
       // 2. Chấm điểm qua Gemini LLM (đã tích hợp tự động retry với exponential backoff & jitter)
       const aiResult = await this.aiMatchingService.evaluateCriteriaWithAi(
