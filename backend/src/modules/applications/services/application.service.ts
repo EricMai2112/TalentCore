@@ -27,6 +27,7 @@ import {
   NotificationPriority,
 } from '../../notifications/schemas/notification.schema';
 import { S3StorageService } from './s3-storage.service';
+import { AwsSqsService } from './aws-sqs.service';
 
 @Injectable()
 export class ApplicationService {
@@ -57,6 +58,7 @@ export class ApplicationService {
     private readonly emailService: EmailService,
     @Optional() private readonly cvParserService?: CvParserService,
     @Optional() private readonly s3StorageService?: S3StorageService,
+    @Optional() private readonly awsSqsService?: AwsSqsService,
   ) {}
 
   async applyJob(
@@ -273,7 +275,19 @@ export class ApplicationService {
           }
         }
 
-        await this.aiMatchingProcessor.processMatching(applicationIdStr);
+        if (this.awsSqsService) {
+          const messageId = await this.awsSqsService.sendMatchingJob({
+            applicationId: applicationIdStr,
+            s3Url: cvUrl,
+            safeName,
+            timestamp: Date.now(),
+          });
+          if (!messageId) {
+            await this.aiMatchingProcessor.processMatching(applicationIdStr);
+          }
+        } else {
+          await this.aiMatchingProcessor.processMatching(applicationIdStr);
+        }
       } catch (bgErr: any) {
         this.logger.error(`[Background Job] Lỗi khi xử lý ngầm bóc tách hoặc chấm điểm: ${bgErr?.message || bgErr}`);
       }
