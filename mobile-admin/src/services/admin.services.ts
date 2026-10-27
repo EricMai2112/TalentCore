@@ -294,9 +294,17 @@ export interface JobDescriptionItem {
   updatedAt?: string;
 }
 
+export interface StaffUser {
+  _id: string;
+  name: string;
+  email: string;
+  role: string;
+  departmentId?: any;
+}
+
 export interface InterviewItem {
   _id: string;
-  applicationId: string;
+  applicationId: any;
   candidateId: {
     _id: string;
     fullName?: string;
@@ -310,13 +318,18 @@ export interface InterviewItem {
     departmentId?: {
       _id: string;
       name: string;
-    };
+    } | string;
   };
-  interviewerId: {
+  interviewerId?: {
     _id: string;
     name?: string;
     email?: string;
-  };
+  } | null;
+  interviewerIds?: Array<{
+    _id: string;
+    name?: string;
+    email?: string;
+  } | string>;
   date: string;
   startTime: string;
   endTime: string;
@@ -326,8 +339,12 @@ export interface InterviewItem {
   status: 'SCHEDULED' | 'UPCOMING' | 'IN_PROGRESS' | 'COMPLETED' | 'CANCELLED' | string;
   result: 'PENDING' | 'PASS' | 'FAIL' | string;
   confirmationStatus?: string;
+  cancelReason?: string;
+  isEscalated?: boolean;
   notes?: string;
   feedback?: string;
+  createdAt?: string;
+  updatedAt?: string;
 }
 
 export interface OfferItem {
@@ -451,6 +468,34 @@ export const adminService = {
     payload: { status?: string; result?: string; feedback?: string }
   ): Promise<any> {
     return apiClient.patch(`/interviews/${id}/status`, payload);
+  },
+
+  async submitDeptSchedule(id: string, payload: any): Promise<any> {
+    return apiClient.patch(`/interviews/${id}/submit-dept-schedule`, payload);
+  },
+
+  async hrApproveSchedule(id: string): Promise<any> {
+    return apiClient.patch(`/interviews/${id}/hr-approve-schedule`, {});
+  },
+
+  async approveCandidateCancellation(id: string): Promise<any> {
+    return apiClient.patch(`/interviews/${id}/approve-cancel`, {});
+  },
+
+  async rejectDeptCv(id: string, reason?: string): Promise<any> {
+    return apiClient.patch(`/interviews/${id}/dept-reject`, { reason });
+  },
+
+  async getEmployees(): Promise<StaffUser[]> {
+    const data = await apiClient.get<any>('/users/employees');
+    if (Array.isArray(data)) return data;
+    if (Array.isArray(data?.data)) return data.data;
+    if (Array.isArray(data?.users)) return data.users;
+    return [];
+  },
+
+  async getInterviewById(id: string): Promise<InterviewItem> {
+    return apiClient.get<InterviewItem>(`/interviews/${id}`);
   },
 
   async getOffers(params?: any): Promise<OfferItem[]> {

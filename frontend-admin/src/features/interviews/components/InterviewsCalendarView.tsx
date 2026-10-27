@@ -419,17 +419,30 @@ export default function InterviewsCalendarView({
   const todayISO = formatDate(new Date().toISOString())
   const activeWeekISOs = weekDays.map((d) => formatDate(d.toISOString()))
 
-  // Helper: Only render official approved interviews on the calendar view grid
+  // Helper: Only render official approved interviews on the calendar view grid (Đã lên lịch/xác nhận, Hoàn thành, Đã hủy)
   const isOfficialSchedule = (item: InterviewItem) => {
     if (!item.date || !item.startTime || !item.endTime) return false
+
+    // 1. Hoàn thành & Đã hủy
     if (
-      item.confirmationStatus === 'WAITING_DEPT_SCHEDULE' ||
-      item.confirmationStatus === 'WAITING_HR_APPROVAL' ||
-      item.confirmationStatus === 'REJECTED'
+      item.status === InterviewStatus.COMPLETED ||
+      item.status === InterviewStatus.CANCELLED ||
+      item.confirmationStatus === 'CANCELLED'
     ) {
-      return false
+      return true
     }
-    return true
+
+    // 2. Đã lên lịch: chỉ khi ứng viên ĐÃ XÁC NHẬN (CONFIRMED) hoặc IN_PROGRESS / UPCOMING
+    if (
+      item.confirmationStatus === 'CONFIRMED' ||
+      item.status === InterviewStatus.IN_PROGRESS ||
+      item.status === InterviewStatus.UPCOMING
+    ) {
+      return true
+    }
+
+    // 3. Các trạng thái chưa xác nhận hoặc chờ duyệt/xếp: ẩn khỏi lịch
+    return false
   }
 
   // Filter today's interviews, sort by User Priority Rules, and limit to MAX 5 items
@@ -459,11 +472,7 @@ export default function InterviewsCalendarView({
   const interviewDatesSet = useMemo(() => {
     const set = new Set<string>()
     interviews.forEach((item) => {
-      if (
-        item.date &&
-        item.status !== InterviewStatus.CANCELLED &&
-        item.confirmationStatus !== 'REJECTED'
-      ) {
+      if (item.date && isOfficialSchedule(item)) {
         const dStr = formatDate(item.date)
         if (dStr) set.add(dStr)
       }

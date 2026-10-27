@@ -28,8 +28,8 @@ interface CandidateDetailModalProps {
   visible: boolean;
   candidate: CandidateApplication | null;
   onClose: () => void;
-  stages: StageItem[];
-  onStageChange: (candidateId: string, newStageId: string, stageName: string) => Promise<void>;
+  stages?: StageItem[];
+  onStageChange?: (candidateId: string, newStageId: string, stageName: string) => Promise<void>;
   onReject: (candidate: CandidateApplication) => void;
   onNoteAdded?: () => void;
 }
@@ -38,7 +38,7 @@ export const CandidateDetailModal: React.FC<CandidateDetailModalProps> = ({
   visible,
   candidate,
   onClose,
-  stages,
+  stages = [],
   onStageChange,
   onReject,
   onNoteAdded,
@@ -184,6 +184,10 @@ export const CandidateDetailModal: React.FC<CandidateDetailModalProps> = ({
 
   // Đổi Stage
   const handleSelectStage = async (stage: StageItem) => {
+    if (!onStageChange) {
+      setShowStagePicker(false);
+      return;
+    }
     try {
       setChangingStage(true);
       await onStageChange(currentApp._id, stage._id, stage.name);
