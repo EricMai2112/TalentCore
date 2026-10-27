@@ -82,7 +82,7 @@ export function InterviewStatCards({ interviews, className = '' }: InterviewStat
     },
     {
       id: 'action_needed',
-      label: 'CẦN XỬ LÝ / ĐỔI LỊCH',
+      label: 'CẦN XỬ LÝ',
       count: actionNeededCount,
       icon: BellRing,
       iconBg: 'bg-rose-100/90 text-rose-600 border-rose-200/60',
