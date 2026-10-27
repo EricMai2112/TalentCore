@@ -1,12 +1,16 @@
-import { Injectable, BadRequestException, NotFoundException, Logger } from '@nestjs/common';
+import { Injectable, BadRequestException, NotFoundException, Logger, Optional } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model, Types } from 'mongoose';
+import * as path from 'path';
+import * as fs from 'fs';
 import { Application, ApplicationDocument, ApplicationStatus } from '../schemas/application.schema';
 import { Candidate, CandidateDocument } from 'src/modules/candidates/schema/candidate.schema';
 import { JobDescription, JobDescriptionDocument, JobStatus } from 'src/modules/job-description/schemas/job-description.schema';
 import { PipelineTemplate, PipelineTemplateDocument, StageType } from 'src/modules/pipeline-template/schemas/pipeline-template.schema';
 import { AiMatchingProcessor } from '../processors/ai-matching.processor';
+import { AiMatchingService } from './ai-matching.service';
 import { AiEvaluation, AiEvaluationDocument } from '../schemas/ai-evaluation.schema';
+import { CvParserService } from 'src/modules/candidates/services/cv-parser.service';
 import {
   Interview,
   InterviewDocument,
@@ -22,6 +26,7 @@ import {
   NotificationCategory,
   NotificationPriority,
 } from '../../notifications/schemas/notification.schema';
+import { S3StorageService } from './s3-storage.service';
 
 @Injectable()
 export class ApplicationService {
@@ -47,26 +52,32 @@ export class ApplicationService {
     private readonly interviewModel: Model<InterviewDocument>,
 
     private readonly aiMatchingProcessor: AiMatchingProcessor,
+    private readonly aiMatchingService: AiMatchingService,
     private readonly notificationsService: NotificationsService,
     private readonly emailService: EmailService,
+    @Optional() private readonly cvParserService?: CvParserService,
+    @Optional() private readonly s3StorageService?: S3StorageService,
   ) {}
 
-  async applyJob(userId: string, jobDescriptionId: string, candidateId: string) {
+  async applyJob(
+    userId: string,
+    jobDescriptionId: string,
+    candidateId?: string,
+    file?: Express.Multer.File,
+  ) {
     const userObjId = new Types.ObjectId(userId);
-
-    const candidate = await this.candidateModel.findOne({
-      _id: new Types.ObjectId(candidateId),
-      userId: userObjId,
-    });
-    if (!candidate) {
-      throw new BadRequestException('Hồ sơ không tồn tại hoặc không thuộc về bạn.');
-    }
 
     const job = await this.jobModel.findById(jobDescriptionId);
     if (!job || job.status !== JobStatus.JD_CREATED) {
       throw new NotFoundException('Tin tuyển dụng không tồn tại hoặc đã đóng.');
     }
 
+    const pipeline = await this.pipelineModel.findById(job.pipelineTemplateId);
+    if (!pipeline || !pipeline.stages || pipeline.stages.length === 0) {
+      throw new BadRequestException('Quy trình tuyển dụng của vị trí này chưa được thiết lập.');
+    }
+
+    // 1. Kiểm tra ứng viên đã nộp đơn vào vị trí này chưa (bằng bất kỳ hồ sơ nào)
     const userProfiles = await this.candidateModel
       .find({ userId: userObjId }, { _id: 1 })
       .exec();
@@ -81,29 +92,191 @@ export class ApplicationService {
       throw new BadRequestException('Bạn đã ứng tuyển vào vị trí này rồi!');
     }
 
-    const pipeline = await this.pipelineModel.findById(job.pipelineTemplateId);
-    if (!pipeline || !pipeline.stages || pipeline.stages.length === 0) {
-      throw new BadRequestException('Quy trình tuyển dụng của vị trí này chưa được thiết lập.');
-    }
-
     const sortedStages = [...pipeline.stages].sort((a, b) => a.order - b.order);
     const initialStage = sortedStages[0];
+
+    let candidate: CandidateDocument | null = null;
+    let cvUrl: string | undefined = undefined;
+    let cvOriginalName: string | undefined = undefined;
+    let cvMimeType: string | undefined = undefined;
+    let cvSize: number | undefined = undefined;
+    let parsedCvText: string | undefined = undefined;
+    let safeName = '';
+
+    if (file && file.buffer && file.buffer.length > 0) {
+      try {
+        const uploadDir = path.join(process.cwd(), 'uploads', 'cvs');
+        if (!fs.existsSync(uploadDir)) {
+          fs.mkdirSync(uploadDir, { recursive: true });
+        }
+        const ext = path.extname(file.originalname) || '.pdf';
+        safeName = `${Date.now()}-${Math.round(Math.random() * 1e9)}${ext}`;
+        const filePath = path.join(uploadDir, safeName);
+        fs.writeFileSync(filePath, file.buffer);
+
+        cvUrl = `/uploads/cvs/${safeName}`;
+        cvOriginalName = file.originalname;
+        cvMimeType = file.mimetype || 'application/pdf';
+        cvSize = file.size || file.buffer.length;
+
+        if (this.s3StorageService) {
+          try {
+            const s3Url = await this.s3StorageService.uploadCvFile(file, safeName);
+            if (s3Url) {
+              cvUrl = s3Url;
+            }
+          } catch (s3Err: any) {
+            this.logger.warn(`[Apply CV] Upload S3 cảnh báo: ${s3Err?.message || s3Err}`);
+          }
+        }
+
+        const rawBaseName = path.parse(file.originalname).name.trim() || 'Hồ sơ mới';
+
+        const existingProfiles = await this.candidateModel
+          .find({ userId: userObjId }, { profileName: 1 })
+          .lean()
+          .exec();
+
+        const existingNames = new Set(
+          existingProfiles.map((p) => p.profileName?.trim()).filter(Boolean),
+        );
+
+        let profileName = rawBaseName;
+        if (existingNames.has(profileName)) {
+          let counter = 1;
+          while (existingNames.has(`${rawBaseName} (${counter})`)) {
+            counter++;
+          }
+          profileName = `${rawBaseName} (${counter})`;
+        }
+
+        const isDefault = existingProfiles.length === 0;
+
+        const newCandidate = await this.candidateModel.create({
+          userId: userObjId,
+          profileName,
+          isDefault,
+          cvPdfUrl: cvUrl,
+          skills: [],
+          experiences: [],
+          educations: [],
+          projects: [],
+          certifications: [],
+          languages: [],
+        });
+
+        candidate = newCandidate;
+        this.logger.log(`[Apply CV] Đã tạo ngay hồ sơ mới ID: ${candidate._id} ("${candidate.profileName}"). S3 URL: ${cvUrl}`);
+      } catch (err: any) {
+        this.logger.error(`Lỗi khi lưu tệp CV tải lên: ${err?.message || err}`);
+        throw new BadRequestException('Không thể lưu tệp CV tải lên. Vui lòng thử lại!');
+      }
+    } else if (candidateId) {
+      candidate = await this.candidateModel.findOne({
+        _id: new Types.ObjectId(candidateId),
+        userId: userObjId,
+      });
+      if (!candidate) {
+        throw new BadRequestException('Hồ sơ không tồn tại hoặc không thuộc về bạn.');
+      }
+      parsedCvText = this.aiMatchingService.buildFullCvText(candidate);
+      cvUrl = candidate.cvPdfUrl;
+    } else {
+      throw new BadRequestException('Vui lòng chọn một hồ sơ hoặc tải lên tệp CV để ứng tuyển.');
+    }
+
+    if (!candidate) {
+      throw new BadRequestException('Không thể khởi tạo hoặc xác thực hồ sơ ứng tuyển.');
+    }
 
     const newApplication = await this.applicationModel.create({
       candidateId: candidate._id,
       jobDescriptionId: new Types.ObjectId(jobDescriptionId),
       currentStageId: initialStage._id,
       appliedAt: new Date(),
+      cvUrl,
+      cvOriginalName,
+      cvMimeType,
+      cvSize,
+      parsedCvText,
     });
 
-    setImmediate(() => {
-      this.aiMatchingProcessor
-        .processMatching(newApplication._id.toString())
-        .catch((err) => {
-          this.logger.error(
-            `[ApplicationService] Xử lý nền AI Matching thất bại cho Application ${newApplication._id}: ${err?.message || err}`,
+    const createdCandidateId = candidate._id;
+    const applicationIdStr = newApplication._id.toString();
+
+    setImmediate(async () => {
+      try {
+        if (file && file.buffer && file.buffer.length > 0) {
+          this.logger.log(`[Background Job] Bắt đầu bóc tách CV ngầm cho Application ${applicationIdStr}...`);
+
+          if (this.s3StorageService && (!cvUrl || cvUrl.startsWith('/uploads/'))) {
+            try {
+              const s3Url = await this.s3StorageService.uploadCvFile(file, safeName);
+              if (s3Url) {
+                cvUrl = s3Url;
+                await Promise.all([
+                  this.candidateModel.findByIdAndUpdate(createdCandidateId, { $set: { cvPdfUrl: s3Url } }),
+                  this.applicationModel.findByIdAndUpdate(applicationIdStr, { $set: { cvUrl: s3Url } }),
+                ]);
+                this.logger.log(`[Background Job] Đã cập nhật S3 URL cho Candidate & Application: ${s3Url}`);
+              }
+            } catch (s3Err: any) {
+              this.logger.warn(`[Background Job] S3 upload retry cảnh báo: ${s3Err?.message || s3Err}`);
+            }
+          }
+
+          let structuredCv: any = null;
+          let textExtracted = '';
+
+          try {
+            textExtracted = await this.extractTextFromFile(file);
+          } catch (textErr: any) {
+            this.logger.warn(`[Background Job] Trích xuất text thô: ${textErr?.message || textErr}`);
+          }
+
+          if (this.cvParserService) {
+            try {
+              structuredCv = await this.cvParserService.parseCvFileWithAi(file);
+              this.logger.log(`[Background Job] Bóc tách cấu trúc CV bằng AI thành công cho Application ${applicationIdStr}`);
+            } catch (parseErr: any) {
+              this.logger.warn(`[Background Job] AI parse CV cảnh báo: ${parseErr?.message || parseErr}`);
+            }
+          }
+
+          const updateFields: any = {};
+          if (structuredCv?.headline) updateFields.headline = structuredCv.headline;
+          if (structuredCv?.summary) updateFields.summary = structuredCv.summary;
+          if (structuredCv?.careerObjective) updateFields.careerObjective = structuredCv.careerObjective;
+          if (structuredCv?.address) updateFields.address = structuredCv.address;
+          if (structuredCv?.skills?.length) updateFields.skills = structuredCv.skills;
+          if (structuredCv?.experiences?.length) updateFields.experiences = structuredCv.experiences;
+          if (structuredCv?.educations?.length) updateFields.educations = structuredCv.educations;
+          if (structuredCv?.projects?.length) updateFields.projects = structuredCv.projects;
+          if (structuredCv?.certifications?.length) updateFields.certifications = structuredCv.certifications;
+          if (structuredCv?.languages?.length) updateFields.languages = structuredCv.languages;
+
+          const updatedCandidate = await this.candidateModel.findByIdAndUpdate(
+            createdCandidateId,
+            { $set: updateFields },
+            { new: true },
           );
-        });
+
+          let finalCvText = updatedCandidate ? this.aiMatchingService.buildFullCvText(updatedCandidate) : '';
+          if (!finalCvText || finalCvText.trim().length < 50) {
+            finalCvText = textExtracted;
+          }
+
+          if (finalCvText && finalCvText.trim().length > 0) {
+            await this.applicationModel.findByIdAndUpdate(applicationIdStr, {
+              $set: { parsedCvText: finalCvText },
+            });
+          }
+        }
+
+        await this.aiMatchingProcessor.processMatching(applicationIdStr);
+      } catch (bgErr: any) {
+        this.logger.error(`[Background Job] Lỗi khi xử lý ngầm bóc tách hoặc chấm điểm: ${bgErr?.message || bgErr}`);
+      }
     });
 
     // Bắn thông báo khi có ứng viên mới nộp hồ sơ
@@ -800,5 +973,40 @@ export class ApplicationService {
       status: 'PROCESSING',
       message: 'Đã đưa vào tiến trình chấm điểm AI',
     };
+  }
+
+  private async extractTextFromFile(file: Express.Multer.File): Promise<string> {
+    try {
+      const mimeType = (file.mimetype || '').toLowerCase();
+      const originalName = (file.originalname || '').toLowerCase();
+
+      if (originalName.endsWith('.docx') || mimeType.includes('wordprocessingml')) {
+        const mammoth = require('mammoth');
+        const res = await mammoth.extractRawText({ buffer: file.buffer });
+        return (res.value || '').trim();
+      }
+
+      if (originalName.endsWith('.pdf') || mimeType.includes('pdf')) {
+        const pdfModule = require('pdf-parse');
+        if (pdfModule?.PDFParse) {
+          const parser = new pdfModule.PDFParse({ data: file.buffer });
+          const res = await parser.getText();
+          return (res?.text || '').trim();
+        } else if (typeof pdfModule === 'function') {
+          const data = await pdfModule(file.buffer);
+          return (data?.text || '').trim();
+        } else if (typeof pdfModule?.default === 'function') {
+          const data = await pdfModule.default(file.buffer);
+          return (data?.text || '').trim();
+        } else if (pdfModule?.default?.PDFParse) {
+          const parser = new pdfModule.default.PDFParse({ data: file.buffer });
+          const res = await parser.getText();
+          return (res?.text || '').trim();
+        }
+      }
+    } catch (e: any) {
+      this.logger.warn(`[extractTextFromFile] Không thể trích xuất văn bản thô: ${e?.message || e}`);
+    }
+    return '';
   }
 }

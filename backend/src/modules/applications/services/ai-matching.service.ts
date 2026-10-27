@@ -2,14 +2,41 @@ import { Injectable, Logger } from '@nestjs/common';
 import { GoogleGenAI, Type, Schema } from '@google/genai';
 import { JobCriteria } from 'src/modules/job-description/schemas/job-description.schema';
 import { Candidate } from 'src/modules/candidates/schema/candidate.schema';
+import * as fs from 'fs';
+import * as path from 'path';
+
+function cleanEnv(val?: string): string {
+  return (val || '').replace(/^['"]|['"]$/g, '').trim();
+}
+
+function getEnv(key: string): string {
+  let val = cleanEnv(process.env[key]);
+  if (!val) {
+    try {
+      const envPath = path.resolve(process.cwd(), '.env');
+      if (fs.existsSync(envPath)) {
+        const content = fs.readFileSync(envPath, 'utf-8');
+        const match = content.match(new RegExp(`^${key}=([^\\r\\n]+)`, 'm'));
+        if (match) {
+          val = cleanEnv(match[1]);
+          process.env[key] = val;
+        }
+      }
+    } catch {}
+  }
+  return val;
+}
 
 @Injectable()
 export class AiMatchingService {
   private readonly logger = new Logger(AiMatchingService.name);
-  private ai: GoogleGenAI;
+  private ai: GoogleGenAI | null = null;
 
   constructor() {
-    this.ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY || '' });
+    const apiKey = getEnv('GEMINI_API_KEY');
+    if (apiKey) {
+      this.ai = new GoogleGenAI({ apiKey });
+    }
   }
 
   // 1. Tổng hợp toàn văn hồ sơ ứng viên thành Plain Text
@@ -186,27 +213,125 @@ export class AiMatchingService {
       """
     `;
 
-    const response = await this.executeWithRetry(
-      () =>
-        this.ai.models.generateContent({
-          model: 'gemini-3.6-flash',
-          contents: [{ role: 'user', parts: [{ text: prompt }] }],
-          config: {
-            systemInstruction,
-            responseMimeType: 'application/json',
-            responseSchema,
-            temperature: 0.0,
-          },
-        }),
-      {
-        maxAttempts: 5,
-        baseDelayMs: 2000,
-        maxDelayMs: 32000,
-        operationName: 'AiMatchingService.evaluateCriteriaWithAi',
-      },
-    );
+    const openRouterKey = getEnv('OPENROUTER_API_KEY');
+    if (openRouterKey) {
+      try {
+        const model = getEnv('OPENROUTER_MATCHING_MODEL') || getEnv('OPENROUTER_CV_MODEL') || 'anthropic/claude-haiku-5.5';
+        this.logger.log(`Bắt đầu chấm điểm AI qua OpenRouter (${model})...`);
 
-    return JSON.parse(response.text?.trim() || '{}');
+        const jsonTemplate = `
+[YÊU CẦU ĐỊNH DẠNG ĐẦU RA]
+Bắt buộc chỉ trả về duy nhất một đối tượng JSON thuần túy (không markdown, không bọc \`\`\`json) theo đúng cấu trúc sau:
+{
+  "summary": "Tóm tắt nhận định tổng quan về ứng viên (3-4 câu)",
+  "keyStrengths": ["Điểm mạnh 1", "Điểm mạnh 2"],
+  "potentialGaps": ["Điểm còn thiếu 1"],
+  "suggestedQuestions": ["Câu hỏi phỏng vấn 1", "Câu hỏi 2"],
+  "criteriaResults": [
+    {
+      "name": "Tên tiêu chí (phải trùng khớp chính xác 100% với tên trong danh sách tiêu chí)",
+      "score": 60,
+      "evidence": "Trích dẫn nguyên văn đoạn văn bản có thật từ CV làm bằng chứng",
+      "reasoning": "Giải thích ngắn gọn vì sao evidence tương ứng với mức điểm",
+      "isPassed": true
+    }
+  ]
+}
+`;
+
+        const userContent = `${prompt}\n\n${jsonTemplate}`;
+
+        const res = await fetch('https://openrouter.ai/api/v1/chat/completions', {
+          method: 'POST',
+          headers: {
+            Authorization: `Bearer ${openRouterKey}`,
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            model,
+            messages: [
+              { role: 'system', content: systemInstruction },
+              { role: 'user', content: userContent },
+            ],
+            response_format: { type: 'json_object' },
+            temperature: 0.0,
+            max_tokens: 4000,
+          }),
+        });
+
+        if (!res.ok) {
+          const errText = await res.text();
+          throw new Error(`OpenRouter error ${res.status}: ${errText}`);
+        }
+
+        const data = await res.json();
+        let rawText = data.choices?.[0]?.message?.content || '';
+        rawText = rawText.trim();
+        if (rawText.startsWith('```json')) {
+          rawText = rawText.replace(/^```json\s*/, '').replace(/\s*```$/, '');
+        } else if (rawText.startsWith('```')) {
+          rawText = rawText.replace(/^```\s*/, '').replace(/\s*```$/, '');
+        }
+
+        const firstBrace = rawText.indexOf('{');
+        const lastBrace = rawText.lastIndexOf('}');
+        if (firstBrace !== -1 && lastBrace !== -1 && lastBrace > firstBrace) {
+          rawText = rawText.slice(firstBrace, lastBrace + 1);
+        }
+
+        const parsed = JSON.parse(rawText.trim());
+        if (parsed && Array.isArray(parsed.criteriaResults)) {
+          this.logger.log(`Chấm điểm AI thành công qua OpenRouter (${model})`);
+          return parsed;
+        }
+      } catch (err: any) {
+        this.logger.warn(`Lỗi khi chấm điểm qua OpenRouter: ${err?.message || err}`);
+      }
+    }
+
+    if (this.ai) {
+      const geminiCandidates = [
+        'gemini-3.8-flash',
+        'gemini-3.7-flash',
+        'gemini-3.6-flash',
+        'gemini-3.5-flash',
+      ];
+      for (const model of geminiCandidates) {
+        try {
+          const response = await this.ai.models.generateContent({
+            model,
+            contents: [{ role: 'user', parts: [{ text: prompt }] }],
+            config: {
+              systemInstruction,
+              responseMimeType: 'application/json',
+              responseSchema,
+              temperature: 0.0,
+            },
+          });
+          let rawText = response.text?.trim() || '';
+          if (rawText.startsWith('```json')) {
+            rawText = rawText.replace(/^```json\s*/, '').replace(/\s*```$/, '');
+          } else if (rawText.startsWith('```')) {
+            rawText = rawText.replace(/^```\s*/, '').replace(/\s*```$/, '');
+          }
+          const firstBrace = rawText.indexOf('{');
+          const lastBrace = rawText.lastIndexOf('}');
+          if (firstBrace !== -1 && lastBrace !== -1 && lastBrace > firstBrace) {
+            rawText = rawText.slice(firstBrace, lastBrace + 1);
+          }
+          const parsed = JSON.parse(rawText.trim());
+          if (parsed && Array.isArray(parsed.criteriaResults)) {
+            this.logger.log(`Chấm điểm AI thành công qua Google Gemini (${model})`);
+            return parsed;
+          }
+        } catch (err: any) {
+          this.logger.warn(`Gemini model ${model} evaluate criteria failed: ${err?.message || err}`);
+          continue;
+        }
+      }
+    }
+
+    throw new Error('Không thể chấm điểm AI: Không có AI provider nào khả dụng.');
   }
 
   private isTransientError(error: any): boolean {

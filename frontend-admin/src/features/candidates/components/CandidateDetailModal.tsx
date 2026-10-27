@@ -176,6 +176,25 @@ export default function CandidateDetailModal({
           </div>
 
           <div className="flex items-center gap-2 shrink-0">
+            {(renderApp.cvUrl || (candidate as any)?.cvPdfUrl) && (
+              <a
+                href={
+                  (renderApp.cvUrl || (candidate as any)?.cvPdfUrl).startsWith('http')
+                    ? (renderApp.cvUrl || (candidate as any)?.cvPdfUrl)
+                    : `${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000'}${
+                        renderApp.cvUrl || (candidate as any)?.cvPdfUrl
+                      }`
+                }
+                target="_blank"
+                rel="noreferrer"
+                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl border border-blue-200 bg-blue-50 text-blue-700 text-xs font-bold hover:bg-blue-100 transition-colors shadow-xs"
+                title="Mở hoặc tải về tệp CV gốc ứng viên đã nộp"
+              >
+                <FileText size={14} />
+                <span>Xem tệp CV gốc</span>
+                <ExternalLink size={12} className="opacity-70" />
+              </a>
+            )}
             <button
               type="button"
               onClick={handleClose}

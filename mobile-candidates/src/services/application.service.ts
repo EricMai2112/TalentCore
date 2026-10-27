@@ -30,6 +30,9 @@ const request = async <T>(
   options: RequestInit = {},
 ): Promise<T> => {
   const headers = await getAuthHeaders();
+  if (options.body instanceof FormData) {
+    delete headers['Content-Type'];
+  }
   const controller = new AbortController();
   const timeoutId = setTimeout(() => controller.abort(), API_CONFIG.TIMEOUT);
 
@@ -63,6 +66,17 @@ const request = async <T>(
   }
 };
 
+export interface ApplyJobMobilePayload {
+  jobDescriptionId: string;
+  candidateId?: string;
+  cvFile?: {
+    uri: string;
+    name: string;
+    mimeType?: string;
+    file?: any;
+  } | null;
+}
+
 export const applicationService = {
   // 1. Applications
   getMyApplications: async (): Promise<MyApplicationsResponseData> => {
@@ -95,13 +109,42 @@ export const applicationService = {
     }
   },
 
-  applyJob: async (payload: {
-    jobDescriptionId: string;
-    candidateId: string;
-  }): Promise<{ message: string; applicationId: string; currentStage?: any }> => {
+  applyJob: async (
+    payload: ApplyJobMobilePayload | FormData,
+  ): Promise<{ message: string; applicationId: string; currentStage?: any }> => {
+    let body: any;
+    if (payload instanceof FormData) {
+      body = payload;
+    } else {
+      const formData = new FormData();
+      formData.append('jobDescriptionId', payload.jobDescriptionId);
+      if (payload.candidateId) {
+        formData.append('candidateId', payload.candidateId);
+      }
+      if (payload.cvFile) {
+        const { uri, name, mimeType, file } = payload.cvFile;
+        if (file && typeof file === 'object' && ('size' in file || 'arrayBuffer' in file)) {
+          formData.append('cv', file, name);
+        } else {
+          try {
+            const fileRes = await fetch(uri);
+            const blob = await fileRes.blob();
+            formData.append('cv', blob, name);
+          } catch {
+            formData.append('cv', {
+              uri,
+              name,
+              type: mimeType || 'application/pdf',
+            } as any);
+          }
+        }
+      }
+      body = formData;
+    }
+
     return await request('/applications/apply', {
       method: 'POST',
-      body: JSON.stringify(payload),
+      body,
     });
   },
 
