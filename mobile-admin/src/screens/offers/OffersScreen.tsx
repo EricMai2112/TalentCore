@@ -95,26 +95,6 @@ export const OffersScreen: React.FC = () => {
     return found ? found.label : 'Tất cả trạng thái';
   }, [selectedStatus, statusFilterOptions]);
 
-  // Counts by status
-  const statusCounts = useMemo(() => {
-    const counts: Record<string, number> = {
-      ALL: offers.length,
-      SENT: 0,
-      ACCEPTED: 0,
-      DECLINED: 0,
-      CANCELLED: 0,
-      DRAFT: 0,
-      EXPIRED: 0,
-    };
-    offers.forEach((o) => {
-      const st = o.status || 'DRAFT';
-      if (counts[st] !== undefined) {
-        counts[st] += 1;
-      }
-    });
-    return counts;
-  }, [offers]);
-
   // Is any filter active?
   const isFiltered =
     (!isDeptManager && selectedDept !== 'ALL') ||
@@ -287,43 +267,6 @@ export const OffersScreen: React.FC = () => {
           )}
         </View>
 
-        {/* Thanh chip trạng thái trượt ngang giống trên Web */}
-        <ScrollView
-          horizontal
-          showsHorizontalScrollIndicator={false}
-          contentContainerStyle={styles.filterChipRow}
-        >
-          {[
-            { id: 'ALL', label: `Tất cả (${statusCounts.ALL || 0})` },
-            { id: 'SENT', label: `Chờ phản hồi (${statusCounts.SENT || 0})` },
-            { id: 'ACCEPTED', label: `Đã đồng ý (${statusCounts.ACCEPTED || 0})` },
-            { id: 'DECLINED', label: `Đã từ chối (${statusCounts.DECLINED || 0})` },
-            { id: 'CANCELLED', label: `Đã thu hồi (${statusCounts.CANCELLED || 0})` },
-            { id: 'DRAFT', label: `Bản nháp (${statusCounts.DRAFT || 0})` },
-            { id: 'EXPIRED', label: `Quá hạn (${statusCounts.EXPIRED || 0})` },
-          ].map((chip) => {
-            const isSelected = selectedStatus === chip.id;
-            return (
-              <TouchableOpacity
-                key={chip.id}
-                style={[styles.filterChip, isSelected && styles.filterChipActive]}
-                onPress={() => setSelectedStatus(chip.id)}
-                activeOpacity={0.7}
-              >
-                <Text
-                  style={[
-                    styles.filterChipText,
-                    isSelected && styles.filterChipTextActive,
-                  ]}
-                >
-                  {chip.label}
-                </Text>
-              </TouchableOpacity>
-            );
-          })}
-        </ScrollView>
-
-        {/* Hàng bộ lọc thả xuống theo Phòng ban & Trạng thái */}
         <View style={styles.subFilterRow}>
           <View style={styles.selectWrapper}>
             <CustomSelect
@@ -599,37 +542,11 @@ const styles = StyleSheet.create({
     fontSize: 13,
     color: '#0F172A',
   },
-  filterChipRow: {
-    flexDirection: 'row',
-    gap: 8,
-    paddingBottom: 8,
-  },
-  filterChip: {
-    paddingHorizontal: 13,
-    paddingVertical: 6,
-    borderRadius: 20,
-    backgroundColor: '#F1F5F9',
-    borderWidth: 1,
-    borderColor: '#E2E8F0',
-  },
-  filterChipActive: {
-    backgroundColor: '#EFF6FF',
-    borderColor: '#BFDBFE',
-  },
-  filterChipText: {
-    fontSize: 12,
-    fontWeight: '600',
-    color: '#64748B',
-  },
-  filterChipTextActive: {
-    color: '#2563EB',
-    fontWeight: '800',
-  },
   subFilterRow: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 10,
-    marginTop: 2,
+    marginTop: 10,
   },
   selectWrapper: {
     flex: 1,
