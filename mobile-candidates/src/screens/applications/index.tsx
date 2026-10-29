@@ -28,7 +28,6 @@ import {
   ApplicationsSubTabNav,
 } from './components/ApplicationsSubTabNav';
 import { InvitationHeroCard } from './components/InvitationHeroCard';
-import { ApplicationStatsCards } from './components/ApplicationStatsCards';
 import { ApplicationCardItem } from './components/ApplicationCardItem';
 import { UpcomingInterviewCard } from './components/UpcomingInterviewCard';
 import { InterviewCardItem } from './components/InterviewCardItem';
@@ -72,7 +71,7 @@ export const ApplicationsScreen: React.FC<ApplicationsScreenProps> = ({
 
   // Interviews Tab State
   const [interviews, setInterviews] = useState<CandidateInterviewItem[]>([]);
-  const [interviewSearch, setInterviewSearch] = useState('');
+  const [interviewStatusFilter, setInterviewStatusFilter] = useState<'ALL' | 'SCHEDULED' | 'COMPLETED' | 'CANCELLED'>('ALL');
   const [selectedInterview, setSelectedInterview] =
     useState<CandidateInterviewItem | null>(null);
   const [isConfirmModalOpen, setIsConfirmModalOpen] = useState(false);
@@ -238,16 +237,18 @@ export const ApplicationsScreen: React.FC<ApplicationsScreenProps> = ({
       i.confirmationStatus !== 'REJECTED',
   );
 
-  // Filtered interviews list
+  // Filtered interviews list by status
   const filteredInterviews = interviews.filter((i) => {
-    if (!interviewSearch.trim()) return true;
-    const query = interviewSearch.toLowerCase();
-    const title = i.jobDescriptionId?.title?.toLowerCase() || '';
-    const dept =
-      typeof i.jobDescriptionId?.departmentId === 'object'
-        ? i.jobDescriptionId?.departmentId?.name?.toLowerCase() || ''
-        : '';
-    return title.includes(query) || dept.includes(query);
+    if (interviewStatusFilter !== 'ALL') {
+      if (interviewStatusFilter === 'SCHEDULED') {
+        if (i.status !== 'SCHEDULED' && i.status !== 'UPCOMING' && i.status !== 'IN_PROGRESS') {
+          return false;
+        }
+      } else if (i.status !== interviewStatusFilter) {
+        return false;
+      }
+    }
+    return true;
   });
 
   return (
@@ -294,9 +295,6 @@ export const ApplicationsScreen: React.FC<ApplicationsScreenProps> = ({
                 onRefresh={loadAllData}
               />
 
-              {/* 4 Thẻ Thống kê */}
-              <ApplicationStatsCards stats={stats} />
-
               {/* Danh sách đơn ứng tuyển */}
               {applications.length === 0 ? (
                 <View style={styles.emptyContainer}>
@@ -334,31 +332,101 @@ export const ApplicationsScreen: React.FC<ApplicationsScreenProps> = ({
                 />
               )}
 
-              {/* Tìm kiếm lịch phỏng vấn */}
-              <View style={styles.searchBar}>
-                <Ionicons name="search" size={16} color="#94a3b8" />
-                <TextInput
-                  style={styles.searchInput}
-                  placeholder="Tìm theo vị trí hoặc phòng ban..."
-                  placeholderTextColor="#94a3b8"
-                  value={interviewSearch}
-                  onChangeText={setInterviewSearch}
-                />
-                {interviewSearch.length > 0 && (
-                  <Pressable onPress={() => setInterviewSearch('')}>
-                    <Ionicons name="close-circle" size={16} color="#94a3b8" />
-                  </Pressable>
-                )}
+              {/* Section Header & Title with count */}
+              <View style={styles.sectionHeaderRow}>
+                <View style={styles.sectionHeaderLeft}>
+                  <Text style={styles.sectionTitle}>Tất cả lịch phỏng vấn</Text>
+                  <View style={styles.countBadge}>
+                    <Text style={styles.countBadgeText}>{filteredInterviews.length}</Text>
+                  </View>
+                </View>
               </View>
+
+              {/* Filter Pills (Tất cả, Đã lên lịch, Hoàn thành, Đã hủy) */}
+              <ScrollView
+                horizontal
+                showsHorizontalScrollIndicator={false}
+                contentContainerStyle={styles.filterPillsRow}
+              >
+                <Pressable
+                  style={[
+                    styles.filterPill,
+                    interviewStatusFilter === 'ALL' && styles.filterPillActiveAll,
+                  ]}
+                  onPress={() => setInterviewStatusFilter('ALL')}
+                >
+                  <Text
+                    style={[
+                      styles.filterPillText,
+                      interviewStatusFilter === 'ALL' && styles.filterPillTextActive,
+                    ]}
+                  >
+                    Tất cả
+                  </Text>
+                </Pressable>
+
+                <Pressable
+                  style={[
+                    styles.filterPill,
+                    interviewStatusFilter === 'SCHEDULED' && styles.filterPillActiveScheduled,
+                  ]}
+                  onPress={() => setInterviewStatusFilter('SCHEDULED')}
+                >
+                  <Text
+                    style={[
+                      styles.filterPillText,
+                      interviewStatusFilter === 'SCHEDULED' && styles.filterPillTextActive,
+                    ]}
+                  >
+                    Đã lên lịch
+                  </Text>
+                </Pressable>
+
+                <Pressable
+                  style={[
+                    styles.filterPill,
+                    interviewStatusFilter === 'COMPLETED' && styles.filterPillActiveCompleted,
+                  ]}
+                  onPress={() => setInterviewStatusFilter('COMPLETED')}
+                >
+                  <Text
+                    style={[
+                      styles.filterPillText,
+                      interviewStatusFilter === 'COMPLETED' && styles.filterPillTextActive,
+                    ]}
+                  >
+                    Hoàn thành
+                  </Text>
+                </Pressable>
+
+                <Pressable
+                  style={[
+                    styles.filterPill,
+                    interviewStatusFilter === 'CANCELLED' && styles.filterPillActiveCancelled,
+                  ]}
+                  onPress={() => setInterviewStatusFilter('CANCELLED')}
+                >
+                  <Text
+                    style={[
+                      styles.filterPillText,
+                      interviewStatusFilter === 'CANCELLED' && styles.filterPillTextActive,
+                    ]}
+                  >
+                    Đã hủy
+                  </Text>
+                </Pressable>
+              </ScrollView>
 
               {filteredInterviews.length === 0 ? (
                 <View style={styles.emptyContainer}>
                   <View style={styles.emptyIconBox}>
                     <Ionicons name="calendar-outline" size={38} color="#94a3b8" />
                   </View>
-                  <Text style={styles.emptyTitle}>Chưa có lịch phỏng vấn</Text>
+                  <Text style={styles.emptyTitle}>Không tìm thấy lịch phỏng vấn nào</Text>
                   <Text style={styles.emptyDesc}>
-                    Các buổi phỏng vấn trực tiếp hoặc trực tuyến sẽ hiển thị tại đây khi nhà tuyển dụng xếp lịch.
+                    {interviewStatusFilter !== 'ALL'
+                      ? 'Không có lịch phỏng vấn ở trạng thái này.'
+                      : 'Bạn chưa có lịch phỏng vấn nào được xếp trong hệ thống.'}
                   </Text>
                 </View>
               ) : (
@@ -485,24 +553,75 @@ const styles = StyleSheet.create({
   scrollContent: {
     paddingBottom: 110, // Inset to avoid being blocked by floating bottom navigation
   },
-  searchBar: {
+  sectionHeaderRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#f8fafc',
-    borderWidth: 1,
-    borderColor: '#e2e8f0',
-    borderRadius: 14,
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-    marginHorizontal: 16,
-    marginBottom: 14,
+    justifyContent: 'space-between',
+    paddingHorizontal: 16,
+    marginTop: 4,
+    marginBottom: 12,
+  },
+  sectionHeaderLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
     gap: 8,
   },
-  searchInput: {
-    flex: 1,
-    fontSize: 12.5,
+  sectionTitle: {
+    fontSize: 16,
+    fontWeight: '700',
     color: '#0f172a',
-    padding: 0,
+  },
+  countBadge: {
+    backgroundColor: '#f1f5f9',
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+    borderRadius: 12,
+  },
+  countBadgeText: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: '#475569',
+  },
+  filterPillsRow: {
+    paddingHorizontal: 16,
+    gap: 8,
+    marginBottom: 14,
+  },
+  filterPill: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    backgroundColor: '#ffffff',
+    borderWidth: 1,
+    borderColor: '#e2e8f0',
+    paddingHorizontal: 13,
+    paddingVertical: 7,
+    borderRadius: 14,
+  },
+  filterPillActiveAll: {
+    backgroundColor: '#0f172a',
+    borderColor: '#0f172a',
+  },
+  filterPillActiveScheduled: {
+    backgroundColor: '#4f46e5',
+    borderColor: '#4f46e5',
+  },
+  filterPillActiveCompleted: {
+    backgroundColor: '#059669',
+    borderColor: '#059669',
+  },
+  filterPillActiveCancelled: {
+    backgroundColor: '#e11d48',
+    borderColor: '#e11d48',
+  },
+  filterPillText: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: '#475569',
+  },
+  filterPillTextActive: {
+    color: '#ffffff',
+    fontWeight: '700',
   },
   emptyContainer: {
     alignItems: 'center',

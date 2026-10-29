@@ -5,7 +5,6 @@ import Link from 'next/link'
 import { ArrowRight, Loader2, Inbox } from 'lucide-react'
 import { CandidateApplicationItem, ApplicationStats } from '../../types/application.types'
 import { candidateApplicationsApi } from '../../services/candidate-applications.api'
-import { ApplicationStatsCards } from './ApplicationStatsCards'
 import { ApplicationCardItem } from './ApplicationCardItem'
 import { InvitationHeroBanner } from './InvitationHeroBanner'
 
@@ -61,9 +60,6 @@ export function MyApplicationsContent({ onStatsLoaded }: MyApplicationsContentPr
 
       {/* Hero Banner: Lời mời cơ hội việc làm từ HR (Candidate Rediscovery) */}
       <InvitationHeroBanner onApplicationCreated={fetchApplications} />
-
-      {/* 4 Metric Summary Cards Grid */}
-      <ApplicationStatsCards stats={stats} />
 
       {/* Application Cards List */}
       {isLoading ? (
