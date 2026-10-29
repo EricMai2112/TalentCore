@@ -30,6 +30,10 @@ export interface CandidateApplicationItem {
   stages: PipelineStageInfo[];
   aiFitScore?: number | null;
   aiEvaluation?: any;
+  status?: string;
+  reviewStatus?: string;
+  rejectedAt?: string;
+  updatedAt?: string;
 }
 
 export interface ApplicationStats {

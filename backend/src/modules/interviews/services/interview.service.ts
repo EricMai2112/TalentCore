@@ -74,7 +74,8 @@ export class InterviewService {
     }
     if (
       doc.confirmationStatus === InterviewConfirmationStatus.CONFIRMED ||
-      doc.confirmationStatus === InterviewConfirmationStatus.SCHEDULED
+      doc.confirmationStatus === InterviewConfirmationStatus.SCHEDULED ||
+      doc.confirmationStatus === InterviewConfirmationStatus.PENDING
     ) {
       const now = new Date();
       const dateObj = new Date(doc.date);
@@ -95,7 +96,10 @@ export class InterviewService {
         } else if (now > endDateTime) {
           doc.status = InterviewStatus.COMPLETED;
         }
-      } else if (doc.confirmationStatus === InterviewConfirmationStatus.SCHEDULED) {
+      } else if (
+        doc.confirmationStatus === InterviewConfirmationStatus.SCHEDULED ||
+        doc.confirmationStatus === InterviewConfirmationStatus.PENDING
+      ) {
         if (now > endDateTime) {
           doc.status = InterviewStatus.COMPLETED;
         }
@@ -625,15 +629,27 @@ export class InterviewService {
 
     const candidateIds = candidateDocs.map((c) => c._id);
 
+    // Lấy thêm danh sách đơn ứng tuyển của ứng viên để tìm cả theo candidateId lẫn applicationId
+    const applicationDocs = await this.applicationModel
+      .find({ candidateId: { $in: candidateIds } })
+      .select('_id')
+      .exec();
+    const appIds = applicationDocs.map((a) => a._id);
+
     const interviews = await this.interviewModel
       .find({
-        candidateId: { $in: candidateIds },
+        $or: [
+          { candidateId: { $in: candidateIds } },
+          { applicationId: { $in: appIds } },
+        ],
         confirmationStatus: {
           $in: [
+            InterviewConfirmationStatus.PENDING,
             InterviewConfirmationStatus.SCHEDULED,
             InterviewConfirmationStatus.CONFIRMED,
             InterviewConfirmationStatus.CANCEL_REQUESTED,
             InterviewConfirmationStatus.CANCELLED,
+            InterviewConfirmationStatus.RESCHEDULE_REQUESTED,
           ],
         },
       })
