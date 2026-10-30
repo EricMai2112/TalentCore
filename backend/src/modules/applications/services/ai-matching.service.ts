@@ -1,9 +1,10 @@
-import { Injectable, Logger } from '@nestjs/common';
+import { Injectable, Logger, Optional } from '@nestjs/common';
 import { GoogleGenAI, Type, Schema } from '@google/genai';
 import { JobCriteria } from 'src/modules/job-description/schemas/job-description.schema';
 import { Candidate } from 'src/modules/candidates/schema/candidate.schema';
 import * as fs from 'fs';
 import * as path from 'path';
+import { SkillKnowledgeGraphService } from '../knowledge-graph/skill-graph.service';
 
 function cleanEnv(val?: string): string {
   return (val || '').replace(/^['"]|['"]$/g, '').trim();
@@ -32,7 +33,9 @@ export class AiMatchingService {
   private readonly logger = new Logger(AiMatchingService.name);
   private ai: GoogleGenAI | null = null;
 
-  constructor() {
+  constructor(
+    @Optional() private readonly skillGraphService?: SkillKnowledgeGraphService,
+  ) {
     const apiKey = getEnv('GEMINI_API_KEY');
     if (apiKey) {
       this.ai = new GoogleGenAI({ apiKey });
@@ -531,19 +534,26 @@ Bắt buộc chỉ trả về duy nhất một đối tượng JSON thuần túy
     return Math.min(100, Math.max(0, Math.round(rawTotal)));
   }
 
-  processDeterministicScoring(cvText: string, jobCriteria: JobCriteria[], aiResult: any) {
+  async processDeterministicScoring(
+    cvText: string,
+    jobCriteria: JobCriteria[],
+    aiResult: any,
+    candidateSkills: string[] = [],
+  ) {
     const warnings: string[] = [];
     let isMissingMandatory = false;
     let totalScore = 0;
+    const escoTransfers: string[] = [];
 
-    const evaluatedCriteria = jobCriteria.map((criterion) => {
+    const evaluatedCriteria: any[] = [];
+    for (const criterion of jobCriteria) {
       const matched = aiResult.criteriaResults?.find((r: any) => 
         r.name?.toLowerCase().trim() === criterion.name.toLowerCase().trim()
       ) || { score: 0, evidence: '', isPassed: false };
 
-      const evidence = (matched.evidence || '').trim();
-      const similarity = evidence.length > 0 ? this.calculateEvidenceSimilarity(evidence, cvText) : 0;
-      const similarityPct = Math.round(similarity * 100);
+      let evidence = (matched.evidence || '').trim();
+      let similarity = evidence.length > 0 ? this.calculateEvidenceSimilarity(evidence, cvText) : 0;
+      let similarityPct = Math.round(similarity * 100);
 
       let isEvidenceVerified = false;
       if (evidence.length > 0) {
@@ -558,19 +568,47 @@ Bắt buộc chỉ trả về duy nhất một đối tượng JSON thuần túy
         }
       }
 
-      const isMandatory = criterion.requirementType === 'MANDATORY';
-      if (isMandatory && (!matched.isPassed || matched.score < 60)) {
-        isMissingMandatory = true;
-        warnings.push(`Không đáp ứng yêu cầu Bắt buộc: "${criterion.name}" (Điểm: ${matched.score}/100)`);
+      let score = [0, 20, 40, 60, 80, 100].includes(matched.score) ? matched.score : 0;
+
+      if (this.skillGraphService && score < 60 && candidateSkills.length > 0) {
+        const { match: transferMatch, unresolvedSkills } = this.skillGraphService.findBestTransferableSkill(
+          criterion.name,
+          candidateSkills,
+          0.65,
+          {
+            textContext: `${criterion.name} ${cvText.slice(0, 1000)}`,
+            resolvedSkills: candidateSkills,
+          },
+        );
+
+        if (unresolvedSkills && unresolvedSkills.length > 0) {
+          this.skillGraphService.logUnresolvedSkills(unresolvedSkills, `criterion_${criterion.name}`);
+        }
+
+        if (transferMatch) {
+          const compensatedScore = Math.max(score, Math.round(60 * transferMatch.similarity));
+          score = [20, 40, 60, 80, 100].find((s) => s >= compensatedScore) || 60;
+          evidence = evidence
+            ? `${evidence} | [Đồ thị kỹ năng] ${transferMatch.explanation}`
+            : `[Đồ thị kỹ năng] ${transferMatch.explanation}`;
+          isEvidenceVerified = true;
+          matched.isPassed = score >= 60;
+          escoTransfers.push(`${transferMatch.candidateSkill} ➔ ${criterion.name} (${Math.round(transferMatch.similarity * 100)}%)`);
+        }
       }
 
-      const score = [0, 20, 40, 60, 80, 100].includes(matched.score) ? matched.score : 0;
+      const isMandatory = criterion.requirementType === 'MANDATORY';
+      if (isMandatory && (!matched.isPassed || score < 60)) {
+        isMissingMandatory = true;
+        warnings.push(`Không đáp ứng yêu cầu Bắt buộc: "${criterion.name}" (Điểm: ${score}/100)`);
+      }
+
       const scoreContribution = Number(((score / 100) * criterion.weight).toFixed(2));
       totalScore += scoreContribution;
 
       const evidenceStrengthScore = this.calculateEvidenceStrengthScore(evidence, cvText, similarity);
 
-      return {
+      evaluatedCriteria.push({
         name: criterion.name,
         requirementType: criterion.requirementType,
         weight: criterion.weight,
@@ -580,8 +618,8 @@ Bắt buộc chỉ trả về duy nhất một đối tượng JSON thuần túy
         isEvidenceVerified,
         evidenceStrengthScore,
         isPassed: Boolean(matched.isPassed),
-      };
-    });
+      });
+    }
 
     let totalEvidenceStrengthWeight = 0;
     let weightedEvidenceStrength = 0;
@@ -596,13 +634,18 @@ Bắt buộc chỉ trả về duy nhất một đối tượng JSON thuần túy
       ? Math.min(100, Math.max(0, Math.round(weightedEvidenceStrength / totalEvidenceStrengthWeight)))
       : 0;
 
+    const keyStrengths = Array.isArray(aiResult.keyStrengths) ? [...aiResult.keyStrengths] : [];
+    if (escoTransfers.length > 0) {
+      keyStrengths.push(`Năng lực chuyển giao tương đương theo ESCO Ontology: ${escoTransfers.join('; ')}`);
+    }
+
     return {
       aiFitScore: Math.min(100, Math.round(totalScore)),
       evidenceStrengthScore: overallEvidenceStrengthScore,
       isMissingMandatory,
       warnings,
       summary: aiResult.summary || '',
-      keyStrengths: aiResult.keyStrengths || [],
+      keyStrengths,
       potentialGaps: aiResult.potentialGaps || [],
       suggestedQuestions: aiResult.suggestedQuestions || [],
       evaluatedCriteria,

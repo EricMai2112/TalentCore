@@ -69,11 +69,12 @@ export class AiMatchingProcessor {
         job.criteria,
       );
 
-      // 3. Backend validate bằng chứng & tính điểm tất định theo rubric 6 mức
-      const finalEvaluation = this.aiMatchingService.processDeterministicScoring(
+      const candidateSkills = (candidate.skills || []).map((s) => s.name).filter(Boolean);
+      const finalEvaluation = await this.aiMatchingService.processDeterministicScoring(
         fullCvText,
         job.criteria,
         aiResult,
+        candidateSkills,
       );
 
       // 4. Lưu kết quả vào Collection AiEvaluation (Idempotent: Upsert dựa trên applicationId duy nhất)
