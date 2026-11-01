@@ -29,6 +29,14 @@ export const UpcomingInterviewCard: React.FC<UpcomingInterviewCardProps> = ({
   const isConfirmed = interview.confirmationStatus === 'CONFIRMED';
   const isCancelRequested = interview.confirmationStatus === 'CANCEL_REQUESTED';
   const isOnline = interview.locationType === 'ONLINE' || !interview.locationType;
+    const effectiveDeadline =
+    interview.confirmationDeadline ||
+    (interview.createdAt
+      ? new Date(new Date(interview.createdAt).getTime() + 1 * 24 * 60 * 60 * 1000).toISOString()
+      : interview.date
+        ? new Date(new Date(interview.date).getTime() - 24 * 60 * 60 * 1000).toISOString()
+        : '');
+  const isDeadlinePassed = effectiveDeadline ? new Date() > new Date(effectiveDeadline) : false;
 
   const handleJoinMeeting = async () => {
     if (!interview.meetingLink) {
@@ -90,6 +98,17 @@ export const UpcomingInterviewCard: React.FC<UpcomingInterviewCardProps> = ({
           </Text>
         </View>
       </View>
+
+      {/* Hạn phản hồi phỏng vấn */}
+      {!isConfirmed && effectiveDeadline ? (
+        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, backgroundColor: 'rgba(245, 158, 11, 0.15)', borderWidth: 1, borderColor: 'rgba(245, 158, 11, 0.3)', paddingVertical: 6, paddingHorizontal: 12, borderRadius: 12, marginTop: 10, alignSelf: 'flex-start' }}>
+          <Ionicons name="alarm-outline" size={14} color="#fcd34d" />
+          <Text style={{ color: '#fef3c7', fontSize: 12, fontWeight: '700' }}>
+            Hạn phản hồi: {formatDate(effectiveDeadline)}
+            {isDeadlinePassed ? ' (Đã quá hạn)' : ''}
+          </Text>
+        </View>
+      ) : null}
 
       {/* Confirmed or Cancel Status Badge */}
       {isConfirmed && (

@@ -10,6 +10,7 @@ export const interviewScheduleSchema = z
     meetingLink: z.string().optional(),
     offsiteLocation: z.string().optional(),
     interviewerId: z.string().min(1, "Vui lòng chọn Người phỏng vấn thuộc phòng ban"),
+    confirmationDeadline: z.string().optional(),
   })
   .refine(
     (data) => {

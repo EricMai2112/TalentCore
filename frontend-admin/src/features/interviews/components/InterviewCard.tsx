@@ -191,23 +191,13 @@ export default function InterviewCard({
         <span className="truncate block max-w-[150px]">{interviewerName}</span>
       </td>
 
-      {/* 6. Status & Badges & Alerts (Left aligned) */}
-      <td className="px-4 py-4 text-left align-middle">
-        <div className="flex flex-col items-start justify-start gap-1.5">
-          <div className="inline-flex items-center gap-1.5 flex-wrap justify-start">
-            <InterviewWorkflowStatusBadge
-              status={item.status}
-              confirmationStatus={item.confirmationStatus}
-            />
-            {item.result && item.result !== InterviewResult.PENDING && getResultBadge(item.result)}
-          </div>
-
-          {/* Escalated Status Indicator */}
-          {item.isEscalated && !isCancelRequested && (
-            <span className="px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-purple-500/15 text-purple-800 border border-purple-300/60">
-              Cần HR xử lý
-            </span>
-          )}
+      {/* 6. Status (Clean & Compact) */}
+      <td className="px-4 py-4 text-left align-middle w-[170px] whitespace-nowrap">
+        <div className="flex items-center justify-start">
+          <InterviewWorkflowStatusBadge
+            status={item.status}
+            confirmationStatus={item.confirmationStatus}
+          />
         </div>
       </td>
 

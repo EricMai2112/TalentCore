@@ -10,6 +10,8 @@ import {
   SaveEvaluationDto,
 } from '../dtos/interview.dto';
 import { InterviewConfirmationStatus } from '../schemas/interview.schema';
+import { Roles } from '../../auth/decorators/roles.decorator';
+import { UserRole } from '../../users/schemas/user.schema';
 
 @Controller('interviews')
 export class InterviewController {
@@ -91,6 +93,7 @@ export class InterviewController {
     return await this.interviewService.getInterviewById(id);
   }
 
+  @Roles(UserRole.HR_ADMIN, UserRole.DEPARTMENT_MANAGER)
   @Post()
   async createInterview(@Body() dto: CreateInterviewDto) {
     return await this.interviewService.createInterview(dto);
@@ -114,11 +117,13 @@ export class InterviewController {
     return await this.interviewService.submitDeptSchedule(id, dto);
   }
 
+  @Roles(UserRole.HR_ADMIN)
   @Patch(':id/hr-approve-schedule')
   async approveInterviewSchedule(@Param('id') id: string) {
     return await this.interviewService.approveInterviewSchedule(id);
   }
 
+  @Roles(UserRole.HR_ADMIN, UserRole.DEPARTMENT_MANAGER)
   @Put(':id')
   async updateInterview(@Param('id') id: string, @Body() dto: UpdateInterviewDto) {
     return await this.interviewService.updateInterview(id, dto);
@@ -148,6 +153,7 @@ export class InterviewController {
     return await this.interviewService.requestCandidateCancellation(id, dto.reason);
   }
 
+  @Roles(UserRole.HR_ADMIN, UserRole.DEPARTMENT_MANAGER)
   @Patch(':id/approve-cancel')
   async approveCandidateCancellation(@Param('id') id: string) {
     return await this.interviewService.approveCandidateCancellation(id);

@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react'
 import {
   Calendar,
+  Clock,
   Video,
   MapPin,
   User,
@@ -32,6 +33,14 @@ export function UpcomingInterviewBanner({
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [isCancelModalOpen, setIsCancelModalOpen] = useState(false)
   const [isConfirmModalOpen, setIsConfirmModalOpen] = useState(false)
+    const effectiveDeadline =
+    interview.confirmationDeadline ||
+    (interview.createdAt
+      ? new Date(new Date(interview.createdAt).getTime() + 1 * 24 * 60 * 60 * 1000).toISOString()
+      : interview.date
+        ? new Date(new Date(interview.date).getTime() - 24 * 60 * 60 * 1000).toISOString()
+        : '');
+  const isDeadlinePassed = effectiveDeadline ? new Date() > new Date(effectiveDeadline) : false;
   const [cancelReasonText, setCancelReasonText] = useState<string>(
     interview.cancelReason || ''
   )
@@ -81,10 +90,18 @@ export function UpcomingInterviewBanner({
         <div className="relative z-10 flex flex-col justify-between gap-6 lg:flex-row lg:items-center">
           {/* Left Column Info */}
           <div className="space-y-4 max-w-2xl">
-            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-indigo-500/20 border border-indigo-400/30 text-indigo-300 text-xs font-bold tracking-wide uppercase backdrop-blur-xs">
-              <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
-              <Sparkles size={13} className="text-indigo-300" />
-              <span>Phỏng vấn sắp tới</span>
+            <div className="flex items-center gap-2 flex-wrap">
+              <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-indigo-500/20 border border-indigo-400/30 text-indigo-300 text-xs font-bold tracking-wide uppercase backdrop-blur-xs">
+                <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
+                <Sparkles size={13} className="text-indigo-300" />
+                <span>Phỏng vấn sắp tới</span>
+              </div>
+              {confirmationStatus !== 'CONFIRMED' && effectiveDeadline && (
+                <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-amber-500/20 border border-amber-400/30 text-amber-300 text-xs font-bold tracking-wide backdrop-blur-xs">
+                  <Clock size={13} className="text-amber-300" />
+                  <span>Hạn phản hồi: {formatDate(effectiveDeadline)}</span>
+                </div>
+              )}
             </div>
 
             <div>

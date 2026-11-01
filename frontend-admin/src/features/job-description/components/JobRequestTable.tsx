@@ -314,7 +314,6 @@ export default function JobRequestTable({
               <th className="px-4 py-3.5 text-center">Số lượng</th>
               <th className="px-4 py-3.5">Mức ưu tiên</th>
               <th className="px-4 py-3.5">Trạng thái</th>
-              <th className="px-4 py-3.5">Người yêu cầu</th>
               <th className="px-4 py-3.5">Ngày tạo</th>
               <th className="px-5 py-3.5 text-center">Thao tác</th>
             </tr>
@@ -325,8 +324,6 @@ export default function JobRequestTable({
               .map((job, idx) => {
                 const deptName =
                   typeof job.departmentId === 'object' ? job.departmentId?.name : 'Chưa rõ'
-                const postedByName =
-                  typeof job.postedById === 'object' ? job.postedById?.name : 'Tuyển dụng'
                 const statusConf = getStatusConfig(job.status)
                 const priorityConf = getPriorityConfig(job.priority)
                 const createdDate = job.createdAt
@@ -384,16 +381,10 @@ export default function JobRequestTable({
                     {/* Status */}
                     <td className="px-4 py-4">
                       <span
-                        className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full border text-[11px] font-bold shadow-2xs ${statusConf.style}`}
+                        className={`inline-flex items-center px-2.5 py-1 rounded-full border text-[11px] font-bold shadow-2xs ${statusConf.style}`}
                       >
-                        <span className={`w-1.5 h-1.5 rounded-full ${statusConf.dot} shrink-0`} />
                         {statusConf.label}
                       </span>
-                    </td>
-
-                    {/* Requester */}
-                    <td className="px-4 py-4 text-slate-700 font-semibold text-[13px]">
-                      {postedByName}
                     </td>
 
                     {/* Created Date */}

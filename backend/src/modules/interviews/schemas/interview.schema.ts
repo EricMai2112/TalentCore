@@ -84,8 +84,11 @@ export class Interview {
   @Prop({ required: false, enum: InterviewConfirmationStatus, default: InterviewConfirmationStatus.SCHEDULED })
   confirmationStatus?: InterviewConfirmationStatus;
 
-  @Prop({ required: false, trim: true })
+    @Prop({ required: false, trim: true })
   cancelReason?: string;
+
+  @Prop({ required: false, type: Date })
+  confirmationDeadline?: Date;
 
   @Prop({ default: false })
   isEscalated?: boolean;

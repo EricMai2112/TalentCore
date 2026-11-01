@@ -68,6 +68,46 @@ export class InterviewService {
     if (doc.status === InterviewStatus.COMPLETED || doc.status === InterviewStatus.CANCELLED) {
       return doc;
     }
+    const now = new Date();
+    if (!doc.confirmationDeadline && (doc.confirmationStatus === InterviewConfirmationStatus.SCHEDULED || doc.confirmationStatus === InterviewConfirmationStatus.PENDING)) {
+      const baseTime = doc.createdAt
+        ? new Date(doc.createdAt).getTime()
+        : doc.date
+          ? new Date(doc.date).getTime() - 24 * 60 * 60 * 1000
+          : Date.now();
+      doc.confirmationDeadline = new Date(baseTime + 1 * 24 * 60 * 60 * 1000);
+    }
+    if (
+      (doc.confirmationStatus === InterviewConfirmationStatus.SCHEDULED ||
+        doc.confirmationStatus === InterviewConfirmationStatus.PENDING) &&
+      doc.confirmationDeadline &&
+      now > new Date(doc.confirmationDeadline)
+    ) {
+      doc.status = InterviewStatus.CANCELLED;
+      doc.confirmationStatus = InterviewConfirmationStatus.CANCELLED;
+      doc.cancelReason = 'Quá thời hạn xác nhận phỏng vấn';
+      if (doc._id) {
+        this.interviewModel
+          .updateOne(
+            {
+              _id: doc._id,
+              confirmationStatus: {
+                $in: [InterviewConfirmationStatus.SCHEDULED, InterviewConfirmationStatus.PENDING],
+              },
+            },
+            {
+              $set: {
+                status: InterviewStatus.CANCELLED,
+                confirmationStatus: InterviewConfirmationStatus.CANCELLED,
+                cancelReason: 'Quá thời hạn xác nhận phỏng vấn',
+              },
+            },
+          )
+          .exec()
+          .catch(() => {});
+      }
+      return doc;
+    }
     if (doc.confirmationStatus === InterviewConfirmationStatus.REJECTED) {
       doc.status = InterviewStatus.CANCELLED;
       return doc;
@@ -319,6 +359,10 @@ export class InterviewService {
     const newEnd = new Date(targetDate);
     newEnd.setHours(eHour, eMin, 0, 0);
 
+    if (newStart.getTime() >= newEnd.getTime()) {
+      throw new BadRequestException('Thời gian kết thúc phỏng vấn phải diễn ra sau thời gian bắt đầu.');
+    }
+
     for (const exist of existingInterviews) {
       if (!exist.date) continue;
       const existDate = new Date(exist.date);
@@ -376,6 +420,16 @@ export class InterviewService {
       throw new NotFoundException('Không tìm thấy đơn ứng tuyển.');
     }
 
+    const [cSHour, cSMin] = dto.startTime.split(':').map(Number);
+    const [cEHour, cEMin] = dto.endTime.split(':').map(Number);
+    const cStart = new Date(dto.date);
+    cStart.setHours(cSHour, cSMin, 0, 0);
+    const cEnd = new Date(dto.date);
+    cEnd.setHours(cEHour, cEMin, 0, 0);
+    if (cStart.getTime() >= cEnd.getTime()) {
+      throw new BadRequestException('Thời gian kết thúc phỏng vấn phải diễn ra sau thời gian bắt đầu.');
+    }
+
     const conflict = await this.checkInterviewerConflict(
       dto.interviewerId,
       dto.date,
@@ -426,6 +480,9 @@ export class InterviewService {
       status: InterviewStatus.SCHEDULED,
       result: InterviewResult.PENDING,
       confirmationStatus: InterviewConfirmationStatus.SCHEDULED,
+      confirmationDeadline: dto.confirmationDeadline
+        ? new Date(dto.confirmationDeadline)
+        : new Date(Date.now() + 1 * 24 * 60 * 60 * 1000),
       notes: dto.notes,
     });
 
@@ -518,6 +575,9 @@ export class InterviewService {
     if (dto.status) interview.status = dto.status;
     if (dto.result) interview.result = dto.result;
     if (dto.feedback !== undefined) interview.feedback = dto.feedback;
+    if (dto.confirmationDeadline) {
+      interview.confirmationDeadline = new Date(dto.confirmationDeadline);
+    }
 
     if (dto.locationType === LocationType.ONLINE) {
       if (dto.autoCreateMeet || !interview.meetingLink) {
@@ -826,6 +886,7 @@ export class InterviewService {
       notes?: string;
       isHrAdmin?: boolean;
       byHr?: boolean;
+      confirmationDeadline?: string;
     },
   ) {
     const interview = await this.interviewModel.findById(id).exec();
@@ -861,6 +922,11 @@ export class InterviewService {
         .map((idStr) => new Types.ObjectId(idStr));
     }
     if (dto.notes) interview.notes = dto.notes;
+    if (dto.confirmationDeadline) {
+      interview.confirmationDeadline = new Date(dto.confirmationDeadline);
+    } else if (!interview.confirmationDeadline) {
+      interview.confirmationDeadline = new Date(Date.now() + 1 * 24 * 60 * 60 * 1000);
+    }
 
     const isHrUpdate = dto.isHrAdmin || dto.byHr;
 
@@ -959,6 +1025,9 @@ export class InterviewService {
       throw new NotFoundException('Không tìm thấy lịch phỏng vấn');
     }
     interview.confirmationStatus = InterviewConfirmationStatus.SCHEDULED;
+    if (!interview.confirmationDeadline) {
+      interview.confirmationDeadline = new Date(Date.now() + 1 * 24 * 60 * 60 * 1000);
+    }
     const saved = await interview.save();
 
     // Thông báo cho Interviewer và Trưởng phòng ban
@@ -1050,6 +1119,19 @@ export class InterviewService {
     if (!interview) {
       throw new NotFoundException('Không tìm thấy lịch phỏng vấn.');
     }
+    if (
+      confirmationStatus === InterviewConfirmationStatus.CONFIRMED &&
+      interview.confirmationDeadline &&
+      new Date() > new Date(interview.confirmationDeadline)
+    ) {
+      interview.status = InterviewStatus.CANCELLED;
+      interview.confirmationStatus = InterviewConfirmationStatus.CANCELLED;
+      interview.cancelReason = 'Quá thời hạn xác nhận phỏng vấn';
+      await interview.save();
+      throw new BadRequestException(
+        'Đã quá thời hạn xác nhận lịch phỏng vấn. Lịch phỏng vấn đã tự động chuyển sang trạng thái Đã hủy / Từ chối.',
+      );
+    }
     interview.confirmationStatus = confirmationStatus;
     const saved = await interview.save();
 
@@ -1074,19 +1156,18 @@ export class InterviewService {
       const deptId = this.extractDeptId(job?.departmentId);
 
       if (confirmationStatus === InterviewConfirmationStatus.CONFIRMED) {
+        // Đảm bảo đơn ứng tuyển ở đúng stage Phỏng vấn (Interview), không tự động chuyển sang Offer
         const pipeline: any = job?.pipelineTemplateId;
-        if (pipeline && Array.isArray(pipeline.stages) && pipeline.stages.length > 0) {
+        if (pipeline && Array.isArray(pipeline.stages) && pipeline.stages.length > 0 && application) {
           const sortedStages = [...pipeline.stages].sort((a: any, b: any) => (a.order ?? 0) - (b.order ?? 0));
-          const currentIndex = sortedStages.findIndex(
-            (s: any) => s._id?.toString() === application?.currentStageId?.toString(),
+          const interviewStage = sortedStages.find(
+            (s: any) =>
+              s.name?.toLowerCase().includes('interview') ||
+              s.name?.toLowerCase().includes('phỏng vấn'),
           );
-
-          if (currentIndex >= 0 && currentIndex < sortedStages.length - 1) {
-            const nextStage = sortedStages[currentIndex + 1];
-            if (application) {
-              application.currentStageId = nextStage._id;
-              await application.save();
-            }
+          if (interviewStage) {
+            application.currentStageId = interviewStage._id;
+            await application.save();
           }
         }
 

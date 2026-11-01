@@ -84,6 +84,7 @@ export interface InterviewItem {
   feedback?: string;
   confirmationStatus?: 'PENDING' | 'CONFIRMED' | 'WAITING_DEPT_SCHEDULE' | 'WAITING_HR_APPROVAL' | 'SCHEDULED' | 'CANCEL_REQUESTED' | 'CANCELLED' | 'REJECTED' | string;
   cancelReason?: string;
+  confirmationDeadline?: string;
   isEscalated?: boolean;
   createdAt?: string;
   updatedAt?: string;
@@ -100,6 +101,7 @@ export interface CreateInterviewPayload {
   meetingLink?: string;
   offsiteLocation?: string;
   notes?: string;
+  confirmationDeadline?: string;
 }
 
 export interface UpdateInterviewPayload {
@@ -115,4 +117,5 @@ export interface UpdateInterviewPayload {
   status?: InterviewStatus;
   result?: InterviewResult;
   feedback?: string;
+  confirmationDeadline?: string;
 }

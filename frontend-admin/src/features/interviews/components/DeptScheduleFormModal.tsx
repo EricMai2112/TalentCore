@@ -93,6 +93,7 @@ export function DeptScheduleFormModal({
       meetingLink: "",
       offsiteLocation: "Tầng 1, Tòa nhà Landmark 81, Nguyễn Hữu Cảnh, HCM",
       interviewerId: "",
+      confirmationDeadline: new Date(Date.now() + 1 * 24 * 60 * 60 * 1000).toISOString().split("T")[0],
     },
   });
 
@@ -103,6 +104,7 @@ export function DeptScheduleFormModal({
   const meetingLink = watch("meetingLink");
   const offsiteLocation = watch("offsiteLocation");
   const selectedInterviewerId = watch("interviewerId");
+  const confirmationDeadline = watch("confirmationDeadline");
 
   // Populate form on interview change
   useEffect(() => {
@@ -126,6 +128,14 @@ export function DeptScheduleFormModal({
           ? interview.interviewerId?._id
           : interview.interviewerId || "";
 
+      let defaultDeadline = new Date(Date.now() + 1 * 24 * 60 * 60 * 1000).toISOString().split("T")[0];
+      if (interview.confirmationDeadline) {
+        const dl = new Date(interview.confirmationDeadline);
+        if (!isNaN(dl.getTime())) {
+          defaultDeadline = dl.toISOString().split("T")[0];
+        }
+      }
+
       reset({
         date: defaultDate,
         startTime: interview.startTime || "09:00",
@@ -134,6 +144,7 @@ export function DeptScheduleFormModal({
         meetingLink: locType === LocationType.ONLINE ? autoUrl : "",
         offsiteLocation: locType === LocationType.OFFSITE ? autoOffsite : "Tầng 1, Tòa nhà Landmark 81, Nguyễn Hữu Cảnh, HCM",
         interviewerId: existingInterviewerId,
+        confirmationDeadline: defaultDeadline,
       });
     }
   }, [interview, isOpen, deptName, candName, jobTitle, reset]);
@@ -188,6 +199,7 @@ export function DeptScheduleFormModal({
         interviewerIds: [data.interviewerId],
         isHrAdmin: !!isHrAdmin,
         byHr: !!isHrAdmin,
+        confirmationDeadline: data.confirmationDeadline,
       });
 
       onSuccess();
@@ -234,16 +246,28 @@ export function DeptScheduleFormModal({
             </div>
           )}
 
-          {/* Ngày phỏng vấn */}
-          <CustomDatePicker
-            label="Ngày phỏng vấn"
-            required
-            value={date}
-            onChange={(val) => {
-              setValue("date", val, { shouldValidate: true });
-            }}
-            error={errors.date?.message}
-          />
+          {/* Ngày phỏng vấn & Thời hạn xác nhận phỏng vấn */}
+          <div className="grid grid-cols-2 gap-3">
+            <CustomDatePicker
+              label="Ngày phỏng vấn"
+              required
+              value={date}
+              onChange={(val) => {
+                setValue("date", val, { shouldValidate: true });
+              }}
+              error={errors.date?.message}
+            />
+
+            <CustomDatePicker
+              label="Thời hạn xác nhận phỏng vấn"
+              required
+              value={confirmationDeadline || ""}
+              onChange={(val) => {
+                setValue("confirmationDeadline", val, { shouldValidate: true });
+              }}
+              error={errors.confirmationDeadline?.message}
+            />
+          </div>
 
           {/* Khung giờ Phỏng vấn */}
           <div className="grid grid-cols-2 gap-3">

@@ -95,6 +95,7 @@ export interface CandidateInterviewItem {
   rescheduleReason?: string;
   rescheduleRejectReason?: string;
   cancelReason?: string;
+  confirmationDeadline?: string;
   proposedCustomDate?: string;
   proposedCustomStartTime?: string;
   proposedCustomEndTime?: string;

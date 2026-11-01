@@ -1,4 +1,4 @@
-import { Injectable, BadRequestException, NotFoundException, Logger, Optional } from '@nestjs/common';
+import { Injectable, BadRequestException, NotFoundException, ForbiddenException, Logger, Optional } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model, Types } from 'mongoose';
 import * as path from 'path';
@@ -547,7 +547,10 @@ export class ApplicationService {
           const targetIdx = sortedStages.findIndex(
             (s: any) => s._id?.toString() === stageId || s.name === stageId,
           );
-          if (currentIdx !== -1 && targetIdx !== -1 && targetIdx < currentIdx) {
+          if (targetIdx === -1) {
+            throw new BadRequestException('Giai đoạn tuyển dụng không tồn tại trong quy trình của vị trí tuyển dụng này.');
+          }
+          if (currentIdx !== -1 && targetIdx < currentIdx) {
             throw new BadRequestException('Không thể chuyển ứng viên về giai đoạn tuyển dụng trước đó');
           }
         }
@@ -623,12 +626,12 @@ export class ApplicationService {
         try {
           let interview = await this.interviewModel.findOne({ applicationId: populated._id }).exec();
           if (!interview) {
-            const defaultInterviewer = job?.interviewerId || populated.candidateId;
+            const defaultInterviewer = job?.interviewerId || (job?.interviewerIds && job.interviewerIds[0]) || undefined;
             interview = new this.interviewModel({
               applicationId: populated._id,
               candidateId: populated.candidateId?._id || populated.candidateId,
               jobDescriptionId: job?._id || populated.jobDescriptionId,
-              interviewerId: defaultInterviewer || new Types.ObjectId(),
+              interviewerId: defaultInterviewer,
               locationType: LocationType.ONLINE,
               status: InterviewStatus.SCHEDULED,
               result: InterviewResult.PENDING,
@@ -682,7 +685,7 @@ export class ApplicationService {
     return populated;
   }
 
-  async getApplicationById(applicationId: string) {
+  async getApplicationById(applicationId: string, currentUser?: { id: string; role?: string; departmentId?: string }) {
     const application = await this.applicationModel
       .findById(applicationId)
       .populate({
@@ -699,6 +702,14 @@ export class ApplicationService {
 
     if (!application) {
       throw new NotFoundException('Không tìm thấy đơn ứng tuyển.');
+    }
+
+    if (currentUser && currentUser.role === 'CANDIDATE') {
+      const candidateObj: any = application.candidateId;
+      const candidateUserId = (candidateObj?.userId?._id || candidateObj?.userId)?.toString();
+      if (candidateUserId && candidateUserId !== currentUser.id?.toString()) {
+        throw new ForbiddenException('Bạn không có quyền xem thông tin đơn ứng tuyển này.');
+      }
     }
 
     const job = application.jobDescriptionId as any;

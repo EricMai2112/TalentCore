@@ -8,7 +8,7 @@ import { Model, isValidObjectId } from 'mongoose';
 import { JwtService } from '@nestjs/jwt';
 import * as bcrypt from 'bcrypt';
 import { LoginDto, RegisterDto } from '../dtos/auth.dto';
-import { User, UserDocument } from 'src/modules/users/schemas/user.schema';
+import { User, UserDocument, UserStatus } from 'src/modules/users/schemas/user.schema';
 import { UserService } from 'src/modules/users/services/user.service';
 
 @Injectable()
@@ -55,6 +55,10 @@ export class AuthService {
     const isMatchedPassword = await bcrypt.compare(password, user.password);
     if (!isMatchedPassword) {
       throw new UnauthorizedException('Email hoặc Password không chính xác');
+    }
+
+    if (user.status === UserStatus.LOCKED) {
+      throw new UnauthorizedException('Tài khoản của bạn đã bị khóa. Vui lòng liên hệ Quản trị viên để được hỗ trợ.');
     }
 
     const payload = {

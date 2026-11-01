@@ -154,11 +154,21 @@ export class DepartmentService {
     }
 
     async remove(id: string) {
+        if (!Types.ObjectId.isValid(id)) {
+            throw new BadRequestException("Mã phòng ban không hợp lệ");
+        }
         const deptObjectId = new Types.ObjectId(id);
         const department = await this.departmentModel.findById(deptObjectId).exec();
 
         if (!department) {
             throw new NotFoundException("Không tìm thấy phòng ban");
+        }
+
+        const positionsCount = await this.departmentModel.db.collection('positions').countDocuments({ departmentId: deptObjectId });
+        const jobsCount = await this.departmentModel.db.collection('jobdescriptions').countDocuments({ departmentId: deptObjectId });
+
+        if (positionsCount > 0 || jobsCount > 0) {
+            throw new BadRequestException("Không thể xóa phòng ban đang có vị trí công việc hoặc tin tuyển dụng liên kết. Vui lòng di chuyển hoặc xóa các dữ liệu liên quan trước.");
         }
 
         if (department.managerId) {

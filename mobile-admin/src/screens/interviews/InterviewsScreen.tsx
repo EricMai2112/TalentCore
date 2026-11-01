@@ -712,6 +712,22 @@ export const InterviewsScreen: React.FC = () => {
                         </Text>
                       </View>
 
+                      {item.confirmationStatus === 'SCHEDULED' && (item as any).confirmationDeadline && (
+                        <View style={styles.detailRow}>
+                          <Ionicons name="alarm-outline" size={14} color="#D97706" />
+                          <Text style={[styles.detailText, { color: '#B45309', fontWeight: '600' }]}>
+                            Hạn xác nhận: {formatSchedule((item as any).confirmationDeadline, '', '').replace(' - , ', '')}
+                          </Text>
+                        </View>
+                      )}
+                      {item.cancelReason && (
+                        <View style={styles.detailRow}>
+                          <Ionicons name="information-circle-outline" size={14} color="#DC2626" />
+                          <Text style={[styles.detailText, { color: '#DC2626', fontWeight: '500' }]}>
+                            {item.cancelReason}
+                          </Text>
+                        </View>
+                      )}
                       {item.feedback && (
                         <View style={styles.feedbackBox}>
                           <Text style={styles.feedbackLabel}>Đánh giá phỏng vấn:</Text>
