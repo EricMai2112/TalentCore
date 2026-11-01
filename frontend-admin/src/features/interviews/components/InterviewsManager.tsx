@@ -321,7 +321,7 @@ export default function InterviewsManager({
           if (jobTitle !== positionFilter) return false
         }
 
-        // 4. Status Dropdown Filter
+        // 4. Status Dropdown Filter (Chuẩn hóa 6 trạng thái nghiệp vụ)
         if (statusFilter && statusFilter !== 'ALL') {
           const confirmationStatus = item.confirmationStatus
           const status = item.status
@@ -330,39 +330,51 @@ export default function InterviewsManager({
             case 'WAITING_DEPT_SCHEDULE':
               if (confirmationStatus !== 'WAITING_DEPT_SCHEDULE') return false
               break
+
             case 'WAITING_HR_APPROVAL':
               if (confirmationStatus !== 'WAITING_HR_APPROVAL') return false
               break
+
             case 'SCHEDULED':
-              if (
-                confirmationStatus !== 'SCHEDULED' &&
-                !(status === InterviewStatus.SCHEDULED && !confirmationStatus)
-              )
+              // Chờ ứng viên xác nhận: gom cả confirmationStatus là SCHEDULED, PENDING hoặc status SCHEDULED
+              if (status === InterviewStatus.COMPLETED || status === InterviewStatus.CANCELLED) {
                 return false
+              }
+              const isWaitingCandidate =
+                confirmationStatus === 'SCHEDULED' ||
+                confirmationStatus === 'PENDING' ||
+                (!confirmationStatus && status === InterviewStatus.SCHEDULED)
+              if (!isWaitingCandidate) return false
               break
+
             case 'CONFIRMED':
-            case 'UPCOMING':
-              if (confirmationStatus !== 'CONFIRMED' && status !== InterviewStatus.UPCOMING)
+              // Đã lên lịch: Ứng viên đã xác nhận tham gia (chưa kết thúc hoặc hủy)
+              if (status === InterviewStatus.COMPLETED || status === InterviewStatus.CANCELLED) {
                 return false
+              }
+              const isConfirmedSchedule =
+                confirmationStatus === 'CONFIRMED' ||
+                status === InterviewStatus.UPCOMING ||
+                status === InterviewStatus.IN_PROGRESS
+              if (!isConfirmedSchedule) return false
               break
-            case 'IN_PROGRESS':
-              if (status !== InterviewStatus.IN_PROGRESS) return false
-              break
+
             case 'COMPLETED':
+              // Đã kết thúc
               if (status !== InterviewStatus.COMPLETED) return false
               break
+
             case 'CANCELLED':
-            case 'REJECTED':
-              if (
-                status !== InterviewStatus.CANCELLED &&
-                confirmationStatus !== 'CANCELLED' &&
-                confirmationStatus !== 'REJECTED' &&
-                confirmationStatus !== 'CANCEL_REQUESTED'
-              )
-                return false
+              // Đã hủy / Từ chối
+              const isCancelledOrRejected =
+                status === InterviewStatus.CANCELLED ||
+                confirmationStatus === 'CANCELLED' ||
+                confirmationStatus === 'REJECTED' ||
+                confirmationStatus === 'CANCEL_REQUESTED'
+              if (!isCancelledOrRejected) return false
               break
+
             default:
-              if (status !== statusFilter && confirmationStatus !== statusFilter) return false
               break
           }
         }

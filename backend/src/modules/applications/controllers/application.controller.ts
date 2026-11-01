@@ -133,8 +133,11 @@ export class ApplicationController {
   }
 
   @Get(':id')
-  async getApplicationById(@Param('id') id: string) {
-    const data = await this.applicationService.getApplicationById(id);
+  async getApplicationById(
+    @Param('id') id: string,
+    @CurrentUser() currentUser: any,
+  ) {
+    const data = await this.applicationService.getApplicationById(id, currentUser);
     return {
       message: 'Lấy chi tiết đơn ứng tuyển thành công',
       data,

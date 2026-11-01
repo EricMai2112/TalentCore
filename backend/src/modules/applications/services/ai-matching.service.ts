@@ -597,8 +597,9 @@ Bắt buộc chỉ trả về duy nhất một đối tượng JSON thuần túy
         }
       }
 
+      const isCriterionPassed = score >= 60;
       const isMandatory = criterion.requirementType === 'MANDATORY';
-      if (isMandatory && (!matched.isPassed || score < 60)) {
+      if (isMandatory && !isCriterionPassed) {
         isMissingMandatory = true;
         warnings.push(`Không đáp ứng yêu cầu Bắt buộc: "${criterion.name}" (Điểm: ${score}/100)`);
       }
@@ -617,7 +618,7 @@ Bắt buộc chỉ trả về duy nhất một đối tượng JSON thuần túy
         evidence,
         isEvidenceVerified,
         evidenceStrengthScore,
-        isPassed: Boolean(matched.isPassed),
+        isPassed: isCriterionPassed,
       });
     }
 

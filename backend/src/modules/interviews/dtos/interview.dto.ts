@@ -41,6 +41,10 @@ export class CreateInterviewDto {
   @IsString()
   @IsOptional()
   notes?: string;
+
+  @IsString()
+  @IsOptional()
+  confirmationDeadline?: string;
 }
 
 export class UpdateInterviewDto {
@@ -91,6 +95,10 @@ export class UpdateInterviewDto {
   @IsString()
   @IsOptional()
   feedback?: string;
+
+  @IsString()
+  @IsOptional()
+  confirmationDeadline?: string;
 }
 
 export class RequestDeptScheduleDto {

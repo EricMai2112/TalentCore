@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react'
 import {
   Calendar,
+  Clock,
   Video,
   MapPin,
   User,
@@ -33,6 +34,14 @@ export function CandidateInterviewCardItem({
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [isCancelModalOpen, setIsCancelModalOpen] = useState(false)
   const [isConfirmModalOpen, setIsConfirmModalOpen] = useState(false)
+    const effectiveDeadline =
+    interview.confirmationDeadline ||
+    (interview.createdAt
+      ? new Date(new Date(interview.createdAt).getTime() + 1 * 24 * 60 * 60 * 1000).toISOString()
+      : interview.date
+        ? new Date(new Date(interview.date).getTime() - 24 * 60 * 60 * 1000).toISOString()
+        : '');
+  const isDeadlinePassed = effectiveDeadline ? new Date() > new Date(effectiveDeadline) : false;
 
   useEffect(() => {
     if (interview.confirmationStatus) {
@@ -82,7 +91,7 @@ export function CandidateInterviewCardItem({
         return (
           <span className="px-3 py-1 rounded-full text-xs font-bold bg-rose-50 text-rose-700 border border-rose-200 inline-flex items-center gap-1.5 shrink-0">
             <XCircle size={13} className="text-rose-600" />
-            <span>Đã hủy</span>
+            <span>Đã hủy / Từ chối</span>
           </span>
         )
       case 'SCHEDULED':
@@ -135,6 +144,12 @@ export function CandidateInterviewCardItem({
                 {jobTitle}
               </h3>
               {getConfirmationBadge()}
+              {confirmationStatus !== 'CONFIRMED' && interview.status !== 'CANCELLED' && effectiveDeadline && (
+                <span className="px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-amber-50 text-amber-800 border border-amber-200 inline-flex items-center gap-1 shadow-2xs">
+                  <Clock size={11} className="text-amber-600" />
+                  <span>Hạn phản hồi: {formatDate(effectiveDeadline)}</span>
+                </span>
+              )}
             </div>
             <p className="text-xs font-medium text-slate-500 flex items-center gap-1">
               <Building2 size={13} className="text-slate-400" />
@@ -183,7 +198,7 @@ export function CandidateInterviewCardItem({
         </div>
 
         {/* HR Support Zalo/Phone Contact Callout Note */}
-        {(interview.status === 'SCHEDULED' || interview.status === 'UPCOMING' || interview.status === 'IN_PROGRESS') && (
+        {(interview.status === 'SCHEDULED' || interview.status === 'UPCOMING' || interview.status === 'IN_PROGRESS') && !isDeadlinePassed && (
           <HrContactNoteCallout phone="0987654321" zaloPhone="0987654321" />
         )}
 

@@ -34,6 +34,14 @@ export const InterviewCardItem: React.FC<InterviewCardItemProps> = ({
   const isOnline = interview.locationType === 'ONLINE' || !interview.locationType;
   const isCompleted = interview.status === 'COMPLETED';
   const isCancelled = interview.status === 'CANCELLED';
+    const effectiveDeadline =
+    interview.confirmationDeadline ||
+    (interview.createdAt
+      ? new Date(new Date(interview.createdAt).getTime() + 1 * 24 * 60 * 60 * 1000).toISOString()
+      : interview.date
+        ? new Date(new Date(interview.date).getTime() - 24 * 60 * 60 * 1000).toISOString()
+        : '');
+  const isDeadlinePassed = effectiveDeadline ? new Date() > new Date(effectiveDeadline) : false;
   const isActive =
     interview.status === 'SCHEDULED' ||
     interview.status === 'UPCOMING' ||
@@ -103,7 +111,7 @@ export const InterviewCardItem: React.FC<InterviewCardItemProps> = ({
         return (
           <View style={[styles.statusBadge, styles.badgeCancelled]}>
             <Ionicons name="close-circle" size={12} color="#e11d48" />
-            <Text style={styles.badgeCancelledText}>Đã hủy</Text>
+            <Text style={styles.badgeCancelledText}>Đã hủy / Từ chối</Text>
           </View>
         );
       default:
@@ -124,6 +132,13 @@ export const InterviewCardItem: React.FC<InterviewCardItemProps> = ({
           <View style={styles.titleWithBadge}>
             <Text style={styles.jobTitle}>{jobTitle}</Text>
             {getConfirmationBadge()}
+            {!isConfirmed && !isCancelled && effectiveDeadline ? (
+              <View style={[styles.statusBadge, { backgroundColor: '#fef3c7', borderColor: '#fde68a' }]}>
+                <Text style={{ fontSize: 10, fontWeight: '700', color: '#b45309' }}>
+                  ⏰ Hạn: {formatDate(effectiveDeadline)}
+                </Text>
+              </View>
+            ) : null}
           </View>
           <Text style={styles.deptText}>{deptName}</Text>
         </View>
@@ -158,6 +173,28 @@ export const InterviewCardItem: React.FC<InterviewCardItemProps> = ({
             {interview.interviewerId?.name || 'Hội đồng phỏng vấn'}
           </Text>
         </View>
+
+        {effectiveDeadline ? (
+          <View style={styles.detailRow}>
+            <Ionicons
+              name="alarm-outline"
+              size={14}
+              color={isDeadlinePassed && !isConfirmed ? '#e11d48' : '#d97706'}
+            />
+            <Text
+              style={[
+                styles.detailText,
+                {
+                  color: isDeadlinePassed && !isConfirmed ? '#e11d48' : '#b45309',
+                  fontWeight: '700',
+                },
+              ]}
+            >
+              Hạn phản hồi: {formatDate(effectiveDeadline)}
+              {isDeadlinePassed && !isConfirmed ? ' (Đã quá hạn)' : ''}
+            </Text>
+          </View>
+        ) : null}
       </View>
 
       {/* HR Support Zalo/Phone Callout Note */}
@@ -167,7 +204,7 @@ export const InterviewCardItem: React.FC<InterviewCardItemProps> = ({
       {isActive && (
         <View style={styles.actionsRow}>
           {/* If NOT confirmed and NOT cancel requested: Show 2 buttons */}
-          {!isConfirmed && !isCancelRequested && (
+          {!isConfirmed && !isCancelRequested && !isDeadlinePassed && (
             <>
               <Pressable style={styles.confirmBtn} onPress={onConfirm}>
                 <Ionicons name="checkmark-circle" size={14} color="#ffffff" />

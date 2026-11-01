@@ -74,6 +74,10 @@ export default function InterviewForm({
   const [offsiteLocationVal, setOffsiteLocationVal] = useState<string>('');
   const [notesVal, setNotesVal] = useState<string>('');
   const [statusVal, setStatusVal] = useState<InterviewStatus>(InterviewStatus.SCHEDULED);
+  const [confirmationDeadlineVal, setConfirmationDeadlineVal] = useState<string>(() => {
+    const d = new Date(Date.now() + 1 * 24 * 60 * 60 * 1000);
+    return d.toISOString().split('T')[0];
+  });
 
   const [isSubmitting, setIsSubmitting] = useState<boolean>(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
@@ -172,6 +176,12 @@ export default function InterviewForm({
       setOffsiteLocationVal(data.offsiteLocation || '');
       setNotesVal(data.notes || '');
       setStatusVal(data.status || InterviewStatus.SCHEDULED);
+      if (data.confirmationDeadline) {
+        const dl = new Date(data.confirmationDeadline);
+        if (!isNaN(dl.getTime())) {
+          setConfirmationDeadlineVal(dl.toISOString().split('T')[0]);
+        }
+      }
 
       setIsLoadingInterview(false);
     };
@@ -335,7 +345,8 @@ export default function InterviewForm({
           locationType: locationTypeVal,
           autoCreateMeet,
           offsiteLocation: locationTypeVal === LocationType.OFFSITE ? offsiteLocationVal : undefined,
-          notes: notesVal
+          notes: notesVal,
+          confirmationDeadline: confirmationDeadlineVal
         });
       } else if (interviewId) {
         await interviewsApi.updateInterview(interviewId, {
@@ -347,7 +358,8 @@ export default function InterviewForm({
           autoCreateMeet,
           offsiteLocation: locationTypeVal === LocationType.OFFSITE ? offsiteLocationVal : undefined,
           notes: notesVal,
-          status: statusVal
+          status: statusVal,
+          confirmationDeadline: confirmationDeadlineVal
         });
       }
 
@@ -645,11 +657,11 @@ export default function InterviewForm({
             </div>
           </div>
 
-          {/* 3. Trường Ngày & Giờ */}
+          {/* 3. Trường Ngày & Thời hạn xác nhận */}
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
             <div className="space-y-2">
               <label className="text-xs font-bold text-slate-700 uppercase tracking-wider block">
-                Ngày <span className="text-rose-500">*</span>
+                Ngày phỏng vấn <span className="text-rose-500">*</span>
               </label>
               <CustomDatePicker
                 value={dateVal}
@@ -661,34 +673,49 @@ export default function InterviewForm({
               />
             </div>
 
-            <div className="grid grid-cols-2 gap-3">
-              <div className="space-y-2">
-                <label className="text-xs font-bold text-slate-700 uppercase tracking-wider block">
-                  Giờ bắt đầu <span className="text-rose-500">*</span>
-                </label>
-                <CustomTimePicker
-                  value={startTimeVal}
-                  onChange={(val) => {
-                    setStartTimeVal(val);
-                    setIsDirty(true);
-                  }}
-                  placeholder="14:00"
-                />
-              </div>
+            <div className="space-y-2">
+              <label className="text-xs font-bold text-slate-700 uppercase tracking-wider block">
+                Thời hạn xác nhận phỏng vấn <span className="text-rose-500">*</span>
+              </label>
+              <CustomDatePicker
+                value={confirmationDeadlineVal}
+                onChange={(val) => {
+                  setConfirmationDeadlineVal(val);
+                  setIsDirty(true);
+                }}
+                placeholder="dd/mm/yyyy"
+              />
+            </div>
+          </div>
 
-              <div className="space-y-2">
-                <label className="text-xs font-bold text-slate-700 uppercase tracking-wider block">
-                  Giờ kết thúc <span className="text-rose-500">*</span>
-                </label>
-                <CustomTimePicker
-                  value={endTimeVal}
-                  onChange={(val) => {
-                    setEndTimeVal(val);
-                    setIsDirty(true);
-                  }}
-                  placeholder="15:30"
-                />
-              </div>
+          {/* 3.1. Khung giờ phỏng vấn */}
+          <div className="grid grid-cols-2 gap-3 max-w-lg">
+            <div className="space-y-2">
+              <label className="text-xs font-bold text-slate-700 uppercase tracking-wider block">
+                Giờ bắt đầu <span className="text-rose-500">*</span>
+              </label>
+              <CustomTimePicker
+                value={startTimeVal}
+                onChange={(val) => {
+                  setStartTimeVal(val);
+                  setIsDirty(true);
+                }}
+                placeholder="14:00"
+              />
+            </div>
+
+            <div className="space-y-2">
+              <label className="text-xs font-bold text-slate-700 uppercase tracking-wider block">
+                Giờ kết thúc <span className="text-rose-500">*</span>
+              </label>
+              <CustomTimePicker
+                value={endTimeVal}
+                onChange={(val) => {
+                  setEndTimeVal(val);
+                  setIsDirty(true);
+                }}
+                placeholder="15:30"
+              />
             </div>
           </div>
 

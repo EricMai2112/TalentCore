@@ -79,7 +79,7 @@ export default function InterviewsListView({
               <th className="px-4 py-3.5">Phòng ban</th>
               <th className="px-4 py-3.5">Thời gian</th>
               <th className="px-4 py-3.5">Người phỏng vấn</th>
-              <th className="px-4 py-3.5 text-left">Trạng thái</th>
+              <th className="px-4 py-3.5 text-left w-[170px] whitespace-nowrap">Trạng thái</th>
               <th className="px-5 py-3.5 text-center">Thao tác</th>
             </tr>
           </thead>

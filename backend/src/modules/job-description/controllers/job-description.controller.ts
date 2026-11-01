@@ -20,12 +20,15 @@ import { SaveJobDraftDto } from '../dtos/save-job-draft.dto';
 
 import { Public } from '../../auth/decorators/public.decorator';
 import { CurrentUser } from '../../auth/decorators/current-user.decorator';
+import { Roles } from '../../auth/decorators/roles.decorator';
+import { UserRole } from '../../users/schemas/user.schema';
 
 @Controller('job-descriptions')
 @UsePipes(new ValidationPipe({ whitelist: true }))
 export class JobDescriptionController {
   constructor(private readonly jobDescriptionService: JobDescriptionService) {}
 
+  @Roles(UserRole.HR_ADMIN, UserRole.DEPARTMENT_MANAGER)
   @Post('drafts')
   async saveDraft(
     @Body() dto: SaveJobDraftDto,
@@ -41,6 +44,7 @@ export class JobDescriptionController {
     };
   }
 
+  @Roles(UserRole.HR_ADMIN, UserRole.DEPARTMENT_MANAGER)
   @Get('drafts/:positionId')
   async getDraftByPosition(
     @Param('positionId') positionId: string,
@@ -56,6 +60,7 @@ export class JobDescriptionController {
     };
   }
 
+  @Roles(UserRole.HR_ADMIN, UserRole.DEPARTMENT_MANAGER)
   @Delete('drafts/:positionId')
   @HttpCode(HttpStatus.OK)
   async deleteDraft(
@@ -68,6 +73,7 @@ export class JobDescriptionController {
     };
   }
 
+  @Roles(UserRole.HR_ADMIN, UserRole.DEPARTMENT_MANAGER)
   @Post('ai-suggest-weights')
   async suggestCriteriaWeightsWithAi(@Body() dto: SuggestCriteriaWeightsDto) {
     const result = await this.jobDescriptionService.suggestCriteriaWeightsWithAi(dto);
@@ -77,6 +83,7 @@ export class JobDescriptionController {
     };
   }
 
+  @Roles(UserRole.HR_ADMIN, UserRole.DEPARTMENT_MANAGER)
   @Post('ai-generate-content')
   async generateJdContentWithAi(@Body() dto: GenerateJdContentDto) {
     const result = await this.jobDescriptionService.generateJdContentWithAi(dto);
@@ -86,6 +93,7 @@ export class JobDescriptionController {
     };
   }
 
+  @Roles(UserRole.HR_ADMIN, UserRole.DEPARTMENT_MANAGER)
   @Post()
   async create(@Body() createDto: CreateJobDescriptionDto) {
     const job = await this.jobDescriptionService.create(createDto);
@@ -95,6 +103,7 @@ export class JobDescriptionController {
     };
   }
 
+  @Roles(UserRole.HR_ADMIN, UserRole.DEPARTMENT_MANAGER, UserRole.EMPLOYEE)
   @Get()
   async findAll() {
     const jobs = await this.jobDescriptionService.findAll();
@@ -124,6 +133,7 @@ export class JobDescriptionController {
     };
   }
 
+  @Roles(UserRole.HR_ADMIN, UserRole.DEPARTMENT_MANAGER)
   @Put(':id')
   async update(
     @Param('id') id: string,
@@ -136,6 +146,7 @@ export class JobDescriptionController {
     };
   }
 
+  @Roles(UserRole.HR_ADMIN)
   @Delete(':id')
   @HttpCode(HttpStatus.OK)
   async delete(@Param('id') id: string) {

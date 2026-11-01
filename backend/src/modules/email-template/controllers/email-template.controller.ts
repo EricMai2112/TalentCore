@@ -12,6 +12,8 @@ import {
   ValidationPipe,
 } from '@nestjs/common';
 import { EmailTemplateService } from '../services/email-template.service';
+import { Roles } from '../../auth/decorators/roles.decorator';
+import { UserRole } from '../../users/schemas/user.schema';
 import {
   CreateEmailTemplateDto,
   UpdateEmailTemplateDto,
@@ -22,6 +24,7 @@ import {
 export class EmailTemplateController {
   constructor(private readonly emailTemplateService: EmailTemplateService) {}
 
+  @Roles(UserRole.HR_ADMIN)
   @Post()
   async create(@Body() createEmailTemplateDto: CreateEmailTemplateDto) {
     const template =
@@ -50,6 +53,7 @@ export class EmailTemplateController {
     };
   }
 
+  @Roles(UserRole.HR_ADMIN)
   @Put(':id')
   async update(
     @Param('id') id: string,
@@ -65,6 +69,7 @@ export class EmailTemplateController {
     };
   }
 
+  @Roles(UserRole.HR_ADMIN)
   @Delete(':id')
   @HttpCode(HttpStatus.OK)
   async delete(@Param('id') id: string) {
