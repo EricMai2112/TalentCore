@@ -9,6 +9,7 @@
 !.yarn/plugins
 !.yarn/releases
 !.yarn/versions
+.kiro/
 
 # testing
 /coverage
@@ -30,9 +31,10 @@ yarn-debug.log*
 yarn-error.log*
 .pnpm-debug.log*
 
-# env files (can opt-in for committing if needed)
-.env*
-
+# env files
+.env*.local
+.env.local
+.env
 # vercel
 .vercel
 

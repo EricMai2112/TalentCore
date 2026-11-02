@@ -22,7 +22,7 @@ export default async function JobDescriptionPage() {
   let positions: Position[] = [];
 
   try {
-    const [jobsRes, deptsRes, templatesRes, skillsRes, empsRes, positionsRes] = await Promise.all([
+    const [jobsRes, deptsRes, templatesRes, skillsRes, empsRes, positionsRes] = await Promise.allSettled([
       jobDescriptionApi.getJobs(),
       jobDescriptionApi.getDepartments(),
       jobDescriptionApi.getPipelineTemplates(),
@@ -31,18 +31,18 @@ export default async function JobDescriptionPage() {
       jobDescriptionApi.getPositions(),
     ]);
 
-    initialJobs = jobsRes;
-    departments = deptsRes;
-    pipelineTemplates = templatesRes;
-    skills = skillsRes;
-    employees = empsRes;
-    positions = positionsRes;
+    if (jobsRes.status === "fulfilled") initialJobs = jobsRes.value;
+    if (deptsRes.status === "fulfilled") departments = deptsRes.value;
+    if (templatesRes.status === "fulfilled") pipelineTemplates = templatesRes.value;
+    if (skillsRes.status === "fulfilled") skills = skillsRes.value;
+    if (empsRes.status === "fulfilled") employees = empsRes.value;
+    if (positionsRes.status === "fulfilled") positions = positionsRes.value;
   } catch (err) {
     console.error("Failed to fetch initial data for Job Requisitions:", err);
   }
 
   return (
-    <div className="p-6 max-w-7xl mx-auto space-y-6">
+    <div className="w-full space-y-6">
       <JobRequestManager
         initialJobs={initialJobs}
         departments={departments}

@@ -9,6 +9,18 @@ import { SkillsModule } from './modules/skills/skills.module';
 import { PositionsModule } from './modules/positions/positions.module';
 import { DepartmentsModule } from './modules/departments/departments.module';
 import { JobDescriptionModule } from './modules/job-description/job-description.module';
+import { CandidatesModule } from './modules/candidates/candidates.module';
+import { ApplicationsModule } from './modules/applications/applications.module';
+import { InterviewsModule } from './modules/interviews/interviews.module';
+import { NotificationsModule } from './modules/notifications/notifications.module';
+import { OffersModule } from './modules/offers/offers.module';
+import { AnalyticsModule } from './modules/analytics/analytics.module';
+// import { MockInterviewModule } from './modules/mock-interview/mock-interview.module';
+import { SmsModule } from './modules/sms/sms.module';
+
+import { APP_GUARD } from '@nestjs/core';
+import { JwtAuthGuard } from './modules/auth/guards/jwt-auth.guard';
+import { RolesGuard } from './modules/auth/guards/roles.guard';
 
 @Module({
   imports: [
@@ -28,8 +40,25 @@ import { JobDescriptionModule } from './modules/job-description/job-description.
     PositionsModule,
     DepartmentsModule,
     JobDescriptionModule,
+    CandidatesModule,
+    ApplicationsModule,
+    InterviewsModule,
+    NotificationsModule,
+    OffersModule,
+    AnalyticsModule,
+    // MockInterviewModule,
+    SmsModule,
   ],
   controllers: [],
-  providers: [],
+  providers: [
+    {
+      provide: APP_GUARD,
+      useClass: JwtAuthGuard,
+    },
+    {
+      provide: APP_GUARD,
+      useClass: RolesGuard,
+    },
+  ],
 })
 export class AppModule {}

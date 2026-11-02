@@ -4,11 +4,11 @@ import {
   UnauthorizedException,
 } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
-import { Model } from 'mongoose';
+import { Model, isValidObjectId } from 'mongoose';
 import { JwtService } from '@nestjs/jwt';
 import * as bcrypt from 'bcrypt';
 import { LoginDto, RegisterDto } from '../dtos/auth.dto';
-import { User, UserDocument } from 'src/modules/users/schemas/user.schema';
+import { User, UserDocument, UserStatus } from 'src/modules/users/schemas/user.schema';
 import { UserService } from 'src/modules/users/services/user.service';
 
 @Injectable()
@@ -19,7 +19,7 @@ export class AuthService {
   ) {}
 
   async register(registerDto: RegisterDto) {
-    const { email, name, phone, password, confirm_password } = registerDto;
+    const { email, password, confirm_password } = registerDto;
 
     const isExistedEmail = await this.userService.findByEmail(email);
 
@@ -35,8 +35,6 @@ export class AuthService {
 
     await this.userService.createUser({
       email,
-      name,
-      phone,
       password: hashedPassword,
     });
 
@@ -59,7 +57,16 @@ export class AuthService {
       throw new UnauthorizedException('Email hoặc Password không chính xác');
     }
 
-    const payload = { sub: user.id, email: user.email };
+    if (user.status === UserStatus.LOCKED) {
+      throw new UnauthorizedException('Tài khoản của bạn đã bị khóa. Vui lòng liên hệ Quản trị viên để được hỗ trợ.');
+    }
+
+    const payload = {
+      sub: user._id.toString(),
+      email: user.email,
+      role: user.role,
+      departmentId: user.departmentId ? user.departmentId.toString() : undefined,
+    };
 
     const userObject = user.toObject();
 
@@ -71,8 +78,14 @@ export class AuthService {
     };
   }
 
-  async getMe(userId: string) {
-    const user = await this.userService.findByEmail(userId); 
+  async getMe(identifier: string) {
+    let user;
+    if (isValidObjectId(identifier)) {
+      user = await this.userService.findById(identifier);
+    }
+    if (!user) {
+      user = await this.userService.findByEmail(identifier);
+    }
     if (!user) {
       throw new UnauthorizedException('Người dùng không tồn tại');
     }

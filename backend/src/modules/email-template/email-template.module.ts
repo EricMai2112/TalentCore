@@ -5,6 +5,7 @@ import {
   EmailTemplateSchema,
 } from './schemas/email-template.schema';
 import { EmailTemplateService } from './services/email-template.service';
+import { EmailService } from './services/email.service';
 import { EmailTemplateController } from './controllers/email-template.controller';
 
 @Module({
@@ -14,7 +15,7 @@ import { EmailTemplateController } from './controllers/email-template.controller
     ]),
   ],
   controllers: [EmailTemplateController],
-  providers: [EmailTemplateService],
-  exports: [EmailTemplateService],
+  providers: [EmailTemplateService, EmailService],
+  exports: [EmailTemplateService, EmailService],
 })
 export class EmailTemplateModule {}

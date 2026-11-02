@@ -1,21 +1,23 @@
-import { Body, Controller, Get, Post, Req, Res, UnauthorizedException, UsePipes, ValidationPipe } from '@nestjs/common';
+import { Body, Controller, Get, Post, Res, UsePipes, ValidationPipe } from '@nestjs/common';
 import { LoginDto, RegisterDto } from '../dtos/auth.dto';
 import { AuthService } from '../services/auth.service';
-import { JwtService } from '@nestjs/jwt';
-import type { Response, Request } from 'express';
-
+import type { Response } from 'express';
+import { Public } from '../decorators/public.decorator';
+import { CurrentUser } from '../decorators/current-user.decorator';
 
 @Controller('auth')
 export class AuthController {
-    constructor(private readonly authService: AuthService, private jwtService: JwtService) {}
+  constructor(private readonly authService: AuthService) {}
 
-    @Post("register")
-    @UsePipes(new ValidationPipe())
-    async register(@Body() registerDto: RegisterDto) {
-        return this.authService.register(registerDto)
-    }
+  @Public()
+  @Post('register')
+  @UsePipes(new ValidationPipe())
+  async register(@Body() registerDto: RegisterDto) {
+    return this.authService.register(registerDto);
+  }
 
-    @Post('login')
+  @Public()
+  @Post('login')
   @UsePipes(new ValidationPipe())
   async login(@Body() loginDto: LoginDto, @Res({ passthrough: true }) res: Response) {
     const result = await this.authService.login(loginDto);
@@ -27,31 +29,15 @@ export class AuthController {
       maxAge: 24 * 60 * 60 * 1000, // 1 ngày
     });
 
-    res.cookie('user_info', JSON.stringify(result.user), {
-      httpOnly: false,
-      secure: process.env.NODE_ENV === 'production',
-      sameSite: 'lax',
-      maxAge: 24 * 60 * 60 * 1000,
-    });
-
     return result;
   }
 
   @Get('me')
-  async getMe(@Req() req: Request) {
-    const token = req.cookies?.['accessToken'];
-    if (!token) {
-      throw new UnauthorizedException('Chưa đăng nhập');
-    }
-
-    try {
-      const payload = this.jwtService.verify(token);
-      return this.authService.getMe(payload.email);
-    } catch {
-      throw new UnauthorizedException('Token không hợp lệ hoặc đã hết hạn');
-    }
+  async getMe(@CurrentUser('email') email: string) {
+    return this.authService.getMe(email);
   }
 
+  @Public()
   @Post('logout')
   async logout(@Res({ passthrough: true }) res: Response) {
     res.clearCookie('accessToken');
