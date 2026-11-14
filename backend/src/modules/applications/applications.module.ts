@@ -27,6 +27,7 @@ import { CandidatesModule } from '../candidates/candidates.module';
 import { S3StorageService } from './services/s3-storage.service';
 import { AwsSqsService } from './services/aws-sqs.service';
 import { SkillKnowledgeGraphService } from './knowledge-graph/skill-graph.service';
+import { AwsObservabilityService } from './services/aws-observability.service';
 
 @Module({
     imports: [MongooseModule.forFeature([
@@ -62,6 +63,7 @@ import { SkillKnowledgeGraphService } from './knowledge-graph/skill-graph.servic
       S3StorageService,
       AwsSqsService,
       SkillKnowledgeGraphService,
+      AwsObservabilityService,
     ],
     exports: [
       ApplicationService,
@@ -70,6 +72,7 @@ import { SkillKnowledgeGraphService } from './knowledge-graph/skill-graph.servic
       S3StorageService,
       AwsSqsService,
       SkillKnowledgeGraphService,
+      AwsObservabilityService,
     ]
 })
 export class ApplicationsModule {}

@@ -1,4 +1,4 @@
-import { Injectable, Logger } from '@nestjs/common';
+import { Injectable, Logger, Optional } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model, Types } from 'mongoose';
 import { Application, ApplicationDocument } from '../schemas/application.schema';
@@ -7,6 +7,7 @@ import { Candidate, CandidateDocument } from 'src/modules/candidates/schema/cand
 import { JobDescription, JobDescriptionDocument } from 'src/modules/job-description/schemas/job-description.schema';
 import { PipelineTemplate, PipelineTemplateDocument } from 'src/modules/pipeline-template/schemas/pipeline-template.schema';
 import { AiMatchingService } from '../services/ai-matching.service';
+import { AwsObservabilityService } from '../services/aws-observability.service';
 
 @Injectable()
 export class AiMatchingProcessor {
@@ -19,6 +20,7 @@ export class AiMatchingProcessor {
     @InjectModel(JobDescription.name) private jobModel: Model<JobDescriptionDocument>,
     @InjectModel(PipelineTemplate.name) private pipelineModel: Model<PipelineTemplateDocument>,
     private readonly aiMatchingService: AiMatchingService,
+    @Optional() private readonly awsObservabilityService?: AwsObservabilityService,
   ) {}
 
   async processMatching(
@@ -34,6 +36,10 @@ export class AiMatchingProcessor {
     );
 
     let job: any = null;
+    const matchingStartTime = Date.now();
+    let normDurationMs = 0;
+    let llmDurationMs = 0;
+    let persistDurationMs = 0;
 
     try {
       const application = await this.applicationModel.findById(applicationId);
@@ -55,21 +61,39 @@ export class AiMatchingProcessor {
         return;
       }
 
-      // 1. Trích xuất toàn văn hồ sơ ứng viên thành văn bản chuẩn hóa
+      const normStart = Date.now();
       const fullCvText =
         application.parsedCvText && application.parsedCvText.trim().length > 30
           ? application.parsedCvText
           : this.aiMatchingService.buildFullCvText(candidate);
 
-      // 2. Chấm điểm qua Gemini LLM (đã tích hợp tự động retry với exponential backoff & jitter)
+      const skillSet = new Set<string>();
+      (candidate.skills || []).forEach((s: any) => s.name && skillSet.add(s.name.trim()));
+      (candidate.projects || []).forEach((p: any) =>
+        (p.technologies || []).forEach((t: string) => t && skillSet.add(t.trim())),
+      );
+      (candidate.experiences || []).forEach((e: any) =>
+        (e.technologies || []).forEach((t: string) => t && skillSet.add(t.trim())),
+      );
+      if (this.aiMatchingService.skillGraphService) {
+        const extracted = this.aiMatchingService.skillGraphService.extractSkills(fullCvText);
+        extracted.forEach((s) => {
+          const node = this.aiMatchingService.skillGraphService?.getSkillNode(s);
+          skillSet.add(node?.name || s);
+        });
+      }
+      const candidateSkills = Array.from(skillSet).filter(Boolean);
+      normDurationMs = Math.max(1, Date.now() - normStart);
+
+      const llmStart = Date.now();
       const aiResult = await this.aiMatchingService.evaluateCriteriaWithAi(
         fullCvText,
         job.title,
         job.experienceLevel,
         job.criteria,
       );
+      llmDurationMs = Math.max(1, Date.now() - llmStart);
 
-      const candidateSkills = (candidate.skills || []).map((s) => s.name).filter(Boolean);
       const finalEvaluation = await this.aiMatchingService.processDeterministicScoring(
         fullCvText,
         job.criteria,
@@ -77,14 +101,14 @@ export class AiMatchingProcessor {
         candidateSkills,
       );
 
-      // 4. Lưu kết quả vào Collection AiEvaluation (Idempotent: Upsert dựa trên applicationId duy nhất)
+      const persistStart = Date.now();
+      const { diagnostics, ...dbEvaluationPayload } = finalEvaluation as any;
       await this.aiEvaluationModel.findOneAndUpdate(
         { applicationId: application._id },
-        { ...finalEvaluation, applicationId: application._id },
+        { ...dbEvaluationPayload, applicationId: application._id },
         { upsert: true, returnDocument: 'after' },
       );
 
-      // 5. Tự động chuyển Application sang Stage tiếp theo trong Pipeline
       const pipeline = await this.pipelineModel.findById(job.pipelineTemplateId);
       if (pipeline?.stages?.length) {
         const sortedStages = [...pipeline.stages].sort((a, b) => a.order - b.order);
@@ -92,7 +116,6 @@ export class AiMatchingProcessor {
           (s) => s._id.toString() === application.currentStageId.toString(),
         );
 
-        // Nếu đang ở Stage đầu tiên, tự động chuyển sang Stage thứ 2
         if (currentIndex === 0 && sortedStages.length > 1) {
           const nextStage = sortedStages[1];
           application.currentStageId = nextStage._id;
@@ -102,8 +125,32 @@ export class AiMatchingProcessor {
           );
         }
       }
+      persistDurationMs = Math.max(1, Date.now() - persistStart);
+
+      //CloudWatch
+      const totalDurationMs = Date.now() - matchingStartTime;
+      if (this.awsObservabilityService) {
+        await this.awsObservabilityService.recordMatchingTelemetry({
+          applicationId: String(application._id),
+          jobId: String(job._id || jobId),
+          attempt,
+          timings: {
+            cvNormalizationMs: normDurationMs,
+            llmEvaluationMs: llmDurationMs,
+            knowledgeGraphMs: diagnostics?.totalGraphDurationMs || 0,
+            deterministicValidationMs: diagnostics?.totalEvidenceDurationMs || 0,
+            persistenceMs: persistDurationMs,
+            totalDurationMs,
+          },
+          criteriaCount: job.criteria.length,
+          unverifiedEvidenceCount: diagnostics?.unverifiedEvidenceCount || 0,
+          hallucinationRate: diagnostics?.hallucinationRate || 0,
+          transferredSkillsCount: diagnostics?.transferredSkillsCount || 0,
+          finalScore: finalEvaluation.aiFitScore,
+          status: 'SUCCESS',
+        });
+      }
     } catch (error: any) {
-      // Bóc tách thông tin lỗi an toàn (không log API key hoặc dữ liệu nhạy cảm)
       const status = error?.status || error?.code || error?.error?.code || 'UNKNOWN';
       const rawMessage = error?.message || error?.error?.message || String(error);
       const safeMessage = rawMessage.replace(/key=[a-zA-Z0-9_\-]+/gi, 'key=***');
@@ -112,12 +159,32 @@ export class AiMatchingProcessor {
         `[AI Matching Processor] Lỗi xử lý Application ${applicationId} (Job: ${jobId}, Attempt: ${attempt}) [${status}]: ${safeMessage}`,
       );
 
-      // Nếu chạy qua BullMQ Worker, re-throw lỗi để BullMQ kích hoạt cơ chế retry của Job
+      if (this.awsObservabilityService) {
+        await this.awsObservabilityService.recordMatchingTelemetry({
+          applicationId,
+          jobId: String(job?._id || jobId),
+          attempt,
+          timings: {
+            cvNormalizationMs: normDurationMs,
+            llmEvaluationMs: llmDurationMs,
+            knowledgeGraphMs: 0,
+            deterministicValidationMs: 0,
+            persistenceMs: persistDurationMs,
+            totalDurationMs: Date.now() - matchingStartTime,
+          },
+          criteriaCount: job?.criteria?.length || 0,
+          unverifiedEvidenceCount: 0,
+          hallucinationRate: 0,
+          transferredSkillsCount: 0,
+          finalScore: 0,
+          status: 'FAILED',
+        });
+      }
+
       if (isFromBullMQ) {
         throw error;
       }
 
-      // Nếu chạy trực tiếp ở chế độ nền (setImmediate), bắt lỗi tại đây để TUYỆT ĐỐI KHÔNG làm crash tiến trình Node.js
     }
   }
 }

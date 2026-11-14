@@ -180,7 +180,7 @@ export default function JobDetailModal({
         </div>
 
         {/* Footer */}
-        <div className="px-8 py-5 border-t border-slate-100 bg-slate-50 flex items-center justify-end gap-4 sticky bottom-0 z-10">
+        <div className="px-8 py-5 border-t border-slate-100 bg-slate-50 flex items-center justify-end gap-3 sticky bottom-0 z-10">
           <button
             type="button"
             onClick={onClose}

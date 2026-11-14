@@ -4,7 +4,7 @@ import { JobCriteria } from 'src/modules/job-description/schemas/job-description
 import { Candidate } from 'src/modules/candidates/schema/candidate.schema';
 import * as fs from 'fs';
 import * as path from 'path';
-import { SkillKnowledgeGraphService } from '../knowledge-graph/skill-graph.service';
+import { SkillKnowledgeGraphService, SCORING_CONFIG } from '../knowledge-graph/skill-graph.service';
 
 function cleanEnv(val?: string): string {
   return (val || '').replace(/^['"]|['"]$/g, '').trim();
@@ -34,7 +34,7 @@ export class AiMatchingService {
   private ai: GoogleGenAI | null = null;
 
   constructor(
-    @Optional() private readonly skillGraphService?: SkillKnowledgeGraphService,
+    @Optional() public readonly skillGraphService?: SkillKnowledgeGraphService,
   ) {
     const apiKey = getEnv('GEMINI_API_KEY');
     if (apiKey) {
@@ -544,6 +544,8 @@ Bắt buộc chỉ trả về duy nhất một đối tượng JSON thuần túy
     let isMissingMandatory = false;
     let totalScore = 0;
     const escoTransfers: string[] = [];
+    let totalGraphDurationMs = 0;
+    let totalEvidenceDurationMs = 0;
 
     const evaluatedCriteria: any[] = [];
     for (const criterion of jobCriteria) {
@@ -551,6 +553,7 @@ Bắt buộc chỉ trả về duy nhất một đối tượng JSON thuần túy
         r.name?.toLowerCase().trim() === criterion.name.toLowerCase().trim()
       ) || { score: 0, evidence: '', isPassed: false };
 
+      const evStart = Date.now();
       let evidence = (matched.evidence || '').trim();
       let similarity = evidence.length > 0 ? this.calculateEvidenceSimilarity(evidence, cvText) : 0;
       let similarityPct = Math.round(similarity * 100);
@@ -567,19 +570,22 @@ Bắt buộc chỉ trả về duy nhất một đối tượng JSON thuần túy
           warnings.push(`Cảnh báo ảo giác AI: Bằng chứng cho tiêu chí "${criterion.name}" độ khớp thấp (${similarityPct}%), cần xem xét thủ công.`);
         }
       }
+      totalEvidenceDurationMs += Math.max(1, Date.now() - evStart);
 
       let score = [0, 20, 40, 60, 80, 100].includes(matched.score) ? matched.score : 0;
 
       if (this.skillGraphService && score < 60 && candidateSkills.length > 0) {
+        const kgStart = Date.now();
         const { match: transferMatch, unresolvedSkills } = this.skillGraphService.findBestTransferableSkill(
           criterion.name,
           candidateSkills,
-          0.65,
+          SCORING_CONFIG.MIN_TRANSFER_SCORE,
           {
             textContext: `${criterion.name} ${cvText.slice(0, 1000)}`,
             resolvedSkills: candidateSkills,
           },
         );
+        totalGraphDurationMs += Math.max(1, Date.now() - kgStart);
 
         if (unresolvedSkills && unresolvedSkills.length > 0) {
           this.skillGraphService.logUnresolvedSkills(unresolvedSkills, `criterion_${criterion.name}`);
@@ -640,6 +646,9 @@ Bắt buộc chỉ trả về duy nhất một đối tượng JSON thuần túy
       keyStrengths.push(`Năng lực chuyển giao tương đương theo ESCO Ontology: ${escoTransfers.join('; ')}`);
     }
 
+    const unverifiedEvidenceCount = evaluatedCriteria.filter((c) => c.evidence && !c.isEvidenceVerified).length;
+    const hallucinationRate = jobCriteria.length > 0 ? unverifiedEvidenceCount / jobCriteria.length : 0;
+
     return {
       aiFitScore: Math.min(100, Math.round(totalScore)),
       evidenceStrengthScore: overallEvidenceStrengthScore,
@@ -650,6 +659,13 @@ Bắt buộc chỉ trả về duy nhất một đối tượng JSON thuần túy
       potentialGaps: aiResult.potentialGaps || [],
       suggestedQuestions: aiResult.suggestedQuestions || [],
       evaluatedCriteria,
+      diagnostics: {
+        totalGraphDurationMs,
+        totalEvidenceDurationMs,
+        unverifiedEvidenceCount,
+        hallucinationRate,
+        transferredSkillsCount: escoTransfers.length,
+      },
     };
   }
 }

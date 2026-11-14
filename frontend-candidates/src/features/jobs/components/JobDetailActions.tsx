@@ -61,14 +61,16 @@ export function JobSidebarApplyButton({ job }: JobSidebarApplyButtonProps) {
 
   return (
     <>
-      <button
-        type="button"
-        onClick={() => setIsApplyOpen(true)}
-        className="w-full flex items-center justify-center gap-2.5 py-4 rounded-2xl bg-blue-600 hover:bg-blue-700 text-white font-extrabold text-base transition-all shadow-md shadow-blue-500/20 active:scale-95 cursor-pointer"
-      >
-        <Send size={18} />
-        <span>Ứng tuyển ngay vị trí này</span>
-      </button>
+      <div className="space-y-2.5 w-full">
+        <button
+          type="button"
+          onClick={() => setIsApplyOpen(true)}
+          className="w-full flex items-center justify-center gap-2.5 py-4 rounded-2xl bg-blue-600 hover:bg-blue-700 text-white font-extrabold text-base transition-all shadow-md shadow-blue-500/20 active:scale-95 cursor-pointer"
+        >
+          <Send size={18} />
+          <span>Ứng tuyển ngay vị trí này</span>
+        </button>
+      </div>
 
       <ApplyModal
         isOpen={isApplyOpen}
