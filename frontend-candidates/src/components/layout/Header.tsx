@@ -33,8 +33,8 @@ export default function Header() {
     { label: 'Về chúng tôi', href: '/#about' },
     { label: 'Sản phẩm & Giải pháp', href: '/#products' },
     { label: 'Sự nghiệp', href: '/#careers' },
-    { label: 'Tin tức', href: '/#news' },
     { label: 'Tuyển dụng', href: '/jobs' },
+    { label: 'Tin tức', href: '/#news' },
   ];
 
   return (

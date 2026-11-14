@@ -36,10 +36,6 @@ export const SCORING_CONFIG = {
   STEP_DECAY: 0.9,
   CROSS_SECTOR_DECAY: 0.6,
   CROSS_SECTOR_CAP: 0.25,
-  /**
-   * Ngưỡng tối thiểu để chấp nhận một kỹ năng là "chuyển giao được".
-   * Mặc định 0.40. Cần hiệu chỉnh bằng dữ liệu đánh giá thực tế (gold set evaluation).
-   */
   MIN_TRANSFER_SCORE: 0.4,
 } as const;
 
@@ -442,10 +438,8 @@ export class SkillGraphEngine {
           let pathScore: number;
 
           if (numSteps === 1) {
-            // Direct 1-step edge: score is EXACTLY edge.weight (STEP_DECAY^0 = 1, no decay)
             pathScore = edge.weight;
           } else {
-            // Multi-step path:
             // product of weights * STEP_DECAY^(steps - 1) * (isCrossSectorPath ? CROSS_SECTOR_DECAY : 1)
             const weightProduct = nextSteps.reduce((prod, s) => prod * s.weight, 1.0);
             const stepDecayMultiplier = Math.pow(stepDecay, numSteps - 1);
@@ -457,7 +451,6 @@ export class SkillGraphEngine {
             const crossMultiplier = isCrossSectorPath ? crossSectorDecay : 1.0;
             pathScore = weightProduct * stepDecayMultiplier * crossMultiplier;
 
-            // Check if intermediate nodes contain 'Common' between two different specialized sectors
             const intermediateIds = nextPath.slice(1, -1);
             const hasCommonIntermediate = intermediateIds.some(
               (id) => this.nodesMap.get(id)?.sector === 'Common',
