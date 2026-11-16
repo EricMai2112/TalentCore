@@ -21,11 +21,12 @@ export const kanbanApi = {
 
   updateApplicationStage: async (
     applicationId: string,
-    stageId: string
+    stageId: string,
+    reason?: string
   ): Promise<KanbanApplication> => {
     const res = await apiClient.put<ApiResponse<KanbanApplication>>(
       `/applications/${applicationId}/stage`,
-      { stageId }
+      { stageId, reason }
     );
     return res.data;
   },

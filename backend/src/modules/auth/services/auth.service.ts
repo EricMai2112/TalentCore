@@ -8,8 +8,8 @@ import { Model, isValidObjectId } from 'mongoose';
 import { JwtService } from '@nestjs/jwt';
 import * as bcrypt from 'bcrypt';
 import { LoginDto, RegisterDto } from '../dtos/auth.dto';
-import { User, UserDocument, UserStatus } from 'src/modules/users/schemas/user.schema';
-import { UserService } from 'src/modules/users/services/user.service';
+import { User, UserDocument, UserStatus } from '../../users/schemas/user.schema';
+import { UserService } from '../../users/services/user.service';
 
 @Injectable()
 export class AuthService {

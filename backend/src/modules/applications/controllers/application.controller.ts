@@ -83,8 +83,10 @@ export class ApplicationController {
   async updateApplicationStage(
     @Param('id') id: string,
     @Body('stageId') stageId: string,
+    @Body('reason') reason?: string,
+    @CurrentUser() currentUser?: any,
   ) {
-    const data = await this.applicationService.updateApplicationStage(id, stageId);
+    const data = await this.applicationService.updateApplicationStage(id, stageId, reason, currentUser);
     return {
       message: 'Cập nhật giai đoạn phỏng vấn thành công',
       data,

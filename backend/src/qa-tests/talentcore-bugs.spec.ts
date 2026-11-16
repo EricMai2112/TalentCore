@@ -13,6 +13,10 @@ import { EmailService } from '../modules/email-template/services/email.service';
 import { DepartmentService } from '../modules/departments/services/department.service';
 import { InterviewService } from '../modules/interviews/services/interview.service';
 import { JobCriteria } from '../modules/job-description/schemas/job-description.schema';
+import { JobDescriptionService } from '../modules/job-description/services/job-description.service';
+import { JobStatus } from '../modules/job-description/schemas/job-description.schema';
+import { EventsGateway } from '../modules/job-description/gateways/events.gateway';
+import { ApplicationSchema } from '../modules/applications/schemas/application.schema';
 import * as bcrypt from 'bcrypt';
 
 describe('TalentCore QA Automation Test Suite - Fix Verification', () => {
@@ -468,6 +472,422 @@ describe('TalentCore QA Automation Test Suite - Fix Verification', () => {
         ).rejects.toThrow('Đã quá thời hạn xác nhận lịch phỏng vấn');
         expect(mockInterview.status).toBe('CANCELLED');
         expect(mockInterview.confirmationStatus).toBe('CANCELLED');
+      });
+    });
+
+    // =========================================================================
+    // REG-08: [JobDescriptionService] Ràng buộc minimumSalary <= maximumSalary
+    // =========================================================================
+    describe('REG-08: [JobDescriptionService] Validation lương tối thiểu và tối đa', () => {
+      let jobService: JobDescriptionService;
+      let mockJobModel: any;
+
+      beforeEach(async () => {
+        mockJobModel = {
+          findById: jest.fn(),
+        };
+        const module: TestingModule = await Test.createTestingModule({
+          providers: [
+            JobDescriptionService,
+            { provide: 'JobDescriptionModel', useValue: mockJobModel },
+            { provide: 'JobDescriptionDraftModel', useValue: {} },
+            { provide: EventsGateway, useValue: { emitJobPublished: jest.fn(), emitJobUpdated: jest.fn() } },
+            { provide: NotificationsService, useValue: {} },
+          ],
+        }).compile();
+
+        jobService = module.get<JobDescriptionService>(JobDescriptionService);
+      });
+
+      it('Ném BadRequestException khi tạo JD với minimumSalary > maximumSalary', async () => {
+        const invalidDto: any = {
+          title: 'Senior Node.js Developer',
+          minimumSalary: 50000000,
+          maximumSalary: 30000000,
+        };
+
+        await expect(jobService.create(invalidDto)).rejects.toThrow(BadRequestException);
+        await expect(jobService.create(invalidDto)).rejects.toThrow(
+          'Mức lương tối thiểu (minimumSalary) không được lớn hơn mức lương tối đa (maximumSalary).',
+        );
+      });
+
+      it('Ném BadRequestException khi cập nhật JD với minimumSalary mới vượt quá maximumSalary hiện có', async () => {
+        const existingJobId = new Types.ObjectId().toString();
+        mockJobModel.findById.mockReturnValue({
+          select: jest.fn().mockReturnValue({
+            exec: jest.fn().mockResolvedValue({
+              _id: existingJobId,
+              status: JobStatus.JD_CREATED,
+              minimumSalary: 10000000,
+              maximumSalary: 20000000,
+            }),
+          }),
+        });
+
+        const updateDto: any = {
+          minimumSalary: 25000000,
+        };
+
+        await expect(jobService.update(existingJobId, updateDto)).rejects.toThrow(BadRequestException);
+        await expect(jobService.update(existingJobId, updateDto)).rejects.toThrow(
+          'Mức lương tối thiểu (minimumSalary) không được lớn hơn mức lương tối đa (maximumSalary).',
+        );
+      });
+    });
+
+    // =========================================================================
+    // REG-07: [JobDescriptionService.delete] Chặn xóa cứng JD khi còn dữ liệu liên kết
+    // =========================================================================
+    describe('REG-07: [JobDescriptionService.delete] Kiểm tra toàn vẹn quan hệ khi xóa JD', () => {
+      let jobService: JobDescriptionService;
+      let mockJobModel: any;
+
+      beforeEach(async () => {
+        mockJobModel = {
+          findById: jest.fn(),
+          findByIdAndDelete: jest.fn(),
+          db: {
+            collection: jest.fn().mockImplementation((name: string) => {
+              if (name === 'applications') {
+                return { countDocuments: jest.fn().mockResolvedValue(3) };
+              }
+              return { countDocuments: jest.fn().mockResolvedValue(0) };
+            }),
+          },
+        };
+
+        const module: TestingModule = await Test.createTestingModule({
+          providers: [
+            JobDescriptionService,
+            { provide: 'JobDescriptionModel', useValue: mockJobModel },
+            { provide: 'JobDescriptionDraftModel', useValue: {} },
+            { provide: EventsGateway, useValue: {} },
+            { provide: NotificationsService, useValue: {} },
+          ],
+        }).compile();
+
+        jobService = module.get<JobDescriptionService>(JobDescriptionService);
+      });
+
+      it('Ném BadRequestException khi xóa JD có hồ sơ ứng tuyển liên kết', async () => {
+        const jobId = new Types.ObjectId().toString();
+        mockJobModel.findById.mockReturnValue({
+          populate: jest.fn().mockReturnThis(),
+          exec: jest.fn().mockResolvedValue({ _id: jobId, title: 'Golang Engineer' }),
+        });
+
+        await expect(jobService.delete(jobId)).rejects.toThrow(BadRequestException);
+        await expect(jobService.delete(jobId)).rejects.toThrow(
+          'Không thể xóa tin tuyển dụng đang có dữ liệu liên kết (3 hồ sơ ứng tuyển, 0 lịch phỏng vấn, 0 thư mời việc). Vui lòng lưu trữ hoặc đóng tin tuyển dụng thay vì xóa.',
+        );
+      });
+    });
+
+    // =========================================================================
+    // REG-04: [ApplicationService.applyJob] Chặn ứng tuyển tin đã quá hạn
+    // =========================================================================
+    describe('REG-04: [ApplicationService.applyJob] Chặn nộp đơn khi quá hạn applicationDeadline', () => {
+      let applicationService: ApplicationService;
+      let mockJobModel: any;
+      let mockCandidateModel: any;
+      let mockAppModel: any;
+
+      beforeEach(async () => {
+        mockJobModel = {
+          findById: jest.fn(),
+        };
+        mockCandidateModel = {
+          find: jest.fn().mockReturnValue({ exec: jest.fn().mockResolvedValue([]) }),
+        };
+        mockAppModel = {
+          findOne: jest.fn().mockResolvedValue(null),
+        };
+
+        const module: TestingModule = await Test.createTestingModule({
+          providers: [
+            ApplicationService,
+            { provide: 'ApplicationModel', useValue: mockAppModel },
+            { provide: 'CandidateModel', useValue: mockCandidateModel },
+            { provide: 'JobDescriptionModel', useValue: mockJobModel },
+            { provide: 'PipelineTemplateModel', useValue: {} },
+            { provide: 'AiEvaluationModel', useValue: {} },
+            { provide: 'InterviewModel', useValue: {} },
+            { provide: AiMatchingProcessor, useValue: {} },
+            { provide: AiMatchingService, useValue: {} },
+            { provide: NotificationsService, useValue: {} },
+            { provide: EmailService, useValue: {} },
+          ],
+        }).compile();
+
+        applicationService = module.get<ApplicationService>(ApplicationService);
+      });
+
+      it('Ném BadRequestException khi applicationDeadline nhỏ hơn thời điểm hiện tại', async () => {
+        const expiredJobId = new Types.ObjectId().toString();
+        const pastDeadline = new Date(Date.now() - 2 * 24 * 60 * 60 * 1000);
+
+        mockJobModel.findById.mockResolvedValue({
+          _id: expiredJobId,
+          status: JobStatus.JD_CREATED,
+          applicationDeadline: pastDeadline,
+          pipelineTemplateId: new Types.ObjectId(),
+        });
+
+        await expect(
+          applicationService.applyJob(new Types.ObjectId().toString(), expiredJobId),
+        ).rejects.toThrow(BadRequestException);
+        await expect(
+          applicationService.applyJob(new Types.ObjectId().toString(), expiredJobId),
+        ).rejects.toThrow('Vị trí tuyển dụng này đã hết hạn nhận hồ sơ ứng tuyển.');
+      });
+    });
+
+    // =========================================================================
+    // REG-03: [ApplicationService.updateApplicationStage] Cho phép kéo lùi kèm ghi nhật ký notes
+    // =========================================================================
+    describe('REG-03: [ApplicationService.updateApplicationStage] Cho phép kéo lùi và ghi nhận reason vào notes', () => {
+      let applicationService: ApplicationService;
+      let mockAppModel: any;
+      let mockJobModel: any;
+      let mockPipelineModel: any;
+
+      beforeEach(async () => {
+        mockAppModel = {
+          findById: jest.fn(),
+        };
+        mockJobModel = {
+          findById: jest.fn(),
+        };
+        mockPipelineModel = {
+          findById: jest.fn(),
+        };
+
+        const module: TestingModule = await Test.createTestingModule({
+          providers: [
+            ApplicationService,
+            { provide: 'ApplicationModel', useValue: mockAppModel },
+            { provide: 'CandidateModel', useValue: {} },
+            { provide: 'JobDescriptionModel', useValue: mockJobModel },
+            { provide: 'PipelineTemplateModel', useValue: mockPipelineModel },
+            { provide: 'AiEvaluationModel', useValue: { findOne: jest.fn().mockReturnValue({ lean: jest.fn().mockReturnValue({ exec: jest.fn().mockResolvedValue(null) }) }) } },
+            { provide: 'InterviewModel', useValue: { findOne: jest.fn().mockReturnValue({ exec: jest.fn().mockResolvedValue(null) }) } },
+            { provide: AiMatchingProcessor, useValue: {} },
+            { provide: AiMatchingService, useValue: {} },
+            { provide: NotificationsService, useValue: { notifyCandidateStageChanged: jest.fn() } },
+            { provide: EmailService, useValue: {} },
+          ],
+        }).compile();
+
+        applicationService = module.get<ApplicationService>(ApplicationService);
+      });
+
+      it('Không ném lỗi khi chuyển lùi và tự động ghi audit note kèm lý do', async () => {
+        const stage1Id = new Types.ObjectId();
+        const stage2Id = new Types.ObjectId();
+        const jobDescId = new Types.ObjectId();
+
+        const appDoc: any = {
+          _id: new Types.ObjectId(),
+          currentStageId: stage2Id,
+          jobDescriptionId: {
+            _id: jobDescId,
+            pipelineTemplateId: {
+              stages: [
+                { _id: stage1Id, name: 'Sàng lọc CV', order: 1 },
+                { _id: stage2Id, name: 'Phỏng vấn chuyên môn', order: 2 },
+              ],
+            },
+          },
+          candidateId: {
+            userId: { name: 'Nguyễn Văn A' },
+          },
+          notes: [],
+          save: jest.fn().mockImplementation(function () {
+            return Promise.resolve(this);
+          }),
+          toObject: function () {
+            return { ...this };
+          },
+        };
+
+        mockAppModel.findById.mockImplementation((id: any) => ({
+          populate: jest.fn().mockReturnValue({
+            populate: jest.fn().mockResolvedValue(appDoc),
+          }),
+          exec: jest.fn().mockResolvedValue(appDoc),
+          then: (resolve: any) => resolve(appDoc),
+        }));
+
+        mockJobModel.findById.mockReturnValue({
+          exec: jest.fn().mockResolvedValue({
+            pipelineTemplateId: new Types.ObjectId(),
+          }),
+        });
+
+        mockPipelineModel.findById.mockReturnValue({
+          exec: jest.fn().mockResolvedValue({
+            stages: [
+              { _id: stage1Id, name: 'Sàng lọc CV', order: 1 },
+              { _id: stage2Id, name: 'Phỏng vấn chuyên môn', order: 2 },
+            ],
+          }),
+        });
+
+        await applicationService.updateApplicationStage(
+          appDoc._id.toString(),
+          stage1Id.toString(),
+          'Cần đánh giá lại kỹ thuật vòng 1',
+          { name: 'Nguyễn HR', role: 'RECRUITER' },
+        );
+
+        expect(appDoc.save).toHaveBeenCalled();
+        expect(appDoc.currentStageId).toEqual(stage1Id.toString());
+        expect(appDoc.notes.length).toBe(1);
+        expect(appDoc.notes[0].content).toContain('[Kéo lùi giai đoạn]');
+        expect(appDoc.notes[0].content).toContain('Cần đánh giá lại kỹ thuật vòng 1');
+        expect(appDoc.notes[0].authorName).toBe('Nguyễn HR');
+      });
+    });
+
+    // =========================================================================
+    // REG-05: [ApplicationService.updateApplicationStage] Broadcast WebSocket kanban:card_moved
+    // =========================================================================
+    describe('REG-05: [ApplicationService.updateApplicationStage] Broadcast sự kiện WebSocket thời gian thực', () => {
+      let applicationService: ApplicationService;
+      let mockAppModel: any;
+      let mockJobModel: any;
+      let mockPipelineModel: any;
+      let mockEventsGateway: any;
+
+      beforeEach(async () => {
+        mockAppModel = {
+          findById: jest.fn(),
+        };
+        mockJobModel = {
+          findById: jest.fn(),
+        };
+        mockPipelineModel = {
+          findById: jest.fn(),
+        };
+        mockEventsGateway = {
+          emitKanbanCardMoved: jest.fn(),
+        };
+
+        const module: TestingModule = await Test.createTestingModule({
+          providers: [
+            ApplicationService,
+            { provide: 'ApplicationModel', useValue: mockAppModel },
+            { provide: 'CandidateModel', useValue: {} },
+            { provide: 'JobDescriptionModel', useValue: mockJobModel },
+            { provide: 'PipelineTemplateModel', useValue: mockPipelineModel },
+            { provide: 'AiEvaluationModel', useValue: { findOne: jest.fn().mockReturnValue({ lean: jest.fn().mockReturnValue({ exec: jest.fn().mockResolvedValue(null) }) }) } },
+            { provide: 'InterviewModel', useValue: { findOne: jest.fn().mockReturnValue({ exec: jest.fn().mockResolvedValue(null) }) } },
+            { provide: AiMatchingProcessor, useValue: {} },
+            { provide: AiMatchingService, useValue: {} },
+            { provide: NotificationsService, useValue: { notifyCandidateStageChanged: jest.fn() } },
+            { provide: EmailService, useValue: {} },
+            { provide: EventsGateway, useValue: mockEventsGateway },
+          ],
+        }).compile();
+
+        applicationService = module.get<ApplicationService>(ApplicationService);
+      });
+
+      it('Kích hoạt emitKanbanCardMoved với đầy đủ dữ liệu khi cập nhật stage', async () => {
+        const stage1Id = new Types.ObjectId();
+        const stage2Id = new Types.ObjectId();
+        const jobDescId = new Types.ObjectId();
+
+        const appDoc: any = {
+          _id: new Types.ObjectId(),
+          currentStageId: stage1Id,
+          jobDescriptionId: {
+            _id: jobDescId,
+            pipelineTemplateId: {
+              stages: [
+                { _id: stage1Id, name: 'Sàng lọc CV', order: 1 },
+                { _id: stage2Id, name: 'Phỏng vấn', order: 2 },
+              ],
+            },
+          },
+          candidateId: {
+            userId: { name: 'Trần Thị B' },
+          },
+          notes: [],
+          save: jest.fn().mockImplementation(function () {
+            return Promise.resolve(this);
+          }),
+          toObject: function () {
+            return { ...this };
+          },
+        };
+
+        mockAppModel.findById.mockImplementation((id: any) => ({
+          populate: jest.fn().mockReturnValue({
+            populate: jest.fn().mockResolvedValue(appDoc),
+          }),
+          exec: jest.fn().mockResolvedValue(appDoc),
+          then: (resolve: any) => resolve(appDoc),
+        }));
+
+        mockJobModel.findById.mockReturnValue({
+          exec: jest.fn().mockResolvedValue({
+            pipelineTemplateId: new Types.ObjectId(),
+          }),
+        });
+
+        mockPipelineModel.findById.mockReturnValue({
+          exec: jest.fn().mockResolvedValue({
+            stages: [
+              { _id: stage1Id, name: 'Sàng lọc CV', order: 1 },
+              { _id: stage2Id, name: 'Phỏng vấn', order: 2 },
+            ],
+          }),
+        });
+
+        await applicationService.updateApplicationStage(appDoc._id.toString(), stage2Id.toString());
+
+        expect(mockEventsGateway.emitKanbanCardMoved).toHaveBeenCalledWith(
+          expect.objectContaining({
+            applicationId: appDoc._id.toString(),
+            jobDescriptionId: jobDescId.toString(),
+            sourceStageId: stage1Id.toString(),
+            targetStageId: stage2Id.toString(),
+          }),
+        );
+      });
+    });
+
+    // =========================================================================
+    // REG-06: [ApplicationSchema] Compound Indexes trên collection applications
+    // =========================================================================
+    describe('REG-06: [ApplicationSchema] Kiểm tra khai báo Compound Index cho truy vấn Kanban', () => {
+      it('Đã định nghĩa compound index { jobDescriptionId: 1, status: 1, currentStageId: 1, updatedAt: -1 }', () => {
+        const indexes = ApplicationSchema.indexes();
+        const foundKanbanIndex = indexes.some((idxConfig: any) => {
+          const fields = idxConfig[0];
+          return (
+            fields.jobDescriptionId === 1 &&
+            fields.status === 1 &&
+            fields.currentStageId === 1 &&
+            fields.updatedAt === -1
+          );
+        });
+        expect(foundKanbanIndex).toBe(true);
+      });
+
+      it('Đã định nghĩa compound index { jobDescriptionId: 1, status: 1, appliedAt: -1 }', () => {
+        const indexes = ApplicationSchema.indexes();
+        const foundAppliedIndex = indexes.some((idxConfig: any) => {
+          const fields = idxConfig[0];
+          return (
+            fields.jobDescriptionId === 1 &&
+            fields.status === 1 &&
+            fields.appliedAt === -1
+          );
+        });
+        expect(foundAppliedIndex).toBe(true);
       });
     });
   });
