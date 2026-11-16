@@ -432,6 +432,25 @@ export class JobDescriptionService {
       throw new BadRequestException('experienceLevel không được để trống');
     }
 
+    if (dto.draftData) {
+      const minSal =
+        dto.draftData.minimumSalary !== undefined && dto.draftData.minimumSalary !== ''
+          ? Number(dto.draftData.minimumSalary)
+          : undefined;
+      const maxSal =
+        dto.draftData.maximumSalary !== undefined && dto.draftData.maximumSalary !== ''
+          ? Number(dto.draftData.maximumSalary)
+          : undefined;
+      if (
+        minSal !== undefined &&
+        maxSal !== undefined &&
+        !isNaN(minSal) &&
+        !isNaN(maxSal)
+      ) {
+        this.validateSalaries(minSal, maxSal);
+      }
+    }
+
     const posId = new Types.ObjectId(dto.positionId);
     const deptId = new Types.ObjectId(dto.departmentId);
     const userObjId = new Types.ObjectId(userId);
