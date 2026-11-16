@@ -674,10 +674,20 @@ export default function JobRequestFormWizard({
   }
 
   // Form step navigation & validation with Zod schemas
+  const salaryError =
+    minimumSalary !== '' &&
+    maximumSalary !== '' &&
+    Number(minimumSalary) > Number(maximumSalary)
+      ? 'Lương tối thiểu không được lớn hơn lương tối đa'
+      : undefined
+
   const handleNextStep = (e?: React.MouseEvent) => {
     if (e) e.preventDefault()
     setError(null)
     if (step === 1) {
+      if (salaryError) {
+        return setError(salaryError)
+      }
       const result = jobRequestStep1Schema.safeParse({
         title,
         departmentId,
@@ -967,6 +977,11 @@ export default function JobRequestFormWizard({
   // Common save execution function (supports direct saving in edit mode or complete submit)
   const executeSave = async () => {
     setError(null)
+
+    if (salaryError) {
+      setStep(1)
+      return setError(salaryError)
+    }
 
     const validation = jobRequestFullSchema.safeParse({
       title,
@@ -1305,7 +1320,8 @@ export default function JobRequestFormWizard({
                     type="number"
                     min={0}
                     placeholder="VD: 15000000"
-                    helperText="Nhập 0 ở cả 2 để hiển thị Thỏa thuận"
+                    helperText={salaryError ? undefined : "Nhập 0 ở cả 2 để hiển thị Thỏa thuận"}
+                    error={salaryError}
                     value={minimumSalary}
                     onChange={(e) =>
                       setMinimumSalary(e.target.value === '' ? '' : Number(e.target.value))
@@ -1318,7 +1334,8 @@ export default function JobRequestFormWizard({
                     type="number"
                     min={0}
                     placeholder="VD: 25000000"
-                    helperText="Nhập 0 ở cả 2 để hiển thị Thỏa thuận"
+                    helperText={salaryError ? undefined : "Nhập 0 ở cả 2 để hiển thị Thỏa thuận"}
+                    error={salaryError}
                     value={maximumSalary}
                     onChange={(e) =>
                       setMaximumSalary(e.target.value === '' ? '' : Number(e.target.value))

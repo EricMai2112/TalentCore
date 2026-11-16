@@ -98,7 +98,7 @@ export class OffersService {
 
     if (dto.sendImmediately) {
       savedOffer.otpCode = this.generateOtp();
-      savedOffer.otpExpiresAt = savedOffer.expirationDate;
+      savedOffer.otpExpiresAt = new Date(Date.now() + 5 * 60 * 1000);
       await savedOffer.save();
       await this.notifyCandidateForOffer(savedOffer);
       await this.sendOfferEmailToCandidate(savedOffer);
@@ -300,7 +300,7 @@ export class OffersService {
     offer.status = OfferStatus.SENT;
     offer.sentAt = new Date();
     offer.otpCode = this.generateOtp();
-    offer.otpExpiresAt = offer.expirationDate;
+    offer.otpExpiresAt = new Date(Date.now() + 5 * 60 * 1000);
 
     const updatedOffer = await offer.save();
 

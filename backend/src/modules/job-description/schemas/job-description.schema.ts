@@ -77,7 +77,20 @@ export class JobDescription {
   @Prop({ required: true, type: Number })
   minimumSalary: number;
 
-  @Prop({ required: true, type: Number })
+  @Prop({
+    required: true,
+    type: Number,
+    validate: {
+      validator: function (this: any, val: number) {
+        if (this.minimumSalary !== undefined && val !== undefined) {
+          return val >= this.minimumSalary;
+        }
+        return true;
+      },
+      message:
+        'Mức lương tối thiểu (minimumSalary) không được lớn hơn mức lương tối đa (maximumSalary).',
+    },
+  })
   maximumSalary: number;
 
   @Prop({ type: [Types.ObjectId], ref: 'Skill', default: [] })

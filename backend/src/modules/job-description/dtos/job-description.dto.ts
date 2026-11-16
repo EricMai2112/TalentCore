@@ -8,6 +8,9 @@ import {
   IsDateString,
   Min,
   ValidateNested,
+  registerDecorator,
+  ValidationOptions,
+  ValidationArguments,
 } from 'class-validator';
 import { Type } from 'class-transformer';
 import {
@@ -16,6 +19,43 @@ import {
   JobPriority,
   CriteriaRequirementType,
 } from '../schemas/job-description.schema';
+
+export function IsGreaterThanOrEqualTo(
+  property: string,
+  validationOptions?: ValidationOptions,
+) {
+  return function (object: Object, propertyName: string) {
+    registerDecorator({
+      name: 'isGreaterThanOrEqualTo',
+      target: object.constructor,
+      propertyName: propertyName,
+      constraints: [property],
+      options: validationOptions,
+      validator: {
+        validate(value: any, args: ValidationArguments) {
+          const [relatedPropertyName] = args.constraints;
+          const relatedValue = (args.object as any)[relatedPropertyName];
+          if (
+            value === undefined ||
+            value === null ||
+            relatedValue === undefined ||
+            relatedValue === null
+          ) {
+            return true;
+          }
+          return (
+            typeof value === 'number' &&
+            typeof relatedValue === 'number' &&
+            value >= relatedValue
+          );
+        },
+        defaultMessage(args: ValidationArguments) {
+          return `${args.property} phải lớn hơn hoặc bằng ${args.constraints[0]}`;
+        },
+      },
+    });
+  };
+}
 
 export class JobCriteriaDto {
   @IsString({ message: 'Tên tiêu chí phải là chuỗi' })
@@ -75,6 +115,9 @@ export class CreateJobDescriptionDto {
 
   @IsNumber({}, { message: 'Lương tối đa phải là số' })
   @Min(0, { message: 'Lương tối đa phải lớn hơn hoặc bằng 0' })
+  @IsGreaterThanOrEqualTo('minimumSalary', {
+    message: 'Mức lương tối thiểu (minimumSalary) không được lớn hơn mức lương tối đa (maximumSalary).',
+  })
   maximumSalary: number;
 
   @IsArray({ message: 'requiredSkills phải là một mảng' })
@@ -171,6 +214,9 @@ export class UpdateJobDescriptionDto {
 
   @IsNumber({}, { message: 'Lương tối đa phải là số' })
   @Min(0, { message: 'Lương tối đa phải lớn hơn hoặc bằng 0' })
+  @IsGreaterThanOrEqualTo('minimumSalary', {
+    message: 'Mức lương tối thiểu (minimumSalary) không được lớn hơn mức lương tối đa (maximumSalary).',
+  })
   @IsOptional()
   maximumSalary?: number;
 
