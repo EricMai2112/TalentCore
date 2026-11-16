@@ -15,6 +15,7 @@ import { AiMatchingProcessor } from './processors/ai-matching.processor';
 import { AiMatchingCronService } from './services/ai-matching-cron.service';
 import { NotificationsModule } from '../notifications/notifications.module';
 import { EmailTemplateModule } from '../email-template/email-template.module';
+import { JobDescriptionModule } from '../job-description/job-description.module';
 
 import { User, UserSchema } from '../users/schemas/user.schema';
 import { CandidateInvitation, CandidateInvitationSchema } from './schemas/candidate-invitation.schema';
@@ -52,6 +53,7 @@ import { AwsObservabilityService } from './services/aws-observability.service';
     NotificationsModule,
     EmailTemplateModule,
     CandidatesModule,
+    JobDescriptionModule,
 ],
     controllers: [ApplicationController, CandidateRediscoveryController],
     providers: [

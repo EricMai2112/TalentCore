@@ -3,7 +3,7 @@
 import { useState, useEffect, useMemo, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { createPortal } from "react-dom";
-import { Briefcase, ChevronLeft, ChevronRight } from "lucide-react";
+import { Briefcase, ChevronLeft, ChevronRight, RotateCcw, X } from "lucide-react";
 import {
   DndContext,
   DragOverlay,
@@ -30,6 +30,8 @@ import CandidateKanbanCard from "./CandidateKanbanCard";
 import { RejectCandidateModal } from "@/src/components/common";
 import { useToast } from "@/src/hooks/useToast";
 import Toast from "@/src/components/common/Toast";
+import { io, Socket } from "socket.io-client";
+import { env } from "@/src/config/env.config";
 
 // Lazy load heavy CandidateDetailModal on demand
 const CandidateDetailModal = dynamic(
@@ -96,6 +98,51 @@ export default function KanbanContainer({
   const [selectedDeptScheduleInterview, setSelectedDeptScheduleInterview] = useState<InterviewItem | null>(null);
   const [isDeptScheduleModalOpen, setIsDeptScheduleModalOpen] = useState(false);
   const [refreshTrigger, setRefreshTrigger] = useState(0);
+
+  // Backward move confirmation modal state (BUG-LOGIC-02 / REG-03)
+  const [backwardMoveTarget, setBackwardMoveTarget] = useState<{
+    appId: string;
+    targetStageId: string;
+    candidateName: string;
+    fromStageName: string;
+    toStageName: string;
+  } | null>(null);
+  const [backwardReason, setBackwardReason] = useState<string>("");
+
+  // Real-time synchronization via WebSocket (BUG-ASYNC-01 / REG-05)
+  useEffect(() => {
+    if (!selectedJobId) return;
+    const socketUrl = env.apiUrl.replace(/\/api\/?$/, "");
+    const socket: Socket = io(socketUrl, {
+      transports: ["websocket", "polling"],
+      withCredentials: true,
+    });
+
+    socket.on(
+      "kanban:card_moved",
+      (data: {
+        applicationId: string;
+        jobDescriptionId: string;
+        sourceStageId?: string;
+        targetStageId: string;
+        updatedAt: string;
+      }) => {
+        if (data.jobDescriptionId === selectedJobId) {
+          setApplications((prev) =>
+            prev.map((app) =>
+              app._id === data.applicationId
+                ? { ...app, currentStageId: data.targetStageId }
+                : app
+            )
+          );
+        }
+      }
+    );
+
+    return () => {
+      socket.disconnect();
+    };
+  }, [selectedJobId]);
 
   // Carousel 4-stages-per-page state
   const [carouselIndex, setCarouselIndex] = useState<number>(0);
@@ -433,23 +480,10 @@ export default function KanbanContainer({
     if (found) setActiveApplication(found);
   };
 
-  // Shared handler for moving application to another stage (via drag or quick action buttons)
-  const handleMoveStage = async (appId: string, targetStageId: string) => {
+  // Execute moving application stage with optimistic update & rollback
+  const executeMoveStage = async (appId: string, targetStageId: string, reason?: string) => {
     const currentApp = applications.find((a) => a._id === appId);
     if (!currentApp || currentApp.currentStageId === targetStageId) return;
-
-    // Chặn chuyển về giai đoạn trước đó (chỉ cho phép tiến lên)
-    const currentIdx = activeStages.findIndex(
-      (s) => s._id === currentApp.currentStageId || s.name === currentApp.currentStageId
-    );
-    const targetIdx = activeStages.findIndex(
-      (s) => s._id === targetStageId || s.name === targetStageId
-    );
-
-    if (currentIdx !== -1 && targetIdx !== -1 && targetIdx < currentIdx) {
-      showToast("Không thể chuyển ứng viên về giai đoạn tuyển dụng trước đó!", "error");
-      return;
-    }
 
     // Optimistic UI Update
     setApplications((prev) =>
@@ -459,7 +493,7 @@ export default function KanbanContainer({
     );
 
     try {
-      await kanbanApi.updateApplicationStage(appId, targetStageId);
+      await kanbanApi.updateApplicationStage(appId, targetStageId, reason);
     } catch (err: any) {
       console.error("Lỗi cập nhật giai đoạn phỏng vấn:", err);
       // Revert if API fails
@@ -470,6 +504,40 @@ export default function KanbanContainer({
       );
       showToast(err?.message || "Không thể chuyển giai đoạn ứng viên. Đã hoàn tác lại vị trí.", "error");
     }
+  };
+
+  // Shared handler for moving application to another stage (via drag or quick action buttons)
+  const handleMoveStage = async (appId: string, targetStageId: string, reason?: string) => {
+    const currentApp = applications.find((a) => a._id === appId);
+    if (!currentApp || currentApp.currentStageId === targetStageId) return;
+
+    const currentIdx = activeStages.findIndex(
+      (s) => s._id === currentApp.currentStageId || s.name === currentApp.currentStageId
+    );
+    const targetIdx = activeStages.findIndex(
+      (s) => s._id === targetStageId || s.name === targetStageId
+    );
+
+    // Kéo lùi giai đoạn: Mở modal xác nhận kèm lý do thay vì chặn cứng (BUG-LOGIC-02 / REG-03)
+    if (currentIdx !== -1 && targetIdx !== -1 && targetIdx < currentIdx) {
+      const cand = currentApp.candidateId as any;
+      const candidateName =
+        typeof cand === "object"
+          ? cand?.userId?.name || cand?.fullName || cand?.profileName || "Ứng viên"
+          : "Ứng viên";
+      const fromStageName = activeStages[currentIdx]?.name || "Giai đoạn hiện tại";
+      const toStageName = activeStages[targetIdx]?.name || "Giai đoạn trước";
+      setBackwardMoveTarget({
+        appId,
+        targetStageId,
+        candidateName,
+        fromStageName,
+        toStageName,
+      });
+      return;
+    }
+
+    await executeMoveStage(appId, targetStageId, reason);
   };
 
   // Handle Drag End
@@ -503,19 +571,6 @@ export default function KanbanContainer({
     }
 
     if (currentApp.currentStageId === targetStageId) return;
-
-    // Chặn kéo thả về cột trước đó
-    const currentIdx = activeStages.findIndex(
-      (s) => s._id === currentApp.currentStageId || s.name === currentApp.currentStageId
-    );
-    const targetIdx = activeStages.findIndex(
-      (s) => s._id === targetStageId || s.name === targetStageId
-    );
-
-    if (currentIdx !== -1 && targetIdx !== -1 && targetIdx < currentIdx) {
-      showToast("Không thể kéo ứng viên về giai đoạn tuyển dụng trước đó!", "error");
-      return;
-    }
 
     await handleMoveStage(appId, targetStageId);
   };
@@ -727,7 +782,7 @@ export default function KanbanContainer({
                   onCreateOffer={(app) => router.push(`/offers/create?applicationId=${app._id}`)}
                   onCreateInterview={handleCreateInterview}
                   style={{ width: columnWidthStyle }}
-                  isDropDisabled={activeAppStageIndex !== -1 && colIdx < activeAppStageIndex}
+                  isDropDisabled={false}
                   isDraggingAny={Boolean(activeApplication)}
                 />
               ))}
@@ -829,6 +884,106 @@ export default function KanbanContainer({
           setRefreshTrigger((k) => k + 1);
         }}
       />
+
+      {/* Modal Xác nhận Kéo lùi giai đoạn (BUG-LOGIC-02 / REG-03) - Portaled directly to document.body to cover entire viewport */}
+      {isMounted && typeof window !== "undefined" && backwardMoveTarget && createPortal(
+        <div className="fixed inset-0 z-[9999] flex items-center justify-center p-4">
+          {/* Backdrop full viewport covering entire screen including navbar and sidebar */}
+          <div
+            className="fixed inset-0 bg-slate-950/50 backdrop-blur-sm transition-opacity animate-in fade-in duration-200"
+            onClick={() => {
+              setBackwardMoveTarget(null);
+              setBackwardReason("");
+            }}
+          />
+
+          {/* Modal Card */}
+          <div className="relative w-full max-w-lg bg-white rounded-2xl shadow-2xl z-10 overflow-hidden flex flex-col max-h-[90vh] animate-in zoom-in-95 duration-200 text-slate-900 border border-slate-100">
+            {/* Modal Header */}
+            <div className="px-6 pt-6 pb-4 flex items-start justify-between border-b border-slate-100 bg-amber-50/50">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-xl bg-amber-100 text-amber-700 flex items-center justify-center shrink-0">
+                  <RotateCcw size={20} />
+                </div>
+                <div>
+                  <h3 className="text-lg font-bold text-slate-900 tracking-tight">
+                    Xác nhận chuyển lùi giai đoạn
+                  </h3>
+                  <p className="text-xs font-semibold text-slate-500 mt-0.5">
+                    Hồ sơ: <span className="text-slate-800 font-bold">{backwardMoveTarget.candidateName}</span>
+                  </p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => {
+                  setBackwardMoveTarget(null);
+                  setBackwardReason("");
+                }}
+                className="p-1.5 text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded-xl transition-colors cursor-pointer"
+              >
+                <X size={18} />
+              </button>
+            </div>
+
+            {/* Modal Content */}
+            <div className="p-6 space-y-4">
+              <p className="text-sm text-slate-600 leading-relaxed">
+                Bạn có chắc chắn muốn chuyển ứng viên{" "}
+                <span className="font-semibold text-slate-900">{backwardMoveTarget.candidateName}</span> từ giai đoạn{" "}
+                <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-indigo-50 text-indigo-700 border border-indigo-200">
+                  "{backwardMoveTarget.fromStageName}"
+                </span>{" "}
+                về{" "}
+                <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-amber-50 text-amber-700 border border-amber-200">
+                  "{backwardMoveTarget.toStageName}"
+                </span>?
+              </p>
+
+              <div>
+                <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1.5">
+                  Lý do chuyển lùi (Ghi vào nhật ký hồ sơ)
+                </label>
+                <textarea
+                  value={backwardReason}
+                  onChange={(e) => setBackwardReason(e.target.value)}
+                  placeholder="Nhập lý do chuyển lùi giai đoạn (ví dụ: Cần đánh giá lại kỹ thuật, bổ sung vòng phỏng vấn)..."
+                  rows={3}
+                  className="w-full text-sm border border-slate-200 rounded-xl p-3 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 focus:outline-none transition-all placeholder:text-slate-400"
+                />
+              </div>
+            </div>
+
+            {/* Modal Footer */}
+            <div className="px-6 py-4 bg-slate-50 border-t border-slate-100 flex justify-end gap-3">
+              <button
+                type="button"
+                onClick={() => {
+                  setBackwardMoveTarget(null);
+                  setBackwardReason("");
+                }}
+                className="px-4 py-2 text-sm font-semibold text-slate-600 hover:text-slate-800 bg-white border border-slate-200 hover:bg-slate-50 rounded-xl transition-colors cursor-pointer shadow-sm"
+              >
+                Hủy bỏ
+              </button>
+              <button
+                type="button"
+                onClick={async () => {
+                  const target = backwardMoveTarget;
+                  const reason = backwardReason.trim();
+                  setBackwardMoveTarget(null);
+                  setBackwardReason("");
+                  await executeMoveStage(target.appId, target.targetStageId, reason);
+                }}
+                className="px-4 py-2 text-sm font-semibold text-white bg-indigo-600 hover:bg-indigo-700 rounded-xl transition-colors cursor-pointer shadow-sm shadow-indigo-500/20"
+              >
+                Xác nhận chuyển
+              </button>
+            </div>
+          </div>
+        </div>,
+        document.body
+      )}
 
       {toast && <Toast toast={toast} onClose={hideToast} />}
     </div>

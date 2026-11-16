@@ -75,3 +75,5 @@ export class Application {
 export const ApplicationSchema = SchemaFactory.createForClass(Application);
 
 ApplicationSchema.index({ candidateId: 1, jobDescriptionId: 1 }, { unique: true });
+ApplicationSchema.index({ jobDescriptionId: 1, status: 1, currentStageId: 1, updatedAt: -1 });
+ApplicationSchema.index({ jobDescriptionId: 1, status: 1, appliedAt: -1 });

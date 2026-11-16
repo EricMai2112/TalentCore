@@ -246,8 +246,21 @@ export class JobDescriptionService {
     }
   }
 
+  private validateSalaries(minimumSalary?: number, maximumSalary?: number): void {
+    if (
+      minimumSalary !== undefined &&
+      maximumSalary !== undefined &&
+      minimumSalary > maximumSalary
+    ) {
+      throw new BadRequestException(
+        'Mức lương tối thiểu (minimumSalary) không được lớn hơn mức lương tối đa (maximumSalary).',
+      );
+    }
+  }
+
   async create(createDto: CreateJobDescriptionDto): Promise<JobDescriptionDocument> {
     this.validateCriteriaWeights(createDto.criteria);
+    this.validateSalaries(createDto.minimumSalary, createDto.maximumSalary);
 
     const newJob = new this.jobDescriptionModel(createDto);
     const saved = await newJob.save();
@@ -338,7 +351,14 @@ export class JobDescriptionService {
 
     this.validateCriteriaWeights(updateDto.criteria);
 
-    const oldJob = await this.jobDescriptionModel.findById(id).select('status').exec();
+    const oldJob = await this.jobDescriptionModel.findById(id).select('status minimumSalary maximumSalary').exec();
+    if (!oldJob) {
+      throw new NotFoundException(`Không tìm thấy Job Description với id "${id}"`);
+    }
+
+    const effectiveMin = updateDto.minimumSalary !== undefined ? updateDto.minimumSalary : (oldJob as any).minimumSalary;
+    const effectiveMax = updateDto.maximumSalary !== undefined ? updateDto.maximumSalary : (oldJob as any).maximumSalary;
+    this.validateSalaries(effectiveMin, effectiveMax);
 
     const updatedJob = await this.jobDescriptionModel
       .findByIdAndUpdate(id, { $set: updateDto }, { new: true, runValidators: true })
@@ -376,7 +396,24 @@ export class JobDescriptionService {
   }
 
   async delete(id: string): Promise<void> {
+    if (!isValidObjectId(id)) {
+      throw new BadRequestException(`Id "${id}" không hợp lệ`);
+    }
     await this.findById(id);
+
+    const jobObjId = new Types.ObjectId(id);
+    const [applicationsCount, interviewsCount, offersCount] = await Promise.all([
+      this.jobDescriptionModel.db.collection('applications').countDocuments({ jobDescriptionId: jobObjId }),
+      this.jobDescriptionModel.db.collection('interviews').countDocuments({ jobDescriptionId: jobObjId }),
+      this.jobDescriptionModel.db.collection('offers').countDocuments({ jobDescriptionId: jobObjId }),
+    ]);
+
+    if (applicationsCount > 0 || interviewsCount > 0 || offersCount > 0) {
+      throw new BadRequestException(
+        `Không thể xóa tin tuyển dụng đang có dữ liệu liên kết (${applicationsCount} hồ sơ ứng tuyển, ${interviewsCount} lịch phỏng vấn, ${offersCount} thư mời việc). Vui lòng lưu trữ hoặc đóng tin tuyển dụng thay vì xóa.`,
+      );
+    }
+
     await this.jobDescriptionModel.findByIdAndDelete(id).exec();
   }
 

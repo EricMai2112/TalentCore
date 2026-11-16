@@ -43,4 +43,18 @@ export class EventsGateway
     this.logger.log(`Broadcasting job_updated event for job: ${job._id}`);
     this.server.emit('job_updated', job);
   }
+
+  emitKanbanCardMoved(payload: {
+    applicationId: string;
+    jobDescriptionId: string;
+    sourceStageId?: string;
+    targetStageId: string;
+    updatedAt: Date;
+    notes?: any[];
+  }) {
+    this.logger.log(`Broadcasting kanban:card_moved event for application: ${payload.applicationId}`);
+    if (this.server) {
+      this.server.emit('kanban:card_moved', payload);
+    }
+  }
 }

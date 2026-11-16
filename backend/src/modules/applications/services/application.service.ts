@@ -3,14 +3,14 @@ import { InjectModel } from '@nestjs/mongoose';
 import { Model, Types } from 'mongoose';
 import * as path from 'path';
 import * as fs from 'fs';
-import { Application, ApplicationDocument, ApplicationStatus } from '../schemas/application.schema';
-import { Candidate, CandidateDocument } from 'src/modules/candidates/schema/candidate.schema';
-import { JobDescription, JobDescriptionDocument, JobStatus } from 'src/modules/job-description/schemas/job-description.schema';
-import { PipelineTemplate, PipelineTemplateDocument, StageType } from 'src/modules/pipeline-template/schemas/pipeline-template.schema';
+import { Application, ApplicationDocument, ApplicationNote, ApplicationStatus } from '../schemas/application.schema';
+import { Candidate, CandidateDocument } from '../../candidates/schema/candidate.schema';
+import { JobDescription, JobDescriptionDocument, JobStatus } from '../../job-description/schemas/job-description.schema';
+import { PipelineTemplate, PipelineTemplateDocument, StageType } from '../../pipeline-template/schemas/pipeline-template.schema';
 import { AiMatchingProcessor } from '../processors/ai-matching.processor';
 import { AiMatchingService } from './ai-matching.service';
 import { AiEvaluation, AiEvaluationDocument } from '../schemas/ai-evaluation.schema';
-import { CvParserService } from 'src/modules/candidates/services/cv-parser.service';
+import { CvParserService } from '../../candidates/services/cv-parser.service';
 import {
   Interview,
   InterviewDocument,
@@ -18,7 +18,7 @@ import {
   InterviewStatus,
   InterviewResult,
   InterviewConfirmationStatus,
-} from 'src/modules/interviews/schemas/interview.schema';
+} from '../../interviews/schemas/interview.schema';
 import { NotificationsService } from '../../notifications/services/notifications.service';
 import { EmailService } from '../../email-template/services/email.service';
 import {
@@ -28,6 +28,7 @@ import {
 } from '../../notifications/schemas/notification.schema';
 import { S3StorageService } from './s3-storage.service';
 import { AwsSqsService } from './aws-sqs.service';
+import { EventsGateway } from '../../job-description/gateways/events.gateway';
 
 @Injectable()
 export class ApplicationService {
@@ -59,6 +60,7 @@ export class ApplicationService {
     @Optional() private readonly cvParserService?: CvParserService,
     @Optional() private readonly s3StorageService?: S3StorageService,
     @Optional() private readonly awsSqsService?: AwsSqsService,
+    @Optional() private readonly eventsGateway?: EventsGateway,
   ) {}
 
   async applyJob(
@@ -72,6 +74,10 @@ export class ApplicationService {
     const job = await this.jobModel.findById(jobDescriptionId);
     if (!job || job.status !== JobStatus.JD_CREATED) {
       throw new NotFoundException('Tin tuyển dụng không tồn tại hoặc đã đóng.');
+    }
+
+    if (job.applicationDeadline && new Date() > new Date(job.applicationDeadline)) {
+      throw new BadRequestException('Vị trí tuyển dụng này đã hết hạn nhận hồ sơ ứng tuyển.');
     }
 
     const pipeline = await this.pipelineModel.findById(job.pipelineTemplateId);
@@ -523,7 +529,12 @@ export class ApplicationService {
     return rawDept.toString();
   }
 
-  async updateApplicationStage(applicationId: string, stageId: string) {
+  async updateApplicationStage(
+    applicationId: string,
+    stageId: string,
+    reason?: string,
+    currentUser?: any,
+  ) {
     if (!Types.ObjectId.isValid(applicationId)) {
       throw new BadRequestException('ID đơn ứng tuyển không hợp lệ');
     }
@@ -533,7 +544,11 @@ export class ApplicationService {
       throw new NotFoundException('Không tìm thấy đơn ứng tuyển');
     }
 
-    // Không cho phép chuyển ứng viên về giai đoạn trước đó (chỉ cho phép tiến lên)
+    let isBackwardMove = false;
+    let fromStageName = '';
+    let toStageName = '';
+
+    // Kiểm tra tính hợp lệ của stage trong quy trình pipeline
     const currentStageId = application.currentStageId?.toString();
     if (currentStageId && currentStageId !== stageId) {
       const job = await this.jobModel.findById(application.jobDescriptionId).exec();
@@ -551,14 +566,49 @@ export class ApplicationService {
             throw new BadRequestException('Giai đoạn tuyển dụng không tồn tại trong quy trình của vị trí tuyển dụng này.');
           }
           if (currentIdx !== -1 && targetIdx < currentIdx) {
-            throw new BadRequestException('Không thể chuyển ứng viên về giai đoạn tuyển dụng trước đó');
+            isBackwardMove = true;
+            fromStageName = sortedStages[currentIdx]?.name || 'Giai đoạn trước';
+            toStageName = sortedStages[targetIdx]?.name || 'Giai đoạn sau';
           }
         }
       }
     }
 
+    // Nếu kéo lùi giai đoạn, ghi nhật ký ghi chú (Audit Note)
+    if (isBackwardMove) {
+      const authorName = currentUser?.name || currentUser?.fullName || 'Hệ thống';
+      const authorRole = currentUser?.role || 'RECRUITER';
+      const backwardNote: ApplicationNote = {
+        authorName,
+        authorRole,
+        content: `[Kéo lùi giai đoạn] Chuyển từ "${fromStageName}" về "${toStageName}". Lý do: ${reason && reason.trim() ? reason.trim() : 'Không cung cấp'}`,
+        createdAt: new Date(),
+      };
+      if (!application.notes) {
+        application.notes = [];
+      }
+      application.notes.push(backwardNote);
+    }
+
     application.currentStageId = stageId as any;
     const updated = await application.save();
+
+    const rawJobId = application.jobDescriptionId as any;
+    const cleanJobDescriptionId = rawJobId?._id ? rawJobId._id.toString() : rawJobId?.toString();
+
+    // Broadcast sự kiện WebSocket thời gian thực tới tất cả Recruiter/HR đang mở bảng Kanban
+    try {
+      this.eventsGateway?.emitKanbanCardMoved({
+        applicationId: updated._id.toString(),
+        jobDescriptionId: cleanJobDescriptionId,
+        sourceStageId: currentStageId,
+        targetStageId: stageId,
+        updatedAt: new Date(),
+        notes: application.notes,
+      });
+    } catch (socketErr) {
+      this.logger.error('Lỗi khi broadcast WebSocket kanban:card_moved:', socketErr);
+    }
 
     const populated = await this.getApplicationById(updated._id.toString());
 
