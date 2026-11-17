@@ -35,6 +35,7 @@
     "@nestjs/mongoose": "^11.0.4",
     "@nestjs/platform-express": "^11.0.1",
     "@nestjs/platform-socket.io": "^11.1.29",
+    "@nestjs/schedule": "^12.0.4",
     "@nestjs/websockets": "^11.1.29",
     "@types/nodemailer": "^8.0.2",
     "bcrypt": "^6.0.0",

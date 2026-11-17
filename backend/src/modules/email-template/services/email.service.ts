@@ -655,6 +655,54 @@ export class EmailService {
   }
 
   /**
+   * Gửi email khôi phục / đặt lại mật khẩu cho ứng viên qua AWS SES (Xác thực bằng liên kết)
+   */
+  async sendForgotPasswordEmail(params: {
+    toEmail: string;
+    candidateName?: string;
+    resetToken: string;
+  }) {
+    if (!params.toEmail) {
+      this.logger.warn('[Forgot Password Email] Không có email người nhận, bỏ qua gửi mail.');
+      return;
+    }
+
+    const name = params.candidateName || 'Quý ứng viên';
+    const actionUrl = `${this.candidateUrl}/reset-password?token=${encodeURIComponent(params.resetToken)}`;
+    const subject = '[TalentCore] Yêu cầu đặt lại mật khẩu tài khoản';
+
+    const bodyText =
+      `Chào ${name},\n\n` +
+      `Hệ thống tuyển dụng TalentCore nhận được yêu cầu đặt lại mật khẩu cho tài khoản: ${params.toEmail}.\n\n` +
+      `Vui lòng nhấn vào nút "Đặt lại mật khẩu" bên dưới để tiến hành thiết lập mật khẩu mới (liên kết có hiệu lực trong 15 phút):\n\n` +
+      `Nếu bạn không thực hiện yêu cầu này, vui lòng bỏ qua email. Mật khẩu hiện tại của bạn vẫn được bảo vệ an toàn.\n\n` +
+      `Trân trọng,\nĐội ngũ TalentCore`;
+
+    const infoList: Array<{ label: string; value: string }> = [
+      { label: 'Tài khoản yêu cầu', value: params.toEmail },
+      { label: 'Thời hạn liên kết', value: '15 phút' },
+    ];
+
+    const renderedHtml = this.generateGeneralHtmlEmail({
+      title: subject,
+      bodyText,
+      badgeText: 'Khôi phục mật khẩu',
+      badgeColor: '#2563eb',
+      infoList,
+      actionText: 'Đặt lại mật khẩu',
+      actionUrl,
+    });
+
+    try {
+      await this.sendEmail(params.toEmail, subject, renderedHtml, bodyText);
+      this.logger.log(`[Forgot Password Email] Đã gửi email đặt lại mật khẩu thành công tới ${params.toEmail}`);
+    } catch (err: any) {
+      this.logger.error(`[Forgot Password Email] Lỗi gửi email đặt lại mật khẩu tới ${params.toEmail}: ${err?.message || err}`);
+      throw err;
+    }
+  }
+
+  /**
    * Gửi email khi HR gửi Offer Letter cho ứng viên.
    * LẤY NGUYÊN VẸN TEMPLATE HTML TỪ MÀN HÌNH TẠO OFFER (offerLetterHtml) VÀ EMAIL SUBJECT.
    * ĐẢM BẢO HIỂN THỊ CHUẨN ĐẸP 100% TRÊN GMAIL, KHÔNG BỊ TRÀN HAY VỠ BẢNG.

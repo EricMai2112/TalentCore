@@ -17,6 +17,10 @@ export class UserService {
         return this.userModel.findOne({ email }).exec();
     }
 
+    async findByForgotPasswordToken(token: string) {
+        return this.userModel.findOne({ forgot_password_token: token }).exec();
+    }
+
     async findById(id: string) {
         return this.userModel.findById(id).populate('departmentId').exec();
     }

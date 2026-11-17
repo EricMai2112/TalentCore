@@ -1,5 +1,12 @@
 import { Body, Controller, Get, Patch, Post, Res, UsePipes, ValidationPipe } from '@nestjs/common';
-import { ChangePasswordDto, LoginDto, RegisterDto } from '../dtos/auth.dto';
+import {
+  ChangePasswordDto,
+  ForgotPasswordDto,
+  LoginDto,
+  RegisterDto,
+  ResetPasswordDto,
+  VerifyForgotPasswordDto,
+} from '../dtos/auth.dto';
 import { AuthService } from '../services/auth.service';
 import type { Response } from 'express';
 import { Public } from '../decorators/public.decorator';
@@ -52,5 +59,26 @@ export class AuthController {
     res.clearCookie('accessToken');
     res.clearCookie('user_info');
     return { message: 'Đăng xuất thành công' };
+  }
+
+  @Public()
+  @Post('forgot-password')
+  @UsePipes(new ValidationPipe({ whitelist: true }))
+  async forgotPassword(@Body() dto: ForgotPasswordDto) {
+    return this.authService.forgotPassword(dto);
+  }
+
+  @Public()
+  @Post('verify-forgot-password')
+  @UsePipes(new ValidationPipe({ whitelist: true }))
+  async verifyForgotPassword(@Body() dto: VerifyForgotPasswordDto) {
+    return this.authService.verifyForgotPasswordToken(dto.token);
+  }
+
+  @Public()
+  @Post('reset-password')
+  @UsePipes(new ValidationPipe({ whitelist: true }))
+  async resetPassword(@Body() dto: ResetPasswordDto) {
+    return this.authService.resetPassword(dto);
   }
 }

@@ -39,6 +39,18 @@ export class User {
   @Prop({ type: Types.ObjectId, ref: 'Department' })
   departmentId?: Types.ObjectId;
 
+  @Prop({ required: false })
+  forgot_password_token?: string;
+
+  @Prop({ required: false, type: Date })
+  forgot_password_requested_at?: Date | null;
+
+  @Prop({ required: false, default: 0 })
+  forgot_password_request_count?: number;
+
+  @Prop({ required: false, type: Date })
+  forgot_password_request_window_start?: Date;
+
   createdAt: Date;
 
   updatedAt: Date;
