@@ -110,21 +110,17 @@ export class OffersService {
 
   async findAll(query: QueryOfferDto, currentUser: any) {
     const { page = 1, limit = 10, status, departmentId, jobDescriptionId, search } = query;
-    const filter: any = {};
+    const baseFilter: any = {};
 
     // RBAC: Department Manager can only see offers of their department
     if (currentUser.role === UserRole.DEPARTMENT_MANAGER && currentUser.departmentId) {
-      filter.departmentId = new Types.ObjectId(currentUser.departmentId);
+      baseFilter.departmentId = new Types.ObjectId(currentUser.departmentId);
     } else if (departmentId && Types.ObjectId.isValid(departmentId)) {
-      filter.departmentId = new Types.ObjectId(departmentId);
-    }
-
-    if (status) {
-      filter.status = status;
+      baseFilter.departmentId = new Types.ObjectId(departmentId);
     }
 
     if (jobDescriptionId && Types.ObjectId.isValid(jobDescriptionId)) {
-      filter.jobDescriptionId = new Types.ObjectId(jobDescriptionId);
+      baseFilter.jobDescriptionId = new Types.ObjectId(jobDescriptionId);
     }
 
     if (search && search.trim()) {
@@ -174,12 +170,28 @@ export class OffersService {
         searchOrConditions.push({ jobDescriptionId: { $in: jdIds } });
       }
 
-      filter.$or = searchOrConditions;
+      baseFilter.$or = searchOrConditions;
+    }
+
+    const filter: any = { ...baseFilter };
+    if (status) {
+      filter.status = status;
     }
 
     const skip = (page - 1) * limit;
 
-    const [items, total] = await Promise.all([
+    const aggPipeline: any[] = [];
+    if (Object.keys(baseFilter).length > 0) {
+      aggPipeline.push({ $match: baseFilter });
+    }
+    aggPipeline.push({
+      $group: {
+        _id: '$status',
+        count: { $sum: 1 },
+      },
+    });
+
+    const [items, total, statusCountsAgg] = await Promise.all([
       this.offerModel
         .find(filter)
         .sort({ updatedAt: -1 })
@@ -204,7 +216,29 @@ export class OffersService {
         })
         .exec(),
       this.offerModel.countDocuments(filter).exec(),
+      this.offerModel.aggregate(aggPipeline).exec(),
     ]);
+
+    const stats = {
+      total: 0,
+      draft: 0,
+      sent: 0,
+      accepted: 0,
+      declined: 0,
+      cancelled: 0,
+      expired: 0,
+    };
+
+    for (const item of statusCountsAgg) {
+      const count = Number(item.count) || 0;
+      stats.total += count;
+      if (item._id === OfferStatus.DRAFT) stats.draft = count;
+      else if (item._id === OfferStatus.SENT) stats.sent = count;
+      else if (item._id === OfferStatus.ACCEPTED) stats.accepted = count;
+      else if (item._id === OfferStatus.DECLINED) stats.declined = count;
+      else if (item._id === OfferStatus.CANCELLED) stats.cancelled = count;
+      else if (item._id === OfferStatus.EXPIRED) stats.expired = count;
+    }
 
     return {
       items,
@@ -212,6 +246,7 @@ export class OffersService {
       page,
       limit,
       totalPages: Math.ceil(total / limit),
+      stats,
     };
   }
 

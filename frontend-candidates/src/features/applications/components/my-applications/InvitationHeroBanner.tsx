@@ -230,16 +230,16 @@ export function InvitationHeroBanner({ onApplicationCreated }: InvitationHeroBan
           )}
 
           {/* Action Row */}
-          <div className="pt-2 flex flex-wrap items-center justify-between gap-3 border-t border-white/10">
+          <div className="pt-2 flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-t border-white/10">
             <div className="flex items-center gap-2 text-xs text-blue-200/70">
               <span>Được chọn lọc dựa trên kết quả ấn tượng từ đợt tuyển trước</span>
             </div>
 
-            <div className="flex items-center gap-2.5">
+            <div className="flex flex-col-reverse sm:flex-row items-stretch sm:items-center gap-2 sm:gap-2.5">
               <Link
                 href={`/jobs/${job._id}`}
                 target="_blank"
-                className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-semibold text-blue-200 hover:text-white hover:bg-white/10 transition-all"
+                className="inline-flex items-center justify-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-semibold text-blue-200 hover:text-white hover:bg-white/10 transition-all text-center"
               >
                 <span>Xem mô tả công việc</span>
                 <ExternalLink size={13} />
@@ -247,14 +247,14 @@ export function InvitationHeroBanner({ onApplicationCreated }: InvitationHeroBan
 
               <button
                 onClick={openDeclineModal}
-                className="px-4 py-2 rounded-xl text-xs font-semibold text-slate-300 hover:text-white hover:bg-white/10 transition-all cursor-pointer"
+                className="px-4 py-2 rounded-xl text-xs font-semibold text-slate-300 hover:text-white hover:bg-white/10 transition-all cursor-pointer text-center"
               >
                 Từ chối
               </button>
 
               <button
                 onClick={openAcceptModal}
-                className="px-5 py-2.5 rounded-xl bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white text-xs font-bold shadow-lg shadow-blue-600/30 transition-all cursor-pointer"
+                className="px-5 py-2.5 rounded-xl bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white text-xs font-bold shadow-lg shadow-blue-600/30 transition-all cursor-pointer text-center"
               >
                 Chấp nhận lời mời
               </button>
@@ -344,12 +344,12 @@ export function InvitationHeroBanner({ onApplicationCreated }: InvitationHeroBan
               </div>
             )}
 
-            <div className="pt-2 flex items-center justify-end gap-2.5">
+            <div className="pt-2 flex flex-col-reverse sm:flex-row items-stretch sm:items-center justify-end gap-2.5">
               <button
                 type="button"
                 onClick={() => setActiveModal(null)}
                 disabled={isSubmitting}
-                className="px-4 py-2.5 text-xs font-bold text-slate-600 hover:bg-slate-100 rounded-xl transition-all cursor-pointer"
+                className="w-full sm:w-auto justify-center px-4 py-2.5 text-xs font-bold text-slate-600 hover:bg-slate-100 rounded-xl transition-all cursor-pointer text-center"
               >
                 Hủy bỏ
               </button>
@@ -357,7 +357,7 @@ export function InvitationHeroBanner({ onApplicationCreated }: InvitationHeroBan
                 type="button"
                 onClick={handleConfirmAction}
                 disabled={isSubmitting || !!successMsg}
-                className={`px-5 py-2.5 text-xs font-bold text-white rounded-xl shadow-md flex items-center gap-2 transition-all cursor-pointer disabled:opacity-50 ${
+                className={`w-full sm:w-auto justify-center px-5 py-2.5 text-xs font-bold text-white rounded-xl shadow-md flex items-center gap-2 transition-all cursor-pointer disabled:opacity-50 text-center ${
                   activeModal === 'ACCEPT'
                     ? 'bg-blue-600 hover:bg-blue-700 shadow-blue-600/25'
                     : 'bg-rose-600 hover:bg-rose-700 shadow-rose-500/25'

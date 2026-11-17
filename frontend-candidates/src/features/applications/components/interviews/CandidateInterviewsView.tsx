@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { Loader2, Inbox, CheckCircle2, Clock, XCircle, Search } from 'lucide-react'
+import { Loader2, Inbox, Search } from 'lucide-react'
 import { CandidateInterviewItem } from '../../types/application.types'
 import { candidateInterviewsApi } from '../../services/candidate-interviews.api'
 import { UpcomingInterviewBanner } from './UpcomingInterviewBanner'
@@ -85,7 +85,7 @@ export function CandidateInterviewsView() {
           </div>
 
           {/* Search Input */}
-          <div className="relative min-w-[240px]">
+          <div className="relative w-full sm:w-auto sm:min-w-[240px]">
             <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400" size={15} />
             <input
               type="text"
@@ -97,12 +97,12 @@ export function CandidateInterviewsView() {
           </div>
         </div>
 
-        {/* Filter Pills */}
-        <div className="flex items-center gap-2 overflow-x-auto pb-1">
+        {/* Filter Tabs */}
+        <div className="grid grid-cols-4 gap-1.5 sm:flex sm:items-center sm:gap-2">
           <button
             type="button"
             onClick={() => setStatusFilter('ALL')}
-            className={`px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${
+            className={`w-full sm:w-auto px-1 sm:px-3.5 py-2 sm:py-1.5 rounded-xl text-[11px] sm:text-xs font-bold transition-all cursor-pointer text-center flex items-center justify-center ${
               statusFilter === 'ALL'
                 ? 'bg-slate-900 text-white shadow-2xs'
                 : 'bg-white border border-slate-200 text-slate-600 hover:bg-slate-50'
@@ -113,38 +113,35 @@ export function CandidateInterviewsView() {
           <button
             type="button"
             onClick={() => setStatusFilter('SCHEDULED')}
-            className={`px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer inline-flex items-center gap-1.5 ${
+            className={`w-full sm:w-auto px-1 sm:px-3.5 py-2 sm:py-1.5 rounded-xl text-[11px] sm:text-xs font-bold transition-all cursor-pointer text-center flex items-center justify-center ${
               statusFilter === 'SCHEDULED'
                 ? 'bg-indigo-600 text-white shadow-2xs'
                 : 'bg-white border border-slate-200 text-slate-600 hover:bg-slate-50'
             }`}
           >
-            <Clock size={13} />
-            <span>Đã lên lịch</span>
+            Đã lên lịch
           </button>
           <button
             type="button"
             onClick={() => setStatusFilter('COMPLETED')}
-            className={`px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer inline-flex items-center gap-1.5 ${
+            className={`w-full sm:w-auto px-1 sm:px-3.5 py-2 sm:py-1.5 rounded-xl text-[11px] sm:text-xs font-bold transition-all cursor-pointer text-center flex items-center justify-center ${
               statusFilter === 'COMPLETED'
                 ? 'bg-emerald-600 text-white shadow-2xs'
                 : 'bg-white border border-slate-200 text-slate-600 hover:bg-slate-50'
             }`}
           >
-            <CheckCircle2 size={13} />
-            <span>Hoàn thành</span>
+            Hoàn thành
           </button>
           <button
             type="button"
             onClick={() => setStatusFilter('CANCELLED')}
-            className={`px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer inline-flex items-center gap-1.5 ${
+            className={`w-full sm:w-auto px-1 sm:px-3.5 py-2 sm:py-1.5 rounded-xl text-[11px] sm:text-xs font-bold transition-all cursor-pointer text-center flex items-center justify-center ${
               statusFilter === 'CANCELLED'
                 ? 'bg-rose-600 text-white shadow-2xs'
                 : 'bg-white border border-slate-200 text-slate-600 hover:bg-slate-50'
             }`}
           >
-            <XCircle size={13} />
-            <span>Đã hủy</span>
+            Đã hủy
           </button>
         </div>
       </div>

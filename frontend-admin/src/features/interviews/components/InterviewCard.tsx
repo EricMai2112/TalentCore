@@ -25,7 +25,7 @@ import {
 import { InterviewWorkflowStatusBadge } from './InterviewWorkflowStatusBadge'
 import { useAuth } from '@/src/providers/AuthProvider'
 import { UserRole } from '@/src/features/users/types/user.types'
-import { CustomActionMenu } from '@/src/components/common'
+import { CustomActionMenu, CustomAvatar } from '@/src/components/common'
 import { useRouter } from 'next/navigation'
 
 interface InterviewCardProps {
@@ -108,9 +108,10 @@ export default function InterviewCard({
       {/* 1. Candidate Name & Email */}
       <td className="px-4 py-4 align-middle">
         <div className="flex items-center gap-3">
-          <div className="w-9 h-9 rounded-full font-black bg-blue-500/10 text-[#3B82F6] border border-blue-200/60 flex items-center justify-center shrink-0 text-xs shadow-2xs">
-            {initials}
-          </div>
+          <CustomAvatar
+            name={candName}
+            src={typeof cand === 'object' ? (cand as any)?.avatar || (cand as any)?.userId?.avatar : undefined}
+          />
           <div className="min-w-0">
             <p className="text-[13px] font-bold text-slate-900 group-hover:text-[#3B82F6] transition-colors truncate">
               {candName}

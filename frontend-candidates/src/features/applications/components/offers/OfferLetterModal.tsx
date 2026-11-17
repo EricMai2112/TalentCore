@@ -365,24 +365,24 @@ export const OfferLetterModal: React.FC<OfferLetterModalProps> = ({
           </div>
 
           {/* Modal Footer (Pinned) */}
-          <div className="shrink-0 px-6 py-4 border-t border-slate-100 bg-slate-50/70 flex items-center justify-between">
+          <div className="shrink-0 px-4 sm:px-6 py-3.5 sm:py-4 border-t border-slate-100 bg-slate-50/70 flex flex-col-reverse sm:flex-row items-stretch sm:items-center justify-between gap-2.5">
             <button
               type="button"
               onClick={onClose}
-              className="px-4 py-2 text-xs font-semibold text-slate-600 hover:text-slate-800 transition-colors cursor-pointer"
+              className="px-4 py-2 text-xs font-semibold text-slate-600 hover:text-slate-800 transition-colors cursor-pointer text-center"
             >
               Đóng
             </button>
 
             {canRespond && (
-              <div className="flex items-center gap-2.5">
+              <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 sm:gap-2.5">
                 <button
                   type="button"
                   onClick={() => {
                     setErrorMessage('');
                     setDeclineMode(true);
                   }}
-                  className="px-4 py-2.5 rounded-2xl border border-rose-200 text-rose-600 hover:bg-rose-50 font-bold text-xs transition-colors cursor-pointer"
+                  className="px-4 py-2.5 rounded-2xl border border-rose-200 text-rose-600 hover:bg-rose-50 font-bold text-xs transition-colors cursor-pointer text-center justify-center flex items-center"
                 >
                   Từ chối nhận việc
                 </button>
@@ -393,7 +393,7 @@ export const OfferLetterModal: React.FC<OfferLetterModalProps> = ({
                     setConfirmAcceptMode(true);
                     handleResendOtp();
                   }}
-                  className="px-5 py-2.5 rounded-2xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs shadow-sm shadow-emerald-500/20 transition-all flex items-center gap-1.5 cursor-pointer"
+                  className="px-5 py-2.5 rounded-2xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs shadow-sm shadow-emerald-500/20 transition-all flex items-center justify-center gap-1.5 cursor-pointer text-center"
                 >
                   <CheckCircle2 className="w-4 h-4" />
                   Đồng ý nhận việc
@@ -506,12 +506,12 @@ export const OfferLetterModal: React.FC<OfferLetterModalProps> = ({
               </div>
             )}
 
-            <div className="flex items-center justify-end gap-2.5 pt-2">
+            <div className="flex flex-col-reverse sm:flex-row items-stretch sm:items-center justify-end gap-2.5 pt-2">
               <button
                 type="button"
                 onClick={() => setConfirmAcceptMode(false)}
                 disabled={submitting}
-                className="px-4 py-2.5 rounded-2xl border border-slate-200 text-slate-700 font-semibold text-xs hover:bg-slate-50 transition-colors cursor-pointer"
+                className="w-full sm:w-auto justify-center px-4 py-2.5 rounded-2xl border border-slate-200 text-slate-700 font-semibold text-xs hover:bg-slate-50 transition-colors cursor-pointer"
               >
                 Suy nghĩ thêm
               </button>
@@ -519,7 +519,7 @@ export const OfferLetterModal: React.FC<OfferLetterModalProps> = ({
                 type="button"
                 onClick={() => handleRespond('ACCEPT')}
                 disabled={submitting}
-                className="px-5 py-2.5 rounded-2xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs shadow-sm shadow-emerald-500/20 transition-all flex items-center gap-1.5 cursor-pointer disabled:opacity-50"
+                className="w-full sm:w-auto justify-center px-5 py-2.5 rounded-2xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs shadow-sm shadow-emerald-500/20 transition-all flex items-center gap-1.5 cursor-pointer disabled:opacity-50"
               >
                 {submitting && <Loader2 className="w-3.5 h-3.5 animate-spin" />}
                 Tôi đồng ý nhận việc
@@ -578,12 +578,12 @@ export const OfferLetterModal: React.FC<OfferLetterModalProps> = ({
               </div>
             )}
 
-            <div className="flex items-center justify-end gap-2.5 pt-2">
+            <div className="flex flex-col-reverse sm:flex-row items-stretch sm:items-center justify-end gap-2.5 pt-2">
               <button
                 type="button"
                 onClick={() => setDeclineMode(false)}
                 disabled={submitting}
-                className="px-4 py-2.5 rounded-2xl border border-slate-200 text-slate-700 font-semibold text-xs hover:bg-slate-50 transition-colors cursor-pointer"
+                className="w-full sm:w-auto justify-center px-4 py-2.5 rounded-2xl border border-slate-200 text-slate-700 font-semibold text-xs hover:bg-slate-50 transition-colors cursor-pointer"
               >
                 Quay lại
               </button>
@@ -591,7 +591,7 @@ export const OfferLetterModal: React.FC<OfferLetterModalProps> = ({
                 type="button"
                 onClick={() => handleRespond('DECLINE')}
                 disabled={submitting}
-                className="px-5 py-2.5 rounded-2xl bg-rose-600 hover:bg-rose-700 text-white font-bold text-xs shadow-sm shadow-rose-500/20 transition-all flex items-center gap-1.5 cursor-pointer disabled:opacity-50"
+                className="w-full sm:w-auto justify-center px-5 py-2.5 rounded-2xl bg-rose-600 hover:bg-rose-700 text-white font-bold text-xs shadow-sm shadow-rose-500/20 transition-all flex items-center gap-1.5 cursor-pointer disabled:opacity-50"
               >
                 {submitting && <Loader2 className="w-3.5 h-3.5 animate-spin" />}
                 Xác nhận từ chối

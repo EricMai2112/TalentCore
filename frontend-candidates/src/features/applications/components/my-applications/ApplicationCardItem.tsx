@@ -135,30 +135,47 @@ export function ApplicationCardItem({ app }: ApplicationCardItemProps) {
   const step1Date = formatDate(app.appliedAt)
   const rejectedDate = formatDate(app.rejectedAt || app.updatedAt || app.appliedAt)
 
+  const activeNodeRef = React.useRef<HTMLDivElement>(null)
+  const scrollContainerRef = React.useRef<HTMLDivElement>(null)
+
+  React.useEffect(() => {
+    if (activeNodeRef.current && scrollContainerRef.current) {
+      const container = scrollContainerRef.current
+      const node = activeNodeRef.current
+      const containerWidth = container.offsetWidth
+      const nodeLeft = node.offsetLeft
+      const nodeWidth = node.offsetWidth
+      container.scrollTo({
+        left: nodeLeft - containerWidth / 2 + nodeWidth / 2,
+        behavior: 'smooth'
+      })
+    }
+  }, [activeIdx])
+
   return (
-    <div className="p-6 space-y-6 transition-all bg-white border shadow-xs border-slate-200/90 rounded-3xl hover:border-indigo-200">
+    <div className="p-4 sm:p-6 space-y-5 sm:space-y-6 transition-all bg-white border shadow-xs border-slate-200/90 rounded-3xl hover:border-indigo-200">
       {/* Card Header */}
-      <div className="flex flex-col items-start justify-between gap-4 sm:flex-row sm:items-center">
-        <div className="flex items-start gap-3.5">
-          <div className="flex items-center justify-center w-12 h-12 text-indigo-600 rounded-2xl bg-indigo-50 shrink-0">
-            <Briefcase size={22} />
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+        <div className="flex items-start gap-3 flex-1 min-w-0">
+          <div className="flex items-center justify-center w-11 h-11 sm:w-12 sm:h-12 text-indigo-600 rounded-2xl bg-indigo-50 shrink-0 shadow-2xs">
+            <Briefcase size={20} className="sm:w-[22px] sm:h-[22px]" />
           </div>
-          <div className="space-y-1">
-            <h3 className="text-base font-bold leading-tight sm:text-lg text-slate-900">
+          <div className="space-y-1 min-w-0 flex-1">
+            <h3 className="text-base font-bold leading-tight sm:text-lg text-slate-900 break-words">
               {job?.title || 'Senior Frontend Developer'}
             </h3>
-            <div className="flex flex-wrap items-center gap-3 text-xs font-medium text-slate-500">
-              <span className="flex items-center gap-1">
+            <div className="flex flex-wrap items-center gap-x-2.5 gap-y-1 text-xs font-medium text-slate-500">
+              <span className="flex items-center gap-1 shrink-0">
                 <Building2 size={13} className="text-slate-400" />
                 {deptName}
               </span>
               <span>•</span>
-              <span className="flex items-center gap-1">
+              <span className="flex items-center gap-1 shrink-0">
                 <MapPin size={13} className="text-slate-400" />
                 {location}
               </span>
               <span>•</span>
-              <span className="flex items-center gap-1 font-semibold text-slate-700">
+              <span className="flex items-center gap-1 font-semibold text-slate-700 shrink-0">
                 <Banknote size={13} className="text-slate-400" />
                 {salary}
               </span>
@@ -166,8 +183,8 @@ export function ApplicationCardItem({ app }: ApplicationCardItemProps) {
           </div>
         </div>
 
-        {/* Stage Badge on Top Right */}
-        <div className="shrink-0 self-start sm:self-auto">
+        {/* Stage Badge */}
+        <div className="shrink-0 self-start sm:self-center">
           {getStageBadge(
             isRejected ? 'Đã từ chối' : isHired ? 'Đã trúng tuyển' : currentStageName,
             isRejected ? '#e11d48' : isHired ? '#059669' : app.stageColor
@@ -176,122 +193,120 @@ export function ApplicationCardItem({ app }: ApplicationCardItemProps) {
       </div>
 
       {/* Dynamic Pipeline Stepper Progress Bar */}
-      <div className="py-4 px-4 sm:px-6 bg-slate-50/70 border border-slate-100 rounded-2xl">
+      <div className="py-4 px-3 sm:px-6 bg-slate-50/70 border border-slate-100 rounded-2xl">
         {/* Stepper Header Status Banner */}
-        <div className="flex items-center justify-between pb-3.5 mb-3.5 border-b border-slate-200/60 text-xs">
+        <div className="flex items-center gap-2 pb-3 mb-3 border-b border-slate-200/60 text-xs">
           <span className="font-bold text-slate-700 flex items-center gap-1.5">
             <span className="w-2 h-2 rounded-full bg-blue-600" />
             Tiến trình tuyển dụng
           </span>
-          <span
-            className={`font-semibold px-2.5 py-0.5 rounded-full text-[11px] ${
-              isRejected
-                ? 'bg-rose-100 text-rose-700 font-bold border border-rose-200'
-                : isHired
-                ? 'bg-emerald-100 text-emerald-700 font-bold border border-emerald-200'
-                : 'bg-blue-50 text-blue-700 font-bold border border-blue-100'
-            }`}
-          >
-            {isRejected
-              ? `Dừng tại vòng ${activeIdx + 1}/${sortedStages.length}: ${currentStageName}`
-              : isHired
-              ? `Trúng tuyển (${sortedStages.length}/${sortedStages.length})`
-              : `Vòng ${activeIdx + 1}/${sortedStages.length}: ${currentStageName}`}
-          </span>
         </div>
 
-        {/* Stepper Nodes */}
-        <div className="overflow-x-auto pb-1">
-          <div className="flex items-start min-w-[560px] w-full">
-            {sortedStages.map((stage, idx) => {
-              const isLast = idx === sortedStages.length - 1
-              let stageState: 'completed' | 'current' | 'rejected' | 'upcoming' = 'upcoming'
+        {/* Stepper Nodes Container */}
+        <div className="relative">
+          {/* Scroll fade hint indicators for mobile */}
+          <div className="absolute right-0 top-0 bottom-0 w-6 bg-gradient-to-l from-slate-50 to-transparent pointer-events-none sm:hidden z-20" />
+          <div className="absolute left-0 top-0 bottom-0 w-6 bg-gradient-to-r from-slate-50 to-transparent pointer-events-none sm:hidden z-20" />
 
-              if (isHired) {
-                stageState = 'completed'
-              } else if (idx < activeIdx) {
-                stageState = 'completed'
-              } else if (idx === activeIdx) {
-                stageState = isRejected ? 'rejected' : 'current'
-              } else {
-                stageState = 'upcoming'
-              }
+          <div
+            ref={scrollContainerRef}
+            className="overflow-x-auto pb-1.5 scroll-smooth no-scrollbar"
+          >
+            <div className="flex items-start min-w-[520px] sm:min-w-0 w-full px-1">
+              {sortedStages.map((stage, idx) => {
+                const isLast = idx === sortedStages.length - 1
+                const isCurrent = idx === activeIdx
+                let stageState: 'completed' | 'current' | 'rejected' | 'upcoming' = 'upcoming'
 
-              // Connection line state to next stage
-              const nextLineActive = !isRejected && (idx < activeIdx || isHired)
-              const nextLineRejected = isRejected && idx === activeIdx - 1
-              const localizedName = getLocalizedStageName(stage.name)
+                if (isHired) {
+                  stageState = 'completed'
+                } else if (idx < activeIdx) {
+                  stageState = 'completed'
+                } else if (idx === activeIdx) {
+                  stageState = isRejected ? 'rejected' : 'current'
+                } else {
+                  stageState = 'upcoming'
+                }
 
-              return (
-                <React.Fragment key={stage._id || idx}>
-                  {/* Stage Node */}
-                  <div className="flex flex-col items-center text-center z-10 shrink-0 w-24">
-                    {stageState === 'completed' && (
-                      <div className="w-8 h-8 rounded-full bg-blue-600 text-white flex items-center justify-center shadow-xs mb-2">
-                        <Check size={16} className="stroke-[3]" />
-                      </div>
-                    )}
-                    {stageState === 'current' && (
-                      <div className="w-8 h-8 rounded-full bg-blue-600 text-white ring-4 ring-blue-100 flex items-center justify-center shadow-xs mb-2">
-                        <Clock size={15} className="stroke-[2.5]" />
-                      </div>
-                    )}
-                    {stageState === 'rejected' && (
-                      <div className="w-8 h-8 rounded-full bg-rose-600 text-white ring-4 ring-rose-100 flex items-center justify-center shadow-xs mb-2">
-                        <X size={16} className="stroke-[3]" />
-                      </div>
-                    )}
-                    {stageState === 'upcoming' && (
-                      <div className="w-8 h-8 rounded-full bg-slate-100 text-slate-400 border border-slate-200 flex items-center justify-center mb-2">
-                        <span className="text-xs font-bold">{idx + 1}</span>
-                      </div>
-                    )}
+                // Connection line state to next stage
+                const nextLineActive = !isRejected && (idx < activeIdx || isHired)
+                const nextLineRejected = isRejected && idx === activeIdx - 1
+                const localizedName = getLocalizedStageName(stage.name)
 
-                    <span
-                      className={`text-xs truncate max-w-[95px] px-1 ${
-                        stageState === 'completed'
-                          ? 'font-bold text-slate-800'
-                          : stageState === 'current'
-                          ? 'font-extrabold text-blue-700'
-                          : stageState === 'rejected'
-                          ? 'font-extrabold text-rose-600'
-                          : 'font-medium text-slate-400'
-                      }`}
-                      title={localizedName}
+                return (
+                  <React.Fragment key={stage._id || idx}>
+                    {/* Stage Node */}
+                    <div
+                      ref={isCurrent ? activeNodeRef : undefined}
+                      className="flex flex-col items-center text-center z-10 shrink-0 w-22 sm:w-auto sm:flex-1"
                     >
-                      {localizedName}
-                    </span>
+                      {stageState === 'completed' && (
+                        <div className="w-8 h-8 rounded-full bg-blue-600 text-white flex items-center justify-center shadow-xs mb-2">
+                          <Check size={16} className="stroke-[3]" />
+                        </div>
+                      )}
+                      {stageState === 'current' && (
+                        <div className="w-8 h-8 rounded-full bg-blue-600 text-white ring-4 ring-blue-100 flex items-center justify-center shadow-xs mb-2">
+                          <Clock size={15} className="stroke-[2.5]" />
+                        </div>
+                      )}
+                      {stageState === 'rejected' && (
+                        <div className="w-8 h-8 rounded-full bg-rose-600 text-white ring-4 ring-rose-100 flex items-center justify-center shadow-xs mb-2">
+                          <X size={16} className="stroke-[3]" />
+                        </div>
+                      )}
+                      {stageState === 'upcoming' && (
+                        <div className="w-8 h-8 rounded-full bg-slate-100 text-slate-400 border border-slate-200 flex items-center justify-center mb-2">
+                          <span className="text-xs font-bold">{idx + 1}</span>
+                        </div>
+                      )}
 
-                    {/* Subtitle / Date */}
-                    {stageState === 'completed' && (
-                      <span className="text-[11px] font-medium text-slate-400 mt-1">
-                        {step1Date}
+                      <span
+                        className={`text-[11px] sm:text-xs truncate max-w-[85px] sm:max-w-[95px] px-1 ${
+                          stageState === 'completed'
+                            ? 'font-bold text-slate-800'
+                            : stageState === 'current'
+                            ? 'font-extrabold text-blue-700'
+                            : stageState === 'rejected'
+                            ? 'font-extrabold text-rose-600'
+                            : 'font-medium text-slate-400'
+                        }`}
+                        title={localizedName}
+                      >
+                        {localizedName}
                       </span>
-                    )}
-                    {stageState === 'rejected' && (
-                      <span className="text-[11px] font-medium text-rose-500 mt-1">
-                        {rejectedDate || 'Đã từ chối'}
-                      </span>
-                    )}
-                  </div>
 
-                  {/* Connecting Line */}
-                  {!isLast && (
-                    <div className="flex-1 relative top-4 min-w-[20px]">
-                      {nextLineRejected ? (
-                        <div className="w-full border-b-2 border-dashed border-rose-400 h-0" />
-                      ) : (
-                        <div
-                          className={`h-0.5 ${
-                            nextLineActive ? 'bg-blue-600' : 'bg-slate-200'
-                          }`}
-                        />
+                      {/* Subtitle / Date */}
+                      {stageState === 'completed' && (
+                        <span className="text-[10px] sm:text-[11px] font-medium text-slate-400 mt-1">
+                          {step1Date}
+                        </span>
+                      )}
+                      {stageState === 'rejected' && (
+                        <span className="text-[10px] sm:text-[11px] font-medium text-rose-500 mt-1">
+                          {rejectedDate || 'Đã từ chối'}
+                        </span>
                       )}
                     </div>
-                  )}
-                </React.Fragment>
-              )
-            })}
+
+                    {/* Connecting Line */}
+                    {!isLast && (
+                      <div className="flex-1 relative top-4 min-w-[16px] sm:min-w-[24px]">
+                        {nextLineRejected ? (
+                          <div className="w-full border-b-2 border-dashed border-rose-400 h-0" />
+                        ) : (
+                          <div
+                            className={`h-0.5 ${
+                              nextLineActive ? 'bg-blue-600' : 'bg-slate-200'
+                            }`}
+                          />
+                        )}
+                      </div>
+                    )}
+                  </React.Fragment>
+                )
+              })}
+            </div>
           </div>
         </div>
       </div>

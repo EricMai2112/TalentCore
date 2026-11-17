@@ -112,6 +112,16 @@ export interface UpdateOfferPayload {
   offerLetterHtml?: string;
 }
 
+export interface OfferStatsSummary {
+  total: number;
+  draft: number;
+  sent: number;
+  accepted: number;
+  declined: number;
+  cancelled?: number;
+  expired?: number;
+}
+
 export interface QueryOfferParams {
   page?: number;
   limit?: number;
@@ -127,4 +137,5 @@ export interface OfferListResponse {
   page: number;
   limit: number;
   totalPages: number;
+  stats?: OfferStatsSummary;
 }
