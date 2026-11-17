@@ -2,7 +2,7 @@ import { Suspense } from 'react';
 import { OffersManager } from '@/src/features/offers/components';
 import { createServerApiClient } from '@/src/lib/api-client';
 import { getCachedDepartments } from '@/src/lib/server-cache';
-import { OfferItem, OfferListResponse } from '@/src/features/offers/types/offer.types';
+import { OfferItem, OfferListResponse, OfferStatsSummary } from '@/src/features/offers/types/offer.types';
 import { Department } from '@/src/features/departments/types/department.types';
 import type { Metadata } from 'next';
 
@@ -16,6 +16,7 @@ export const dynamic = 'force-dynamic';
 export default async function OffersPage() {
   let initialOffers: OfferItem[] = [];
   let initialTotal = 0;
+  let initialStats: OfferStatsSummary | undefined = undefined;
   let initialDepartments: Department[] = [];
   let initialApplications: any[] = [];
 
@@ -38,6 +39,7 @@ export default async function OffersPage() {
       if (data && 'items' in data) {
         initialOffers = data.items;
         initialTotal = data.total;
+        initialStats = data.stats;
       }
     }
 
@@ -57,6 +59,7 @@ export default async function OffersPage() {
       <OffersManager
         initialOffers={initialOffers}
         initialTotal={initialTotal}
+        initialStats={initialStats}
         initialDepartments={initialDepartments}
         initialApplications={initialApplications}
       />

@@ -37,5 +37,8 @@ export type { ToastProps } from './Toast';
 export { useToast } from '@/src/hooks/useToast';
 export type { ToastState, ToastType } from '@/src/hooks/useToast';
 
+export { default as CustomAvatar, getAvatarInitial } from './CustomAvatar';
+export type { CustomAvatarProps } from './CustomAvatar';
+
 export { default as CandidateDetailModal } from '@/src/features/candidates/components/CandidateDetailModal';
 

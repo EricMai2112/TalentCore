@@ -204,13 +204,13 @@ export function CandidateInterviewCardItem({
 
         {/* Card Footer Actions */}
         {(interview.status === 'SCHEDULED' || interview.status === 'UPCOMING' || interview.status === 'IN_PROGRESS') && (
-          <div className="flex flex-wrap items-center justify-end gap-2 pt-3 border-t border-slate-100">
+          <div className="flex flex-col-reverse sm:flex-row items-stretch sm:items-center sm:justify-end gap-2 pt-3 border-t border-slate-100">
             {confirmationStatus !== 'CONFIRMED' && confirmationStatus !== 'CANCEL_REQUESTED' && (
               <button
                 type="button"
                 disabled={isSubmitting}
                 onClick={() => setIsConfirmModalOpen(true)}
-                className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs shadow-xs transition-colors cursor-pointer"
+                className="inline-flex items-center justify-center gap-1.5 px-4 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs shadow-xs transition-colors cursor-pointer w-full sm:w-auto"
               >
                 <CheckCircle2 size={14} />
                 <span>Xác nhận phỏng vấn</span>
@@ -222,7 +222,7 @@ export function CandidateInterviewCardItem({
                 type="button"
                 disabled={isSubmitting}
                 onClick={() => setIsCancelModalOpen(true)}
-                className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-rose-50 hover:bg-rose-100 text-rose-700 font-semibold text-xs border border-rose-200 transition-colors cursor-pointer"
+                className="inline-flex items-center justify-center gap-1.5 px-3.5 py-2 rounded-xl bg-rose-50 hover:bg-rose-100 text-rose-700 font-semibold text-xs border border-rose-200 transition-colors cursor-pointer w-full sm:w-auto"
               >
                 <AlertTriangle size={14} />
                 <span>Yêu cầu hủy lịch phỏng vấn</span>
@@ -234,7 +234,7 @@ export function CandidateInterviewCardItem({
                 href={interview.meetingLink}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-indigo-50 hover:bg-indigo-100 text-indigo-700 font-bold text-xs transition-colors cursor-pointer"
+                className="inline-flex items-center justify-center gap-1.5 px-4 py-2 rounded-xl bg-indigo-50 hover:bg-indigo-100 text-indigo-700 font-bold text-xs transition-colors cursor-pointer w-full sm:w-auto"
               >
                 <Video size={14} />
                 <span>Vào phòng phỏng vấn</span>

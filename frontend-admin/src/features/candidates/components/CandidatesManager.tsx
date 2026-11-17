@@ -32,7 +32,8 @@ import {
   CustomActionMenu,
   RejectCandidateModal,
   Toast,
-  useToast
+  useToast,
+  CustomAvatar
 } from '@/src/components/common'
 import { CustomSelectOption } from '@/src/components/common/CustomSelect'
 import { CandidateStageBadge, CandidateAiScoreBadge } from './'
@@ -395,9 +396,7 @@ export default function CandidatesManager({
                     {/* Candidate Name & Avatar */}
                     <td className="px-5 py-4">
                       <div className="flex items-center gap-3">
-                        <div className="w-9 h-9 rounded-xl font-black bg-blue-500/10 text-[#3B82F6] border border-blue-200/60 flex items-center justify-center shrink-0 text-xs shadow-2xs">
-                          {initials}
-                        </div>
+                        <CustomAvatar name={name} src={u?.avatar} />
                         <div className="min-w-0">
                           <p className="text-[13px] font-bold text-slate-900 group-hover:text-[#3B82F6] transition-colors truncate">
                             {name}

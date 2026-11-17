@@ -1,6 +1,6 @@
 import { useQuery } from '@tanstack/react-query'
 import { offersApi } from '../services/offers.api'
-import { OfferItem, QueryOfferParams } from '../types/offer.types'
+import { OfferItem, QueryOfferParams, OfferListResponse, OfferStatsSummary } from '../types/offer.types'
 
 export const offerKeys = {
   all: ['offers'] as const,
@@ -12,7 +12,7 @@ export const offerKeys = {
 
 interface UseOffersQueryOptions {
   params: QueryOfferParams
-  initialData?: { items: OfferItem[]; total: number }
+  initialData?: OfferListResponse | { items: OfferItem[]; total: number; stats?: OfferStatsSummary }
   enabled?: boolean
 }
 

@@ -165,11 +165,7 @@ export default function MobileMenu({ navItems, isScrolled }: MobileMenuProps) {
       {/* Menu Toggle Button */}
       <button
         onClick={() => setIsOpen(true)}
-        className={`p-2 rounded-lg transition-colors cursor-pointer ${
-          isScrolled
-            ? 'text-slate-700 hover:text-slate-900 hover:bg-slate-100'
-            : 'text-slate-400 hover:text-white hover:bg-slate-800/50'
-        }`}
+        className="p-2 rounded-lg transition-colors cursor-pointer text-slate-400 hover:text-white hover:bg-slate-800/50"
         aria-label="Toggle Menu"
       >
         <Menu className="w-6 h-6" />

@@ -2,18 +2,24 @@
 
 import React from 'react';
 import { FileText, Clock, CheckCircle2, XCircle } from 'lucide-react';
-import { OfferItem, OfferStatus } from '../types/offer.types';
+import { OfferItem, OfferStatus, OfferStatsSummary } from '../types/offer.types';
 
 interface OfferStatCardsProps {
-  offers: OfferItem[];
+  offers?: OfferItem[];
+  stats?: OfferStatsSummary;
   className?: string;
 }
 
 export const OfferStatCards: React.FC<OfferStatCardsProps> = ({
-  offers,
+  offers = [],
+  stats: propsStats,
   className = '',
 }) => {
   const stats = React.useMemo(() => {
+    if (propsStats) {
+      return propsStats;
+    }
+
     let draft = 0;
     let sent = 0;
     let accepted = 0;
@@ -33,7 +39,7 @@ export const OfferStatCards: React.FC<OfferStatCardsProps> = ({
       accepted,
       declined,
     };
-  }, [offers]);
+  }, [offers, propsStats]);
 
   const statCardsConfig = [
     {

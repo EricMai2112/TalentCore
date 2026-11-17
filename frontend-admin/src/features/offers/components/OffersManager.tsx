@@ -26,11 +26,12 @@ import {
   CustomActionMenu,
   CustomActionMenuItem,
   Toast,
-  useToast
+  useToast,
+  CustomAvatar
 } from '@/src/components/common'
 import { OfferStatCards } from './OfferStatCards'
 import { OfferDetailModal } from './OfferDetailModal'
-import { OfferItem, OfferStatus } from '../types/offer.types'
+import { OfferItem, OfferStatus, OfferStatsSummary } from '../types/offer.types'
 import { useQueryClient } from '@tanstack/react-query'
 import { useOffersQuery, offerKeys } from '../hooks/useOffersQuery'
 import { useSendOfferMutation, useWithdrawOfferMutation } from '../hooks/useOfferMutations'
@@ -39,6 +40,7 @@ import { Department } from '@/src/features/departments/types/department.types'
 interface OffersManagerProps {
   initialOffers?: OfferItem[]
   initialTotal?: number
+  initialStats?: OfferStatsSummary
   initialDepartments?: Department[]
   initialApplications?: any[]
 }
@@ -46,6 +48,7 @@ interface OffersManagerProps {
 export const OffersManager: React.FC<OffersManagerProps> = ({
   initialOffers = [],
   initialTotal = 0,
+  initialStats,
   initialDepartments = [],
   initialApplications = []
 }) => {
@@ -102,10 +105,17 @@ export const OffersManager: React.FC<OffersManagerProps> = ({
 
   const initialData = React.useMemo(() => {
     if (isDefaultView && initialOffers.length > 0) {
-      return { items: initialOffers, total: initialTotal }
+      return {
+        items: initialOffers,
+        total: initialTotal,
+        page: 1,
+        limit: pageSize,
+        totalPages: Math.ceil(initialTotal / pageSize),
+        stats: initialStats
+      }
     }
     return undefined
-  }, [isDefaultView, initialOffers, initialTotal])
+  }, [isDefaultView, initialOffers, initialTotal, initialStats, pageSize])
 
   const { data, isLoading, isFetching } = useOffersQuery({
     params: queryParams,
@@ -114,6 +124,7 @@ export const OffersManager: React.FC<OffersManagerProps> = ({
 
   const offers = data?.items || []
   const total = data?.total || 0
+  const stats = data?.stats
   const loading = isLoading || isFetching
 
   const queryClient = useQueryClient()
@@ -209,7 +220,7 @@ export const OffersManager: React.FC<OffersManagerProps> = ({
       <Toast toast={toast} onClose={hideToast} position="bottom-right" />
 
       {/* Metrics Stat Cards */}
-      <OfferStatCards offers={offers} />
+      <OfferStatCards offers={offers} stats={stats} />
 
       {/* Filters Toolbar with Action Button */}
       <div className="flex flex-wrap items-center justify-between gap-3">
@@ -379,9 +390,7 @@ export const OffersManager: React.FC<OffersManagerProps> = ({
                   {/* Candidate Cell */}
                   <td className="px-4 py-3.5">
                     <div className="flex items-center gap-3">
-                      <div className="flex items-center justify-center text-xs font-bold text-white w-9 h-9 rounded-xl bg-gradient-to-tr from-blue-600 to-indigo-600 shadow-2xs">
-                        {name.charAt(0)}
-                      </div>
+                      <CustomAvatar name={name} src={candidateUser?.avatar} />
                       <div>
                         <p className="text-xs font-semibold text-slate-800">{name}</p>
                         <p className="text-2xs text-slate-400 mt-0.5">{email || 'Chưa có email'}</p>
