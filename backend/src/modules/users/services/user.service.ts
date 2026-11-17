@@ -2,7 +2,7 @@ import { BadRequestException, Injectable, NotFoundException } from "@nestjs/comm
 import { InjectModel } from "@nestjs/mongoose";
 import { User, UserDocument, UserRole, UserStatus } from "../schemas/user.schema";
 import { Model } from "mongoose";
-import { CreateEmployeeDto, UpdateEmployeeDto, ToggleStatusDto } from "../dtos/user.dto";
+import { CreateEmployeeDto, UpdateEmployeeDto, ToggleStatusDto, UpdateProfileDto } from "../dtos/user.dto";
 import * as bcrypt from 'bcrypt';
 import { EmailService } from "../../email-template/services/email.service";
 
@@ -18,7 +18,7 @@ export class UserService {
     }
 
     async findById(id: string) {
-        return this.userModel.findById(id).exec();
+        return this.userModel.findById(id).populate('departmentId').exec();
     }
 
     async updateUserById(id: string, updates: Partial<User>) {
@@ -118,5 +118,27 @@ export class UserService {
         return this.userModel
             .find({ role: { $ne: UserRole.CANDIDATE } }, { password: 0 })
             .exec();
+    }
+
+    async updateProfile(id: string, updateProfileDto: UpdateProfileDto) {
+        const user = await this.userModel.findById(id).exec();
+        if (!user) {
+            throw new NotFoundException("Không tìm thấy người dùng");
+        }
+
+        if (updateProfileDto.name !== undefined) {
+            user.name = updateProfileDto.name.trim();
+        }
+        if (updateProfileDto.phone !== undefined) {
+            user.phone = updateProfileDto.phone.trim();
+        }
+        await user.save();
+
+        const populated = await this.userModel.findById(id).populate('departmentId').exec();
+        const { password: _, ...result } = populated ? populated.toObject() : user.toObject();
+        return {
+            message: "Cập nhật thông tin cá nhân thành công",
+            user: result,
+        };
     }
 }

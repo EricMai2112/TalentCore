@@ -75,4 +75,45 @@ export const authService = {
       console.error('Error logging out:', error);
     }
   },
+
+  async updateProfile(payload: { name?: string; phone?: string }): Promise<User> {
+    const token = await AsyncStorage.getItem(TOKEN_KEY);
+    const url = `${API_CONFIG.BASE_URL}/users/profile`;
+    const response = await fetch(url, {
+      method: 'PATCH',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${token}`,
+      },
+      body: JSON.stringify(payload),
+    });
+    const data = await response.json();
+    if (!response.ok) {
+      throw new Error(data?.message || 'Cập nhật thông tin thất bại');
+    }
+    const updatedUser = data.user;
+    if (updatedUser) {
+      await AsyncStorage.setItem(USER_KEY, JSON.stringify(updatedUser));
+    }
+    return updatedUser;
+  },
+
+  async changePassword(payload: { oldPassword: string; newPassword: string; confirmPassword: string }): Promise<{ message: string }> {
+    const token = await AsyncStorage.getItem(TOKEN_KEY);
+    const url = `${API_CONFIG.BASE_URL}/auth/change-password`;
+    const response = await fetch(url, {
+      method: 'PATCH',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${token}`,
+      },
+      body: JSON.stringify(payload),
+    });
+    const data = await response.json();
+    if (!response.ok) {
+      const errorMsg = Array.isArray(data?.message) ? data.message.join(', ') : data?.message;
+      throw new Error(errorMsg || 'Đổi mật khẩu thất bại');
+    }
+    return data;
+  },
 };

@@ -72,6 +72,11 @@ export interface InterviewItem {
     name?: string;
     email?: string;
   };
+  interviewerIds?: Array<{
+    _id: string;
+    name?: string;
+    email?: string;
+  } | string>;
   date: string;
   startTime: string;
   endTime: string;

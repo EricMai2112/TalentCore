@@ -237,9 +237,9 @@ export default function InterviewsManager({
   // Active dropdown action ID
   const [activeMenuId, setActiveMenuId] = useState<string | null>(null)
 
-  // Load candidate applications if not hydrated from SSR
+  // Load candidate applications if not hydrated from SSR (only for HR and Department Manager)
   useEffect(() => {
-    if (initialApplications.length > 0) return
+    if (isEmployee || initialApplications.length > 0) return
     const loadApplications = async () => {
       try {
         const apps = await candidateApi.getCandidates()
@@ -249,7 +249,7 @@ export default function InterviewsManager({
       }
     }
     loadApplications()
-  }, [initialApplications])
+  }, [initialApplications, isEmployee])
 
   // Lock department filter if user is Department Manager or Employee
   useEffect(() => {
@@ -258,12 +258,50 @@ export default function InterviewsManager({
     }
   }, [userDeptId, isDeptManager, isEmployee])
 
-  // Dynamic positions options based on current interviews & active department filter
+  // Stable today string — only recomputed when component first mounts
+  const todayISO = useMemo(() => new Date().toISOString().split('T')[0], [])
+
+  // 1. Role Scope Filter: Lọc theo vai trò người dùng (cho Thẻ KPI & cơ sở lọc dữ liệu)
+  // - Admin (HR_ADMIN): tổng hợp tất cả lịch phỏng vấn
+  // - Trưởng phòng (DEPARTMENT_MANAGER): chỉ thống kê lịch của phòng ban mình phụ trách
+  // - Nhân viên phỏng vấn (EMPLOYEE): chỉ thống kê các buổi phỏng vấn mà nhân viên đó được phân công
+  const roleScopedInterviews = useMemo(() => {
+    return interviews.filter((item) => {
+      const itemDeptId =
+        typeof item.jobDescriptionId === 'object' && item.jobDescriptionId?.departmentId
+          ? typeof item.jobDescriptionId.departmentId === 'object'
+            ? item.jobDescriptionId.departmentId._id
+            : item.jobDescriptionId.departmentId
+          : null
+
+      const itemInterviewerId =
+        typeof item.interviewerId === 'object' ? item.interviewerId?._id : item.interviewerId
+
+      if (isDeptManager) {
+        if (userDeptId && String(itemDeptId) !== String(userDeptId)) return false
+      } else if (isEmployee) {
+        const currentUserId = String(user?._id || (user as any)?.id || '')
+        const mainInterviewerId = String(itemInterviewerId || '')
+        const inInterviewerIds = Array.isArray(item.interviewerIds)
+          ? item.interviewerIds.some((id: any) => {
+              const strId = String(typeof id === 'object' ? id?._id : id)
+              return strId === currentUserId
+            })
+          : false
+        const isAssigned = (mainInterviewerId && mainInterviewerId === currentUserId) || inInterviewerIds
+        if (!isAssigned) return false
+      }
+
+      return true
+    })
+  }, [interviews, isDeptManager, isEmployee, userDeptId, user])
+
+  // Dynamic positions options based on current role-scoped interviews & active department filter
   const availablePositions = useMemo(
     () =>
       Array.from(
         new Set(
-          interviews
+          roleScopedInterviews
             .filter((item) => {
               if (!departmentFilter || departmentFilter === 'ALL') return true
               const itemDeptId =
@@ -280,34 +318,19 @@ export default function InterviewsManager({
             .filter(Boolean)
         )
       ) as string[],
-    [interviews, departmentFilter]
+    [roleScopedInterviews, departmentFilter]
   )
 
-  // Stable today string — only recomputed when component first mounts
-  const todayISO = useMemo(() => new Date().toISOString().split('T')[0], [])
-
-  // Base role & filter scoping — memoized to avoid full recompute on every render
+  // Base filter scoping — áp dụng thêm các bộ lọc từ dropdown (phòng ban, vị trí, trạng thái, tìm kiếm)
   const baseFilteredInterviews = useMemo(
     () =>
-      interviews.filter((item) => {
+      roleScopedInterviews.filter((item) => {
         const itemDeptId =
           typeof item.jobDescriptionId === 'object' && item.jobDescriptionId?.departmentId
             ? typeof item.jobDescriptionId.departmentId === 'object'
               ? item.jobDescriptionId.departmentId._id
               : item.jobDescriptionId.departmentId
             : null
-
-        const itemInterviewerId =
-          typeof item.interviewerId === 'object' ? item.interviewerId?._id : item.interviewerId
-
-        // 1. Role Scope Filter
-        if (isDeptManager) {
-          if (userDeptId && itemDeptId !== userDeptId) return false
-        } else if (isEmployee) {
-          const isAssigned =
-            itemInterviewerId === user?._id || itemInterviewerId === (user as any)?.id
-          if (!isAssigned) return false
-        }
 
         // 2. Department Dropdown Filter
         if (departmentFilter && departmentFilter !== 'ALL') {
@@ -403,11 +426,7 @@ export default function InterviewsManager({
         return true
       }),
     [
-      interviews,
-      isDeptManager,
-      isEmployee,
-      userDeptId,
-      user,
+      roleScopedInterviews,
       departmentFilter,
       positionFilter,
       statusFilter,
@@ -469,7 +488,7 @@ export default function InterviewsManager({
       <InterviewsHeader totalCount={filteredInterviews.length} />
 
       {/* Top Stat Cards (List View Only) */}
-      {viewMode === 'list' && <InterviewStatCards interviews={interviews} />}
+      {viewMode === 'list' && <InterviewStatCards interviews={roleScopedInterviews} />}
 
       {/* Toolbar / Filters */}
       <InterviewsFilterToolbar

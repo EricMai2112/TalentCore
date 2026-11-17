@@ -13,16 +13,22 @@ import { UserRole } from '../types/auth.types';
 
 interface AdminHeaderProps {
   onNotificationPress?: () => void;
+  onProfilePress?: () => void;
   unreadCount?: number;
 }
 
 export const AdminHeader: React.FC<AdminHeaderProps> = ({
   onNotificationPress,
+  onProfilePress,
   unreadCount = 3,
 }) => {
   const { user, logout } = useAuth();
 
   const handleProfilePress = () => {
+    if (onProfilePress) {
+      onProfilePress();
+      return;
+    }
     Alert.alert(
       user?.name || 'Tài khoản Quản trị',
       `${user?.email || ''}\nVai trò: ${getRoleTitle(user?.role)}`,

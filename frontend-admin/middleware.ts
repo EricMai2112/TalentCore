@@ -1,5 +1,19 @@
 import { NextResponse, type NextRequest } from "next/server";
 
+function getUserRoleFromToken(token?: string): string | null {
+  if (!token) return null;
+  try {
+    const parts = token.split(".");
+    if (parts.length < 2) return null;
+    const base64 = parts[1].replace(/-/g, "+").replace(/_/g, "/");
+    const jsonStr = Buffer.from(base64, "base64").toString("utf-8");
+    const payload = JSON.parse(jsonStr);
+    return payload.role || null;
+  } catch {
+    return null;
+  }
+}
+
 export function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
   const token = request.cookies.get("accessToken")?.value;
@@ -25,9 +39,27 @@ export function middleware(request: NextRequest) {
     return NextResponse.redirect(loginUrl);
   }
 
-  // If user is already authenticated and visits login page or root, redirect to dashboard
+  const role = getUserRoleFromToken(token);
+  const isEmployee = role === "EMPLOYEE";
+
+  // If user is already authenticated and visits login page or root, redirect based on role
   if ((isAuthPage || pathname === "/") && token) {
-    return NextResponse.redirect(new URL("/dashboard", request.url));
+    const targetUrl = isEmployee ? "/interviews" : "/dashboard";
+    return NextResponse.redirect(new URL(targetUrl, request.url));
+  }
+
+  // If an interviewer (EMPLOYEE) attempts to access unauthorized pages, redirect to /interviews
+  if (
+    token &&
+    isEmployee &&
+    (pathname.startsWith("/dashboard") ||
+      pathname.startsWith("/candidates") ||
+      pathname.startsWith("/kanban") ||
+      pathname.startsWith("/job-description") ||
+      pathname.startsWith("/offers") ||
+      pathname.startsWith("/settings"))
+  ) {
+    return NextResponse.redirect(new URL("/interviews", request.url));
   }
 
   return NextResponse.next();

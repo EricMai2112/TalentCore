@@ -4,6 +4,8 @@ import { getCachedDepartments } from "@/src/lib/server-cache";
 import { CandidateApplication } from "@/src/features/candidates/types/candidate.types";
 import { Department } from "@/src/features/departments/types/department.types";
 import type { Metadata } from "next";
+import { cookies } from "next/headers";
+import { redirect } from "next/navigation";
 
 export const metadata: Metadata = {
   title: "Quản lý ứng viên | TalentCore Admin",
@@ -19,6 +21,23 @@ export const dynamic = "force-dynamic";
  * on first load (no client-side loading spinner).
  */
 export default async function CandidatesPage() {
+  const cookieStore = await cookies();
+  const token = cookieStore.get("accessToken")?.value;
+
+  if (token) {
+    try {
+      const parts = token.split(".");
+      if (parts.length >= 2) {
+        const payload = JSON.parse(Buffer.from(parts[1], "base64").toString("utf-8"));
+        if (payload.role === "EMPLOYEE") {
+          redirect("/interviews");
+        }
+      }
+    } catch {
+      // fallback
+    }
+  }
+
   let initialApplications: CandidateApplication[] = [];
   let initialDepartments: Department[] = [];
 

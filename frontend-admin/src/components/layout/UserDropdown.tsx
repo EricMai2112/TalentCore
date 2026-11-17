@@ -1,13 +1,18 @@
 'use client'
 
 import { useState } from 'react'
-import { ChevronDown, LogOut, User } from 'lucide-react'
+import { ChevronDown, LogOut, User, KeyRound } from 'lucide-react'
 import { useAuth } from '@/src/providers/AuthProvider'
 import { USER_ROLE_LABEL } from '@/src/features/users/types/user.types'
+import UserProfileModal from './UserProfileModal'
+import ChangePasswordModal from './ChangePasswordModal'
+import { CustomAvatar } from '@/src/components/common'
 
 export default function UserDropdown() {
   const { user, logout } = useAuth()
   const [isDropdownOpen, setIsDropdownOpen] = useState(false)
+  const [isProfileModalOpen, setIsProfileModalOpen] = useState(false)
+  const [isPasswordModalOpen, setIsPasswordModalOpen] = useState(false)
 
   const roleName = user?.role ? USER_ROLE_LABEL[user.role] : 'Người dùng'
 
@@ -22,9 +27,12 @@ export default function UserDropdown() {
             : 'bg-white/55 hover:bg-white/80 backdrop-blur-md border-white/65 text-slate-800'
         }`}
       >
-        <div className="w-8 h-8 rounded-xl bg-gradient-to-br from-[#3B82F6] to-[#8B5CF6] text-white flex items-center justify-center shrink-0 shadow-2xs">
-          <User size={16} />
-        </div>
+        <CustomAvatar
+          name={user?.name || 'Administrator'}
+          src={user?.avatar}
+          size="sm"
+          className="rounded-xl ring-2 ring-blue-500/20"
+        />
         <div className="hidden md:flex flex-col text-left min-w-0 pr-0.5">
           <span className="text-xs font-bold text-slate-800 truncate leading-tight max-w-[120px]">
             {user?.name || 'Administrator'}
@@ -47,9 +55,12 @@ export default function UserDropdown() {
           {/* User Profile Card Header */}
           <div className="px-3 py-2.5 bg-white/60 rounded-xl mb-1 border border-white/70 shadow-2xs">
             <div className="flex items-center gap-2 mb-1">
-              <div className="w-7 h-7 rounded-full bg-gradient-to-br from-[#3B82F6] to-[#8B5CF6] text-white flex items-center justify-center shrink-0 shadow-2xs">
-                <User size={14} />
-              </div>
+              <CustomAvatar
+                name={user?.name || 'Administrator'}
+                src={user?.avatar}
+                size="xs"
+                rounded="rounded-full"
+              />
               <p className="text-xs font-bold text-[#0F172A] truncate">
                 {user?.name || 'Administrator'}
               </p>
@@ -66,6 +77,32 @@ export default function UserDropdown() {
               type="button"
               onClick={() => {
                 setIsDropdownOpen(false)
+                setIsProfileModalOpen(true)
+              }}
+              className="w-full flex items-center gap-2 px-3 py-2 text-xs font-semibold text-slate-700 hover:bg-slate-100/80 rounded-xl transition-colors cursor-pointer"
+            >
+              <User size={14} className="text-blue-600" />
+              <span>Hồ sơ cá nhân</span>
+            </button>
+
+            <button
+              type="button"
+              onClick={() => {
+                setIsDropdownOpen(false)
+                setIsPasswordModalOpen(true)
+              }}
+              className="w-full flex items-center gap-2 px-3 py-2 text-xs font-semibold text-slate-700 hover:bg-slate-100/80 rounded-xl transition-colors cursor-pointer"
+            >
+              <KeyRound size={14} className="text-indigo-600" />
+              <span>Đổi mật khẩu</span>
+            </button>
+
+            <div className="my-1 border-t border-slate-100" />
+
+            <button
+              type="button"
+              onClick={() => {
+                setIsDropdownOpen(false)
                 logout()
               }}
               className="w-full flex items-center gap-2 px-3 py-2 text-xs font-bold text-rose-600 hover:bg-rose-50/80 rounded-xl transition-colors cursor-pointer"
@@ -76,6 +113,17 @@ export default function UserDropdown() {
           </div>
         </div>
       )}
+
+      {/* Profile & Change Password Modals */}
+      <UserProfileModal
+        isOpen={isProfileModalOpen}
+        onClose={() => setIsProfileModalOpen(false)}
+      />
+
+      <ChangePasswordModal
+        isOpen={isPasswordModalOpen}
+        onClose={() => setIsPasswordModalOpen(false)}
+      />
     </div>
   )
 }

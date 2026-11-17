@@ -8,6 +8,7 @@ import RecruitmentScreen from '../screens/recruitment/RecruitmentScreen';
 import InterviewsScreen from '../screens/interviews/InterviewsScreen';
 import OffersScreen from '../screens/offers/OffersScreen';
 import NotificationsScreen from '../screens/notifications/NotificationsScreen';
+import AccountScreen from '../screens/account/AccountScreen';
 import { adminService } from '../services/admin.services';
 
 export const MainAdminScreen: React.FC = () => {
@@ -56,6 +57,8 @@ export const MainAdminScreen: React.FC = () => {
             onRefreshBadge={fetchBadgeCount}
           />
         );
+      case 'account':
+        return <AccountScreen onBack={() => setActiveTab('dashboard')} />;
       default:
         return <DashboardScreen />;
     }
@@ -67,6 +70,7 @@ export const MainAdminScreen: React.FC = () => {
       <View style={styles.container}>
         <AdminHeader
           onNotificationPress={() => setActiveTab('notifications')}
+          onProfilePress={() => setActiveTab('account')}
           unreadCount={unreadCount}
         />
 

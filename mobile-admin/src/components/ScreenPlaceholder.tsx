@@ -47,6 +47,12 @@ const TAB_META: Record<
     icon: 'notifications',
     gradient: ['#2563EB', '#4F46E5'],
   },
+  account: {
+    title: 'Hồ sơ cá nhân & Tài khoản',
+    subtitle: 'Quản lý thông tin, chức vụ và đổi mật khẩu',
+    icon: 'person',
+    gradient: ['#6366F1', '#4338CA'],
+  },
 };
 
 export const ScreenPlaceholder: React.FC<ScreenPlaceholderProps> = ({ tabKey }) => {

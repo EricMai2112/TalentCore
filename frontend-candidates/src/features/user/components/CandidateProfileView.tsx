@@ -64,7 +64,7 @@ interface CandidateProfileViewProps {
 }
 
 export default function CandidateProfileView({ profileId }: CandidateProfileViewProps = {}) {
-  const { user: authUser, isLoading: isAuthLoading } = useAuth()
+  const { user: authUser, setUser: setAuthUser, isLoading: isAuthLoading } = useAuth()
   const router = useRouter()
   const [profile, setProfile] = useState<CandidateProfile | null>(null)
   const [loading, setLoading] = useState<boolean>(true)
@@ -1281,6 +1281,61 @@ export default function CandidateProfileView({ profileId }: CandidateProfileView
           </div>
 
           {/* Modals */}
+          <EditPersonalInfoModal
+            isOpen={isPersonalModalOpen}
+            onClose={() => setIsPersonalModalOpen(false)}
+            profile={profile}
+            defaultName={authUser?.name || ''}
+            defaultPhone={authUser?.phone || ''}
+            onSuccess={(updatedData) => {
+              const resData = (updatedData as any)?.data || updatedData
+              setProfile((prev) => {
+                if (!prev) return resData
+                const updatedUserId =
+                  typeof resData?.userId === 'object' && resData?.userId !== null
+                    ? resData.userId
+                    : typeof prev.userId === 'object' && prev.userId !== null
+                    ? {
+                        ...prev.userId,
+                        name: resData?.name ?? (prev.userId as any).name,
+                        phone: resData?.phone ?? (prev.userId as any).phone,
+                      }
+                    : prev.userId
+                return {
+                  ...prev,
+                  ...resData,
+                  userId: updatedUserId,
+                }
+              })
+              if (setAuthUser && authUser) {
+                setAuthUser({
+                  ...authUser,
+                  name:
+                    resData?.name ||
+                    (typeof resData?.userId === 'object' ? resData.userId?.name : authUser.name),
+                  phone:
+                    resData?.phone ||
+                    (typeof resData?.userId === 'object' ? resData.userId?.phone : authUser.phone),
+                })
+              }
+              setIsPersonalModalOpen(false)
+              toast.success('Cập nhật thông tin cá nhân thành công!')
+            }}
+          />
+
+          <EditCareerObjectiveModal
+            isOpen={isObjectiveModalOpen}
+            onClose={() => setIsObjectiveModalOpen(false)}
+            initialValue={profile?.careerObjective || ''}
+            onSuccess={(updatedObjective) => {
+              setProfile((prev) =>
+                prev ? { ...prev, careerObjective: updatedObjective } : null
+              )
+              setIsObjectiveModalOpen(false)
+              toast.success('Cập nhật mục tiêu nghề nghiệp thành công!')
+            }}
+          />
+
           <EditEducationModal
             isOpen={isEduModalOpen}
             onClose={() => setIsEduModalOpen(false)}
