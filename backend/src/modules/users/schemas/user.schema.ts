@@ -36,7 +36,7 @@ export class User {
   @Prop({ required: true })
   password: string;
 
-  @Prop()
+  @Prop({ type: Types.ObjectId, ref: 'Department' })
   departmentId?: Types.ObjectId;
 
   createdAt: Date;

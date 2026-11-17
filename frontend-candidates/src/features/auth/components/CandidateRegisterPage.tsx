@@ -18,6 +18,7 @@ export default function CandidateRegisterPage() {
 
   const [showPassword, setShowPassword] = useState(false)
   const [showConfirmPassword, setShowConfirmPassword] = useState(false)
+  const [agreedTerms, setAgreedTerms] = useState(false)
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [successMessage, setSuccessMessage] = useState<string | null>(null)
@@ -30,6 +31,11 @@ export default function CandidateRegisterPage() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     setError(null)
+
+    if (!agreedTerms) {
+      setError('Vui lòng đọc và đồng ý với Điều khoản sử dụng và Chính sách bảo mật')
+      return
+    }
 
     if (form.password !== form.confirm_password) {
       setError('Mật khẩu xác nhận không khớp')
@@ -165,11 +171,44 @@ export default function CandidateRegisterPage() {
                 </div>
               </div>
 
+              {/* Checkbox Điều khoản sử dụng & Chính sách bảo mật */}
+              <div className="flex items-start gap-2.5 pt-1">
+                <input
+                  type="checkbox"
+                  id="agreedTerms"
+                  checked={agreedTerms}
+                  onChange={(e) => {
+                    setAgreedTerms(e.target.checked)
+                    if (error) setError(null)
+                  }}
+                  className="mt-0.5 w-4 h-4 rounded border-slate-300 text-blue-600 focus:ring-blue-500 cursor-pointer"
+                />
+                <label htmlFor="agreedTerms" className="text-xs text-slate-600 leading-snug cursor-pointer select-none">
+                  Tôi đã đọc và đồng ý với{' '}
+                  <Link
+                    href="/terms"
+                    target="_blank"
+                    className="font-bold text-blue-600 hover:text-blue-800 underline transition-colors"
+                  >
+                    Điều khoản sử dụng
+                  </Link>{' '}
+                  và{' '}
+                  <Link
+                    href="/privacy"
+                    target="_blank"
+                    className="font-bold text-blue-600 hover:text-blue-800 underline transition-colors"
+                  >
+                    Chính sách bảo mật
+                  </Link>{' '}
+                  của TalentCore.
+                </label>
+              </div>
+
               {/* Nút Đăng ký */}
               <button
                 type="submit"
-                disabled={isLoading}
-                className="w-full py-3 bg-blue-600 hover:bg-blue-700 text-white text-sm font-bold rounded-xl transition-all shadow-lg shadow-blue-500/25 active:scale-[0.98] disabled:opacity-50 cursor-pointer mt-3 flex items-center justify-center gap-2"
+                disabled={isLoading || !agreedTerms}
+                className="w-full py-3 bg-blue-600 hover:bg-blue-700 text-white text-sm font-bold rounded-xl transition-all shadow-lg shadow-blue-500/25 active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer mt-3 flex items-center justify-center gap-2"
               >
                 {isLoading ? (
                   <>

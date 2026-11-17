@@ -1,11 +1,20 @@
 import { Body, Controller, Get, Param, Patch, Post, UsePipes, ValidationPipe } from "@nestjs/common";
 import { UserService } from "../services/user.service";
-import { CreateEmployeeDto, UpdateEmployeeDto, ToggleStatusDto } from "../dtos/user.dto";
+import { CreateEmployeeDto, UpdateEmployeeDto, ToggleStatusDto, UpdateProfileDto } from "../dtos/user.dto";
+import { CurrentUser } from "../../auth/decorators/current-user.decorator";
 
 @Controller("users")
 @UsePipes(new ValidationPipe({ whitelist: true }))
 export class UserController {
     constructor(private readonly userService: UserService) {}
+
+    @Patch("profile")
+    async updateProfile(
+        @CurrentUser("sub") userId: string,
+        @Body() updateProfileDto: UpdateProfileDto,
+    ) {
+        return this.userService.updateProfile(userId, updateProfileDto);
+    }
 
     @Post("employees")
     async createEmployee(@Body() createEmployeeDto: CreateEmployeeDto) {

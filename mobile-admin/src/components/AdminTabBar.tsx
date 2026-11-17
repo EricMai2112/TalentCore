@@ -10,7 +10,13 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-export type AdminTabKey = 'recruitment' | 'interviews' | 'dashboard' | 'offers' | 'notifications';
+export type AdminTabKey =
+  | 'recruitment'
+  | 'interviews'
+  | 'dashboard'
+  | 'offers'
+  | 'notifications'
+  | 'account';
 
 export interface TabConfig {
   key: AdminTabKey;
@@ -193,10 +199,21 @@ export const AdminTabBar: React.FC<AdminTabBarProps> = ({
   };
 
   useEffect(() => {
-    if (tabWidth > 0 && !isCenterActive) {
+    if (activeTab === 'account') {
+      Animated.timing(pillOpacity, {
+        toValue: 0,
+        duration: 160,
+        useNativeDriver: true,
+      }).start();
+    } else if (tabWidth > 0 && !isCenterActive && activeIndex >= 0) {
       translateX.setValue(activeIndex * tabWidth);
+      Animated.timing(pillOpacity, {
+        toValue: 1,
+        duration: 160,
+        useNativeDriver: true,
+      }).start();
     }
-  }, [tabWidth]);
+  }, [tabWidth, activeTab, activeIndex, isCenterActive]);
 
   return (
     <View

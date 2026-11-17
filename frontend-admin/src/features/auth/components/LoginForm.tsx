@@ -9,6 +9,7 @@ import { authApi } from '../services/auth.api'
 import { useAuth } from '@/src/providers/AuthProvider'
 import { GlassInput } from '@/src/components/common/glass'
 import { loginSchema, LoginFormData } from '../schemas/login.schema'
+import { UserRole } from '@/src/features/users/types/user.types'
 
 export default function LoginForm() {
   const router = useRouter()
@@ -37,7 +38,11 @@ export default function LoginForm() {
         password: data.password,
       })
       setUser(res.user)
-      router.push('/dashboard')
+      if (res.user?.role === UserRole.EMPLOYEE) {
+        router.push('/interviews')
+      } else {
+        router.push('/dashboard')
+      }
     } catch (err: any) {
       setServerError(err.message || 'Đăng nhập thất bại. Vui lòng kiểm tra lại thông tin!')
     }

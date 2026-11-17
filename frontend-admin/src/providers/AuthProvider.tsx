@@ -2,7 +2,7 @@
 
 import { createContext, useContext, useEffect, useState } from "react";
 import { usePathname, useRouter } from "next/navigation";
-import { User } from "@/src/features/users/types/user.types";
+import { User, UserRole } from "@/src/features/users/types/user.types";
 import { authApi } from "@/src/features/auth/services/auth.api";
 
 interface AuthContextType {
@@ -58,6 +58,18 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     if (!isLoading && !user && !isAuthRoute) {
       const returnUrl = encodeURIComponent(pathname || "/dashboard");
       router.replace(`/login?returnUrl=${returnUrl}`);
+    } else if (!isLoading && user && user.role === UserRole.EMPLOYEE) {
+      if (
+        pathname === "/" ||
+        pathname.startsWith("/dashboard") ||
+        pathname.startsWith("/candidates") ||
+        pathname.startsWith("/kanban") ||
+        pathname.startsWith("/job-description") ||
+        pathname.startsWith("/offers") ||
+        pathname.startsWith("/settings")
+      ) {
+        router.replace("/interviews");
+      }
     }
   }, [isLoading, user, isAuthRoute, pathname, router]);
 

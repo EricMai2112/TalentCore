@@ -48,7 +48,7 @@ const navItems: NavItem[] = [
     label: 'Ứng viên',
     href: '/candidates',
     icon: UserRound,
-    roles: [UserRole.HR_ADMIN, UserRole.DEPARTMENT_MANAGER, UserRole.EMPLOYEE]
+    roles: [UserRole.HR_ADMIN, UserRole.DEPARTMENT_MANAGER]
   },
   {
     label: 'Phỏng vấn',

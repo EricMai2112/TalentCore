@@ -44,3 +44,15 @@ export class ToggleStatusDto {
   @IsEnum(UserStatus, { message: 'Trạng thái không hợp lệ' })
   status: UserStatus;
 }
+
+export class UpdateProfileDto {
+  @IsOptional()
+  @IsString()
+  @IsNotEmpty({ message: 'Họ tên không được để trống' })
+  name?: string;
+
+  @IsOptional()
+  @IsString()
+  @IsNotEmpty({ message: 'Số điện thoại không được để trống' })
+  phone?: string;
+}

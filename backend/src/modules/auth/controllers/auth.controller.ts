@@ -1,5 +1,5 @@
-import { Body, Controller, Get, Post, Res, UsePipes, ValidationPipe } from '@nestjs/common';
-import { LoginDto, RegisterDto } from '../dtos/auth.dto';
+import { Body, Controller, Get, Patch, Post, Res, UsePipes, ValidationPipe } from '@nestjs/common';
+import { ChangePasswordDto, LoginDto, RegisterDto } from '../dtos/auth.dto';
 import { AuthService } from '../services/auth.service';
 import type { Response } from 'express';
 import { Public } from '../decorators/public.decorator';
@@ -35,6 +35,15 @@ export class AuthController {
   @Get('me')
   async getMe(@CurrentUser('email') email: string) {
     return this.authService.getMe(email);
+  }
+
+  @Patch('change-password')
+  @UsePipes(new ValidationPipe({ whitelist: true }))
+  async changePassword(
+    @CurrentUser('sub') userId: string,
+    @Body() changePasswordDto: ChangePasswordDto,
+  ) {
+    return this.authService.changePassword(userId, changePasswordDto);
   }
 
   @Public()

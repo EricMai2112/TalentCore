@@ -7,7 +7,7 @@ import { InjectModel } from '@nestjs/mongoose';
 import { Model, isValidObjectId } from 'mongoose';
 import { JwtService } from '@nestjs/jwt';
 import * as bcrypt from 'bcrypt';
-import { LoginDto, RegisterDto } from '../dtos/auth.dto';
+import { ChangePasswordDto, LoginDto, RegisterDto } from '../dtos/auth.dto';
 import { User, UserDocument, UserStatus } from '../../users/schemas/user.schema';
 import { UserService } from '../../users/services/user.service';
 
@@ -92,5 +92,34 @@ export class AuthService {
     const userObject = user.toObject();
     const { password: _, ...userWithoutPassword } = userObject;
     return userWithoutPassword;
+  }
+
+  async changePassword(userId: string, dto: ChangePasswordDto) {
+    const { oldPassword, newPassword, confirmPassword } = dto;
+
+    const user = await this.userService.findById(userId);
+    if (!user) {
+      throw new UnauthorizedException('Người dùng không tồn tại');
+    }
+
+    const isMatch = await bcrypt.compare(oldPassword, user.password);
+    if (!isMatch) {
+      throw new BadRequestException('Mật khẩu hiện tại không chính xác');
+    }
+
+    if (newPassword !== confirmPassword) {
+      throw new BadRequestException('Mật khẩu xác nhận không khớp');
+    }
+
+    if (oldPassword === newPassword) {
+      throw new BadRequestException('Mật khẩu mới không được trùng với mật khẩu hiện tại');
+    }
+
+    const hashedPassword = await bcrypt.hash(newPassword, 10);
+    await this.userService.updateUserById(userId, { password: hashedPassword });
+
+    return {
+      message: 'Đổi mật khẩu thành công',
+    };
   }
 }
