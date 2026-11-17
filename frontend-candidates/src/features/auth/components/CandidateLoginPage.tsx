@@ -78,7 +78,15 @@ export default function CandidateLoginPage() {
 
               {/* Mật khẩu */}
               <div className="space-y-1.5">
-                <label className="block text-xs font-bold text-slate-700">Mật khẩu</label>
+                <div className="flex items-center justify-between">
+                  <label className="block text-xs font-bold text-slate-700">Mật khẩu</label>
+                  <Link
+                    href="/forgot-password"
+                    className="text-xs font-semibold text-blue-600 hover:text-blue-700 hover:underline"
+                  >
+                    Quên mật khẩu?
+                  </Link>
+                </div>
                 <div className="relative">
                   <input
                     type={showPassword ? 'text' : 'password'}

@@ -6,12 +6,14 @@ import { AuthController } from './controllers/auth.controller';
 import { AuthService } from './services/auth.service';
 import { User, UserSchema } from '../users/schemas/user.schema';
 import { UsersModule } from '../users/users.module';
+import { EmailTemplateModule } from '../email-template/email-template.module';
 import { JwtAuthGuard } from './guards/jwt-auth.guard';
 import { RolesGuard } from './guards/roles.guard';
 
 @Module({
   imports: [
     UsersModule,
+    EmailTemplateModule,
     JwtModule.registerAsync({
         imports: [ConfigModule],
         useFactory: (configService: ConfigService) => ({
