@@ -567,6 +567,7 @@ export class InterviewService {
       if (dto.endTime) interview.endTime = dto.endTime;
 
       interview.confirmationStatus = InterviewConfirmationStatus.SCHEDULED;
+      interview.reminded1h = false;
     }
 
     if (dto.locationType) interview.locationType = dto.locationType;
