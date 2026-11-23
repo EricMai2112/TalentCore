@@ -5,7 +5,10 @@ import {
   LoginDto,
   RegisterDto,
   ResetPasswordDto,
+  ResetPasswordWithOtpDto,
+  SendOtpDto,
   VerifyForgotPasswordDto,
+  VerifyOtpDto,
 } from '../dtos/auth.dto';
 import { AuthService } from '../services/auth.service';
 import type { Response } from 'express';
@@ -80,5 +83,26 @@ export class AuthController {
   @UsePipes(new ValidationPipe({ whitelist: true }))
   async resetPassword(@Body() dto: ResetPasswordDto) {
     return this.authService.resetPassword(dto);
+  }
+
+  @Public()
+  @Post('forgot-password-otp')
+  @UsePipes(new ValidationPipe({ whitelist: true }))
+  async forgotPasswordOtp(@Body() dto: SendOtpDto) {
+    return this.authService.sendForgotPasswordOtp(dto.email);
+  }
+
+  @Public()
+  @Post('verify-otp')
+  @UsePipes(new ValidationPipe({ whitelist: true }))
+  async verifyOtp(@Body() dto: VerifyOtpDto) {
+    return this.authService.verifyForgotPasswordOtp(dto.email, dto.otp);
+  }
+
+  @Public()
+  @Post('reset-password-otp')
+  @UsePipes(new ValidationPipe({ whitelist: true }))
+  async resetPasswordWithOtp(@Body() dto: ResetPasswordWithOtpDto) {
+    return this.authService.resetPasswordWithOtp(dto);
   }
 }

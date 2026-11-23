@@ -1,11 +1,13 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { API_CONFIG } from '../config/api.config';
 import {
+  AuthMessageResponse,
   CandidateUser,
   LoginPayload,
   LoginResponse,
   RegisterPayload,
   RegisterResponse,
+  ResetPasswordWithOtpPayload,
 } from '../types/auth.types';
 
 const TOKEN_KEY = '@talentcore_candidate_token';
@@ -115,5 +117,115 @@ export const authService = {
         AsyncStorage.removeItem(USER_KEY),
       ]);
     } catch {}
+  },
+
+  sendForgotPasswordOtp: async (email: string): Promise<AuthMessageResponse> => {
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), API_CONFIG.TIMEOUT);
+
+    try {
+      const response = await fetch(`${API_CONFIG.BASE_URL}/auth/forgot-password-otp`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Accept: 'application/json',
+        },
+        body: JSON.stringify({ email: email.trim().toLowerCase() }),
+        signal: controller.signal,
+      });
+
+      clearTimeout(timeoutId);
+      const data = await response.json();
+
+      if (!response.ok) {
+        const errorMsg = Array.isArray(data.message)
+          ? data.message.join(', ')
+          : data.message || 'Không thể gửi mã xác thực OTP';
+        throw new Error(errorMsg);
+      }
+
+      return data as AuthMessageResponse;
+    } catch (error: any) {
+      clearTimeout(timeoutId);
+      if (error.name === 'AbortError') {
+        throw new Error('Kết nối máy chủ quá hạn. Vui lòng thử lại!');
+      }
+      throw error;
+    }
+  },
+
+  verifyForgotPasswordOtp: async (email: string, otp: string): Promise<AuthMessageResponse> => {
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), API_CONFIG.TIMEOUT);
+
+    try {
+      const response = await fetch(`${API_CONFIG.BASE_URL}/auth/verify-otp`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Accept: 'application/json',
+        },
+        body: JSON.stringify({ email: email.trim().toLowerCase(), otp: otp.trim() }),
+        signal: controller.signal,
+      });
+
+      clearTimeout(timeoutId);
+      const data = await response.json();
+
+      if (!response.ok) {
+        const errorMsg = Array.isArray(data.message)
+          ? data.message.join(', ')
+          : data.message || 'Mã xác thực không hợp lệ';
+        throw new Error(errorMsg);
+      }
+
+      return data as AuthMessageResponse;
+    } catch (error: any) {
+      clearTimeout(timeoutId);
+      if (error.name === 'AbortError') {
+        throw new Error('Kết nối máy chủ quá hạn. Vui lòng thử lại!');
+      }
+      throw error;
+    }
+  },
+
+  resetPasswordWithOtp: async (payload: ResetPasswordWithOtpPayload): Promise<AuthMessageResponse> => {
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), API_CONFIG.TIMEOUT);
+
+    try {
+      const response = await fetch(`${API_CONFIG.BASE_URL}/auth/reset-password-otp`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Accept: 'application/json',
+        },
+        body: JSON.stringify({
+          email: payload.email.trim().toLowerCase(),
+          otp: payload.otp.trim(),
+          password: payload.password,
+          confirm_password: payload.confirm_password,
+        }),
+        signal: controller.signal,
+      });
+
+      clearTimeout(timeoutId);
+      const data = await response.json();
+
+      if (!response.ok) {
+        const errorMsg = Array.isArray(data.message)
+          ? data.message.join(', ')
+          : data.message || 'Đặt lại mật khẩu thất bại';
+        throw new Error(errorMsg);
+      }
+
+      return data as AuthMessageResponse;
+    } catch (error: any) {
+      clearTimeout(timeoutId);
+      if (error.name === 'AbortError') {
+        throw new Error('Kết nối máy chủ quá hạn. Vui lòng thử lại!');
+      }
+      throw error;
+    }
   },
 };

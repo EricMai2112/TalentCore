@@ -1,4 +1,4 @@
-import { IsEmail, IsNotEmpty, IsOptional, IsString, Matches, MinLength } from 'class-validator';
+import { IsEmail, IsNotEmpty, IsOptional, IsString, Length, Matches, MinLength } from 'class-validator';
 
 export class RegisterDto {
     @IsEmail({}, {message: "Email không đúng định dạng"})
@@ -57,6 +57,43 @@ export class ResetPasswordDto {
     @IsString({ message: 'Mã xác thực liên kết không hợp lệ' })
     @IsNotEmpty({ message: 'Mã xác thực liên kết không được để trống' })
     token: string;
+
+    @IsString()
+    @MinLength(6, { message: 'Mật khẩu mới phải có ít nhất 6 ký tự' })
+    @IsNotEmpty({ message: 'Mật khẩu mới không được để trống' })
+    password: string;
+
+    @IsString()
+    @IsNotEmpty({ message: 'Vui lòng xác nhận mật khẩu mới' })
+    confirm_password: string;
+}
+
+export class SendOtpDto {
+    @IsEmail({}, { message: 'Email không đúng định dạng' })
+    @IsNotEmpty({ message: 'Email không được để trống' })
+    email: string;
+}
+
+export class VerifyOtpDto {
+    @IsEmail({}, { message: 'Email không đúng định dạng' })
+    @IsNotEmpty({ message: 'Email không được để trống' })
+    email: string;
+
+    @IsString()
+    @Length(6, 6, { message: 'Mã OTP phải gồm đúng 6 chữ số' })
+    @IsNotEmpty({ message: 'Mã OTP không được để trống' })
+    otp: string;
+}
+
+export class ResetPasswordWithOtpDto {
+    @IsEmail({}, { message: 'Email không đúng định dạng' })
+    @IsNotEmpty({ message: 'Email không được để trống' })
+    email: string;
+
+    @IsString()
+    @Length(6, 6, { message: 'Mã OTP phải gồm đúng 6 chữ số' })
+    @IsNotEmpty({ message: 'Mã OTP không được để trống' })
+    otp: string;
 
     @IsString()
     @MinLength(6, { message: 'Mật khẩu mới phải có ít nhất 6 ký tự' })

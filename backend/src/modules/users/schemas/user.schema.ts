@@ -42,6 +42,15 @@ export class User {
   @Prop({ required: false })
   forgot_password_token?: string;
 
+  @Prop({ required: false })
+  forgot_password_otp?: string;
+
+  @Prop({ required: false, type: Date })
+  forgot_password_otp_expires_at?: Date | null;
+
+  @Prop({ required: false, default: 0 })
+  forgot_password_otp_attempts?: number;
+
   @Prop({ required: false, type: Date })
   forgot_password_requested_at?: Date | null;
 
