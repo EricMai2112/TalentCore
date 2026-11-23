@@ -55,10 +55,10 @@ export class Interview {
   date?: Date;
 
   @Prop({ required: false, trim: true })
-  startTime?: string; // e.g. "14:00"
+  startTime?: string;
 
   @Prop({ required: false, trim: true })
-  endTime?: string; // e.g. "15:30"
+  endTime?: string;
 
   @Prop({ required: true, enum: LocationType, default: LocationType.ONLINE })
   locationType: LocationType;
@@ -92,6 +92,9 @@ export class Interview {
 
   @Prop({ default: false })
   isEscalated?: boolean;
+
+  @Prop({ default: false })
+  reminded1h?: boolean;
 }
 
 export const InterviewSchema = SchemaFactory.createForClass(Interview);

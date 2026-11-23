@@ -436,6 +436,34 @@ export class NotificationsService {
     });
   }
 
+  async notifyCandidateInterviewReminder(
+    candidateUserId: string,
+    params: {
+      jobTitle: string;
+      dateFormatted: string;
+      timeRange: string;
+      interviewId: string;
+      meetLink?: string;
+    },
+  ) {
+    if (!candidateUserId) return;
+
+    return this.create({
+      recipientId: candidateUserId,
+      title: 'Nhắc lịch phỏng vấn (1 giờ tới)',
+      message: `Buổi phỏng vấn vị trí "${params.jobTitle}" của bạn sẽ bắt đầu trong vòng 1 giờ tới (${params.timeRange}, ngày ${params.dateFormatted}). Vui lòng chuẩn bị sẵn sàng.`,
+      type: NotificationType.INTERVIEW_REMINDER,
+      category: NotificationCategory.INTERVIEW,
+      priority: NotificationPriority.URGENT,
+      actionUrl: '/user/applications',
+      metadata: {
+        interviewId: params.interviewId,
+        jobTitle: params.jobTitle,
+        meetLink: params.meetLink,
+      },
+    });
+  }
+
   async notifyCandidateInterviewRescheduled(
     candidateUserId: string,
     params: {

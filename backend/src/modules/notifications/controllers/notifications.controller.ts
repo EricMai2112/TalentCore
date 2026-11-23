@@ -1,6 +1,7 @@
 import {
   Controller,
   Get,
+  Post,
   Patch,
   Delete,
   Param,
@@ -13,6 +14,7 @@ import {
 import type { Request } from 'express';
 import { JwtService } from '@nestjs/jwt';
 import { NotificationsService } from '../services/notifications.service';
+import { InterviewReminderCron } from '../crons/interview-reminder.cron';
 import { QueryNotificationDto } from '../dtos/query-notification.dto';
 
 @Controller('notifications')
@@ -20,6 +22,7 @@ export class NotificationsController {
   constructor(
     private readonly notificationsService: NotificationsService,
     private readonly jwtService: JwtService,
+    private readonly interviewReminderCron: InterviewReminderCron,
   ) {}
 
   private extractUserId(req: Request): string {
@@ -93,5 +96,14 @@ export class NotificationsController {
     const userId = this.extractUserId(req);
     const result = await this.notificationsService.deleteNotification(id, userId);
     return result;
+  }
+
+  @Post('trigger-interview-reminders')
+  async triggerInterviewReminders() {
+    const result = await this.interviewReminderCron.sendUpcomingReminders();
+    return {
+      message: 'Đã kích hoạt quét và gửi thông báo nhắc lịch phỏng vấn trước 1h thành công',
+      data: result,
+    };
   }
 }

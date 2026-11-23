@@ -584,6 +584,82 @@ export class EmailService {
     }
   }
 
+  async sendInterviewReminderEmail(params: {
+    toEmail: string;
+    candidateName: string;
+    jobTitle: string;
+    companyName?: string;
+    interviewDate: string;
+    interviewTime: string;
+    interviewType: string;
+    meetLink?: string;
+    interviewerName?: string;
+  }) {
+    if (!params.toEmail) {
+      this.logger.warn('[Interview Reminder Email] Không có email ứng viên, bỏ qua gửi mail.');
+      return;
+    }
+
+    const companyName = params.companyName || 'TalentCore';
+    const interviewerName = params.interviewerName || 'Hội đồng phỏng vấn';
+    const actionUrl = `${this.candidateUrl}/user/applications?tab=interviews`;
+
+    const placeholders: Record<string, string> = {
+      candidateName: params.candidateName,
+      jobTitle: params.jobTitle,
+      companyName,
+      interviewDate: params.interviewDate,
+      interviewTime: params.interviewTime,
+      interviewType: params.interviewType,
+      meetLink: params.meetLink || '',
+      interviewerName,
+      actionUrl,
+    };
+
+    let subject = '[TalentCore] NHẮC LỊCH: Buổi phỏng vấn vị trí {{jobTitle}} sẽ diễn ra sau 1 giờ';
+    let body =
+      `Chào {{candidateName}},\n\n` +
+      `Đây là email nhắc nhở tự động từ {{companyName}}: Buổi phỏng vấn cho vị trí {{jobTitle}} của bạn sẽ bắt đầu trong vòng 1 giờ tới.\n\n` +
+      `Vui lòng kiểm tra kết nối mạng, chuẩn bị thiết bị hoặc di chuyển đến địa điểm phỏng vấn đúng giờ để buổi phỏng vấn đạt kết quả tốt nhất.\n\n` +
+      `Chúc bạn có một buổi phỏng vấn thành công!\n\n` +
+      `Trân trọng,\n{{companyName}}`;
+
+    const renderedSubject = this.replacePlaceholders(subject, placeholders);
+    const renderedBody = this.replacePlaceholders(body, placeholders);
+
+    const infoList: Array<{ label: string; value: string }> = [
+      { label: 'Vị trí ứng tuyển', value: params.jobTitle },
+      { label: 'Thời gian', value: `${params.interviewTime} (Hôm nay ${params.interviewDate})` },
+      { label: 'Hình thức', value: params.interviewType },
+    ];
+    if (params.meetLink) {
+      infoList.push({
+        label: params.interviewType.toLowerCase().includes('online') ? 'Link phỏng vấn trực tuyến' : 'Địa điểm phỏng vấn',
+        value: params.meetLink,
+      });
+    }
+    if (interviewerName) {
+      infoList.push({ label: 'Người phỏng vấn', value: interviewerName });
+    }
+
+    const renderedHtml = this.generateGeneralHtmlEmail({
+      title: renderedSubject,
+      bodyText: renderedBody,
+      badgeText: 'Nhắc lịch phỏng vấn (1 giờ tới)',
+      badgeColor: '#ea580c',
+      infoList,
+      actionText: 'Vào phòng phỏng vấn / Chi tiết',
+      actionUrl: params.meetLink && params.meetLink.startsWith('http') ? params.meetLink : actionUrl,
+    });
+
+    try {
+      await this.sendEmail(params.toEmail, renderedSubject, renderedHtml, renderedBody);
+      this.logger.log(`[Interview Reminder Email] Đã gửi email nhắc lịch 1h tới ${params.toEmail}`);
+    } catch (err: any) {
+      this.logger.error(`[Interview Reminder Email] Lỗi gửi email nhắc lịch 1h tới ${params.toEmail}: ${err?.message || err}`);
+    }
+  }
+
   /**
    * Gửi email khi HR từ chối hồ sơ ứng viên (hoặc duyệt hủy lịch)
    */
