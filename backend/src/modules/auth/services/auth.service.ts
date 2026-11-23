@@ -283,4 +283,147 @@ export class AuthService {
       message: 'Đặt lại mật khẩu thành công. Vui lòng đăng nhập bằng mật khẩu mới.',
     };
   }
+
+  /**
+   * Gửi mã xác thực OTP 6 số qua email cho ứng dụng di động
+   */
+  async sendForgotPasswordOtp(email: string) {
+    if (!email) {
+      throw new BadRequestException('Vui lòng cung cấp địa chỉ email.');
+    }
+
+    const cleanEmail = email.trim().toLowerCase();
+    const user = await this.userService.findByEmail(cleanEmail);
+
+    if (!user) {
+      return {
+        message: `Nếu email tồn tại trong hệ thống, mã xác thực OTP sẽ được gửi đến ${cleanEmail}.`,
+      };
+    }
+
+    const now = new Date();
+
+    if (user.forgot_password_requested_at) {
+      const diff = now.getTime() - new Date(user.forgot_password_requested_at).getTime();
+      if (diff < 60 * 1000) {
+        const remain = Math.ceil((60 * 1000 - diff) / 1000);
+        throw new BadRequestException(`Vui lòng đợi ${remain} giây trước khi gửi lại mã OTP.`);
+      }
+    }
+
+    // 2. Rate limit trong khung 2 giờ (Tối đa 5 lần)
+    const windowStart = user.forgot_password_request_window_start
+      ? new Date(user.forgot_password_request_window_start).getTime()
+      : 0;
+    let requestCount = user.forgot_password_request_count || 0;
+    let newWindowStart = user.forgot_password_request_window_start;
+
+    if (!windowStart || now.getTime() - windowStart > 2 * 60 * 60 * 1000) {
+      requestCount = 0;
+      newWindowStart = now;
+    }
+
+    if (requestCount >= 5) {
+      throw new BadRequestException('Bạn đã gửi quá nhiều yêu cầu mã OTP. Vui lòng thử lại sau 2 giờ.');
+    }
+
+    const otp = Math.floor(100000 + Math.random() * 900000).toString();
+    const expiresAt = new Date(now.getTime() + 10 * 60 * 1000); // 10 phút hiệu lực
+
+    await this.userService.updateUserById(user._id.toString(), {
+      forgot_password_otp: otp,
+      forgot_password_otp_expires_at: expiresAt,
+      forgot_password_otp_attempts: 0,
+      forgot_password_requested_at: now,
+      forgot_password_request_count: requestCount + 1,
+      forgot_password_request_window_start: newWindowStart,
+    });
+
+    await this.emailService.sendForgotPasswordOtpEmail({
+      toEmail: user.email,
+      candidateName: user.name,
+      otp,
+    });
+
+    return {
+      message: `Mã xác thực OTP đã được gửi đến email ${user.email}. Vui lòng kiểm tra hộp thư để tiến hành đổi mật khẩu.`,
+    };
+  }
+
+  async verifyForgotPasswordOtp(email: string, otp: string) {
+    if (!email || !otp) {
+      throw new BadRequestException('Email và mã OTP không được để trống.');
+    }
+
+    const cleanEmail = email.trim().toLowerCase();
+    const cleanOtp = otp.trim();
+
+    const user = await this.userService.findByEmail(cleanEmail);
+    if (!user || !user.forgot_password_otp) {
+      throw new BadRequestException('Không tìm thấy yêu cầu đặt lại mật khẩu hoặc mã OTP đã hết hạn.');
+    }
+
+    const attempts = user.forgot_password_otp_attempts || 0;
+    if (attempts >= 5) {
+      throw new BadRequestException('Bạn đã nhập sai mã OTP quá 5 lần. Vui lòng gửi lại yêu cầu mã mới.');
+    }
+
+    if (
+      !user.forgot_password_otp_expires_at ||
+      new Date().getTime() > new Date(user.forgot_password_otp_expires_at).getTime()
+    ) {
+      throw new BadRequestException('Mã xác thực OTP đã hết hạn. Vui lòng yêu cầu mã mới.');
+    }
+
+    if (user.forgot_password_otp !== cleanOtp) {
+      await this.userService.updateUserById(user._id.toString(), {
+        forgot_password_otp_attempts: attempts + 1,
+      });
+      const remaining = 5 - (attempts + 1);
+      throw new BadRequestException(
+        remaining > 0
+          ? `Mã xác thực OTP không chính xác. Bạn còn ${remaining} lần thử.`
+          : 'Bạn đã nhập sai mã OTP quá 5 lần. Vui lòng gửi lại yêu cầu mã mới.',
+      );
+    }
+
+    return {
+      valid: true,
+      message: 'Mã xác thực OTP hợp lệ.',
+    };
+  }
+
+  async resetPasswordWithOtp(dto: {
+    email: string;
+    otp: string;
+    password: string;
+    confirm_password: string;
+  }) {
+    const { email, otp, password, confirm_password } = dto;
+
+    if (password !== confirm_password) {
+      throw new BadRequestException('Mật khẩu xác nhận không khớp.');
+    }
+
+    await this.verifyForgotPasswordOtp(email, otp);
+
+    const cleanEmail = email.trim().toLowerCase();
+    const user = await this.userService.findByEmail(cleanEmail);
+    if (!user) {
+      throw new BadRequestException('Người dùng không tồn tại.');
+    }
+
+    const hashedPassword = await bcrypt.hash(password, 10);
+    await this.userService.updateUserById(user._id.toString(), {
+      password: hashedPassword,
+      forgot_password_otp: '',
+      forgot_password_otp_expires_at: null,
+      forgot_password_otp_attempts: 0,
+      forgot_password_requested_at: null,
+    });
+
+    return {
+      message: 'Đặt lại mật khẩu thành công. Vui lòng đăng nhập với mật khẩu mới.',
+    };
+  }
 }

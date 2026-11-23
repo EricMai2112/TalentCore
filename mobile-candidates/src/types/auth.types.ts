@@ -28,3 +28,24 @@ export interface LoginResponse {
 export interface RegisterResponse {
   message: string;
 }
+
+export interface SendOtpPayload {
+  email: string;
+}
+
+export interface VerifyOtpPayload {
+  email: string;
+  otp: string;
+}
+
+export interface ResetPasswordWithOtpPayload {
+  email: string;
+  otp: string;
+  password: string;
+  confirm_password: string;
+}
+
+export interface AuthMessageResponse {
+  message: string;
+  valid?: boolean;
+}

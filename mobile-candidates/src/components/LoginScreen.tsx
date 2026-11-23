@@ -14,6 +14,7 @@ import {
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useAuth } from '../context/AuthContext';
+import { ForgotPasswordModal } from './ForgotPasswordModal';
 
 interface LoginScreenProps {
   onNavigateToRegister?: () => void;
@@ -27,6 +28,8 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ onNavigateToRegister, 
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [errorMessage, setErrorMessage] = useState('');
+  const [successBanner, setSuccessBanner] = useState('');
+  const [showForgotPassword, setShowForgotPassword] = useState(false);
 
   const validate = (): boolean => {
     if (!email.trim()) {
@@ -96,6 +99,13 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ onNavigateToRegister, 
           <Text style={styles.title}>Đăng nhập ứng viên</Text>
         </View>
 
+        {successBanner ? (
+          <View style={styles.successBox}>
+            <Ionicons name="checkmark-circle" size={18} color="#16a34a" />
+            <Text style={styles.successText}>{successBanner}</Text>
+          </View>
+        ) : null}
+
         {errorMessage ? (
           <View style={styles.errorBox}>
             <Ionicons name="alert-circle" size={18} color="#ef4444" />
@@ -160,6 +170,18 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ onNavigateToRegister, 
             </View>
           </View>
 
+          <View style={styles.forgotPasswordRow}>
+            <Pressable
+              onPress={() => {
+                setErrorMessage('');
+                setShowForgotPassword(true);
+              }}
+              hitSlop={10}
+            >
+              <Text style={styles.forgotPasswordText}>Quên mật khẩu?</Text>
+            </Pressable>
+          </View>
+
           <Pressable
             style={({ pressed }) => [styles.submitButton, pressed && styles.submitButtonPressed]}
             onPress={handleLogin}
@@ -190,6 +212,17 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ onNavigateToRegister, 
           </Pressable>
         </View>
       </ScrollView>
+
+      {/* Modal Khôi phục mật khẩu qua OTP */}
+      <ForgotPasswordModal
+        visible={showForgotPassword}
+        initialEmail={email}
+        onClose={() => setShowForgotPassword(false)}
+        onSuccess={(updatedEmail) => {
+          setEmail(updatedEmail);
+          setSuccessBanner('Đặt lại mật khẩu thành công! Vui lòng đăng nhập với mật khẩu mới.');
+        }}
+      />
     </KeyboardAvoidingView>
   );
 };
@@ -258,6 +291,24 @@ const styles = StyleSheet.create({
     fontSize: 13,
     fontWeight: '500',
   },
+  successBox: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#f0fdf4',
+    borderWidth: 1,
+    borderColor: '#bbf7d0',
+    paddingHorizontal: 14,
+    paddingVertical: 10,
+    borderRadius: 12,
+    marginBottom: 20,
+    gap: 8,
+  },
+  successText: {
+    flex: 1,
+    color: '#16a34a',
+    fontSize: 13,
+    fontWeight: '500',
+  },
   form: {
     gap: 18,
   },
@@ -286,6 +337,16 @@ const styles = StyleSheet.create({
     flex: 1,
     color: '#0f172a',
     fontSize: 15,
+  },
+  forgotPasswordRow: {
+    alignItems: 'flex-end',
+    marginTop: -6,
+    marginBottom: 4,
+  },
+  forgotPasswordText: {
+    color: '#7c3aed',
+    fontSize: 13,
+    fontWeight: '700',
   },
   submitButton: {
     marginTop: 8,

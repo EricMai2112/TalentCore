@@ -779,6 +779,64 @@ export class EmailService {
   }
 
   /**
+   * Gửi email mã OTP xác thực đặt lại mật khẩu cho ứng viên trên thiết bị di động
+   */
+  async sendForgotPasswordOtpEmail(params: {
+    toEmail: string;
+    candidateName?: string;
+    otp: string;
+  }) {
+    if (!params.toEmail) {
+      this.logger.warn('[Forgot Password OTP Email] Không có email người nhận, bỏ qua gửi mail.');
+      return;
+    }
+
+    const name = params.candidateName || 'Quý ứng viên';
+    const subject = '[TalentCore] Mã xác thực đặt lại mật khẩu (OTP)';
+
+    const bodyContent = `
+      <p>Chào <strong>${name}</strong>,</p>
+      <p>Hệ thống TalentCore đã nhận được yêu cầu đặt lại mật khẩu cho tài khoản: <strong>${params.toEmail}</strong>.</p>
+      <p>Dưới đây là mã xác thực OTP của bạn:</p>
+      <div style="text-align: center; margin: 24px 0;">
+        <span style="display: inline-block; font-size: 32px; font-weight: 800; letter-spacing: 8px; color: #7c3aed; background-color: #f5f3ff; border: 2px dashed #7c3aed; padding: 12px 28px; border-radius: 12px;">
+          ${params.otp}
+        </span>
+      </div>
+      <p style="color: #64748b; font-size: 13px;">Mã xác thực này có hiệu lực trong vòng <strong>10 phút</strong>. Vì lý do bảo mật, vui lòng không chia sẻ mã này cho bất kỳ ai.</p>
+      <p style="color: #64748b; font-size: 13px;">Nếu bạn không thực hiện yêu cầu này, vui lòng bỏ qua email. Mật khẩu của bạn vẫn được bảo vệ an toàn.</p>
+      <p style="margin-top: 24px;">Trân trọng,<br><strong>Đội ngũ TalentCore</strong></p>
+    `.trim();
+
+    const infoList: Array<{ label: string; value: string }> = [
+      { label: 'Tài khoản yêu cầu', value: params.toEmail },
+      { label: 'Thời hạn mã OTP', value: '10 phút' },
+    ];
+
+    const renderedHtml = this.generateGeneralHtmlEmail({
+      title: subject,
+      bodyText: bodyContent,
+      badgeText: 'Mã xác thực OTP',
+      badgeColor: '#7c3aed',
+      infoList,
+    });
+
+    const plainText =
+      `Chào ${name},\n\n` +
+      `Mã xác thực OTP đặt lại mật khẩu của bạn là: ${params.otp}\n` +
+      `Mã có hiệu lực trong 10 phút. Tuyệt đối không chia sẻ mã này cho người khác.\n\n` +
+      `Trân trọng,\nĐội ngũ TalentCore`;
+
+    try {
+      await this.sendEmail(params.toEmail, subject, renderedHtml, plainText);
+      this.logger.log(`[Forgot Password OTP Email] Đã gửi mã OTP đặt lại mật khẩu thành công tới ${params.toEmail}`);
+    } catch (err: any) {
+      this.logger.error(`[Forgot Password OTP Email] Lỗi gửi mã OTP tới ${params.toEmail}: ${err?.message || err}`);
+      throw err;
+    }
+  }
+
+  /**
    * Gửi email khi HR gửi Offer Letter cho ứng viên.
    * LẤY NGUYÊN VẸN TEMPLATE HTML TỪ MÀN HÌNH TẠO OFFER (offerLetterHtml) VÀ EMAIL SUBJECT.
    * ĐẢM BẢO HIỂN THỊ CHUẨN ĐẸP 100% TRÊN GMAIL, KHÔNG BỊ TRÀN HAY VỠ BẢNG.
