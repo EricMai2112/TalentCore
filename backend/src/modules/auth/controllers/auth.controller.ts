@@ -1,4 +1,5 @@
-import { Body, Controller, Get, Patch, Post, Res, UsePipes, ValidationPipe } from '@nestjs/common';
+import { BadRequestException, Body, Controller, Get, Patch, Post, Query, Res, UsePipes, ValidationPipe } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
 import {
   ChangePasswordDto,
   ForgotPasswordDto,
@@ -17,7 +18,35 @@ import { CurrentUser } from '../decorators/current-user.decorator';
 
 @Controller('auth')
 export class AuthController {
-  constructor(private readonly authService: AuthService) {}
+  constructor(
+    private readonly authService: AuthService,
+    private readonly configService: ConfigService,
+  ) {}
+
+  @Public()
+  @Get('google/url')
+  getGoogleAuthUrl(@Query('state') state?: string) {
+    return {
+      url: this.authService.getGoogleAuthUrl(state || 'candidates'),
+    };
+  }
+
+  @Public()
+  @Get('google')
+  googleAuthRedirect(@Query('state') state: string, @Res() res: Response) {
+    const url = this.authService.getGoogleAuthUrl(state || 'candidates');
+    return res.redirect(url);
+  }
+
+  @Public()
+  @Get('oauth/google')
+  async googleCallback(
+    @Query('code') code: string,
+    @Query('state') state: string,
+    @Res() res: Response,
+  ) {
+    await this.authService.handleOAuthCallback(code, state, res);
+  }
 
   @Public()
   @Post('register')

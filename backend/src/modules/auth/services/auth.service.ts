@@ -16,9 +16,10 @@ import {
   RegisterDto,
   ResetPasswordDto,
 } from '../dtos/auth.dto';
-import { User, UserDocument, UserStatus } from '../../users/schemas/user.schema';
+import { User, UserDocument, UserRole, UserStatus } from '../../users/schemas/user.schema';
 import { UserService } from '../../users/services/user.service';
 import { EmailService } from '../../email-template/services/email.service';
+import type { Response } from 'express';
 
 @Injectable()
 export class AuthService {
@@ -425,5 +426,167 @@ export class AuthService {
     return {
       message: 'Đặt lại mật khẩu thành công. Vui lòng đăng nhập với mật khẩu mới.',
     };
+  }
+
+  getGoogleAuthUrl(state = 'candidates') {
+    const clientId = this.configService.get<string>('GOOGLE_CLIENT_ID');
+    const redirectUri =
+      this.configService.get<string>('GOOGLE_REDIRECT_URI') || 'http://localhost:4000/users/oauth/google';
+    const rootUrl = 'https://accounts.google.com/o/oauth2/v2/auth';
+    const options = {
+      redirect_uri: redirectUri,
+      client_id: clientId || '',
+      access_type: 'offline',
+      response_type: 'code',
+      prompt: 'consent',
+      scope: [
+        'https://www.googleapis.com/auth/userinfo.profile',
+        'https://www.googleapis.com/auth/userinfo.email',
+      ].join(' '),
+      state,
+    };
+    const qs = new URLSearchParams(options);
+    return `${rootUrl}?${qs.toString()}`;
+  }
+
+  async googleOauth(code: string, redirectUriOverride?: string) {
+    const clientId = this.configService.get<string>('GOOGLE_CLIENT_ID');
+    const clientSecret = this.configService.get<string>('GOOGLE_CLIENT_SECRET');
+    const redirectUri =
+      redirectUriOverride ||
+      this.configService.get<string>('GOOGLE_REDIRECT_URI') ||
+      'http://localhost:4000/users/oauth/google';
+
+    if (!clientId || !clientSecret) {
+      throw new BadRequestException('Chưa cấu hình GOOGLE_CLIENT_ID hoặc GOOGLE_CLIENT_SECRET trong backend .env.');
+    }
+
+    const tokenBody = new URLSearchParams({
+      code,
+      client_id: clientId,
+      client_secret: clientSecret,
+      redirect_uri: redirectUri,
+      grant_type: 'authorization_code',
+    });
+
+    const tokenRes = await fetch('https://oauth2.googleapis.com/token', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/x-www-form-urlencoded',
+      },
+      body: tokenBody.toString(),
+    });
+
+    const tokenData = await tokenRes.json();
+    if (!tokenRes.ok) {
+      throw new BadRequestException(
+        tokenData.error_description || tokenData.error || 'Đổi mã xác thực Google (Token Exchange) thất bại',
+      );
+    }
+
+    const { access_token: googleAccessToken } = tokenData;
+
+    const userinfoRes = await fetch('https://www.googleapis.com/oauth2/v1/userinfo?alt=json', {
+      headers: {
+        Authorization: `Bearer ${googleAccessToken}`,
+      },
+    });
+
+    const userInfo = await userinfoRes.json();
+    if (!userinfoRes.ok || !userInfo.email) {
+      throw new BadRequestException('Không thể lấy thông tin người dùng từ tài khoản Google');
+    }
+
+    const normalizedEmail = String(userInfo.email).trim().toLowerCase();
+    let user = await this.userService.findByEmailOrGoogleId(normalizedEmail, userInfo.id);
+
+    if (user) {
+      if (user.status === UserStatus.LOCKED) {
+        throw new UnauthorizedException('Tài khoản của bạn đã bị khóa. Vui lòng liên hệ Quản trị viên để được hỗ trợ.');
+      }
+
+      const updates: Partial<User> = {};
+      if (!user.googleId && userInfo.id) updates.googleId = userInfo.id;
+      if (!user.avatar && userInfo.picture) updates.avatar = userInfo.picture;
+      if ((!user.name || user.name.trim() === '') && userInfo.name) updates.name = userInfo.name;
+      if (!user.authProvider || user.authProvider === 'LOCAL') updates.authProvider = 'GOOGLE';
+
+      if (Object.keys(updates).length > 0) {
+        const updated = await this.userService.updateUserById(user._id.toString(), updates);
+        if (updated) user = updated;
+      }
+    } else {
+      const randomPassword = Math.random().toString(36).substring(2, 10) + Math.random().toString(36).substring(2, 10);
+      const hashedPassword = await bcrypt.hash(randomPassword, 10);
+
+      user = await this.userService.createUser({
+        email: normalizedEmail,
+        name: userInfo.name || normalizedEmail.split('@')[0],
+        avatar: userInfo.picture || '',
+        googleId: userInfo.id,
+        authProvider: 'GOOGLE',
+        role: UserRole.CANDIDATE,
+        status: UserStatus.ACTIVE,
+        password: hashedPassword,
+      });
+    }
+
+    // 4. Sign JWT
+    const payload = {
+      sub: user._id.toString(),
+      email: user.email,
+      role: user.role,
+      departmentId: user.departmentId ? user.departmentId.toString() : undefined,
+    };
+
+    const userObject = (user as any).toObject ? (user as any).toObject() : user;
+    const { password: _, ...userWithoutPassword } = userObject;
+
+    return {
+      access_token: this.jwtService.sign(payload),
+      user: userWithoutPassword,
+    };
+  }
+
+  async handleOAuthCallback(
+    code: string,
+    state: string,
+    res: Response,
+    redirectUriOverride?: string,
+  ) {
+    const candidateClient =
+      this.configService.get<string>('CANDIDATE_CLIENT_REDIRECT') ||
+      `${this.configService.get<string>('CANDIDATE_URL') || 'http://localhost:3001'}/oauth/callback`;
+    const candidateLogin =
+      `${this.configService.get<string>('CANDIDATE_URL') || 'http://localhost:3001'}/login`;
+
+    try {
+      if (!code) {
+        throw new BadRequestException('Mã xác thực Google (authorization code) bị thiếu.');
+      }
+
+      const result = await this.googleOauth(code, redirectUriOverride);
+
+      res.cookie('accessToken', result.access_token, {
+        httpOnly: true,
+        secure: process.env.NODE_ENV === 'production',
+        sameSite: 'lax',
+        maxAge: 24 * 60 * 60 * 1000,
+      });
+
+      const redirectWithParams = `${candidateClient}?access_token=${encodeURIComponent(
+        result.access_token,
+      )}&email=${encodeURIComponent(result.user.email)}&role=${encodeURIComponent(
+        result.user.role,
+      )}&name=${encodeURIComponent(result.user.name || '')}&avatar=${encodeURIComponent(
+        result.user.avatar || '',
+      )}`;
+      return res.redirect(redirectWithParams);
+    } catch (err: any) {
+      const errorRedirect = `${candidateLogin}?error=${encodeURIComponent(
+        err.message || 'Đăng nhập Google thất bại',
+      )}`;
+      return res.redirect(errorRedirect);
+    }
   }
 }

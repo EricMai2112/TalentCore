@@ -36,6 +36,15 @@ export class User {
   @Prop({ required: true })
   password: string;
 
+  @Prop({ required: false, default: '' })
+  avatar?: string;
+
+  @Prop({ required: false })
+  googleId?: string;
+
+  @Prop({ required: false, default: 'LOCAL' })
+  authProvider?: string;
+
   @Prop({ type: Types.ObjectId, ref: 'Department' })
   departmentId?: Types.ObjectId;
 
