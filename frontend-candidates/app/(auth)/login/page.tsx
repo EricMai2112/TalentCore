@@ -1,3 +1,4 @@
+import { Suspense } from "react";
 import CandidateLoginPage from "@/src/features/auth/components/CandidateLoginPage";
 
 export const metadata = {
@@ -6,5 +7,9 @@ export const metadata = {
 };
 
 export default function LoginPage() {
-  return <CandidateLoginPage />;
+  return (
+    <Suspense fallback={<div className="min-h-[500px] flex items-center justify-center text-slate-400">Đang tải...</div>}>
+      <CandidateLoginPage />
+    </Suspense>
+  );
 }

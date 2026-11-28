@@ -17,6 +17,18 @@ export class UserService {
         return this.userModel.findOne({ email }).exec();
     }
 
+    async findByGoogleId(googleId: string) {
+        return this.userModel.findOne({ googleId }).exec();
+    }
+
+    async findByEmailOrGoogleId(email: string, googleId?: string) {
+        const conditions: any[] = [{ email: email.toLowerCase() }];
+        if (googleId) {
+            conditions.push({ googleId });
+        }
+        return this.userModel.findOne({ $or: conditions }).exec();
+    }
+
     async findByForgotPasswordToken(token: string) {
         return this.userModel.findOne({ forgot_password_token: token }).exec();
     }

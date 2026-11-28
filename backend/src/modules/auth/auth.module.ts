@@ -3,6 +3,7 @@ import { MongooseModule } from '@nestjs/mongoose';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { JwtModule } from '@nestjs/jwt';
 import { AuthController } from './controllers/auth.controller';
+import { UserOAuthController } from './controllers/user-oauth.controller';
 import { AuthService } from './services/auth.service';
 import { User, UserSchema } from '../users/schemas/user.schema';
 import { UsersModule } from '../users/users.module';
@@ -23,7 +24,7 @@ import { RolesGuard } from './guards/roles.guard';
         inject: [ConfigService],
       }),
   ],
-  controllers: [AuthController],
+  controllers: [AuthController, UserOAuthController],
   providers: [AuthService, JwtAuthGuard, RolesGuard],
   exports: [JwtModule, JwtAuthGuard, RolesGuard, AuthService],
 })
